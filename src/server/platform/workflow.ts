@@ -59,7 +59,7 @@ export type EdgeCondition = {
   value?: unknown;
 };
 
-function readPath(json: Record<string, unknown>, path: string): unknown {
+export function readPath(json: Record<string, unknown>, path: string): unknown {
   return path.split(".").reduce<unknown>((acc, part) => {
     if (acc && typeof acc === "object") return (acc as Record<string, unknown>)[part];
     return undefined;

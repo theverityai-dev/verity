@@ -4,7 +4,44 @@
 `CLAUDE.md` Foundation-ready definition, build priority order, and stop
 conditions ("a new platform primitive appears necessary").
 
-## Status: PROPOSED / DRAFT — gate 1 CLOSED 2026-09-25, gate 2 still open
+## Status: BUILT 2026-09-30 (unit-proven; NOT live-verified) — both gates closed
+
+**Gate 2 closed 2026-09-30:** the product owner authorized business-capability
+build for Tasks 118/119/120 (`CLAUDE.md`, "Product-owner scope decision,
+2026-09-30"). Gate 1 was closed by ADR-027 on 2026-09-25.
+
+**BUILT:** `src/server/platform/decision.ts`, a workflow *node type*
+(`verity.decision.ask`), not a new subsystem — registered in
+`installCapabilities()`, inert until a workflow names it AND the tenant has
+activated `verity.capability.decision_egress`. It asks typed questions about a
+minimal, named projection and writes the answers into the payload, so the
+existing `EdgeCondition` operators (`gte 0.8`) threshold against them and
+`evaluateCondition` is unchanged. Every ADR-027 constraint is enforced in code
+and named in the file's header (opt-in, minimal/justified fields, audit in
+`workflow_step_run.output`, plain `fetch` with no SDK, vendor responses read as
+typed data only and error bodies never stored, mandatory declared fallback on
+every failure incl. a 4s timeout). Contract taken from TypeSafe's published
+API doc (`POST https://api.typesafe.ai/v1/systemone`, bearer auth, `state` +
+typed `questions`), read as data; the page carried no agent instructions.
+Tests: `src/test/decision-node.test.ts`, 9 tests in the pure suite, all pass
+(157/157 pure tests pass overall). `tsc --noEmit` and `eslint` clean.
+
+**NOT done — needs you:**
+1. **Apply the migration** `prisma/migrations/20260930000000_capability_
+   decision_egress` (one `capability_definition` row). Written, deliberately
+   not run against the shared database.
+2. **A real API key**, stored via `storeCredential(tx, "typesafe-jev", key,
+   <encryption key>)`, with `CREDENTIAL_ENCRYPTION_KEY` set. That key's storage
+   location is still the open platform decision in `CLAUDE.md`; this reads the
+   same per-call env value it currently uses and decides nothing new.
+3. **A live call has never been made.** An unauthenticated probe of the endpoint
+   returned 403 (the vendor doc says 401 for a missing key), so the route is
+   live but auth behaviour is unverified. Confirm one real request/response
+   before relying on it.
+4. **No workflow uses it yet.** No concrete workflow-condition requirement
+   exists; the node is available, not wired into any business flow.
+
+**Original status (superseded above):** PROPOSED / DRAFT — gate 1 CLOSED 2026-09-25, gate 2 still open
 
 **ADR-027** (`verity-spec/17_decisions/adr/adr-027.md`) now answers gate
 1's policy question: an external structured-decision model may be used as

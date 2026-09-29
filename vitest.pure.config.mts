@@ -20,6 +20,7 @@ export default defineConfig({
       "scripts/scheduler-time.test.mjs",
       "src/server/platform/pack-manifest.test.ts",
       "src/test/agent-chat-route.test.ts",
+      "src/test/decision-node.test.ts",
     ],
     setupFiles: ["./src/test/setup-pure-env.ts"],
     fileParallelism: false,

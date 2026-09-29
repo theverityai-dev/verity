@@ -10,6 +10,7 @@ import { registerPlywoodCapability } from "./plywood";
 import { registerAccountingCapability } from "./accounting";
 import { registerInventoryCapability } from "./inventory";
 import { registerManufacturingCapability } from "./manufacturing";
+import { registerDecisionNode } from "@/server/platform/decision";
 import { registerHrCapability } from "./hr";
 import { registerBillingCapability } from "./billing";
 import { registerRecipeCapability } from "./recipe";
@@ -41,6 +42,9 @@ export function installCapabilities(): void {
   // backend through the platform's extension point, and it is silent when this
   // deployment has none configured.
   installStorage();
+  // A workflow node type, not a capability: it is inert until a workflow names
+  // it AND the tenant has activated the egress capability (ADR-027).
+  registerDecisionNode();
   registerLocationCapability();
   registerAssetCapability();
   registerEvidenceCapability();
