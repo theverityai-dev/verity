@@ -87,168 +87,190 @@ function drawMap(w: number, h: number, bezel: number): string {
   return canvas.toDataURL();
 }
 
+/** Settle time after `load` before the engine touches any DOM. This engine
+ *  writes `class`/`style` on server-rendered elements; doing that before React
+ *  has hydrated them makes React report a hydration mismatch. */
+const HYDRATION_SETTLE_MS = 1200;
+
+function start(): (() => void) | undefined {
+  const transparency = matchMedia("(prefers-reduced-transparency: reduce)");
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  if (transparency.matches) return;
+
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
+  const defs = document.createElementNS(NS, "defs");
+  svg.appendChild(defs);
+  document.body.appendChild(svg);
+
+  let uid = 0;
+  const live = new Map<HTMLElement, SVGFilterElement>();
+  const known = new Set<HTMLElement>();
+  const mapCache = new Map<string, string>();
+
+  const release = (el: HTMLElement) => {
+    const filter = live.get(el);
+    if (!filter) return;
+    filter.remove();
+    el.style.backdropFilter = "";
+    el.classList.remove("lg-on");
+    live.delete(el);
+  };
+
+  const build = (el: HTMLElement) => {
+    const w = Math.round(el.offsetWidth);
+    const h = Math.round(el.offsetHeight);
+    if (w < 24 || h < 24) return release(el);
+    if (!live.has(el) && live.size >= MAX_LIVE) return;
+    const o = optics(el);
+    const key = `${w}x${h}x${o.bezel}`;
+    let href = mapCache.get(key);
+    if (!href) {
+      href = drawMap(w, h, o.bezel);
+      if (mapCache.size > 40) mapCache.clear();
+      mapCache.set(key, href);
+    }
+    if (!href) return;
+
+    let filter = live.get(el);
+    if (!filter) {
+      filter = document.createElementNS(NS, "filter");
+      filter.setAttribute("id", `lg-${++uid}`);
+      filter.setAttribute("filterUnits", "userSpaceOnUse");
+      filter.setAttribute("color-interpolation-filters", "sRGB");
+      defs.appendChild(filter);
+      live.set(el, filter);
+    }
+    filter.setAttribute("x", "0");
+    filter.setAttribute("y", "0");
+    filter.setAttribute("width", String(w));
+    filter.setAttribute("height", String(h));
+    filter.innerHTML =
+      `<feImage x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" href="${href}" result="map"/>` +
+      ["R", "G", "B"]
+        .map(
+          (c, i) =>
+            `<feDisplacementMap in="SourceGraphic" in2="map" scale="${(o.strength * ABERRATION[i]).toFixed(1)}" xChannelSelector="R" yChannelSelector="G" result="d${c}"/>` +
+            `<feColorMatrix in="d${c}" values="${CHANNELS[i]}" result="c${c}"/>`,
+        )
+        .join("") +
+      `<feBlend in="cR" in2="cG" mode="screen" result="rg"/><feBlend in="rg" in2="cB" mode="screen"/>`;
+
+    // Blur first, then refract, then lift: same order as the reference port.
+    el.style.backdropFilter = `blur(${o.blur}px) url(#${filter.getAttribute("id")}) saturate(1.25) brightness(1.02)`;
+    // The specular rim is a ::before, which needs a containing block. Only
+    // promote a statically-positioned surface; fixed/absolute/sticky stay put.
+    if (getComputedStyle(el).position === "static") el.style.position = "relative";
+    el.classList.add("lg-on");
+  };
+
+  // Refraction only exists where the surface is on screen.
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        const el = e.target as HTMLElement;
+        if (e.isIntersecting) build(el);
+        else release(el);
+      }
+    },
+    { rootMargin: "120px" },
+  );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const pending = new Set<HTMLElement>();
+  const ro = new ResizeObserver((entries) => {
+    for (const e of entries) pending.add(e.target as HTMLElement);
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      pending.forEach((el) => live.has(el) && build(el));
+      pending.clear();
+    }, 120);
+  });
+
+  const track = (el: HTMLElement) => {
+    if (known.has(el)) return;
+    known.add(el);
+    io.observe(el);
+    ro.observe(el);
+  };
+  const untrack = (el: HTMLElement) => {
+    if (!known.delete(el)) return;
+    io.unobserve(el);
+    ro.unobserve(el);
+    release(el);
+  };
+  const scan = (root: ParentNode) => {
+    if (root instanceof HTMLElement && root.matches(SELECTOR)) track(root);
+    root.querySelectorAll<HTMLElement>(SELECTOR).forEach(track);
+  };
+  const sweep = () => known.forEach((el) => !el.isConnected && untrack(el));
+
+  scan(document);
+  const mo = new MutationObserver((records) => {
+    for (const r of records) r.addedNodes.forEach((n) => n instanceof HTMLElement && scan(n));
+    if (records.some((r) => r.removedNodes.length)) sweep();
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // Specular rim follows the pointer on the surface it is over.
+  let raf = 0;
+  let last: PointerEvent | null = null;
+  const onMove = (e: PointerEvent) => {
+    last = e;
+    if (raf || motion.matches) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const el = (last?.target as Element | null)?.closest<HTMLElement>(".lg-on");
+      if (!el || !last) return;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--lg-x", `${(((last.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
+      el.style.setProperty("--lg-y", `${(((last.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
+    });
+  };
+  addEventListener("pointermove", onMove, { passive: true });
+
+  // User flips reduced-transparency mid-session: drop every filter at once.
+  const onTransparency = () => {
+    if (transparency.matches) [...live.keys()].forEach(release);
+    else
+      // Re-observe rather than build directly: the observer's first callback
+      // re-applies refraction to on-screen surfaces only.
+      known.forEach((el) => {
+        io.unobserve(el);
+        io.observe(el);
+      });
+  };
+  transparency.addEventListener("change", onTransparency);
+
+  return () => {
+    mo.disconnect();
+    io.disconnect();
+    ro.disconnect();
+    clearTimeout(timer);
+    cancelAnimationFrame(raf);
+    removeEventListener("pointermove", onMove);
+    transparency.removeEventListener("change", onTransparency);
+    known.forEach(release);
+    svg.remove();
+  };
+}
+
 export function LiquidGlass() {
   useEffect(() => {
     if (!isChromium()) return;
-    const transparency = matchMedia("(prefers-reduced-transparency: reduce)");
-    const motion = matchMedia("(prefers-reduced-motion: reduce)");
-    if (transparency.matches) return;
-
-    const svg = document.createElementNS(NS, "svg");
-    svg.setAttribute("aria-hidden", "true");
-    svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden";
-    const defs = document.createElementNS(NS, "defs");
-    svg.appendChild(defs);
-    document.body.appendChild(svg);
-
-    let uid = 0;
-    const live = new Map<HTMLElement, SVGFilterElement>();
-    const known = new Set<HTMLElement>();
-    const mapCache = new Map<string, string>();
-
-    const release = (el: HTMLElement) => {
-      const filter = live.get(el);
-      if (!filter) return;
-      filter.remove();
-      el.style.backdropFilter = "";
-      el.classList.remove("lg-on");
-      live.delete(el);
-    };
-
-    const build = (el: HTMLElement) => {
-      const w = Math.round(el.offsetWidth);
-      const h = Math.round(el.offsetHeight);
-      if (w < 24 || h < 24) return release(el);
-      if (!live.has(el) && live.size >= MAX_LIVE) return;
-      const o = optics(el);
-      const key = `${w}x${h}x${o.bezel}`;
-      let href = mapCache.get(key);
-      if (!href) {
-        href = drawMap(w, h, o.bezel);
-        if (mapCache.size > 40) mapCache.clear();
-        mapCache.set(key, href);
-      }
-      if (!href) return;
-
-      let filter = live.get(el);
-      if (!filter) {
-        filter = document.createElementNS(NS, "filter");
-        filter.setAttribute("id", `lg-${++uid}`);
-        filter.setAttribute("filterUnits", "userSpaceOnUse");
-        filter.setAttribute("color-interpolation-filters", "sRGB");
-        defs.appendChild(filter);
-        live.set(el, filter);
-      }
-      filter.setAttribute("x", "0");
-      filter.setAttribute("y", "0");
-      filter.setAttribute("width", String(w));
-      filter.setAttribute("height", String(h));
-      filter.innerHTML =
-        `<feImage x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" href="${href}" result="map"/>` +
-        ["R", "G", "B"]
-          .map(
-            (c, i) =>
-              `<feDisplacementMap in="SourceGraphic" in2="map" scale="${(o.strength * ABERRATION[i]).toFixed(1)}" xChannelSelector="R" yChannelSelector="G" result="d${c}"/>` +
-              `<feColorMatrix in="d${c}" values="${CHANNELS[i]}" result="c${c}"/>`,
-          )
-          .join("") +
-        `<feBlend in="cR" in2="cG" mode="screen" result="rg"/><feBlend in="rg" in2="cB" mode="screen"/>`;
-
-      // Blur first, then refract, then lift: same order as the reference port.
-      el.style.backdropFilter = `blur(${o.blur}px) url(#${filter.getAttribute("id")}) saturate(1.25) brightness(1.02)`;
-      // The specular rim is a ::before, which needs a containing block. Only
-      // promote a statically-positioned surface; fixed/absolute/sticky stay put.
-      if (getComputedStyle(el).position === "static") el.style.position = "relative";
-      el.classList.add("lg-on");
-    };
-
-    // Refraction only exists where the surface is on screen.
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const el = e.target as HTMLElement;
-          if (e.isIntersecting) build(el);
-          else release(el);
-        }
-      },
-      { rootMargin: "120px" },
-    );
+    let stop: (() => void) | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const pending = new Set<HTMLElement>();
-    const ro = new ResizeObserver((entries) => {
-      for (const e of entries) pending.add(e.target as HTMLElement);
-      clearTimeout(timer);
+    const begin = () => {
       timer = setTimeout(() => {
-        pending.forEach((el) => live.has(el) && build(el));
-        pending.clear();
-      }, 120);
-    });
-
-    const track = (el: HTMLElement) => {
-      if (known.has(el)) return;
-      known.add(el);
-      io.observe(el);
-      ro.observe(el);
+        stop = start();
+      }, HYDRATION_SETTLE_MS);
     };
-    const untrack = (el: HTMLElement) => {
-      if (!known.delete(el)) return;
-      io.unobserve(el);
-      ro.unobserve(el);
-      release(el);
-    };
-    const scan = (root: ParentNode) => {
-      if (root instanceof HTMLElement && root.matches(SELECTOR)) track(root);
-      root.querySelectorAll<HTMLElement>(SELECTOR).forEach(track);
-    };
-    const sweep = () => known.forEach((el) => !el.isConnected && untrack(el));
-
-    scan(document);
-    const mo = new MutationObserver((records) => {
-      for (const r of records) r.addedNodes.forEach((n) => n instanceof HTMLElement && scan(n));
-      if (records.some((r) => r.removedNodes.length)) sweep();
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-
-    // Specular rim follows the pointer on the surface it is over.
-    let raf = 0;
-    let last: PointerEvent | null = null;
-    const onMove = (e: PointerEvent) => {
-      last = e;
-      if (raf || motion.matches) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        const el = (last?.target as Element | null)?.closest<HTMLElement>(".lg-on");
-        if (!el || !last) return;
-        const r = el.getBoundingClientRect();
-        el.style.setProperty("--lg-x", `${(((last.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
-        el.style.setProperty("--lg-y", `${(((last.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
-      });
-    };
-    addEventListener("pointermove", onMove, { passive: true });
-
-    // User flips reduced-transparency mid-session: drop every filter at once.
-    const onTransparency = () => {
-      if (transparency.matches) [...live.keys()].forEach(release);
-      else
-        // Re-observe rather than build directly: the observer's first callback
-        // re-applies refraction to on-screen surfaces only.
-        known.forEach((el) => {
-          io.unobserve(el);
-          io.observe(el);
-        });
-    };
-    transparency.addEventListener("change", onTransparency);
-
+    if (document.readyState === "complete") begin();
+    else addEventListener("load", begin, { once: true });
     return () => {
-      mo.disconnect();
-      io.disconnect();
-      ro.disconnect();
       clearTimeout(timer);
-      cancelAnimationFrame(raf);
-      removeEventListener("pointermove", onMove);
-      transparency.removeEventListener("change", onTransparency);
-      known.forEach(release);
-      svg.remove();
+      removeEventListener("load", begin);
+      stop?.();
     };
   }, []);
 

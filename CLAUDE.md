@@ -279,7 +279,7 @@ any requirement written because it is "common in ERP/SaaS" rather than traced to
 
   **This list is a curated highlight reel, not the complete register, and is stale beyond what
   it explicitly names.** The canonical ADR register is `verity-spec/17_decisions/adr/`
-  (`adr-001.md`…`adr-026.md` as of 2026-09-19) — ADR-013 (Global HQ Operator Security Model),
+  (`adr-001.md`…`adr-028.md` as of 2026-09-30; ADR-027 Jev/external decision model, ADR-028 liquid-glass refraction over ADR-026's materials) — ADR-013 (Global HQ Operator Security Model),
   ADR-014 (DEC-001 scope), ADR-015 (scheduled work trigger), ADR-016 (the scheduler may enumerate
   tenants), ADR-017 (below), ADR-018 (extract a generic Trading capability out of plywood),
   ADR-019 (below), ADR-020 (OIDC browser identity), ADR-021 (capability pins), and ADR-022

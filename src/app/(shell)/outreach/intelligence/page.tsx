@@ -212,7 +212,7 @@ function IntelligenceTable({
 }) {
   const columns: Column[] = [
     drillHref
-      ? { key: "key", header: keyHeader, sortable: true, variant: "link", href: "/outreach/prospects?q={q}" }
+      ? { key: "key", header: keyHeader, sortable: true, variant: "link", href: "/outreach/prospects?{qs}" }
       : { key: "key", header: keyHeader, sortable: true },
     { key: "leads", header: "Leads", numeric: true, sortable: true },
     { key: "outreach", header: "Outreach", numeric: true, sortable: true },
@@ -233,7 +233,11 @@ function IntelligenceTable({
           rows={rows.map((r) => ({
             id: r.key,
             key: r.key,
-            q: encodeURIComponent(r.key),
+            // "Unspecified" is the placeholder for leads with no domain and no
+            // industry text, not a value any lead contains, so a text search for
+            // it always returns nothing. The domain filter's `none` is the
+            // real "no domain" query.
+            qs: r.key === "Unspecified" ? "domain=none" : `q=${encodeURIComponent(r.key)}`,
             leads: r.leads,
             outreach: r.outreach,
             responses: r.responses,

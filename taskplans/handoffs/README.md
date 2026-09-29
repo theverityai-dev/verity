@@ -11,7 +11,7 @@ line below matching recent commits), regenerate it from `git log` and the
 taskplans it points to before trusting it, same rule `00_STATUS_INDEX.md`
 already states for itself.
 
-**Last updated: 2026-09-18 (Apple platform UI/UX audit P0/P1 completion pass — CLOSED)**
+**Last updated: 2026-09-30 (liquid-glass ADR-028; Task 116 Senior/Junior live verification; refreshed against `taskplans/122_...`)**
 
 ## How to use this folder
 
@@ -51,6 +51,37 @@ already states for itself.
   design-system.md` §2, REQ-004..009). `verity-design-companion` skill
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
+
+## Since 2026-09-18 (this file had not been updated; regenerated 2026-09-30)
+
+Sources of truth for everything below: `taskplans/122_pending_taskplans_
+phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
+
+- **Task 116 — Apple-quality visual UX program: IN PROGRESS.** Senior
+  (§8.2), Junior (§8.3), member detail (§8.4) and Intelligence drill-through
+  (§8.6) live-verified 2026-09-30 with approved test accounts; two real
+  defects fixed. Remaining: durable Phase 0 screenshots and the rest of the
+  route-family x role x theme x viewport matrix; Junior progress track and
+  timeline unproven with data.
+- **Liquid-glass refraction — DONE 2026-09-30, ADR-028.** `src/components/
+  ui/LiquidGlass.tsx`, mounted in the root layout, upgrades the existing four
+  glass classes in Chromium; blur fallback elsewhere; honours reduced
+  transparency. Popover clipping and see-through fixed in `globals.css`.
+  Verified dark/light, desktop/mobile, overlays, reduced-transparency
+  (stubbed), Safari UA (simulated). Not verified: a real `Modal` consumer, a
+  real Safari/Firefox.
+- **Task 121/122 Phase 4 — DONE 2026-09-24, 18 of 28 bare tables migrated.**
+  The other 10 are documented structural exceptions, not debt.
+- **Task 121 §3.2/§3.3 — DONE 2026-09-24** (REQ drafting; `obvious-basics-
+  checklist` wired into review). Task 122 Phase 2 ratified REQ-017/018/019/
+  022/023/024.
+- **Task 118 — minimal `ManufacturingOrder` slice BUILT 2026-09-25.** The
+  wider manufacturing capability still needs the product-owner scope decision.
+- **Task 119 — ADR-027 conditionally accepted.** Still gated on the CLAUDE.md
+  objective moving past PLATFORM FOUNDATION READY or a named workflow need.
+- **Blocked on the product owner, not on engineering:** Task 118 scope, Task
+  119 gate, Task 120 (Relay has no backend; Verity has no external tool-
+  invocation surface), Task 114 P2 scoping.
 
 ## Active work, in order
 

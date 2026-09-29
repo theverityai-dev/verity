@@ -189,7 +189,9 @@ viewport evidence pass Phase 0 left open; continue Phase 1 past
 families. Direction already locked by the product owner: dark graphite,
 subtle blue, no bloom, no persistent workspace pills.
 
-## Phase 6 — Outreach launch verification remainder
+## Phase 6 — Outreach launch verification remainder [DONE 2026-09-30 for Senior/Junior sign-in]
+
+**2026-09-30:** closed for sign-in and rendering. The product owner approved the `pacreds.txt` accounts as test-only; Senior and Junior were signed in on localhost and the slices in Task 116 §8.2-§8.4 verified (see that file's 2026-09-30 entry). Not done: Junior writes (logging activity, progress track and timeline with data) — deliberately not exercised against a tenant that may be production. The original blocker text below is kept for history.
 
 Junior/Senior role sign-in smoke test against the real PA-OMS tenant.
 **Blocked on product-owner credentials** — passwords were printed once to

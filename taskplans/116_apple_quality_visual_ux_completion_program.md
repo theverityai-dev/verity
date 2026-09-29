@@ -168,6 +168,26 @@ page-family gates defined below.
   improvise without product-owner sign-off (the same posture ADR-024's
   gold board got). Decided, with the product owner, not to build it.
   §10 is considered **closed as already-met**, not open debt.
+- **2026-09-30 — Phase 6 credential gap closed; §8.2/§8.3/§8.4/§8.6 live-
+  verified.** The product owner approved `pacreds.txt` accounts as test-only
+  on localhost. Signed in as Senior (Kulsoom), Junior (Hikari) and Core
+  (Divo), each in an isolated browser context. Results: **§8.2** bare
+  `/outreach` redirects a Senior to `/outreach/team`, which renders the
+  team-scoped hero, work-state matrix and lead queues (dark desktop, light
+  mobile 390px: no horizontal scroll, bottom tab bar present). **§8.3**
+  `/outreach/workspace` renders greeting, counts, direction card and the
+  split "Nothing on your list" empty state (dark desktop, light mobile). The
+  progress track and "Logged today" timeline only render with data, and no
+  test records were written to the tenant, so those two remain unproven with
+  data. **§8.4** member detail renders heatmap, coaching, daily reports and
+  assigned work (dark desktop). **§8.6** drill-through links present.
+  **Two real defects found and fixed:** (1) Intelligence's "Unspecified"
+  industry row linked to a text search for the literal word, returning 0
+  of 7 prospects; it now links to `?domain=none` (4 of 7). (2) The
+  liquid-glass engine (ADR-028) wrote `class`/`style` on server-rendered
+  elements before hydration finished, producing a React hydration-mismatch
+  console error; it now starts 1.2s after `load`. Still open for Phase 0:
+  durable screenshots and the remaining route-family/theme/viewport matrix.
 
 ## 1. Product outcome
 
