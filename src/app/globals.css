@@ -684,6 +684,42 @@
     var(--shadow-sm);
 }
 
+/**
+ * Liquid-glass refraction (enabled per element by `LiquidGlass.tsx`, Chromium
+ * only). `.lg-on` is added only while a surface holds a live refraction filter,
+ * so every rule here is dormant on Safari/Firefox and under reduced
+ * transparency. It thins the tint (refraction is invisible under a dense
+ * wash) and adds a pointer-tracked specular rim. Text-bearing surfaces keep
+ * their contrast floor: only shell and card lose tint, never overlay/control,
+ * which carry the densest copy and dialogs' decision text.
+ */
+.lg-on::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(
+    115deg,
+    light-dark(rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.10)) 0%,
+    light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.34))
+      calc(var(--lg-x, 30%) - 12%),
+    light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.34))
+      calc(var(--lg-x, 30%) + 4%),
+    light-dark(rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.05)) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.glass-shell.lg-on { --color-glass-1: light-dark(rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.015)); }
+.glass-card.lg-on { --color-glass-2: light-dark(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03)); }
+@media (prefers-reduced-transparency: reduce) {
+  .lg-on::before { display: none; }
+}
+
 .verity-scrim { background: light-dark(rgb(24 24 27 / 0.16), rgb(6 6 8 / 0.5)); }
 
 /**

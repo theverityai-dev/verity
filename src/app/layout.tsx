@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { cookies } from "next/headers";
 import { accentStyle, DEFAULT_ACCENT } from "@/server/platform/accent";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { LiquidGlass } from "@/components/ui/LiquidGlass";
 import "./globals.css";
 
 /**
@@ -98,6 +99,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {/* Unblurred grain, on top of the atmosphere: dithers its gradient so
             it stays smooth at this size instead of banding. See globals.css. */}
         <div className="verity-grain" aria-hidden="true" />
+        {/* Chromium-only refraction over the glass classes; no-op elsewhere. */}
+        <LiquidGlass />
         {/* First stop for a keyboard user on every page. */}
         <a
           href="#main"
