@@ -226,7 +226,13 @@ export function LiquidGlass() {
     // User flips reduced-transparency mid-session: drop every filter at once.
     const onTransparency = () => {
       if (transparency.matches) [...live.keys()].forEach(release);
-      else known.forEach(build);
+      else
+        // Re-observe rather than build directly: the observer's first callback
+        // re-applies refraction to on-screen surfaces only.
+        known.forEach((el) => {
+          io.unobserve(el);
+          io.observe(el);
+        });
     };
     transparency.addEventListener("change", onTransparency);
 
