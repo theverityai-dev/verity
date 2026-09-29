@@ -714,6 +714,24 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
+/* A glass surface is its own stacking context (its backdrop-filter), so a
+   popover inside it, however high its z-index, is trapped and painted UNDER
+   any later glass sibling. Lift whichever panel currently holds an open
+   popover trigger above its siblings so the list is not cut off by the cards
+   below it. Independent of refraction: the defect predates it. */
+.glass-card:has([aria-expanded="true"]):not(.absolute, .fixed, .sticky),
+.glass-control:has([aria-expanded="true"]):not(.absolute, .fixed, .sticky) {
+  position: relative;
+  z-index: 30;
+}
+/* A popover nested in a glass panel cannot blur what lies outside that panel
+   (the panel's own backdrop-filter is its backdrop root), so anything the
+   popover overlaps beyond the panel would read straight through the tint.
+   Nested overlays therefore go near-opaque: legibility outranks translucency
+   (ADR-011 constraint 1). Root-level overlays keep the full glass tint. */
+:is(.glass-card, .glass-control, .glass-shell) .glass-overlay {
+  --color-glass-4: light-dark(rgb(255 255 255 / 0.95), rgb(22 26 31 / 0.96));
+}
 .glass-shell.lg-on { --color-glass-1: light-dark(rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.015)); }
 .glass-card.lg-on { --color-glass-2: light-dark(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03)); }
 @media (prefers-reduced-transparency: reduce) {

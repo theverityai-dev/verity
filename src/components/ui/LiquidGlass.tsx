@@ -25,12 +25,15 @@ import { useEffect } from "react";
 const SELECTOR = ".glass-shell, .glass-card, .glass-control, .glass-overlay";
 const NS = "http://www.w3.org/2000/svg";
 
-/** Per-kind optics. Bezel = width of the edge that bends the backdrop (px). */
+/** Per-kind optics. Bezel = width of the edge that bends the backdrop (px).
+ *  `blur` deliberately equals each kind's own CSS blur (`--blur-glass` 24px,
+ *  `--blur-glass-strong` 34px): the inline filter replaces the class's, and a
+ *  thinner blur leaves text behind a popover sharp enough to read through it. */
 function optics(el: HTMLElement) {
-  if (el.matches(".glass-overlay")) return { bezel: 26, strength: 44, blur: 8 };
-  if (el.matches(".glass-shell")) return { bezel: 22, strength: 30, blur: 10 };
-  if (el.matches(".glass-control")) return { bezel: 10, strength: 16, blur: 6 };
-  return { bezel: 18, strength: 26, blur: 8 }; // card
+  if (el.matches(".glass-overlay")) return { bezel: 26, strength: 44, blur: 34 };
+  if (el.matches(".glass-shell")) return { bezel: 22, strength: 30, blur: 34 };
+  if (el.matches(".glass-control")) return { bezel: 10, strength: 16, blur: 24 };
+  return { bezel: 18, strength: 26, blur: 24 }; // card
 }
 
 const ABERRATION = [1, 0.86, 0.72]; // R, G, B scale factors
@@ -152,7 +155,7 @@ export function LiquidGlass() {
         `<feBlend in="cR" in2="cG" mode="screen" result="rg"/><feBlend in="rg" in2="cB" mode="screen"/>`;
 
       // Blur first, then refract, then lift: same order as the reference port.
-      el.style.backdropFilter = `blur(${o.blur}px) url(#${filter.getAttribute("id")}) saturate(1.7) brightness(1.04)`;
+      el.style.backdropFilter = `blur(${o.blur}px) url(#${filter.getAttribute("id")}) saturate(1.25) brightness(1.02)`;
       // The specular rim is a ::before, which needs a containing block. Only
       // promote a statically-positioned surface; fixed/absolute/sticky stay put.
       if (getComputedStyle(el).position === "static") el.style.position = "relative";
