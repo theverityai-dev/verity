@@ -34,6 +34,15 @@ to the point where it can receive arbitrary future capabilities and client syste
 Facilities, Field Service, Maintenance, Commerce, Finance, Work Order as a finished business
 capability, any industry pack, any client-specific module, any polished product UI.
 
+**Product-owner scope decision, 2026-09-30 (supersedes the list above for the items named
+here only):** business-capability build is now authorized past PLATFORM FOUNDATION READY for
+Task 118 (manufacturing), Task 119 (Jev advisory decision source, under ADR-027's seven
+constraints) and Task 120 (Relay integration). This satisfies Task 119's gate 2 and Task 118
+§6's scope question. It does **not** waive the stop conditions below: anything that adds a
+security boundary (Task 120's external tool-invocation surface) still needs its own ADR before
+code, and nothing here changes INV-001, ADR-017 or `enforcePolicy()`. The list above otherwise
+stands: no new business capability outside those three is authorized by this note.
+
 `Party` is the first vertical slice **only as a platform proving slice** — it exercises
 Tenant -> Organization -> Party -> User -> Membership -> Role -> Permission -> Entity ->
 Command -> State -> Event -> Audit. Keep it minimal and foundational. Do not grow it into

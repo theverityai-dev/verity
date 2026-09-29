@@ -261,3 +261,35 @@ Not chosen: referencing `recipe.Recipe` as this order's BOM (wrong fit —
 keyed 1:1 to `MenuItem`, would force a fake `menuItemId`). See the
 capability file's header for the full reasoning; `ManufacturingOrderLine`
 snapshots components directly instead.
+
+## 8 — 2026-09-30 UI slice
+
+**Scope decision:** the product owner authorized business-capability build
+past PLATFORM FOUNDATION READY for Tasks 118/119/120 (recorded in
+`CLAUDE.md`, "Product-owner scope decision, 2026-09-30"). §6's scope question
+is closed.
+
+**BUILT:** the UI §7 said was missing. `/manufacturing` (list: state counts by
+canonical `StateCategory`, `DataTable`, permission-gated "New order"),
+`/manufacturing/[id]` (state, produces, components consumed, history via
+`AuditTrail`, state-driven Start / Complete / Cancel-with-reason), a
+`CreateOrderForm` with a dynamic components list, all mutations through
+`runCommand` (no client mutation path). The `/manufacturing` nav entry that
+`registerManufacturingCapability` already declared is no longer a dead link.
+`tsc --noEmit` and `eslint` clean; route compiles and gates correctly
+("This feature is not active" for a tenant without the capability), no
+console errors.
+
+**NOT verified with data:** no tenant here has `manufacturing` activated and
+the only signed-in tenant is a real client's, so the create → start →
+complete flow was not clicked through in a browser. The commands themselves
+remain proven by `src/test/capability-manufacturing.test.ts` (5/5). Run the
+V1 completeness gate (`verity-client-capability-builder` cross-check +
+`obvious-basics-checklist`) against these pages the first time a tenant
+activates the capability.
+
+**Still NOT built** (unchanged from §7): lot/serial, work-center capacity/
+cost, BOM cost roll-up, QC evidence wiring, putaway rules, backorders/
+partial completion, `recipe` generalization. No first design-partner client
+is named (§6), so none of these has a concrete requirement to build against;
+per the lean-V1 posture they wait for one.
