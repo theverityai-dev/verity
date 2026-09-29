@@ -6,7 +6,35 @@ scope, read this session) and Verity's own `src/server/platform/tool-
 manifest.ts`, `src/server/platform/integration.ts`, `verity-spec/17_
 decisions/adr/adr-017.md` — not against assumption.
 
-## Status: PROPOSED / DRAFT — design only, not building now
+## Status: PARTIAL 2026-09-30 — ADR-029 written; inert primitives built; route and Relay adapter NOT built
+
+The product owner authorized this task 2026-09-30 (`CLAUDE.md`, "Product-owner
+scope decision"), which closes gate 3 of the original three (scope). The other
+two triggers below are not met by authorization alone, and the security review
+the third bullet demands is what ADR-029 is.
+
+**DONE:** **ADR-029** (`verity-spec/17_decisions/adr/adr-029.md`, `PROPOSED`
+pending your review of the security design): machine callers are real
+provisioned identities behind a revocable, hashed, expiring key; tenant from
+the credential never the payload; only tools already in the actor's manifest,
+with unknown and ungranted refused identically; destructive commands closed by
+default; idempotency key on commands; existing rate limits; dark (503) when no
+key store is bound. **`src/server/platform/external-tools.ts`** — key mint/
+parse/constant-time verify and the manifest-scoped dispatcher — with
+`src/test/external-tools.test.ts` (10 tests, pure suite, all pass).
+
+**NOT built, deliberately:**
+1. `ExternalApiKey` table + RLS + a `SECURITY DEFINER` lookup (the tenant is
+   unknown until the key is read), the idempotency store, and
+   `POST /api/tools/invoke`. Authentication code that cannot be exercised
+   against a database should not ship untested, and applying migrations to the
+   shared database is not something to do unasked. Build order is in ADR-029.
+2. The Verity -> Relay outbound adapter. It needs Relay's API contract, and
+   Relay still has no backend (marketing site only), so any adapter would be
+   guessing at a wire format.
+3. Nothing calls `dispatchExternalTool` yet; it is inert.
+
+**Original status (superseded above):** PROPOSED / DRAFT — design only, not building now
 
 No code exists or should exist against this document yet. It records the
 integration shape and its open decisions so the idea isn't silently lost or

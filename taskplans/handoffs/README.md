@@ -75,13 +75,20 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
 - **Task 121 §3.2/§3.3 — DONE 2026-09-24** (REQ drafting; `obvious-basics-
   checklist` wired into review). Task 122 Phase 2 ratified REQ-017/018/019/
   022/023/024.
-- **Task 118 — minimal `ManufacturingOrder` slice BUILT 2026-09-25.** The
-  wider manufacturing capability still needs the product-owner scope decision.
-- **Task 119 — ADR-027 conditionally accepted.** Still gated on the CLAUDE.md
-  objective moving past PLATFORM FOUNDATION READY or a named workflow need.
-- **Blocked on the product owner, not on engineering:** Task 118 scope, Task
-  119 gate, Task 120 (Relay has no backend; Verity has no external tool-
-  invocation surface), Task 114 P2 scoping.
+- **Product-owner scope decision 2026-09-30** (in `CLAUDE.md`): business-
+  capability build authorized for Tasks 118, 119, 120. Stop conditions unchanged.
+- **Task 118 — UI BUILT 2026-09-30** (`/manufacturing`, `/manufacturing/[id]`,
+  create form, Start/Complete/Cancel) on top of the 2026-09-25 commands. Not
+  clicked through with data (no tenant has the capability). Lot/serial, work
+  centers, cost roll-up, QC wiring: no named design partner, so not built.
+- **Task 119 — BUILT 2026-09-30, unit-proven, NOT live-verified.** Node type
+  `verity.decision.ask` (`decision.ts`), 9 tests. Needs: apply migration
+  `20260930000000_capability_decision_egress`, a real API key, one real call.
+- **Task 120 — PARTIAL 2026-09-30.** ADR-029 (`PROPOSED`, needs your review) +
+  inert tested primitives (`external-tools.ts`, 10 tests). No route, key store
+  or Relay adapter: those need a database to test and Relay's contract.
+- **Still blocked on you:** review ADR-029; apply the Task 119 migration and
+  supply a key; Task 114 P2 scoping; a named manufacturing design partner.
 
 ## Active work, in order
 
