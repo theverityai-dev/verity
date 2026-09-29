@@ -46,7 +46,10 @@ function isChromium(): boolean {
   const brands =
     (navigator as Navigator & { userAgentData?: { brands: { brand: string }[] } })
       .userAgentData?.brands ?? [];
-  return brands.some((b) => /Chromium/.test(b.brand));
+  if (brands.length) return brands.some((b) => /Chromium/.test(b.brand));
+  // `userAgentData` is absent off-HTTPS and where a browser strips it; every
+  // Chromium-based UA still carries `Chrome/`, and Safari/Firefox never do.
+  return /\bChrome\//.test(navigator.userAgent);
 }
 
 /** Red = x shift, green = y shift, 128 neutral. Peaks at the edge, convex falloff. */
