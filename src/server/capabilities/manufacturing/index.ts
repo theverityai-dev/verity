@@ -18,6 +18,7 @@ import {
   OPEN_OPERATION_STATES,
 } from "./shared";
 import { cancelOpenOperations, registerManufacturingStages } from "./stages";
+import { registerManufacturingPassport } from "./passport";
 import { registerManufacturingBom } from "./bom";
 
 /**
@@ -70,6 +71,7 @@ export {
   ENTITY_MANUFACTURING_BOM,
   ENTITY_MANUFACTURING_ROUTE,
   ENTITY_MANUFACTURING_OPERATION,
+  ENTITY_MANUFACTURING_PASSPORT,
 } from "./shared";
 
 const lineInput = z.object({
@@ -502,6 +504,7 @@ export function registerManufacturingCapability(): void {
   });
   registerManufacturingBom();
   registerManufacturingStages();
+  registerManufacturingPassport();
   registerCommand(createManufacturingOrder);
   registerCommand(startManufacturingOrder);
   registerCommand(completeManufacturingOrder);

@@ -163,6 +163,7 @@ model Tenant {
   manufacturingRouteStages ManufacturingRouteStage[]
   manufacturingOperations ManufacturingOperation[]
   manufacturingCheckpointResults ManufacturingCheckpointResult[]
+  manufacturingPassports ManufacturingPassport[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -4140,6 +4141,7 @@ model ManufacturingOrder {
   bomId        String?  @map("bom_id") @db.Uuid
 
   operations ManufacturingOperation[]
+  passports  ManufacturingPassport[]
   bom        ManufacturingBom?        @relation(fields: [bomId], references: [id], onDelete: Restrict)
   tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   location   Location                 @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
@@ -4296,6 +4298,32 @@ model ManufacturingOperation {
   @@unique([orderId, sequence])
   @@index([tenantId, state, stageKey])
   @@map("manufacturing_operation")
+}
+
+/// A published, revocable verification passport for one COMPLETED order (ADR-030).
+///
+/// Public by deliberate act, never by default. The public page reads ONLY this
+/// table's frozen `snapshot`, through one SECURITY DEFINER function keyed by the
+/// token hash; it never reads live order or QC data, so a later change cannot
+/// silently alter what a printed code says. A rework or recall is a revocation
+/// plus a new issue. The token is shown once at issue and only its hash is kept.
+model ManufacturingPassport {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  orderId     String    @map("order_id") @db.Uuid
+  tokenHash   String    @unique @map("token_hash")
+  /// The minimal public projection (tenant name, product, reference, passed checks).
+  snapshot    Json
+  issuedById  String?   @map("issued_by_id") @db.Uuid
+  issuedAt    DateTime  @default(now()) @map("issued_at")
+  revokedAt   DateTime? @map("revoked_at")
+  revokedById String?   @map("revoked_by_id") @db.Uuid
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  ManufacturingOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, orderId])
+  @@map("manufacturing_passport")
 }
 
 /// One QC finding for one checkpoint of one operation. APPEND-ONLY (a database

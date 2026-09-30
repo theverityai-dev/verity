@@ -416,11 +416,15 @@ browser with data (same reason as above).
 separate, shared piece of work (it would also serve Outreach and assets).
 
 **Next slices, in Carxen's priority order (designed, NOT built):**
-1. **Public verification passport.** Designed in **ADR-030 (`PROPOSED`, awaiting
-   your review)**: a published, revocable, minimal, frozen projection of one
-   completed order behind an unguessable token, read through one SECURITY DEFINER
-   function (ADR-029's pattern), no remarks/photos/staff, rate-limited, noindex.
-   Unauthenticated, so no code until you approve it.
+1. ~~**Public verification passport.**~~ **BUILT 2026-09-30 (ADR-030 accepted).** A
+   published, revocable, minimal, FROZEN projection of one completed and fully
+   inspected order, behind an unguessable token (32 random bytes, only its hash
+   stored, shown once as a link and QR), read by the anonymous page through one
+   SECURITY DEFINER function and nothing else; no remarks/photos/staff; one active
+   passport per order; a recall is revoke + new issue; rate-limited; `noindex`.
+   Publish/revoke are audited commands with their own permission. 7 tests against
+   the real database, including one that fetches the real page as an anonymous
+   visitor. Not viewed visually with a live passport.
 2. **Dispatch** with packaging-proof photo, transporter, vehicle no., tracking id,
    in-transit/delivered pipeline (reuse `evidence` for the photo).
 3. **Order consolidation into a batch** and **BOM reservation on release** (a

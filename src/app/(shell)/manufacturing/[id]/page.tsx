@@ -6,6 +6,7 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import {
   ENTITY_MANUFACTURING_OPERATION,
   ENTITY_MANUFACTURING_ORDER,
+  ENTITY_MANUFACTURING_PASSPORT,
   MANUFACTURING_CAPABILITY,
 } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
@@ -15,6 +16,8 @@ import { PageHeader, Panel, PermissionDenied, Stat, StatRow, StateBadge } from "
 import { AuditTrail } from "@/components/shell/AuditTrail";
 import { executeQuery } from "@/server/platform/query";
 import { listRoutes, orderOperations } from "@/server/capabilities/manufacturing/stages";
+import { orderPassport } from "@/server/capabilities/manufacturing/passport";
+import { PassportPanel } from "./PassportPanel";
 import { OrderActions } from "./OrderActions";
 import { StagesPanel, type StageRow } from "./StagesPanel";
 
@@ -77,6 +80,13 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
     : [];
   const routes = canSeeStages && stages.length === 0 ? await executeQuery(actor, listRoutes, {}) : [];
 
+  // The passport is its own entity with its own grant: publishing is a disclosure
+  // decision, so the panel is shown only to someone who may read passports.
+  const canSeePassport = await withTenant(actor.tenantId, (tx) =>
+    hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_PASSPORT),
+  );
+  const passport = canSeePassport ? await executeQuery(actor, orderPassport, { orderId: order.id }) : null;
+
   return (
     <>
       <PageHeader
@@ -109,6 +119,18 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
               orderState={order.state}
               stages={stages}
               routes={routes.map((r) => ({ id: r.id, code: r.code, name: r.name, stages: r.stages.map((s) => s.label).join(" → ") }))}
+            />
+          </Panel>
+        </div>
+      )}
+
+      {passport && (order.state === "completed" || passport.active) && (
+        <div className="mb-6">
+          <Panel title="Verification passport" flush>
+            <PassportPanel
+              orderId={order.id}
+              orderState={order.state}
+              active={passport.active ? { id: passport.active.id, issuedAt: passport.active.issuedAt.toISOString(), reference: passport.active.reference } : null}
             />
           </Panel>
         </div>

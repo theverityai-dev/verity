@@ -59,7 +59,7 @@ function assertUniqueStages(stages: Array<{ stageKey: string; checkpoints?: Arra
 }
 
 /** The snapshot column is JSON; anything that is not a valid checklist reads as empty rather than throwing. */
-function readCheckpoints(json: unknown): Checkpoint[] {
+export function readCheckpoints(json: unknown): Checkpoint[] {
   const parsed = z.array(checkpointSchema).safeParse(json);
   return parsed.success ? parsed.data : [];
 }
@@ -67,7 +67,7 @@ function readCheckpoints(json: unknown): Checkpoint[] {
 type Finding = { checkpointKey: string; result: string; remarks: string | null; evidenceId: string | null; recordedAt: Date };
 
 /** The current verdict per checkpoint: the latest finding wins; the earlier ones stay as history. */
-function latestFindings(findings: Finding[]): Map<string, Finding> {
+export function latestFindings(findings: Finding[]): Map<string, Finding> {
   const latest = new Map<string, Finding>();
   for (const f of [...findings].sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime())) latest.set(f.checkpointKey, f);
   return latest;
