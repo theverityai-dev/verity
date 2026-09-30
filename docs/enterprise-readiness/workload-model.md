@@ -2,6 +2,12 @@
 
 Authority: `taskplans/123_enterprise_readiness_evidence_program.md`, Phase 0.
 
+> **DEFERRED 2026-10-01 — prospect-specific enterprise benchmark, not Verity's
+> primary workload.** Verity's product target is multi-tenant software for
+> roughly 10 to 100 person businesses; the primary Task 123 workload is
+> `msme-reference-workload.md`. Run this 58.4M-visit model only if a real
+> enterprise opportunity requires it. Kept, not deleted.
+
 **Status: PROVISIONAL / NOT CUSTOMER-VERIFIED (2026-10-01).** These are working
 assumptions supplied by the product owner for engineering validation only. They
 are not BRPL-confirmed requirements, customer commitments or capacity claims.

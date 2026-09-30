@@ -37,10 +37,36 @@ Today the honest answer is "unknown." The goal is to replace "unknown" with a
 bounded, measured, reproducible claim per deployment shape, not a blanket
 "enterprise-ready."
 
+## Re-scope 2026-10-01 — Verity's own market first
+
+Verity is standardized multi-tenant software for businesses of roughly 10 to 100
+people. Larger organisations are served by purpose-built solutions on the same
+core, which is a separate track. Task 123 therefore proves the **platform
+foundation for Verity's own market first**, and the BRPL-scale workload is
+demoted:
+
+- **Primary workload:** `docs/enterprise-readiness/msme-reference-workload.md`
+  (about 10 tenants, 10 to 100 users each, uneven sizes; isolation and
+  noisy-neighbour results recorded at load). Per-tenant data volumes are still
+  open inputs.
+- **Deferred:** `docs/enterprise-readiness/workload-model.md` (58.4M visits,
+  750 users) is a prospect-specific enterprise benchmark, run only if a real
+  opportunity needs it. Not deleted.
+- **Preserved, unchanged:** RLS and isolation testing, DB/index audit, load
+  harness, backup/restore drills, Docker/on-prem foundation, reliability and
+  monitoring. No existing work is undone.
+- **Not started and not authorized by this re-scope:** any BRPL-specific
+  module, optimization for 750 to 1,000 concurrent users, air-gapped or
+  enterprise-SLA machinery (ADR-031 already limits promised modes to A).
+- **Seeder follow-up:** `seed:scale` currently generates field-visit history
+  split evenly across tenants. The MSME workload needs uneven tenant sizes and
+  MSME-shaped data; that generalisation is the next Phase 1 change and waits on
+  the open inputs above.
+
 ## Goal / exit condition
 
 One document, `docs/enterprise-readiness/claim.md`, stating for one named
-reference deployment: hardware spec, dataset size, concurrent users,
+reference deployment (initially the MSME multi-tenant workload above): hardware spec, dataset size, concurrent users,
 sustained requests/sec, p50/p95/p99, error rate, restore time, and clean-server
 install time, each traceable to a committed, re-runnable script and a recorded
 run. Milestone is **PLATFORM VALIDATED AT STATED LOAD**, never "enterprise

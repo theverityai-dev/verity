@@ -100,10 +100,13 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
   waits on Relay's contract. Both new migrations are applied to the shared DB.
 - **Task 123 — Enterprise readiness evidence program, started 2026-10-01.**
   Phase 1 seeder (`prisma/seed-scale.ts`, `npm run seed:scale`) and Phase 3 k6
-  harness (`scripts/load/`) scaffolded; no defaults, nothing run, no claim. Next:
-  Phase 0 real prospect workload numbers (yours), then run the seeder on a
-  disposable DB, index audit, load run, deployment-modes ADR before Phase 5. See
-  `taskplans/123_enterprise_readiness_evidence_program.md`.
+  harness (`scripts/load/`) scaffolded; no defaults, nothing run, no claim.
+  **Re-scoped 2026-10-01 to Verity's own market** (multi-tenant, ~10 tenants of
+  10 to 100 users; `docs/enterprise-readiness/msme-reference-workload.md`); the
+  BRPL 58.4M-visit model is deferred. ADR-031 (Mode A first) PROPOSED, awaiting
+  your acceptance. Next: fix the MSME per-tenant data volumes (yours), generalise
+  the seeder to uneven tenants, run on a disposable DB, index audit, load and
+  noisy-neighbour run. See `taskplans/123_enterprise_readiness_evidence_program.md`.
 - **Still blocked on you:** review ADR-029; apply the Task 119 migration and
   supply a key; Task 114 P2 scoping; a named manufacturing design partner.
 
