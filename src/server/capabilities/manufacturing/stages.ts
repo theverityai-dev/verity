@@ -26,12 +26,65 @@ import { ENTITY_MANUFACTURING_OPERATION, ENTITY_MANUFACTURING_ROUTE, OPEN_OPERAT
  */
 
 const stageKeySchema = z.string().regex(/^[a-z][a-z0-9_]{0,39}$/, "lowercase letters, digits and underscores");
-const stageInput = z.object({ stageKey: stageKeySchema, label: z.string().trim().min(1).max(80) });
 
-function assertUniqueStages(stages: Array<{ stageKey: string }>): void {
+/**
+ * A QC checkpoint on a stage. `requireEvidence` means a passing OR failing
+ * finding must carry a captured photo/artefact; a failing finding always needs
+ * remarks, and `requireRemarks` asks for them on a pass too.
+ */
+const checkpointSchema = z.object({
+  key: stageKeySchema,
+  label: z.string().trim().min(1).max(200),
+  requireEvidence: z.boolean().default(false),
+  requireRemarks: z.boolean().default(false),
+});
+export type Checkpoint = z.infer<typeof checkpointSchema>;
+
+const stageInput = z.object({
+  stageKey: stageKeySchema,
+  label: z.string().trim().min(1).max(80),
+  checkpoints: z.array(checkpointSchema).max(30).optional(),
+});
+
+function assertUniqueStages(stages: Array<{ stageKey: string; checkpoints?: Array<{ key: string }> }>): void {
   if (new Set(stages.map((s) => s.stageKey)).size !== stages.length) {
     throw new ValidationError("E_VALIDATION: a stage appears more than once");
   }
+  for (const s of stages) {
+    const keys = (s.checkpoints ?? []).map((c) => c.key);
+    if (new Set(keys).size !== keys.length) {
+      throw new ValidationError(`E_VALIDATION: ${s.stageKey} lists a checkpoint more than once`);
+    }
+  }
+}
+
+/** The snapshot column is JSON; anything that is not a valid checklist reads as empty rather than throwing. */
+function readCheckpoints(json: unknown): Checkpoint[] {
+  const parsed = z.array(checkpointSchema).safeParse(json);
+  return parsed.success ? parsed.data : [];
+}
+
+type Finding = { checkpointKey: string; result: string; remarks: string | null; evidenceId: string | null; recordedAt: Date };
+
+/** The current verdict per checkpoint: the latest finding wins; the earlier ones stay as history. */
+function latestFindings(findings: Finding[]): Map<string, Finding> {
+  const latest = new Map<string, Finding>();
+  for (const f of [...findings].sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime())) latest.set(f.checkpointKey, f);
+  return latest;
+}
+
+export type ChecklistSummary = { total: number; passed: number; failed: number };
+
+function summarize(checkpoints: Checkpoint[], findings: Finding[]): ChecklistSummary {
+  const latest = latestFindings(findings);
+  let passed = 0;
+  let failed = 0;
+  for (const c of checkpoints) {
+    const f = latest.get(c.key);
+    if (f?.result === "pass") passed++;
+    else if (f?.result === "fail") failed++;
+  }
+  return { total: checkpoints.length, passed, failed };
 }
 
 type Op = { id: string; orderId: string; state: string; note: string | null; sequence: number; label: string };
@@ -130,6 +183,7 @@ export const createRoute: CommandDefinition<
         sequence: i + 1,
         stageKey: s.stageKey,
         label: s.label,
+        checkpoints: (s.checkpoints ?? []) as never,
       })),
     });
     return { result: { id: route.id }, events: [{ name: "verity.manufacturing.route_created", entityId: route.id }] };
@@ -190,7 +244,7 @@ export const planOperations: CommandDefinition<
     if (input.stages) assertUniqueStages(input.stages);
   },
   handler: async (ctx, input) => {
-    let stages: Array<{ stageKey: string; label: string }>;
+    let stages: Array<{ stageKey: string; label: string; checkpoints: Checkpoint[] }>;
     if (input.routeId) {
       const route = await ctx.tx.manufacturingRoute.findUnique({
         where: { id: input.routeId },
@@ -198,10 +252,12 @@ export const planOperations: CommandDefinition<
       });
       if (!route) throw new ValidationError("E_VALIDATION: route not found in this tenant");
       if (!route.active) throw new ValidationError("E_VALIDATION: this route is archived");
-      stages = route.stages;
+      stages = route.stages.map((s) => ({ stageKey: s.stageKey, label: s.label, checkpoints: readCheckpoints(s.checkpoints) }));
     } else {
-      stages = input.stages!;
+      stages = input.stages!.map((s) => ({ stageKey: s.stageKey, label: s.label, checkpoints: s.checkpoints ?? [] }));
     }
+    // The checklist is copied, not referenced: later edits to a route never change
+    // what an order already carries.
     await ctx.tx.manufacturingOperation.createMany({
       data: stages.map((s, i) => ({
         tenantId: ctx.actor.tenantId,
@@ -209,6 +265,7 @@ export const planOperations: CommandDefinition<
         sequence: i + 1,
         stageKey: s.stageKey,
         label: s.label,
+        checkpoints: s.checkpoints as never,
       })),
     });
     return {
@@ -270,11 +327,100 @@ export const completeOperation: CommandDefinition<{ operationId: string }, { id:
   input: opInput,
   handler: async (ctx, input) => {
     const op = await ctx.tx.manufacturingOperation.findUniqueOrThrow({ where: { id: input.operationId } });
+
+    // A stage with a checklist is approved by passing it: every checkpoint's
+    // CURRENT verdict must be a pass. A failure is not overwritten by completing;
+    // it is answered by a passing re-inspection or by sending the order back.
+    const checkpoints = readCheckpoints(op.checkpoints);
+    if (checkpoints.length > 0) {
+      const findings = await ctx.tx.manufacturingCheckpointResult.findMany({ where: { operationId: op.id } });
+      const latest = latestFindings(findings);
+      const failed = checkpoints.filter((c) => latest.get(c.key)?.result === "fail");
+      if (failed.length > 0) {
+        throw new ValidationError(
+          `E_VALIDATION: ${failed.map((c) => c.label).join(", ")} failed inspection; record a passing re-inspection or send the order back`,
+        );
+      }
+      const missing = checkpoints.filter((c) => !latest.has(c.key));
+      if (missing.length > 0) {
+        throw new ValidationError(`E_VALIDATION: ${missing.length} checkpoint(s) not yet recorded: ${missing.map((c) => c.label).join(", ")}`);
+      }
+    }
+
     const event = await move(ctx, op, "completed", "verity.manufacturing.complete_operation", {
       completedAt: new Date(),
       completedById: ctx.actor.userId,
     });
     return { result: { id: op.id }, events: [event] };
+  },
+};
+
+/**
+ * Records one QC finding against one checkpoint of a stage that is in progress.
+ * Append-only: a re-inspection is a new row and the latest one is the verdict.
+ * A checkpoint that requires evidence cannot be recorded without a captured
+ * artefact, and that artefact must be evidence about THIS operation, so a photo
+ * of something else cannot be attached to make a stage pass.
+ */
+export const recordCheckpoint: CommandDefinition<
+  { operationId: string; checkpointKey: string; result: "pass" | "fail"; remarks?: string; evidenceId?: string },
+  { id: string }
+> = {
+  key: "verity.manufacturing.record_checkpoint",
+  entity: ENTITY_MANUFACTURING_OPERATION,
+  verb: "ActionExecute",
+  input: z.object({
+    operationId: z.string().uuid(),
+    checkpointKey: stageKeySchema,
+    result: z.enum(["pass", "fail"]),
+    remarks: z.string().trim().max(1000).optional(),
+    evidenceId: z.string().uuid().optional(),
+  }),
+  handler: async (ctx, input) => {
+    const op = await ctx.tx.manufacturingOperation.findUniqueOrThrow({ where: { id: input.operationId } });
+    if (op.state !== "in_progress") {
+      throw new ValidationError("E_VALIDATION: findings are recorded while the stage is in progress");
+    }
+    const checkpoint = readCheckpoints(op.checkpoints).find((c) => c.key === input.checkpointKey);
+    if (!checkpoint) throw new ValidationError("E_VALIDATION: that checkpoint is not part of this stage's checklist");
+
+    if (checkpoint.requireEvidence && !input.evidenceId) {
+      throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs a photo or other evidence`);
+    }
+    if ((input.result === "fail" || checkpoint.requireRemarks) && (input.remarks ?? "").length < 3) {
+      throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs remarks${input.result === "fail" ? " when it fails" : ""}`);
+    }
+    if (input.evidenceId) {
+      const evidence = await ctx.tx.evidence.findUnique({ where: { id: input.evidenceId } });
+      if (!evidence || evidence.entityKey !== ENTITY_MANUFACTURING_OPERATION || evidence.entityId !== op.id) {
+        throw new ValidationError("E_VALIDATION: that evidence was not captured for this operation");
+      }
+    }
+
+    const before = latestFindings(
+      await ctx.tx.manufacturingCheckpointResult.findMany({ where: { operationId: op.id, checkpointKey: input.checkpointKey } }),
+    ).get(input.checkpointKey);
+    const row = await ctx.tx.manufacturingCheckpointResult.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        operationId: op.id,
+        checkpointKey: input.checkpointKey,
+        result: input.result,
+        remarks: input.remarks || null,
+        evidenceId: input.evidenceId ?? null,
+        recordedById: ctx.actor.userId,
+      },
+    });
+    await recordActivity(ctx, {
+      entityKey: ENTITY_MANUFACTURING_OPERATION,
+      entityId: op.id,
+      commandKey: "verity.manufacturing.record_checkpoint",
+      changes: diffFields({ [`checkpoint:${checkpoint.label}`]: before?.result ?? "" }, { [`checkpoint:${checkpoint.label}`]: input.result }),
+    });
+    return {
+      result: { id: row.id },
+      events: [{ name: "verity.manufacturing.checkpoint_recorded", entityId: op.id, payload: { checkpoint: input.checkpointKey, result: input.result } }],
+    };
   },
 };
 
@@ -331,6 +477,8 @@ export const sendBack: CommandDefinition<
         sequence: base + 1 + i,
         stageKey: key,
         label: latest.get(key)!.label,
+        // A redone stage is inspected afresh: same checklist, no findings carried over.
+        checkpoints: latest.get(key)!.checkpoints as never,
         reworkOfId: i === 0 ? latest.get(input.toStageKey)!.id : null,
       })),
     });
@@ -356,6 +504,8 @@ export type OperationRow = {
   completedAt: Date | null;
   /** Pending, its order is running, and everything before it is done or cancelled. */
   actionable: boolean;
+  /** QC progress for this stage's checklist (all zeros when it has none). */
+  checklist: ChecklistSummary;
 };
 
 export const listRoutes: QueryDefinition<
@@ -392,7 +542,9 @@ export const orderOperations: QueryDefinition<{ orderId: string }, OperationRow[
       ctx.tx.stateDefinition.findMany({ where: { entityKey: ENTITY_MANUFACTURING_OPERATION } }),
     ]);
     const category = new Map(states.map((s) => [s.key, s.category]));
+    const findings = await ctx.tx.manufacturingCheckpointResult.findMany({ where: { operationId: { in: ops.map((o) => o.id) } } });
     return ops.map((o, i) => ({
+      checklist: summarize(readCheckpoints(o.checkpoints), findings.filter((f) => f.operationId === o.id)),
       id: o.id,
       sequence: o.sequence,
       stageKey: o.stageKey,
@@ -433,6 +585,8 @@ export const operationQueue: QueryDefinition<{ stageKey?: string }, QueueRow[]> 
     });
     const states = await ctx.tx.stateDefinition.findMany({ where: { entityKey: ENTITY_MANUFACTURING_OPERATION } });
     const category = new Map(states.map((s) => [s.key, s.category]));
+    const openIds = orders.flatMap((o) => o.operations.filter((x) => OPEN_OPERATION_STATES.includes(x.state)).map((x) => x.id));
+    const findings = await ctx.tx.manufacturingCheckpointResult.findMany({ where: { operationId: { in: openIds } } });
 
     const rows: QueueRow[] = [];
     for (const order of orders) {
@@ -454,6 +608,7 @@ export const operationQueue: QueryDefinition<{ stageKey?: string }, QueueRow[]> 
           reworkOfId: o.reworkOfId,
           startedAt: o.startedAt,
           completedAt: o.completedAt,
+          checklist: summarize(readCheckpoints(o.checkpoints), findings.filter((f) => f.operationId === o.id)),
           actionable: o.state === "pending" && !order.operations.slice(0, i).some((p) => OPEN_OPERATION_STATES.includes(p.state)),
           orderId: order.id,
           orderReference: order.reference ?? `MO ${order.id.slice(0, 8)}`,
@@ -467,7 +622,35 @@ export const operationQueue: QueryDefinition<{ stageKey?: string }, QueueRow[]> 
   },
 };
 
+export type ChecklistItem = Checkpoint & {
+  latest: { result: string; remarks: string | null; evidenceId: string | null; recordedAt: Date } | null;
+  /** Findings recorded for this checkpoint, including the superseded ones. */
+  attempts: number;
+};
+
+/** One stage's checklist with each checkpoint's current verdict and how many times it was inspected. */
+export const operationChecklist: QueryDefinition<{ operationId: string }, ChecklistItem[]> = {
+  key: "verity.manufacturing.operation_checklist",
+  entity: ENTITY_MANUFACTURING_OPERATION,
+  input: z.object({ operationId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const op = await ctx.tx.manufacturingOperation.findUniqueOrThrow({ where: { id: input.operationId } });
+    const findings = await ctx.tx.manufacturingCheckpointResult.findMany({ where: { operationId: op.id } });
+    const latest = latestFindings(findings);
+    return readCheckpoints(op.checkpoints).map((c) => {
+      const f = latest.get(c.key);
+      return {
+        ...c,
+        latest: f ? { result: f.result, remarks: f.remarks, evidenceId: f.evidenceId, recordedAt: f.recordedAt } : null,
+        attempts: findings.filter((x) => x.checkpointKey === c.key).length,
+      };
+    });
+  },
+};
+
 export function registerManufacturingStages(): void {
+  registerCommand(recordCheckpoint);
+  registerQuery(operationChecklist);
   registerCommand(createRoute);
   registerCommand(setRouteActive);
   registerCommand(planOperations);

@@ -1,7 +1,7 @@
 "use client";
 
 import { DataTable } from "@/components/ui/DataTable";
-import { OperationActions } from "../OperationActions";
+import { OperationActions, type ChecklistProgress } from "../OperationActions";
 
 export type FloorRow = {
   id: string;
@@ -16,6 +16,7 @@ export type FloorRow = {
   category: string;
   actionable: boolean;
   sendBackTo: Array<{ stageKey: string; label: string }>;
+  checklist: ChecklistProgress;
 };
 
 /**
@@ -42,6 +43,7 @@ export function FloorQueue({ rows }: { rows: FloorRow[] }) {
           state={String(row.rawState)}
           actionable={Boolean(row.actionable)}
           sendBackTo={row.sendBackTo as FloorRow["sendBackTo"]}
+          checklist={row.checklist as ChecklistProgress}
           revalidate="/manufacturing/floor"
         />
       )}

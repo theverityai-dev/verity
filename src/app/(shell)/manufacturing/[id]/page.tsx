@@ -72,6 +72,7 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
         startedAt: o.startedAt?.toISOString() ?? null,
         completedAt: o.completedAt?.toISOString() ?? null,
         actionable: o.actionable,
+        checklist: o.checklist,
       }))
     : [];
   const routes = canSeeStages && stages.length === 0 ? await executeQuery(actor, listRoutes, {}) : [];

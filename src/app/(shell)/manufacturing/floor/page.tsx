@@ -50,6 +50,7 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
     category: r.category,
     actionable: r.actionable,
     sendBackTo: r.sendBackTo,
+    checklist: r.checklist,
   }));
 
   const chip = (active: boolean) =>

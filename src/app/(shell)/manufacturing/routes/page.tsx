@@ -24,7 +24,12 @@ async function RoutesPage() {
       id: r.id,
       code: r.code,
       name: r.name,
-      chain: r.stages.map((s) => s.label).join("  →  "),
+      chain: r.stages
+        .map((s) => {
+          const checks = Array.isArray(s.checkpoints) ? s.checkpoints.length : 0;
+          return checks > 0 ? `${s.label} (${checks} checks)` : s.label;
+        })
+        .join("  →  "),
       stages: r.stages.length,
       state: r.active ? "active" : "archived",
       category: r.active ? "Active" : "Cancelled",

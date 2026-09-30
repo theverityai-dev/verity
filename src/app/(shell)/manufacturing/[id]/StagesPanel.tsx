@@ -7,7 +7,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Button, EmptyState, ErrorState, Field, Select, Textarea } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
-import { OperationActions } from "../OperationActions";
+import { OperationActions, type ChecklistProgress } from "../OperationActions";
 import { stageKeyFor } from "../routes/CreateRouteForm";
 
 export type StageRow = {
@@ -22,6 +22,7 @@ export type StageRow = {
   startedAt: string | null;
   completedAt: string | null;
   actionable: boolean;
+  checklist: ChecklistProgress;
 };
 
 type RouteOption = { id: string; code: string; name: string; stages: string };
@@ -116,6 +117,7 @@ export function StagesPanel({
     started: stamp(s.startedAt),
     finished: stamp(s.completedAt),
     actionable: s.actionable,
+    checklist: s.checklist,
     sendBackTo: stageOrder.slice(0, stageOrder.findIndex((x) => x.stageKey === s.stageKey) + 1),
   }));
 
@@ -138,6 +140,7 @@ export function StagesPanel({
           state={String(row.rawState)}
           actionable={Boolean(row.actionable)}
           sendBackTo={row.sendBackTo as Array<{ stageKey: string; label: string }>}
+          checklist={row.checklist as ChecklistProgress}
           revalidate="/manufacturing"
         />
       )}

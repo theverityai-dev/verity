@@ -162,6 +162,7 @@ model Tenant {
   manufacturingRoutes     ManufacturingRoute[]
   manufacturingRouteStages ManufacturingRouteStage[]
   manufacturingOperations ManufacturingOperation[]
+  manufacturingCheckpointResults ManufacturingCheckpointResult[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -1684,6 +1685,7 @@ model Evidence {
 
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   file   StoredFile? @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  checkpointResults ManufacturingCheckpointResult[]
 
   @@index([tenantId, entityKey, entityId])
   @@index([tenantId, capturedAt])
@@ -4244,6 +4246,10 @@ model ManufacturingRouteStage {
   /// Stable machine key (`cutting`), unique within the route. The label is presentation.
   stageKey String @map("stage_key")
   label    String
+  /// The stage's QC checklist template: [{key, label, requireEvidence, requireRemarks}].
+  /// Copied onto each operation when an order is planned, so editing a route later
+  /// never changes the checklist an order already carries.
+  checkpoints Json @default("[]")
 
   tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   route  ManufacturingRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
@@ -4270,6 +4276,8 @@ model ManufacturingOperation {
   state         String    @default("pending")
   /// The most recent reason: why it is on hold, or why it was sent back.
   note          String?
+  /// Snapshot of the stage's checklist at planning time (see the route stage).
+  checkpoints   Json      @default("[]")
   reworkOfId    String?   @map("rework_of_id") @db.Uuid
   startedAt     DateTime? @map("started_at")
   startedById   String?   @map("started_by_id") @db.Uuid
@@ -4283,10 +4291,37 @@ model ManufacturingOperation {
   order    ManufacturingOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   reworkOf ManufacturingOperation? @relation("OperationRework", fields: [reworkOfId], references: [id], onDelete: Restrict)
   reworks  ManufacturingOperation[] @relation("OperationRework")
+  results  ManufacturingCheckpointResult[]
 
   @@unique([orderId, sequence])
   @@index([tenantId, state, stageKey])
   @@map("manufacturing_operation")
+}
+
+/// One QC finding for one checkpoint of one operation. APPEND-ONLY (a database
+/// trigger refuses UPDATE, and DELETE for the application role): a failed check
+/// is a fact, and a later passing re-inspection is a NEW row. The latest row per
+/// checkpoint is the current verdict; the earlier ones are the history that shows
+/// an item was inspected, failed and fixed. `evidenceId` points at a captured
+/// `Evidence` row, which is itself immutable.
+model ManufacturingCheckpointResult {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  operationId   String   @map("operation_id") @db.Uuid
+  checkpointKey String   @map("checkpoint_key")
+  /// pass | fail
+  result        String
+  remarks       String?
+  evidenceId    String?  @map("evidence_id") @db.Uuid
+  recordedById  String?  @map("recorded_by_id") @db.Uuid
+  recordedAt    DateTime @default(now()) @map("recorded_at")
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  operation ManufacturingOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  evidence  Evidence?              @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@index([operationId, checkpointKey, recordedAt])
+  @@map("manufacturing_checkpoint_result")
 }
 
 // ===========================================================================

@@ -6,8 +6,10 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Input, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { ChecklistPanel } from "./ChecklistPanel";
 
 type Stage = { stageKey: string; label: string };
+export type ChecklistProgress = { total: number; passed: number; failed: number };
 
 /**
  * What an operator can do to one stage, driven by its state. The command
@@ -21,16 +23,21 @@ export function OperationActions({
   state,
   actionable,
   sendBackTo,
+  checklist,
   revalidate,
 }: {
   operationId: string;
   state: string;
   actionable: boolean;
   sendBackTo: Stage[];
+  checklist: ChecklistProgress;
   revalidate: string;
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState<null | "hold" | "back">(null);
+  const [mode, setMode] = useState<null | "hold" | "back" | "checklist">(null);
+  // The server refuses to complete a stage until every checkpoint passes; this
+  // only avoids offering a button that would be refused.
+  const cleared = checklist.total === 0 || checklist.passed === checklist.total;
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -61,7 +68,15 @@ export function OperationActions({
         )}
         {state === "in_progress" && (
           <>
-            <CommandButton commands="verity.manufacturing.complete_operation" size="sm" variant="primary" disabled={pending}
+            {checklist.total > 0 && (
+              <CommandButton commands="verity.manufacturing.record_checkpoint" size="sm" variant="secondary" disabled={pending}
+                onClick={() => setMode(mode === "checklist" ? null : "checklist")}>
+                Checklist {checklist.passed}/{checklist.total}
+                {checklist.failed > 0 ? ` · ${checklist.failed} failed` : ""}
+              </CommandButton>
+            )}
+            <CommandButton commands="verity.manufacturing.complete_operation" size="sm" variant="primary" disabled={pending || !cleared}
+              title={cleared ? undefined : "Every checkpoint must pass first"}
               onClick={() => run("verity.manufacturing.complete_operation", {})}>
               Complete
             </CommandButton>
@@ -84,6 +99,8 @@ export function OperationActions({
           </CommandButton>
         )}
       </div>
+
+      {mode === "checklist" && <ChecklistPanel operationId={operationId} revalidate={revalidate} />}
 
       {mode === "hold" && (
         <form

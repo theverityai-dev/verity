@@ -386,13 +386,41 @@ route archive, tenant isolation). With the 13 earlier manufacturing tests: 24/24
 with data (no tenant here has manufacturing active; not activating it on a real
 client's tenant).
 
+**BUILT + PROVEN 2026-09-30 (later): digital QC checklist + evidence.**
+Checkpoints are data on a route stage (`label`, `requireEvidence`,
+`requireRemarks`) and are SNAPSHOTTED onto each operation when an order is
+planned, so editing a route never changes what an order already carries.
+Findings are an append-only ledger (`ManufacturingCheckpointResult`, database
+trigger refuses UPDATE and the app's DELETE, migration
+`20260930040000_manufacturing_qc`); a fail is followed by a new pass, never
+overwritten, and the latest finding per checkpoint is the verdict. Command
+`record_checkpoint` (stage must be in progress; a fail always needs remarks; a
+checkpoint that requires evidence needs a captured artefact, and that evidence
+must be about THIS operation, so a photo of another order cannot make one pass).
+`complete_operation` is now the QC approval: it refuses while any checkpoint is
+unrecorded or currently failing. A send-back re-creates the stage with a clean
+checklist and leaves the failed findings on the original. Reuses `evidence`
+(`verity.evidence.capture`, immutable) rather than a parallel table. Queries:
+`operation_checklist`; checklist progress appears on the floor queue and order
+stages. UI: a Checklist panel per stage (pass/fail, remarks, photo link), route
+form with a checklist per stage (`[photo]` / `[note]` tags), Complete disabled
+until every checkpoint passes (the server enforces it regardless).
+Tests: `capability-manufacturing-qc.test.ts`, 8 tests (snapshot independence,
+requirements, foreign-evidence refusal, in-progress only, approval gating with
+re-inspection history, append-only enforcement, send-back with clean checklist,
+floor progress) all pass; the 11 stage tests still pass. Not verified in a
+browser with data (same reason as above).
+**Photo capture is by link or stored reference** (`verity.evidence.capture` with a
+`uri`), not a camera/file upload: the platform's two-phase upload exists
+(`files.ts`) but no reusable browser upload component does. Building one is a
+separate, shared piece of work (it would also serve Outreach and assets).
+
 **Next slices, in Carxen's priority order (designed, NOT built):**
-1. **QC checklist + evidence + public passport.** Reuse `evidence` (photo/video
-   against an operation), checklist checkpoints as data on a route stage
-   (require-image / require-remarks), QC approval as the completing action of the
-   QC stage. The public `/verify/[id]` page is an UNAUTHENTICATED surface: it needs
-   its own ADR (unguessable per-order token, SECURITY DEFINER lookup like ADR-029,
-   minimal fields, no tenant data beyond the passport) before any code.
+1. **Public verification passport.** Designed in **ADR-030 (`PROPOSED`, awaiting
+   your review)**: a published, revocable, minimal, frozen projection of one
+   completed order behind an unguessable token, read through one SECURITY DEFINER
+   function (ADR-029's pattern), no remarks/photos/staff, rate-limited, noindex.
+   Unauthenticated, so no code until you approve it.
 2. **Dispatch** with packaging-proof photo, transporter, vehicle no., tracking id,
    in-transit/delivered pipeline (reuse `evidence` for the photo).
 3. **Order consolidation into a batch** and **BOM reservation on release** (a
