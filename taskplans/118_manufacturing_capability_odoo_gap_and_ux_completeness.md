@@ -333,3 +333,72 @@ lean-V1 posture is to wait): lot/serial, work centers, cost roll-up, QC evidence
 wiring, putaway, backorders/partial completion, BOM line editing after creation
 (a changed recipe takes a new code), `recipe` generalization. Ask Carxen which,
 if any, they need first.
+
+## 10 — 2026-09-30 What Carxen actually bought (from `D:\Code\veda`), and stage-wise production
+
+**Sources read:** `Carxen_VEDA_Combined_Quotation.md` (the signed scope, 2026-09-10),
+`docs/carxen-gap-analysis-and-plan.md` (VEDA's own gap analysis vs Carxen's PRD),
+`VEDA_Launch_Readiness_Gap_Plan.md` (what VEDA verified as solid vs missing).
+
+**Carxen's scope, Part A (8 modules):** customers (GST/PAN, phone-first dedup),
+master data (vehicle brand/model/generation, designs, fabrics, colours),
+order + **batch** management (consolidate several orders into one production
+batch, stock-match before producing, draft orders as the quote stage),
+**stage-wise manufacturing floor** (CAD, Cutting, Stitching, Packing; operator
+queue per department; start/hold/complete; custom per-order routing), **digital
+QC** (checklist templates by section, per-checkpoint photo/video, approval, QR
+public verification passport), inventory (bin ledger, **BOM reservation on
+release**, store-manager scoping), procurement (PO, vendor mapping, GRN,
+returns), logistics/dispatch (transporter, vehicle, tracking, packaging photo).
+**Out of scope by their own decision:** CRM pipeline, dealer/B2C portals,
+invoicing/accounting engine, multi-channel notifications. Their product thesis is
+"Factory OS, not ERP": every module must feed production.
+
+**What that says about priority.** The centre of gravity is the production
+floor, not manufacturing-order bookkeeping. VEDA calls stage routing with
+start/hold/complete/rework, a per-order timeline and QC evidence its PRD
+"core acceptance criteria" (Phase 1 of its own plan). Verity's manufacturing had
+only draft -> in progress -> completed, so this was the largest real gap.
+
+**BUILT + PROVEN (real database, own tenant, cleaned up): stage-wise production.**
+`ManufacturingRoute`/`RouteStage` (a route is tenant DATA, never a department
+enum: CLAUDE.md forbidden pattern 2), `ManufacturingOperation` (one per stage per
+order; state machine pending -> in_progress <-> on_hold -> completed | cancelled
+with ADR-009 categories Pending/Active/Blocked/Completed/Cancelled, INV-002
+read-only once completed). Migration `20260930030000_manufacturing_stages`.
+Commands `create_route`, `set_route_active`, `plan_operations` (from a route OR
+the order's own stage list, which is how one order skips/reorders a stage),
+`start_operation` (only when the ORDER is running and every earlier stage is done
+or cancelled), `hold_operation` (reason required), `resume_operation`,
+`complete_operation`, `send_back` (a QC reject: cancels open work and APPENDS the
+route again from the redone stage, first one pointing at what it redoes via
+`reworkOfId`; history is never edited). The order lifecycle stays honest:
+`complete_order` refuses while any stage is open, `cancel_order` cancels open
+stages. Queries `list_routes`, `order_operations`, `operation_queue` (open work of
+running orders only, with per-row send-back targets). UI: `/manufacturing/floor`
+(operator queue, stage chips, ready/on-hold/rework counts), `/manufacturing/routes`,
+and a Stages panel on the order page (plan, work, send back).
+Tests: `capability-manufacturing-stages.test.ts`, 11 tests (route validation,
+plan once, sequencing, hold/resume with reason, completion gating, QC send-back
+with history intact, per-order skipped stage, floor queue, order cancel, INV-002,
+route archive, tenant isolation). With the 13 earlier manufacturing tests: 24/24.
+`tsc` and `eslint` clean; routes compile and gate correctly. Not clicked through
+with data (no tenant here has manufacturing active; not activating it on a real
+client's tenant).
+
+**Next slices, in Carxen's priority order (designed, NOT built):**
+1. **QC checklist + evidence + public passport.** Reuse `evidence` (photo/video
+   against an operation), checklist checkpoints as data on a route stage
+   (require-image / require-remarks), QC approval as the completing action of the
+   QC stage. The public `/verify/[id]` page is an UNAUTHENTICATED surface: it needs
+   its own ADR (unguessable per-order token, SECURITY DEFINER lookup like ADR-029,
+   minimal fields, no tenant data beyond the passport) before any code.
+2. **Dispatch** with packaging-proof photo, transporter, vehicle no., tracking id,
+   in-transit/delivered pipeline (reuse `evidence` for the photo).
+3. **Order consolidation into a batch** and **BOM reservation on release** (a
+   reservation ledger distinct from consumption; today an order consumes at start).
+4. **Lot/batch tracking** (VEDA has `isBatchTracked` + a free-text batch number and
+   no flow; Carxen's own gap analysis lists it as missing there too).
+
+**Deliberately not Carxen's scope:** CRM, dealer/B2C portals, invoicing,
+notifications; do not build them under this task.

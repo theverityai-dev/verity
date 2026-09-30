@@ -3,6 +3,11 @@ import type { TenantScopedClient } from "@/server/platform/tenancy";
 
 export const ENTITY_MANUFACTURING_ORDER = "verity.manufacturing.order";
 export const ENTITY_MANUFACTURING_BOM = "verity.manufacturing.bom";
+export const ENTITY_MANUFACTURING_ROUTE = "verity.manufacturing.route";
+export const ENTITY_MANUFACTURING_OPERATION = "verity.manufacturing.operation";
+
+/** States in which an operation still has work to do (or is waiting on someone). */
+export const OPEN_OPERATION_STATES = ["pending", "in_progress", "on_hold"];
 
 /** Postgres INTEGER ceiling, with headroom. A scaled line above this would fail at write, not at validation. */
 export const MAX_QTY = 2_000_000_000;

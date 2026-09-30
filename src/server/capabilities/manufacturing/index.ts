@@ -8,7 +8,16 @@ import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { registerContribution } from "@/server/platform/contribution";
 import { assertMutable, transition } from "@/server/platform/state";
 import { diffFields, recordActivity } from "@/server/platform/audit";
-import { assertOrderShape, ENTITY_MANUFACTURING_BOM, ENTITY_MANUFACTURING_ORDER, insertOrder } from "./shared";
+import {
+  assertOrderShape,
+  ENTITY_MANUFACTURING_BOM,
+  ENTITY_MANUFACTURING_OPERATION,
+  ENTITY_MANUFACTURING_ORDER,
+  ENTITY_MANUFACTURING_ROUTE,
+  insertOrder,
+  OPEN_OPERATION_STATES,
+} from "./shared";
+import { cancelOpenOperations, registerManufacturingStages } from "./stages";
 import { registerManufacturingBom } from "./bom";
 
 /**
@@ -56,7 +65,12 @@ import { registerManufacturingBom } from "./bom";
  */
 
 export const MANUFACTURING_CAPABILITY = "verity.capability.manufacturing";
-export { ENTITY_MANUFACTURING_ORDER, ENTITY_MANUFACTURING_BOM } from "./shared";
+export {
+  ENTITY_MANUFACTURING_ORDER,
+  ENTITY_MANUFACTURING_BOM,
+  ENTITY_MANUFACTURING_ROUTE,
+  ENTITY_MANUFACTURING_OPERATION,
+} from "./shared";
 
 const lineInput = z.object({
   componentItemId: z.string().uuid(),
@@ -206,6 +220,15 @@ export const completeManufacturingOrder: CommandDefinition<{ orderId: string }, 
     const order = await ctx.tx.manufacturingOrder.findUniqueOrThrow({ where: { id: input.orderId } });
     await assertMutable(ctx.tx, ENTITY_MANUFACTURING_ORDER, order.state);
 
+    // An order planned into stages is not finished until every stage is. An order
+    // with no operations (the original, hand-built shape) is unaffected.
+    const openOperations = await ctx.tx.manufacturingOperation.count({
+      where: { orderId: order.id, state: { in: OPEN_OPERATION_STATES } },
+    });
+    if (openOperations > 0) {
+      throw new ValidationError(`E_VALIDATION: ${openOperations} stage(s) are still open; finish or send them back first`);
+    }
+
     const moved = await transition(ctx, {
       entityKey: ENTITY_MANUFACTURING_ORDER,
       entityId: order.id,
@@ -287,6 +310,11 @@ export const cancelManufacturingOrder: CommandDefinition<
       toKey: "cancelled",
     });
 
+    // A cancelled order has no work left to do: its open stages are cancelled too.
+    const cancelledOperations = await cancelOpenOperations(ctx, order.id, "verity.manufacturing.cancel_order", {
+      others: `Order cancelled: ${input.reason}`,
+    });
+
     if (wasInProgress) {
       for (const line of order.lines) {
         await ctx.tx.inventoryStockMovement.create({
@@ -337,6 +365,7 @@ export const cancelManufacturingOrder: CommandDefinition<
       result: { id: order.id },
       events: [
         moved.event,
+        ...cancelledOperations,
         { name: "verity.manufacturing.order_cancelled", entityId: order.id },
       ],
     };
@@ -451,9 +480,28 @@ export function registerManufacturingCapability(): void {
         requiresEntity: ENTITY_MANUFACTURING_BOM,
         shells: ["platform", "operations"],
       },
+      {
+        href: "/manufacturing/floor",
+        label: "Production floor",
+        group: "Capabilities",
+        order: 27,
+        icon: "manufacturing",
+        requiresEntity: ENTITY_MANUFACTURING_OPERATION,
+        shells: ["platform", "operations"],
+      },
+      {
+        href: "/manufacturing/routes",
+        label: "Production routes",
+        group: "Capabilities",
+        order: 28,
+        icon: "manufacturing",
+        requiresEntity: ENTITY_MANUFACTURING_ROUTE,
+        shells: ["platform", "operations"],
+      },
     ],
   });
   registerManufacturingBom();
+  registerManufacturingStages();
   registerCommand(createManufacturingOrder);
   registerCommand(startManufacturingOrder);
   registerCommand(completeManufacturingOrder);

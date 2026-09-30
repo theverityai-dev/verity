@@ -159,6 +159,9 @@ model Tenant {
   manufacturingOrderLines ManufacturingOrderLine[]
   manufacturingBoms       ManufacturingBom[]
   manufacturingBomLines   ManufacturingBomLine[]
+  manufacturingRoutes     ManufacturingRoute[]
+  manufacturingRouteStages ManufacturingRouteStage[]
+  manufacturingOperations ManufacturingOperation[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -4134,6 +4137,7 @@ model ManufacturingOrder {
   /// lines are a snapshot, so the BOM changing later never touches this order.
   bomId        String?  @map("bom_id") @db.Uuid
 
+  operations ManufacturingOperation[]
   bom        ManufacturingBom?        @relation(fields: [bomId], references: [id], onDelete: Restrict)
   tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   location   Location                 @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
@@ -4209,6 +4213,80 @@ model ManufacturingBomLine {
 
   @@unique([bomId, componentItemId])
   @@map("manufacturing_bom_line")
+}
+
+/// A reusable production route: an ordered list of stages (Task 118, from
+/// Carxen's factory floor: CAD, Cutting, Stitching, QC, Packing). The stages are
+/// the TENANT'S DATA, never an enum: a department chain is exactly the kind of
+/// thing the platform must not hard-code (CLAUDE.md forbidden pattern 2).
+model ManufacturingRoute {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  code      String
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  tenant Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stages ManufacturingRouteStage[]
+
+  @@unique([tenantId, code])
+  @@map("manufacturing_route")
+}
+
+model ManufacturingRouteStage {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  routeId  String @map("route_id") @db.Uuid
+  sequence Int
+  /// Stable machine key (`cutting`), unique within the route. The label is presentation.
+  stageKey String @map("stage_key")
+  label    String
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  route  ManufacturingRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, sequence])
+  @@unique([routeId, stageKey])
+  @@map("manufacturing_route_stage")
+}
+
+/// One stage of one order (Task 118). Append-only in spirit: a QC send-back never
+/// edits history, it CANCELS the open operations and appends fresh ones with
+/// `reworkOfId` pointing at what is being redone (ADR-009: correct by new fact).
+/// An operation is actionable when it is `pending` and every lower-sequence
+/// operation of the order is completed or cancelled.
+model ManufacturingOperation {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  orderId       String    @map("order_id") @db.Uuid
+  sequence      Int
+  stageKey      String    @map("stage_key")
+  label         String
+  /// pending | in_progress | on_hold | completed | cancelled (ADR-009 categories:
+  /// Pending, Active, Blocked, Completed, Cancelled).
+  state         String    @default("pending")
+  /// The most recent reason: why it is on hold, or why it was sent back.
+  note          String?
+  reworkOfId    String?   @map("rework_of_id") @db.Uuid
+  startedAt     DateTime? @map("started_at")
+  startedById   String?   @map("started_by_id") @db.Uuid
+  completedAt   DateTime? @map("completed_at")
+  completedById String?   @map("completed_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  version       Int       @default(1)
+
+  tenant   Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order    ManufacturingOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reworkOf ManufacturingOperation? @relation("OperationRework", fields: [reworkOfId], references: [id], onDelete: Restrict)
+  reworks  ManufacturingOperation[] @relation("OperationRework")
+
+  @@unique([orderId, sequence])
+  @@index([tenantId, state, stageKey])
+  @@map("manufacturing_operation")
 }
 
 // ===========================================================================

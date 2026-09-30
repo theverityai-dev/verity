@@ -3,13 +3,20 @@ import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_MANUFACTURING_ORDER, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
+import {
+  ENTITY_MANUFACTURING_OPERATION,
+  ENTITY_MANUFACTURING_ORDER,
+  MANUFACTURING_CAPABILITY,
+} from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { entityHistory } from "@/server/platform/audit";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, Panel, PermissionDenied, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
 import { AuditTrail } from "@/components/shell/AuditTrail";
+import { executeQuery } from "@/server/platform/query";
+import { listRoutes, orderOperations } from "@/server/capabilities/manufacturing/stages";
 import { OrderActions } from "./OrderActions";
+import { StagesPanel, type StageRow } from "./StagesPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +54,28 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
   const { order } = data;
   const title = order.reference ?? `MO ${order.id.slice(0, 8)}`;
 
+  // Stages are a separate entity with their own Read grant; without it the
+  // panel simply is not shown, and the rest of the order is unaffected.
+  const canSeeStages = await withTenant(actor.tenantId, (tx) =>
+    hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_OPERATION),
+  );
+  const stages: StageRow[] = canSeeStages
+    ? (await executeQuery(actor, orderOperations, { orderId: order.id })).map((o) => ({
+        id: o.id,
+        sequence: o.sequence,
+        stageKey: o.stageKey,
+        label: o.label,
+        state: o.state,
+        category: o.category,
+        note: o.note,
+        rework: o.reworkOfId !== null,
+        startedAt: o.startedAt?.toISOString() ?? null,
+        completedAt: o.completedAt?.toISOString() ?? null,
+        actionable: o.actionable,
+      }))
+    : [];
+  const routes = canSeeStages && stages.length === 0 ? await executeQuery(actor, listRoutes, {}) : [];
+
   return (
     <>
       <PageHeader
@@ -70,6 +99,19 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
         <Stat label="Components" value={order.lines.length} />
         <Stat label="Version" value={order.version} hint="Optimistic concurrency" />
       </StatRow>
+
+      {canSeeStages && (
+        <div className="mb-6">
+          <Panel title="Stages" flush>
+            <StagesPanel
+              orderId={order.id}
+              orderState={order.state}
+              stages={stages}
+              routes={routes.map((r) => ({ id: r.id, code: r.code, name: r.name, stages: r.stages.map((s) => s.label).join(" → ") }))}
+            />
+          </Panel>
+        </div>
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.35fr_1fr]">
         <Panel title="Components consumed" flush>

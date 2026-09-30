@@ -78,10 +78,12 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
 - **Product-owner scope decision 2026-09-30** (in `CLAUDE.md`): business-
   capability build authorized for Tasks 118, 119, 120. Stop conditions unchanged.
 - **Task 118 — BUILT 2026-09-30, design partner Carxen (car seat covers).**
-  Order UI plus a reusable per-unit BOM (custom-field vehicle attributes, orders
-  scaled + snapshotted, archive not delete); 13 DB tests pass; migration applied.
-  Not clicked through with data. Lot/serial, work centers, costing, QC wiring
-  wait for a stated Carxen need.
+  Order UI, a reusable per-unit BOM, and **stage-wise production** (routes as
+  tenant data, per-order operations with sequencing, hold/resume, QC send-back
+  that appends, operator floor page); 24 DB tests pass; migrations applied. Not
+  clicked through with data. Next, from VEDA's quotation: QC checklist + evidence
+  + public passport (needs its own ADR: unauthenticated), dispatch, batch
+  consolidation + BOM reservation, lot tracking. See taskplan 118 §10.
 - **Task 119 — BUILT 2026-09-30, unit-proven, NOT live-verified.** Node type
   `verity.decision.ask` (`decision.ts`), 9 tests. Needs: apply migration
   `20260930000000_capability_decision_egress`, a real API key, one real call.
