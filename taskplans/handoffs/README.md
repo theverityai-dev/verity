@@ -95,6 +95,12 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
   ACCEPTED; key store, idempotency, `POST /api/tools/invoke` proven against the
   real DB (21 tests). Set `EXTERNAL_TOOLS_ENABLED=1` to turn on. Relay adapter
   waits on Relay's contract. Both new migrations are applied to the shared DB.
+- **Task 123 — Enterprise readiness evidence program, started 2026-10-01.**
+  Phase 1 seeder (`prisma/seed-scale.ts`, `npm run seed:scale`) and Phase 3 k6
+  harness (`scripts/load/`) scaffolded; no defaults, nothing run, no claim. Next:
+  Phase 0 real prospect workload numbers (yours), then run the seeder on a
+  disposable DB, index audit, load run, deployment-modes ADR before Phase 5. See
+  `taskplans/123_enterprise_readiness_evidence_program.md`.
 - **Still blocked on you:** review ADR-029; apply the Task 119 migration and
   supply a key; Task 114 P2 scoping; a named manufacturing design partner.
 

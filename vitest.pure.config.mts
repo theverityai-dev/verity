@@ -18,6 +18,7 @@ export default defineConfig({
       "src/test/oidc-provider.test.ts",
       "src/test/proxy.test.ts",
       "scripts/scheduler-time.test.mjs",
+      "scripts/scale/workload.test.ts",
       "src/server/platform/pack-manifest.test.ts",
       "src/test/agent-chat-route.test.ts",
       "src/test/decision-node.test.ts",

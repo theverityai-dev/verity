@@ -30,6 +30,7 @@
     "prisma:push": "prisma db push",
     "seed:plywood": "node prisma/run-seed.cjs seed-plywood-demo.ts",
     "seed:audit-tenant": "node prisma/run-seed.cjs seed-audit-tenant-b.ts",
+    "seed:scale": "node prisma/run-seed.cjs seed-scale.ts",
     "bootstrap:operator": "tsx prisma/bootstrap-operator.ts",
     "db:migrate": "prisma migrate dev",
     "deploy:preview": "vercel deploy --yes",
