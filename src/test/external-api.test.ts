@@ -231,6 +231,20 @@ describeDb("external tool surface (ADR-029)", () => {
     expect(rows).toBe(0);
   });
 
+  it("throttles repeated failed authentication by source, without touching a valid caller", async () => {
+    const source = { "x-forwarded-for": `198.51.100.${Math.floor(Math.random() * 200)}-${randomUUID()}` };
+    let throttled = false;
+    for (let i = 0; i < 60 && !throttled; i++) {
+      const res = await call("vrk_wrong", { tool: "verity.inventory.list_items" }, source);
+      throttled = res.status === 429;
+      if (throttled) expect(res.headers.get("retry-after")).toBeTruthy();
+    }
+    expect(throttled).toBe(true);
+
+    // The same source with a valid key is not counted and not refused.
+    expect((await call(keyA.key, { tool: "verity.inventory.list_items", input: {} }, source)).status).toBe(200);
+  });
+
   it("does not let a machine key mint or revoke keys, or reach a tool it holds no grant for", async () => {
     const mint = await call(
       keyA.key,

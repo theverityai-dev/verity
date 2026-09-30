@@ -7,6 +7,7 @@ import { executeQuery, getQuery } from "@/server/platform/query";
 import { buildToolManifest } from "@/server/platform/tool-manifest";
 import { withTenant } from "@/server/platform/tenancy";
 import { readBoundedJson, RateLimitError } from "@/server/platform/request-limits";
+import { sharedRateLimit } from "@/server/platform/shared-rate-limit";
 import { toActionFailure, type ActionFailure } from "@/server/platform/action-error";
 import { dispatchExternalTool } from "@/server/platform/external-tools";
 import {
@@ -65,8 +66,22 @@ export async function POST(request: Request): Promise<Response> {
 
   const bearer = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
   const authenticated = bearer ? await authenticateApiKey(bearer) : null;
-  // One answer for a missing, malformed, wrong, expired or revoked key.
-  if (!authenticated) return reject("E_UNAUTHENTICATED", "Invalid credentials.", 401);
+  if (!authenticated) {
+    // Only FAILURES are counted, by source, so a burst of guesses is bounded
+    // while a legitimate caller's own traffic never spends this budget. (It
+    // cannot short-circuit the key lookup itself, but 256 bits are not guessable;
+    // what it bounds is cheap probing and lookup load.)
+    const source = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const throttle = await sharedRateLimit(`extkey:${source}`, "signin");
+    if (!throttle.allowed) {
+      return NextResponse.json(
+        { ok: false, code: "E_RATE_LIMIT", message: "Too many failed attempts.", retryable: true } satisfies ActionFailure,
+        { status: 429, headers: { "Retry-After": String(throttle.retryAfterSeconds) } },
+      );
+    }
+    // One answer for a missing, malformed, wrong, expired or revoked key.
+    return reject("E_UNAUTHENTICATED", "Invalid credentials.", 401);
+  }
   const { actor, keyId } = authenticated;
 
   const parsed = bodySchema.safeParse(await readBoundedJson(request, 64 * 1024).catch(() => null));
