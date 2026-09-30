@@ -84,10 +84,13 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
   per order, append-only findings, evidence that must belong to the operation,
   completion = QC approval) and the **public verification passport** (ADR-030
   accepted; frozen minimal snapshot behind a hashed token, one definer function
-  for the anonymous read); 39 DB tests pass; migrations applied. Not clicked
-  through with data. Next, from VEDA's quotation: dispatch, batch consolidation
-  + BOM reservation, lot tracking, and a shared photo-upload component. See
-  taskplan 118 §10.
+  for the anonymous read), **dispatch** (append-only delivery trail, packaging
+  photo must be evidence about that order) and **batch consolidation + stock
+  reservation** (holds not movements, all-or-nothing, location-locked; start
+  respects other orders' holds); 47 DB tests pass (plus the passport live-server
+  test, which only runs with `VERITY_BASE_URL`); migrations applied. Not
+  clicked through with data. Next, from VEDA's quotation: lot/batch tracking and
+  a shared photo-upload component. See taskplan 118 §10.
 - **Task 119 — BUILT 2026-09-30, unit-proven, NOT live-verified.** Node type
   `verity.decision.ask` (`decision.ts`), 9 tests. Needs: apply migration
   `20260930000000_capability_decision_egress`, a real API key, one real call.

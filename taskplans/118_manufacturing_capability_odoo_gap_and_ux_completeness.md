@@ -425,10 +425,24 @@ separate, shared piece of work (it would also serve Outreach and assets).
    Publish/revoke are audited commands with their own permission. 7 tests against
    the real database, including one that fetches the real page as an anonymous
    visitor. Not viewed visually with a live passport.
-2. **Dispatch** with packaging-proof photo, transporter, vehicle no., tracking id,
-   in-transit/delivered pipeline (reuse `evidence` for the photo).
-3. **Order consolidation into a batch** and **BOM reservation on release** (a
-   reservation ledger distinct from consumption; today an order consumes at start).
+2. ~~**Dispatch** with packaging-proof photo, transporter, vehicle no., tracking id,
+   in-transit/delivered pipeline.~~ **BUILT 2026-10-01.** `manufacturing_dispatch` is an
+   append-only ledger (DB trigger refuses UPDATE/DELETE) of `dispatched` and `delivered`
+   events; the latest row is the order's logistics state. `dispatch_order` needs a
+   COMPLETED order and a packaging photo that is `Photo` evidence about THAT order
+   (a photo of another order, or a non-photo, is refused; a DB CHECK also requires it on
+   every `dispatched` row). `confirm_delivery` only after dispatch, once. The photo
+   reuses the platform `evidence` capture; the UI takes a link, like the QC checklist.
+3. ~~**Order consolidation into a batch** and **BOM reservation on release**.~~ **BUILT
+   2026-10-01.** `manufacturing_reservation` is a hold, not a movement: available = on
+   hand minus other orders' live holds, checked all-or-nothing, serialised per location
+   by a transaction advisory lock. Starting an order is refused against stock another
+   order holds, consumes its own hold (`consumed`), and cancelling releases it; holds are
+   released, never deleted. `manufacturing_batch` groups 2+ draft orders at one location
+   (each in at most one batch); it has no state of its own, `batchDetail` gives the
+   consolidated stock-match, `reserve_batch` holds every member or none, `dissolve_batch`
+   only while all are draft. No new security boundary, so no ADR. 9 tests against the
+   real database. Not built: per-line/partial reservation, reservation expiry.
 4. **Lot/batch tracking** (VEDA has `isBatchTracked` + a free-text batch number and
    no flow; Carxen's own gap analysis lists it as missing there too).
 

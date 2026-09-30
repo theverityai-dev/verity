@@ -10,6 +10,7 @@ import { assertMutable, transition } from "@/server/platform/state";
 import { diffFields, recordActivity } from "@/server/platform/audit";
 import {
   assertOrderShape,
+  ENTITY_MANUFACTURING_BATCH,
   ENTITY_MANUFACTURING_BOM,
   ENTITY_MANUFACTURING_OPERATION,
   ENTITY_MANUFACTURING_ORDER,
@@ -20,6 +21,8 @@ import {
 import { cancelOpenOperations, registerManufacturingStages } from "./stages";
 import { registerManufacturingPassport } from "./passport";
 import { registerManufacturingBom } from "./bom";
+import { registerManufacturingLogistics } from "./logistics";
+import { heldByOthers, lockLocationStock, registerManufacturingBatch, releaseOrderReservations } from "./batch";
 
 /**
  * CAPABILITY: Manufacturing — `verity.capability.manufacturing` (Task 118
@@ -72,6 +75,9 @@ export {
   ENTITY_MANUFACTURING_ROUTE,
   ENTITY_MANUFACTURING_OPERATION,
   ENTITY_MANUFACTURING_PASSPORT,
+  ENTITY_MANUFACTURING_DISPATCH,
+  ENTITY_MANUFACTURING_BATCH,
+  ENTITY_MANUFACTURING_RESERVATION,
 } from "./shared";
 
 const lineInput = z.object({
@@ -146,6 +152,9 @@ export const startManufacturingOrder: CommandDefinition<{ orderId: string }, { i
     // Check every line first — real negative-stock guard, enforced here
     // directly (this capability does not call `inventory.recordStockMovement`
     // as a registered command, so its guard doesn't run for these writes).
+    // Stock another order has reserved is not this order's to consume; its own
+    // reservation, if any, is exactly what it is about to take.
+    await lockLocationStock(ctx.tx, ctx.actor.tenantId, order.locationId);
     for (const line of order.lines) {
       const balance = await ctx.tx.inventoryStockBalance.findUnique({
         where: {
@@ -157,13 +166,15 @@ export const startManufacturingOrder: CommandDefinition<{ orderId: string }, { i
         },
       });
       const onHand = balance?.qty ?? 0;
-      if (onHand < line.qtyRequired) {
+      const available = onHand - (await heldByOthers(ctx.tx, line.componentItemId, order.locationId, [order.id]));
+      if (available < line.qtyRequired) {
         throw new ValidationError(
           `E_VALIDATION: not enough ${line.componentItem.name} at this location to start ` +
-            `(need ${line.qtyRequired}, have ${onHand})`,
+            `(need ${line.qtyRequired}, have ${Math.max(available, 0)}${available < onHand ? `, ${onHand} on hand but the rest is reserved` : ""})`,
         );
       }
     }
+    await releaseOrderReservations(ctx.tx, order.id, "consumed");
 
     for (const line of order.lines) {
       await ctx.tx.inventoryStockMovement.create({
@@ -316,6 +327,8 @@ export const cancelManufacturingOrder: CommandDefinition<
     const cancelledOperations = await cancelOpenOperations(ctx, order.id, "verity.manufacturing.cancel_order", {
       others: `Order cancelled: ${input.reason}`,
     });
+
+    await releaseOrderReservations(ctx.tx, order.id, "order cancelled");
 
     if (wasInProgress) {
       for (const line of order.lines) {
@@ -492,6 +505,15 @@ export function registerManufacturingCapability(): void {
         shells: ["platform", "operations"],
       },
       {
+        href: "/manufacturing/batches",
+        label: "Production batches",
+        group: "Capabilities",
+        order: 29,
+        icon: "manufacturing",
+        requiresEntity: ENTITY_MANUFACTURING_BATCH,
+        shells: ["platform", "operations"],
+      },
+      {
         href: "/manufacturing/routes",
         label: "Production routes",
         group: "Capabilities",
@@ -505,6 +527,8 @@ export function registerManufacturingCapability(): void {
   registerManufacturingBom();
   registerManufacturingStages();
   registerManufacturingPassport();
+  registerManufacturingLogistics();
+  registerManufacturingBatch();
   registerCommand(createManufacturingOrder);
   registerCommand(startManufacturingOrder);
   registerCommand(completeManufacturingOrder);

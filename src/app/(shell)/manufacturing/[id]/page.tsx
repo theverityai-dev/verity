@@ -4,9 +4,11 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
 import {
+  ENTITY_MANUFACTURING_DISPATCH,
   ENTITY_MANUFACTURING_OPERATION,
   ENTITY_MANUFACTURING_ORDER,
   ENTITY_MANUFACTURING_PASSPORT,
+  ENTITY_MANUFACTURING_RESERVATION,
   MANUFACTURING_CAPABILITY,
 } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
@@ -17,7 +19,10 @@ import { AuditTrail } from "@/components/shell/AuditTrail";
 import { executeQuery } from "@/server/platform/query";
 import { listRoutes, orderOperations } from "@/server/capabilities/manufacturing/stages";
 import { orderPassport } from "@/server/capabilities/manufacturing/passport";
+import { orderDispatch } from "@/server/capabilities/manufacturing/logistics";
+import { orderReservations } from "@/server/capabilities/manufacturing/batch";
 import { PassportPanel } from "./PassportPanel";
+import { DispatchPanel, StockHoldPanel } from "./LogisticsPanels";
 import { OrderActions } from "./OrderActions";
 import { StagesPanel, type StageRow } from "./StagesPanel";
 
@@ -87,6 +92,14 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
   );
   const passport = canSeePassport ? await executeQuery(actor, orderPassport, { orderId: order.id }) : null;
 
+  // Dispatch and stock holds are likewise their own entities with their own grants.
+  const [canSeeDispatch, canSeeHold] = await withTenant(actor.tenantId, async (tx) => [
+    await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_DISPATCH),
+    await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_RESERVATION),
+  ]);
+  const dispatch = canSeeDispatch ? await executeQuery(actor, orderDispatch, { orderId: order.id }) : null;
+  const hold = canSeeHold && order.state === "draft" ? await executeQuery(actor, orderReservations, { orderId: order.id }) : null;
+
   return (
     <>
       <PageHeader
@@ -111,6 +124,14 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
         <Stat label="Version" value={order.version} hint="Optimistic concurrency" />
       </StatRow>
 
+      {hold && (
+        <div className="mb-6">
+          <Panel title="Stock" flush>
+            <StockHoldPanel orderId={order.id} held={hold.held} lines={hold.lines} />
+          </Panel>
+        </div>
+      )}
+
       {canSeeStages && (
         <div className="mb-6">
           <Panel title="Stages" flush>
@@ -131,6 +152,19 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
               orderId={order.id}
               orderState={order.state}
               active={passport.active ? { id: passport.active.id, issuedAt: passport.active.issuedAt.toISOString(), reference: passport.active.reference } : null}
+            />
+          </Panel>
+        </div>
+      )}
+
+      {dispatch && (order.state === "completed" || dispatch.status) && (
+        <div className="mb-6">
+          <Panel title="Dispatch" flush>
+            <DispatchPanel
+              orderId={order.id}
+              orderState={order.state}
+              status={dispatch.status}
+              events={dispatch.events.map((e) => ({ ...e, recordedAt: e.recordedAt.toISOString() }))}
             />
           </Panel>
         </div>

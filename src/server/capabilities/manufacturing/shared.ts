@@ -6,6 +6,9 @@ export const ENTITY_MANUFACTURING_BOM = "verity.manufacturing.bom";
 export const ENTITY_MANUFACTURING_ROUTE = "verity.manufacturing.route";
 export const ENTITY_MANUFACTURING_OPERATION = "verity.manufacturing.operation";
 export const ENTITY_MANUFACTURING_PASSPORT = "verity.manufacturing.passport";
+export const ENTITY_MANUFACTURING_DISPATCH = "verity.manufacturing.dispatch";
+export const ENTITY_MANUFACTURING_BATCH = "verity.manufacturing.batch";
+export const ENTITY_MANUFACTURING_RESERVATION = "verity.manufacturing.reservation";
 
 /** States in which an operation still has work to do (or is waiting on someone). */
 export const OPEN_OPERATION_STATES = ["pending", "in_progress", "on_hold"];

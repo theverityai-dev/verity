@@ -164,6 +164,9 @@ model Tenant {
   manufacturingOperations ManufacturingOperation[]
   manufacturingCheckpointResults ManufacturingCheckpointResult[]
   manufacturingPassports ManufacturingPassport[]
+  manufacturingDispatches ManufacturingDispatch[]
+  manufacturingBatches ManufacturingBatch[]
+  manufacturingReservations ManufacturingReservation[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -1687,6 +1690,7 @@ model Evidence {
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   file   StoredFile? @relation(fields: [fileId], references: [id], onDelete: Restrict)
   checkpointResults ManufacturingCheckpointResult[]
+  manufacturingDispatches ManufacturingDispatch[]
 
   @@index([tenantId, entityKey, entityId])
   @@index([tenantId, capturedAt])
@@ -4013,6 +4017,7 @@ model InventoryItem {
   manufacturingOrderComponents ManufacturingOrderLine[] @relation("ManufacturingOrderComponent")
   manufacturingBomOutputs      ManufacturingBom[]       @relation("ManufacturingBomOutput")
   manufacturingBomComponents   ManufacturingBomLine[]   @relation("ManufacturingBomComponent")
+  manufacturingReservations    ManufacturingReservation[]
 
   @@unique([tenantId, sku])
   @@unique([tenantId, id], name: "inventory_item_tenant_scoped_id")
@@ -4139,9 +4144,14 @@ model ManufacturingOrder {
   /// The BOM this order was made from, when it was. Traceability only: the
   /// lines are a snapshot, so the BOM changing later never touches this order.
   bomId        String?  @map("bom_id") @db.Uuid
+  /// The consolidation batch this order belongs to, while it does.
+  batchId      String?  @map("batch_id") @db.Uuid
 
   operations ManufacturingOperation[]
   passports  ManufacturingPassport[]
+  dispatches ManufacturingDispatch[]
+  reservations ManufacturingReservation[]
+  batch      ManufacturingBatch?      @relation(fields: [batchId], references: [id], onDelete: SetNull)
   bom        ManufacturingBom?        @relation(fields: [bomId], references: [id], onDelete: Restrict)
   tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   location   Location                 @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
@@ -5731,4 +5741,70 @@ model ExternalIdempotency {
 
   @@unique([tenantId, keyId, idempotencyKey])
   @@map("external_idempotency")
+}
+
+/// One event in an order's delivery: it leaves ('dispatched', with the packaging
+/// photograph as evidence) and later arrives ('delivered'). APPEND-ONLY, like the
+/// QC ledger: a mistake is corrected by a newer fact, and the latest row is the
+/// order's current logistics state.
+model ManufacturingDispatch {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @map("tenant_id") @db.Uuid
+  orderId             String   @map("order_id") @db.Uuid
+  status              String
+  transporter         String?
+  vehicleNo           String?  @map("vehicle_no")
+  trackingRef         String?  @map("tracking_ref")
+  packagingEvidenceId String?  @map("packaging_evidence_id") @db.Uuid
+  note                String?
+  recordedById        String?  @map("recorded_by_id") @db.Uuid
+  recordedAt          DateTime @default(now()) @map("recorded_at")
+
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order             ManufacturingOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  packagingEvidence Evidence?          @relation(fields: [packagingEvidenceId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, orderId, recordedAt])
+  @@map("manufacturing_dispatch")
+}
+
+/// Several draft orders produced together (one cutting run). It has no lifecycle
+/// of its own: its progress is its member orders'. Dissolving it frees the orders.
+model ManufacturingBatch {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  locationId  String   @map("location_id") @db.Uuid
+  reference   String?
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders ManufacturingOrder[]
+
+  @@index([tenantId])
+  @@map("manufacturing_batch")
+}
+
+/// Stock held for a draft order but not yet consumed (Task 118). Not a movement:
+/// nothing leaves the location. Available = on hand minus live reservations of
+/// OTHER orders. Released (never deleted) when the order starts, is cancelled, or
+/// the hold is let go, so why stock was unavailable last Tuesday has an answer.
+model ManufacturingReservation {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  orderId         String    @map("order_id") @db.Uuid
+  componentItemId String    @map("component_item_id") @db.Uuid
+  locationId      String    @map("location_id") @db.Uuid
+  qty             Int
+  releasedAt      DateTime? @map("released_at")
+  releaseReason   String?   @map("release_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order         ManufacturingOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  componentItem InventoryItem      @relation(fields: [componentItemId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, componentItemId, locationId, releasedAt])
+  @@index([tenantId, orderId])
+  @@map("manufacturing_reservation")
 }
