@@ -116,13 +116,12 @@ Output: `deploy/backup/` scripts and measured RPO/RTO.
 
 ### Phase 5 — On-prem package
 
-**Prerequisite, before any package work: an ADR choosing which deployment modes
-Verity 1.0 promises.** "On-prem" is not "compose works on a client's server."
-Candidate modes: A, internet-connected on-prem (external OIDC and storage
-permitted); B, private network (self-hosted OIDC and object storage); C, fully
-air-gapped (everything local). Choosing one, or a subset, is a product decision;
-this plan does not make it. Number it with `verity-adr-gate` (register currently
-ends at ADR-030).
+**Prerequisite, before any package work: acceptance of ADR-031** (supported
+deployment modes; `verity-spec/17_decisions/adr/adr-031.md`, PROPOSED
+2026-10-01). It recommends Mode A (internet-connected on-prem) as the first
+supported and validated mode, and promises neither B (private network) nor C
+(air-gapped). Every Phase 5 result names its mode. Acceptance is the product
+owner's; Phases 1 to 4 do not depend on it.
 
 Extend the existing compose deployment into an installable bundle: env
 preflight, role bootstrap, migrations as a scripted step, operator bootstrap,
