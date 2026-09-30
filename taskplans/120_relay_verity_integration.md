@@ -6,7 +6,20 @@ scope, read this session) and Verity's own `src/server/platform/tool-
 manifest.ts`, `src/server/platform/integration.ts`, `verity-spec/17_
 decisions/adr/adr-017.md` — not against assumption.
 
-## Status: PARTIAL 2026-09-30 — ADR-029 written; inert primitives built; route and Relay adapter NOT built
+## Status: Verity side BUILT 2026-09-30 (dark by default); Relay adapter NOT built
+
+**Update 2026-09-30 (later):** ADR-029 was **approved** by the product owner and
+the surface built and proven against the real database: `ExternalApiKey` +
+`ExternalIdempotency` (RLS), the SECURITY DEFINER `authenticate_api_key`
+lookup, `createApiKey`/`revokeApiKey` commands (grant ceiling, destructive so a
+key cannot mint keys), and `POST /api/tools/invoke`. 21 tests (10 pure + 11
+against the shared project on its own random tenants, cleaned up) all pass.
+Dark unless `EXTERNAL_TOOLS_ENABLED=1`. **Still not built:** the Verity -> Relay
+outbound adapter (Relay has no backend or API contract), failed-auth throttling
+by source, an admin UI for keys. Migration `20260930010000_external_api_key`
+applied to the shared project 2026-09-30, together with the Task 119 one.
+
+**Earlier status (superseded above):** PARTIAL 2026-09-30 — ADR-029 written; inert primitives built; route and Relay adapter NOT built
 
 The product owner authorized this task 2026-09-30 (`CLAUDE.md`, "Product-owner
 scope decision"), which closes gate 3 of the original three (scope). The other

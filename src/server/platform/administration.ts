@@ -10,6 +10,7 @@ import { ValidationError } from "./command";
 import { OPERATOR_ROLE_NAME } from "./operator";
 import type { TenantScopedClient } from "./tenancy";
 import { entityLabel } from "./label";
+import { mintApiKey } from "./external-tools";
 
 /**
  * Platform administration — the write and read contracts HQ operates through.
@@ -279,6 +280,92 @@ export const invitePerson: CommandDefinition<
     return {
       result: { userId: identity.userId, membershipId: identity.membershipId },
       events: [{ name: "verity.platform.person_invited", entityId: identity.membershipId }],
+    };
+  },
+};
+
+/**
+ * Issues a machine credential for a membership (ADR-029, Task 120).
+ *
+ * The same authority as assigning that membership's role: the entity, the verb
+ * and the grant ceiling are `assignRole`'s own, so nobody can hand a machine
+ * more than they could hand a person. The full key is returned exactly once, in
+ * this result, and is never stored (only its hash is). `destructive` keeps it
+ * off the external tool surface and out of the agent's reach: a key cannot mint
+ * keys.
+ */
+export const createApiKey: CommandDefinition<
+  { membershipId: string; name: string; expiresInDays: number },
+  { keyId: string; key: string; expiresAt: string }
+> = {
+  key: "verity.platform.create_api_key",
+  entity: ENTITY_MEMBERSHIP,
+  verb: "Edit",
+  impact: "destructive",
+  input: z.object({
+    membershipId: z.string().uuid(),
+    name: z.string().trim().min(1).max(120),
+    // Bounded on purpose: a key with no expiry is a credential nobody reviews.
+    expiresInDays: z.number().int().min(1).max(365),
+  }),
+  preconditions: async (ctx, input) => {
+    const membership = await ctx.tx.tenantMembership.findUnique({ where: { id: input.membershipId } });
+    if (!membership) throw new ValidationError("E_VALIDATION: membership not found in this client");
+    if (!membership.roleId) {
+      throw new ValidationError("E_VALIDATION: this membership has no role, so a key would grant nothing");
+    }
+    await assertGrantCeiling(ctx.tx, ctx.actor, await resolvePermissions(ctx.tx, membership.roleId));
+  },
+  handler: async (ctx, input) => {
+    const minted = mintApiKey();
+    const expiresAt = new Date(Date.now() + input.expiresInDays * 86_400_000);
+    await ctx.tx.externalApiKey.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        membershipId: input.membershipId,
+        keyId: minted.id,
+        secretHash: minted.secretHash,
+        name: input.name,
+        expiresAt,
+        createdById: ctx.actor.userId,
+      },
+    });
+    await recordSecurityEvent(ctx.tx, {
+      tenantId: ctx.actor.tenantId,
+      eventType: "ApiKeyGenerated",
+      actorUserId: ctx.actor.userId,
+      // The key id and who it stands for. Never the key, and never its hash.
+      payload: { keyId: minted.id, membershipId: input.membershipId, name: input.name, expiresAt: expiresAt.toISOString() },
+    });
+    return {
+      result: { keyId: minted.id, key: minted.key, expiresAt: expiresAt.toISOString() },
+      events: [{ name: "verity.platform.api_key_created", entityId: input.membershipId }],
+    };
+  },
+};
+
+/** Ends a machine credential. The identity and its role are untouched. */
+export const revokeApiKey: CommandDefinition<{ keyId: string }, { keyId: string }> = {
+  key: "verity.platform.revoke_api_key",
+  entity: ENTITY_MEMBERSHIP,
+  verb: "Edit",
+  impact: "destructive",
+  input: z.object({ keyId: z.string().regex(/^[0-9a-f]{16}$/) }),
+  handler: async (ctx, input) => {
+    const key = await ctx.tx.externalApiKey.findUnique({ where: { keyId: input.keyId } });
+    if (!key) throw new ValidationError("E_VALIDATION: key not found in this client");
+    if (!key.revokedAt) {
+      await ctx.tx.externalApiKey.update({ where: { keyId: input.keyId }, data: { revokedAt: new Date() } });
+      await recordSecurityEvent(ctx.tx, {
+        tenantId: ctx.actor.tenantId,
+        eventType: "PermissionRevoked",
+        actorUserId: ctx.actor.userId,
+        payload: { keyId: input.keyId, membershipId: key.membershipId },
+      });
+    }
+    return {
+      result: { keyId: input.keyId },
+      events: [{ name: "verity.platform.api_key_revoked", entityId: key.membershipId }],
     };
   },
 };
@@ -1074,6 +1161,8 @@ export function installAdministration(): void {
   registerCommand(updateOrganization);
   registerCommand(invitePerson);
   registerCommand(assignRole);
+  registerCommand(createApiKey);
+  registerCommand(revokeApiKey);
   registerCommand(revokeMembership);
   registerCommand(setPersonState);
   registerCommand(createRole);

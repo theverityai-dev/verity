@@ -84,9 +84,10 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
 - **Task 119 — BUILT 2026-09-30, unit-proven, NOT live-verified.** Node type
   `verity.decision.ask` (`decision.ts`), 9 tests. Needs: apply migration
   `20260930000000_capability_decision_egress`, a real API key, one real call.
-- **Task 120 — PARTIAL 2026-09-30.** ADR-029 (`PROPOSED`, needs your review) +
-  inert tested primitives (`external-tools.ts`, 10 tests). No route, key store
-  or Relay adapter: those need a database to test and Relay's contract.
+- **Task 120 — Verity side BUILT 2026-09-30, dark by default.** ADR-029
+  ACCEPTED; key store, idempotency, `POST /api/tools/invoke` proven against the
+  real DB (21 tests). Set `EXTERNAL_TOOLS_ENABLED=1` to turn on. Relay adapter
+  waits on Relay's contract. Both new migrations are applied to the shared DB.
 - **Still blocked on you:** review ADR-029; apply the Task 119 migration and
   supply a key; Task 114 P2 scoping; a named manufacturing design partner.
 

@@ -213,6 +213,8 @@ model Tenant {
   outreachProposals             OutreachProposal[]
   outreachClosedClients         OutreachClosedClient[]
   outreachAssignments           OutreachAssignment[]
+  externalApiKeys               ExternalApiKey[]
+  externalIdempotency           ExternalIdempotency[]
 
   @@map("tenant")
 }
@@ -360,6 +362,8 @@ model TenantMembership {
 
   @@unique([userId, organizationId])
   @@index([tenantId])
+  apiKeys ExternalApiKey[]
+
   @@index([userId])
   @@map("tenant_membership")
 }
@@ -5482,4 +5486,52 @@ model OutreachAssignment {
 
   @@index([tenantId, teamId, partyId, active])
   @@map("outreach_assignment")
+}
+
+/// A machine credential for one membership (ADR-029, Task 120).
+///
+/// The key is a revocable, expiring HANDLE to a provisioned identity, never the
+/// identity itself: revoking it ends machine access without touching the user or
+/// their role. Only the SHA-256 of the secret half is stored, so a dump yields
+/// nothing replayable; `keyId` is the non-secret lookup half. The tenant is
+/// fixed by this row (PLA-TEN-006) — it is unknown until the key is read, which
+/// is why lookup goes through the SECURITY DEFINER `verity.authenticate_api_key`
+/// rather than an ordinary RLS-filtered read.
+model ExternalApiKey {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  membershipId String    @map("membership_id") @db.Uuid
+  keyId        String    @unique @map("key_id")
+  secretHash   String    @map("secret_hash")
+  name         String
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership TenantMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([membershipId])
+  @@map("external_api_key")
+}
+
+/// Idempotency ledger for the external tool surface (ADR-029 constraint 7). One
+/// row per (tenant, key, Idempotency-Key). A row with a null `response` is a
+/// claim whose command has not finished; a retry then gets 409, not a second run.
+model ExternalIdempotency {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  keyId          String   @map("key_id")
+  idempotencyKey String   @map("idempotency_key")
+  requestHash    String   @map("request_hash")
+  response       Json?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, keyId, idempotencyKey])
+  @@map("external_idempotency")
 }
