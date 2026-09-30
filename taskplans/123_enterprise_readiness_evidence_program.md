@@ -18,8 +18,12 @@ Built, **none of it a result**: `scripts/scale/workload.ts` (+ test, 6 passing i
 linted, **not yet run against a database**), `scripts/load/verity.k6.js` and
 `scripts/load/README.md` (**not yet run**; k6 and Docker are not installed on the
 build machine). Every workload knob is required and has no default, so no
-number can become "the tested figure" by accident. Phase 0 (the real
-prospect workload) is still needed before any run that would back a claim.
+number can become "the tested figure" by accident. Phase 0: a
+**provisional, not customer-verified** workload is recorded in
+`docs/enterprise-readiness/workload-model.md` (5,000 workers, 32,000 visits/day,
+58.4M visits over 5 years, 750 peak concurrent users, ~117 TB evidence files).
+It is an engineering target only; the prospect's confirmed numbers are still
+needed before any run that would back a claim.
 Re-derive the "already exists" list below from the repo before starting any
 later phase; it was read on 2026-10-01 and will drift.
 
