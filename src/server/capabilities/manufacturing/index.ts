@@ -8,6 +8,8 @@ import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { registerContribution } from "@/server/platform/contribution";
 import { assertMutable, transition } from "@/server/platform/state";
 import { diffFields, recordActivity } from "@/server/platform/audit";
+import { assertOrderShape, ENTITY_MANUFACTURING_BOM, ENTITY_MANUFACTURING_ORDER, insertOrder } from "./shared";
+import { registerManufacturingBom } from "./bom";
 
 /**
  * CAPABILITY: Manufacturing — `verity.capability.manufacturing` (Task 118
@@ -54,7 +56,7 @@ import { diffFields, recordActivity } from "@/server/platform/audit";
  */
 
 export const MANUFACTURING_CAPABILITY = "verity.capability.manufacturing";
-export const ENTITY_MANUFACTURING_ORDER = "verity.manufacturing.order";
+export { ENTITY_MANUFACTURING_ORDER, ENTITY_MANUFACTURING_BOM } from "./shared";
 
 const lineInput = z.object({
   componentItemId: z.string().uuid(),
@@ -83,54 +85,17 @@ export const createManufacturingOrder: CommandDefinition<
     reference: z.string().max(200).optional(),
     lines: z.array(lineInput).min(1),
   }),
-  preconditions: async (ctx, input) => {
-    const location = await ctx.tx.location.findUnique({ where: { id: input.locationId } });
-    if (!location) throw new ValidationError("E_VALIDATION: location not found in this tenant");
-
-    const componentIds = input.lines.map((l) => l.componentItemId);
-    if (new Set(componentIds).size !== componentIds.length) {
-      throw new ValidationError("E_VALIDATION: a component appears more than once on this order");
-    }
-    if (componentIds.includes(input.outputItemId)) {
-      throw new ValidationError("E_VALIDATION: an order cannot consume the same item it produces");
-    }
-
-    const items = await ctx.tx.inventoryItem.findMany({
-      where: { id: { in: [input.outputItemId, ...componentIds] } },
-    });
-    const byId = new Map(items.map((i) => [i.id, i]));
-    if (byId.size !== new Set([input.outputItemId, ...componentIds]).size) {
-      throw new ValidationError("E_VALIDATION: output or a component is not an inventory item in this tenant");
-    }
-    for (const id of [input.outputItemId, ...componentIds]) {
-      if (!byId.get(id)!.active) {
-        throw new ValidationError(`E_VALIDATION: ${byId.get(id)!.name} is deactivated`);
-      }
-    }
-  },
+  preconditions: (ctx, input) =>
+    assertOrderShape(ctx.tx, {
+      locationId: input.locationId,
+      outputItemId: input.outputItemId,
+      componentIds: input.lines.map((l) => l.componentItemId),
+    }),
   handler: async (ctx, input) => {
-    const order = await ctx.tx.manufacturingOrder.create({
-      data: {
-        tenantId: ctx.actor.tenantId,
-        locationId: input.locationId,
-        outputItemId: input.outputItemId,
-        outputQty: input.outputQty,
-        reference: input.reference?.trim() || null,
-      },
-    });
-
-    await ctx.tx.manufacturingOrderLine.createMany({
-      data: input.lines.map((line) => ({
-        tenantId: ctx.actor.tenantId,
-        manufacturingOrderId: order.id,
-        componentItemId: line.componentItemId,
-        qtyRequired: line.qtyRequired,
-      })),
-    });
-
+    const id = await insertOrder(ctx.tx, ctx.actor.tenantId, input);
     return {
-      result: { id: order.id },
-      events: [{ name: "verity.manufacturing.order_created", entityId: order.id }],
+      result: { id },
+      events: [{ name: "verity.manufacturing.order_created", entityId: id }],
     };
   },
 };
@@ -430,6 +395,9 @@ export const manufacturingOrderDetail: QueryDefinition<
     outputQty: number;
     locationId: string;
     locationName: string;
+    /** The BOM this order was made from, when it was. */
+    bomId: string | null;
+    bomCode: string | null;
     lines: Array<{ componentItemId: string; componentItemName: string; qtyRequired: number }>;
   }
 > = {
@@ -439,9 +407,11 @@ export const manufacturingOrderDetail: QueryDefinition<
   handler: async (ctx, input) => {
     const order = await ctx.tx.manufacturingOrder.findUniqueOrThrow({
       where: { id: input.orderId },
-      include: { outputItem: true, location: true, lines: { include: { componentItem: true } } },
+      include: { outputItem: true, location: true, bom: true, lines: { include: { componentItem: true } } },
     });
     return {
+      bomId: order.bomId,
+      bomCode: order.bom?.code ?? null,
       id: order.id,
       reference: order.reference,
       state: order.state,
@@ -472,8 +442,18 @@ export function registerManufacturingCapability(): void {
         requiresEntity: ENTITY_MANUFACTURING_ORDER,
         shells: ["platform", "operations"],
       },
+      {
+        href: "/manufacturing/boms",
+        label: "Bills of materials",
+        group: "Capabilities",
+        order: 26,
+        icon: "manufacturing",
+        requiresEntity: ENTITY_MANUFACTURING_BOM,
+        shells: ["platform", "operations"],
+      },
     ],
   });
+  registerManufacturingBom();
   registerCommand(createManufacturingOrder);
   registerCommand(startManufacturingOrder);
   registerCommand(completeManufacturingOrder);

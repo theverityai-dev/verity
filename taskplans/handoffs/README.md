@@ -77,10 +77,11 @@ phase_wise_completion_plan.md` (phase order) and `00_STATUS_INDEX.md`.
   022/023/024.
 - **Product-owner scope decision 2026-09-30** (in `CLAUDE.md`): business-
   capability build authorized for Tasks 118, 119, 120. Stop conditions unchanged.
-- **Task 118 — UI BUILT 2026-09-30** (`/manufacturing`, `/manufacturing/[id]`,
-  create form, Start/Complete/Cancel) on top of the 2026-09-25 commands. Not
-  clicked through with data (no tenant has the capability). Lot/serial, work
-  centers, cost roll-up, QC wiring: no named design partner, so not built.
+- **Task 118 — BUILT 2026-09-30, design partner Carxen (car seat covers).**
+  Order UI plus a reusable per-unit BOM (custom-field vehicle attributes, orders
+  scaled + snapshotted, archive not delete); 13 DB tests pass; migration applied.
+  Not clicked through with data. Lot/serial, work centers, costing, QC wiring
+  wait for a stated Carxen need.
 - **Task 119 — BUILT 2026-09-30, unit-proven, NOT live-verified.** Node type
   `verity.decision.ask` (`decision.ts`), 9 tests. Needs: apply migration
   `20260930000000_capability_decision_egress`, a real API key, one real call.

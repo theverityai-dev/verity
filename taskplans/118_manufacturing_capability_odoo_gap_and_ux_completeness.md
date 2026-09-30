@@ -293,3 +293,43 @@ cost, BOM cost roll-up, QC evidence wiring, putaway rules, backorders/
 partial completion, `recipe` generalization. No first design-partner client
 is named (§6), so none of these has a concrete requirement to build against;
 per the lean-V1 posture they wait for one.
+
+## 9 — 2026-09-30 Carxen: reusable BOM
+
+**Design partner named:** Carxen, a custom automotive seat-cover maker (the
+business VEDA was built for). §6's "which client anchors the build" is closed.
+The lean-V1 reading of Carxen's need: many vehicle variants share one component
+recipe, and the pain is retyping it on every order. So the slice is a reusable
+BOM, not the whole §3 design.
+
+**BUILT + PROVEN (real database, own random tenant, cleaned up):**
+`ManufacturingBom` + `ManufacturingBomLine` (per-UNIT quantities, RLS, migration
+`20260930020000_manufacturing_bom`, applied to the shared project), registered
+as entity `verity.manufacturing.bom`. Commands `create_bom`, `set_bom_active`
+(archive/restore; never deleted, an order's `bomId` must keep pointing at what
+it came from), `create_order_from_bom` (every line scaled by the quantity and
+SNAPSHOTTED, so a BOM changing later never rewrites an order already made; the
+order records `bomId`); queries `list_boms`, `bom_detail`; the order detail now
+returns `bomId`/`bomCode`. Vehicle make/model/year/seat row are **custom
+fields** the tenant declares on the BOM entity (PLA-EXT-001), validated by the
+existing `validateCustomFields`, never columns. The order validation and write
+are now one shared implementation (`shared.ts`) used by hand-built orders, BOMs
+and orders from a BOM. UI: `/manufacturing/boms` (list + create form whose
+custom-field section renders whatever the tenant declared) and
+`/manufacturing/boms/[id]` (per-unit lines, details, Make an order, Archive/
+Restore); the order page says which BOM it came from.
+Tests: `src/test/capability-manufacturing-bom.test.ts`, 8 tests (custom-field
+validation, duplicate/self/duplicate-component rejection, scaling 3 units =
+360/180/3, a scaled order consumed and received for real, overflow refusal,
+archive semantics, tenant isolation) plus the original 5 manufacturing tests
+still pass after the refactor: 13/13. `tsc` and `eslint` clean.
+
+**Not verified in a browser with data:** no tenant here has manufacturing
+active and I will not activate it on the PlotArmour tenant. Routes compile and
+gate correctly ("This feature is not active") with no console errors.
+
+**Deliberately still NOT built** (no Carxen requirement stated for them, and the
+lean-V1 posture is to wait): lot/serial, work centers, cost roll-up, QC evidence
+wiring, putaway, backorders/partial completion, BOM line editing after creation
+(a changed recipe takes a new code), `recipe` generalization. Ask Carxen which,
+if any, they need first.

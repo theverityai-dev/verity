@@ -157,6 +157,8 @@ model Tenant {
   // Capability: manufacturing (Task 118 minimal slice). Back-relations only.
   manufacturingOrders     ManufacturingOrder[]
   manufacturingOrderLines ManufacturingOrderLine[]
+  manufacturingBoms       ManufacturingBom[]
+  manufacturingBomLines   ManufacturingBomLine[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -4003,6 +4005,8 @@ model InventoryItem {
   recipeIngredients RecipeIngredient[]
   manufacturingOrderOutputs    ManufacturingOrder[]     @relation("ManufacturingOrderOutput")
   manufacturingOrderComponents ManufacturingOrderLine[] @relation("ManufacturingOrderComponent")
+  manufacturingBomOutputs      ManufacturingBom[]       @relation("ManufacturingBomOutput")
+  manufacturingBomComponents   ManufacturingBomLine[]   @relation("ManufacturingBomComponent")
 
   @@unique([tenantId, sku])
   @@unique([tenantId, id], name: "inventory_item_tenant_scoped_id")
@@ -4126,7 +4130,11 @@ model ManufacturingOrder {
   updatedAt    DateTime @updatedAt @map("updated_at")
   version      Int      @default(1)
   customFields Json     @default("{}") @map("custom_fields")
+  /// The BOM this order was made from, when it was. Traceability only: the
+  /// lines are a snapshot, so the BOM changing later never touches this order.
+  bomId        String?  @map("bom_id") @db.Uuid
 
+  bom        ManufacturingBom?        @relation(fields: [bomId], references: [id], onDelete: Restrict)
   tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   location   Location                 @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   outputItem InventoryItem            @relation("ManufacturingOrderOutput", fields: [outputItemId], references: [id], onDelete: Restrict)
@@ -4153,6 +4161,54 @@ model ManufacturingOrderLine {
 
   @@unique([manufacturingOrderId, componentItemId])
   @@map("manufacturing_order_line")
+}
+
+/// A reusable Bill of Materials template (Task 118, first design partner Carxen:
+/// custom car seat covers, many vehicle variants sharing one component recipe).
+///
+/// Per-UNIT quantities: an order from this BOM scales each line by the order's
+/// `outputQty`. An order SNAPSHOTS the scaled lines when it is created, so a BOM
+/// changing later never rewrites an order already made. Vehicle-specific
+/// attributes (make, model, year, seat type) live in `customFields`, never as
+/// columns (PLA-EXT-001). Archived (`active = false`), never deleted: an order's
+/// `bomId` must keep pointing at what it was made from.
+model ManufacturingBom {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  /// Tenant-facing, unique per tenant. A new revision takes a new code.
+  code         String
+  name         String
+  outputItemId String   @map("output_item_id") @db.Uuid
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
+  customFields Json     @default("{}") @map("custom_fields")
+
+  tenant     Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  outputItem InventoryItem         @relation("ManufacturingBomOutput", fields: [outputItemId], references: [id], onDelete: Restrict)
+  lines      ManufacturingBomLine[]
+  orders     ManufacturingOrder[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active])
+  @@map("manufacturing_bom")
+}
+
+model ManufacturingBomLine {
+  id              String @id @default(uuid()) @db.Uuid
+  tenantId        String @map("tenant_id") @db.Uuid
+  bomId           String @map("bom_id") @db.Uuid
+  componentItemId String @map("component_item_id") @db.Uuid
+  /// Consumed to make ONE unit of the BOM's output.
+  qtyPerUnit      Int    @map("qty_per_unit")
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bom           ManufacturingBom @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  componentItem InventoryItem    @relation("ManufacturingBomComponent", fields: [componentItemId], references: [id], onDelete: Restrict)
+
+  @@unique([bomId, componentItemId])
+  @@map("manufacturing_bom_line")
 }
 
 // ===========================================================================

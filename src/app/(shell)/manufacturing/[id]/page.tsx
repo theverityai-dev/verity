@@ -29,7 +29,7 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
     }
     const order = await tx.manufacturingOrder.findUnique({
       where: { id },
-      include: { outputItem: true, location: true, lines: { include: { componentItem: true } } },
+      include: { outputItem: true, location: true, bom: true, lines: { include: { componentItem: true } } },
     });
     if (!order) return { notFound: true as const };
 
@@ -52,9 +52,9 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
       <PageHeader
         title={title}
         description={
-          data.isTerminal
-            ? `Produces ${order.outputItem.name} at ${order.location.name}. This order is closed and permanently read-only.`
-            : `Produces ${order.outputItem.name} at ${order.location.name}.`
+          `Produces ${order.outputItem.name} at ${order.location.name}.` +
+          (order.bom ? ` Made from BOM ${order.bom.code}.` : "") +
+          (data.isTerminal ? " This order is closed and permanently read-only." : "")
         }
         actions={<OrderActions orderId={order.id} state={order.state} />}
       />
