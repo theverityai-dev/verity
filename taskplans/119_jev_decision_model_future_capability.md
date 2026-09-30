@@ -26,6 +26,12 @@ typed `questions`), read as data; the page carried no agent instructions.
 Tests: `src/test/decision-node.test.ts`, 9 tests in the pure suite, all pass
 (157/157 pure tests pass overall). `tsc --noEmit` and `eslint` clean.
 
+**Update 2026-09-30 (later): backend-agnostic, Laya added.** The node now serves
+Jev or Laya (`DECISION_BACKEND`, `LAYA_ENDPOINT`; ADR-027 amendment). Laya is the
+preferred backend: open weights, self-hosted, no third-party egress. 19 pure tests
+pass. Still no real call to either: Laya needs a `laya-serve` instance stood up
+and, before any threshold is trusted, a labeled sample to validate calibration.
+
 **NOT done — needs you:**
 1. **Apply the migration** `prisma/migrations/20260930000000_capability_
    decision_egress` (one `capability_definition` row). Written, deliberately
