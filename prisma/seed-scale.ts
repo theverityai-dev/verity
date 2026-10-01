@@ -106,13 +106,16 @@ async function seedChunk(
     if (evidencePerVisit > 0) {
       await tx.$executeRaw`
         INSERT INTO evidence
-          (id, tenant_id, entity_key, entity_id, kind, captured_at, payload, recorded_at)
+          (id, tenant_id, entity_key, entity_id, kind, uri, captured_at, payload, recorded_at)
         SELECT
           md5(${tenantId}::text || '-e-' || g::text || '-' || e::text)::uuid,
           ${tenantId}::uuid,
           'scale.visit',
           md5(${tenantId}::text || '-v-' || g::text)::uuid,
           'Photo'::"EvidenceKind",
+          -- evidence_artefact_present requires a file_id or uri for a Photo. The
+          -- uri is a placeholder: no binary object exists or is generated here.
+          'synthetic://scale/' || g::text || '/' || e::text,
           ${ANCHOR}::timestamp
             - ((g % ${retentionDays}::int) * interval '1 day')
             - (((g * 37) % 86400) * interval '1 second'),
