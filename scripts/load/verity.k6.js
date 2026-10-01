@@ -54,6 +54,7 @@ const READ_ROUTES = (__ENV.READ_ROUTES || "")
   .filter(Boolean);
 const AUTH_COOKIE = __ENV.AUTH_COOKIE || "";
 const FORBID_BODY_TEXT = __ENV.FORBID_BODY_TEXT || "";
+const REQUIRE_BODY_TEXT = __ENV.REQUIRE_BODY_TEXT || "";
 
 if (STAGES.some((n) => !Number.isInteger(n) || n < 1) || !(STAGE_SECONDS > 0)) {
   throw new Error("VUS_STAGES must be positive integers and STAGE_SECONDS a positive number.");
@@ -99,6 +100,11 @@ export default function () {
     // presence means the request was refused.
     if (FORBID_BODY_TEXT) {
       check(res, { "not an access-denied page": (r) => !String(r.body).includes(FORBID_BODY_TEXT) });
+    }
+    // REQUIRE_BODY_TEXT proves the page carried the signed-in tenant's own data
+    // (for example a seeded record's name), not merely an empty shell.
+    if (REQUIRE_BODY_TEXT) {
+      check(res, { "carries the tenant's data": (r) => String(r.body).includes(REQUIRE_BODY_TEXT) });
     }
   }
   sleep(1);
