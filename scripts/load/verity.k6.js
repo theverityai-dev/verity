@@ -78,8 +78,33 @@ const READ_ROUTES = required("READ_ROUTES")
 const FORBID_BODY_TEXT = (__ENV.FORBID_BODY_TEXT || "").split("|").filter(Boolean);
 const REQUIRE_BODY_TEXT = __ENV.REQUIRE_BODY_TEXT || "";
 
+// Optional diagnostics (Run 08a). Absent means exactly the Run 07 behaviour, and the
+// chosen mode is recorded in the artifact either way:
+//   LOAD_MODEL=closed|open        closed: VUs loop with think time (default); open: fixed arrival rate
+//   THINK_DISTRIBUTION=fixed|uniform   uniform needs THINK_MIN_SECONDS < THINK_MAX_SECONDS
+//   ARRIVAL_COUNT / ARRIVAL_PER_SECONDS   open model: ARRIVAL_COUNT iterations every ARRIVAL_PER_SECONDS
+//   OPEN_PREALLOC_VUS / OPEN_MAX_VUS      open model VU pool
+//   TAG_VU=1                      tag each request with its virtual user (for per-request analysis)
+const LOAD_MODEL = __ENV.LOAD_MODEL || "closed";
+const THINK_DISTRIBUTION = __ENV.THINK_DISTRIBUTION || "fixed";
+const THINK_MIN_SECONDS = Number(__ENV.THINK_MIN_SECONDS || 0);
+const THINK_MAX_SECONDS = Number(__ENV.THINK_MAX_SECONDS || 0);
+const ARRIVAL_COUNT = Number(__ENV.ARRIVAL_COUNT || 0);
+const ARRIVAL_PER_SECONDS = Number(__ENV.ARRIVAL_PER_SECONDS || 0);
+const OPEN_PREALLOC_VUS = Number(__ENV.OPEN_PREALLOC_VUS || 0);
+const OPEN_MAX_VUS = Number(__ENV.OPEN_MAX_VUS || 0);
+const TAG_VU = __ENV.TAG_VU === "1";
+
 if (!(THINK_SECONDS >= 0) || !(READY_EVERY_SECONDS >= 0)) {
   throw new Error("THINK_SECONDS and READY_EVERY_SECONDS must be >= 0.");
+}
+if (!["closed", "open"].includes(LOAD_MODEL)) throw new Error("LOAD_MODEL must be closed or open.");
+if (!["fixed", "uniform"].includes(THINK_DISTRIBUTION)) throw new Error("THINK_DISTRIBUTION must be fixed or uniform.");
+if (THINK_DISTRIBUTION === "uniform" && !(THINK_MIN_SECONDS >= 0 && THINK_MAX_SECONDS > THINK_MIN_SECONDS)) {
+  throw new Error("uniform think time needs THINK_MIN_SECONDS >= 0 and THINK_MAX_SECONDS > THINK_MIN_SECONDS.");
+}
+if (LOAD_MODEL === "open" && !(ARRIVAL_COUNT >= 1 && ARRIVAL_PER_SECONDS >= 1 && OPEN_PREALLOC_VUS >= 1 && OPEN_MAX_VUS >= OPEN_PREALLOC_VUS)) {
+  throw new Error("open model needs ARRIVAL_COUNT, ARRIVAL_PER_SECONDS, OPEN_PREALLOC_VUS and OPEN_MAX_VUS (max >= prealloc).");
 }
 if (READ_ROUTES.length === 0) throw new Error("READ_ROUTES must name at least one route.");
 
@@ -93,16 +118,29 @@ const ROUTES = READ_ROUTES.map((path) => ({ path, label: routeLabel(path) }));
 const STATUSES = ["200", "301", "302", "307", "400", "401", "403", "404", "409", "429", "500", "502", "503", "504", "0"];
 
 const scenarios = {
-  app: {
-    executor: "ramping-vus",
-    exec: "app",
-    startVUs: 0,
-    stages: [
-      { duration: `${RAMP_SECONDS}s`, target: VUS },
-      { duration: `${HOLD_SECONDS}s`, target: VUS },
-    ],
-    gracefulRampDown: "10s",
-  },
+  app:
+    LOAD_MODEL === "open"
+      ? {
+          // Evenly spaced arrivals at a fixed rate, independent of response time. The ramp
+          // window is the same length as in the closed model and is still tagged phase:ramp.
+          executor: "constant-arrival-rate",
+          exec: "app",
+          rate: ARRIVAL_COUNT,
+          timeUnit: `${ARRIVAL_PER_SECONDS}s`,
+          duration: `${RAMP_SECONDS + HOLD_SECONDS}s`,
+          preAllocatedVUs: OPEN_PREALLOC_VUS,
+          maxVUs: OPEN_MAX_VUS,
+        }
+      : {
+          executor: "ramping-vus",
+          exec: "app",
+          startVUs: 0,
+          stages: [
+            { duration: `${RAMP_SECONDS}s`, target: VUS },
+            { duration: `${HOLD_SECONDS}s`, target: VUS },
+          ],
+          gracefulRampDown: "10s",
+        },
 };
 if (READY_EVERY_SECONDS > 0) {
   scenarios.readiness = {
@@ -150,9 +188,11 @@ export function app(data) {
   const phase = elapsed < RAMP_SECONDS ? "ramp" : "hold";
 
   for (const r of ROUTES) {
+    const reqTags = { name: r.label, route: r.label, phase };
+    if (TAG_VU) reqTags.vu = String(__VU);
     const res = http.get(`${BASE_URL}${r.path}`, {
       headers: { Cookie: AUTH_COOKIE },
-      tags: { name: r.label, route: r.label, phase },
+      tags: reqTags,
       redirects: 0,
     });
     const tags = { route: r.label, phase };
@@ -172,7 +212,12 @@ export function app(data) {
       check(res, { "carries the tenant's data": (x) => String(x.body).includes(REQUIRE_BODY_TEXT) }, tags);
     }
   }
-  sleep(THINK_SECONDS);
+  if (LOAD_MODEL === "open") return; // arrival-driven: no think time
+  if (THINK_DISTRIBUTION === "uniform") {
+    sleep(THINK_MIN_SECONDS + Math.random() * (THINK_MAX_SECONDS - THINK_MIN_SECONDS));
+  } else {
+    sleep(THINK_SECONDS);
+  }
 }
 
 export function readiness() {
@@ -193,6 +238,12 @@ export function handleSummary(data) {
       rampSeconds: RAMP_SECONDS,
       holdSeconds: HOLD_SECONDS,
       thinkSeconds: THINK_SECONDS,
+      loadModel: LOAD_MODEL,
+      thinkDistribution: THINK_DISTRIBUTION,
+      thinkMinSeconds: THINK_MIN_SECONDS,
+      thinkMaxSeconds: THINK_MAX_SECONDS,
+      arrival: LOAD_MODEL === "open" ? { count: ARRIVAL_COUNT, perSeconds: ARRIVAL_PER_SECONDS, preAllocatedVus: OPEN_PREALLOC_VUS, maxVus: OPEN_MAX_VUS } : null,
+      tagVu: TAG_VU,
       readyEverySeconds: READY_EVERY_SECONDS,
       routes: ROUTES,
       forbidBodyText: FORBID_BODY_TEXT,
