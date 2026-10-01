@@ -74,7 +74,7 @@ async function ensureTenant(tenantId: string, n: number): Promise<void> {
   // (see operator.ts createClient, seed-audit-tenant-b.ts).
   await withTenant(tenantId, async (tx) => {
     await tx.$executeRaw`
-      INSERT INTO tenants (id, name, is_platform, created_at, updated_at)
+      INSERT INTO tenant (id, name, is_platform, created_at, updated_at)
       VALUES (${tenantId}::uuid, ${`Scale tenant ${n}`}, false, now(), now())
       ON CONFLICT (id) DO NOTHING`;
   });
