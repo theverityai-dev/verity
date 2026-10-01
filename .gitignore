@@ -97,3 +97,6 @@ temporary screenshots/
 # audit run artefacts (credentials, probes) — never commit
 .audit-tenant-a.local.md
 audit/_probe/
+
+# k6 run artifacts: reference reproduced runs from the program docs, do not commit smoke output
+/scripts/load/results/

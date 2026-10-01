@@ -21,8 +21,10 @@
 //   READ_ROUTES     comma list of authenticated GET paths to exercise
 //                   (optional; empty means a probe-only run)
 //   AUTH_COOKIE     full Cookie header value of a real signed-in session,
-//                   obtained through the real sign-in path; required when
-//                   READ_ROUTES is set
+//                   obtained through the real sign-in path (see
+//                   scripts/load/oidc-login.mjs); required when READ_ROUTES is set
+//   FORBID_BODY_TEXT  optional text that marks an access-denied page; Verity
+//                   serves one with HTTP 200, so status alone is not enough
 //
 // Run:
 //   k6 run -e BASE_URL=... -e VUS_STAGES=100,250 -e STAGE_SECONDS=120 \
@@ -51,6 +53,7 @@ const READ_ROUTES = (__ENV.READ_ROUTES || "")
   .map((s) => s.trim())
   .filter(Boolean);
 const AUTH_COOKIE = __ENV.AUTH_COOKIE || "";
+const FORBID_BODY_TEXT = __ENV.FORBID_BODY_TEXT || "";
 
 if (STAGES.some((n) => !Number.isInteger(n) || n < 1) || !(STAGE_SECONDS > 0)) {
   throw new Error("VUS_STAGES must be positive integers and STAGE_SECONDS a positive number.");
@@ -91,6 +94,12 @@ export default function () {
     // A 3xx means the session was rejected and the app bounced to sign-in;
     // counting it as success would measure the redirect, not the page.
     check(res, { "read 200": (r) => r.status === 200 });
+    // Verity renders an access-denied screen with HTTP 200, so status alone
+    // cannot tell a page from a refusal. FORBID_BODY_TEXT names text whose
+    // presence means the request was refused.
+    if (FORBID_BODY_TEXT) {
+      check(res, { "not an access-denied page": (r) => !String(r.body).includes(FORBID_BODY_TEXT) });
+    }
   }
   sleep(1);
 }
