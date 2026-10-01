@@ -19,13 +19,32 @@ log()  { printf '[verity] %s\n' "$*"; }
 warn() { printf '[verity] WARNING: %s\n' "$*" >&2; }
 die()  { printf '[verity] ERROR: %s\n' "$*" >&2; exit 1; }
 
+# Octal permission bits of a file (for example 600), on Linux and on BSD/macOS.
+#
+# The two families disagree about `stat`. GNU, uutils and busybox read the mode
+# with `-c '%a'`. BSD reads it with `-f '%OLp'`, but GNU and uutils treat `-f` as
+# "filesystem status": given a format string they exit non-zero after already
+# printing several lines. This used to try the BSD form first, so on Linux the
+# captured "mode" was multi-line text and every script rejected its own env file
+# (drill finding F1). The GNU form is tried first, where BSD simply fails it, and
+# whatever comes back must be an octal mode or it is not used.
+file_mode() {
+  local path="$1" mode
+  mode="$(stat -c '%a' "${path}" 2>/dev/null || true)"
+  case "${mode}" in [0-7][0-7][0-7]|[0-7][0-7][0-7][0-7]) printf '%s' "${mode}"; return 0 ;; esac
+  mode="$(stat -f '%OLp' "${path}" 2>/dev/null || true)"
+  case "${mode}" in [0-7][0-7][0-7]|[0-7][0-7][0-7][0-7]) printf '%s' "${mode}"; return 0 ;; esac
+  return 1
+}
+
 require_env_file() {
   [ -f "${ENV_FILE}" ] || die "no env file at ${ENV_FILE} — run deploy/scripts/install.sh first"
 
   # A world-readable file holding every credential this deployment uses is a
-  # finding in any review. Refuse rather than warn: the fix is one chmod.
+  # finding in any review. Refuse rather than warn: the fix is one chmod. If the
+  # mode cannot be read at all, refuse too: unknown is not safe.
   local mode
-  mode="$(stat -f '%OLp' "${ENV_FILE}" 2>/dev/null || stat -c '%a' "${ENV_FILE}")"
+  mode="$(file_mode "${ENV_FILE}")" || die "cannot determine the mode of ${ENV_FILE} (neither GNU nor BSD stat worked)"
   case "${mode}" in
     600|400) ;;
     *) die "${ENV_FILE} is mode ${mode}; it holds credentials. Run: chmod 600 ${ENV_FILE}" ;;
