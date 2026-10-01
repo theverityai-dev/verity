@@ -53,7 +53,9 @@ const READ_ROUTES = (__ENV.READ_ROUTES || "")
   .map((s) => s.trim())
   .filter(Boolean);
 const AUTH_COOKIE = __ENV.AUTH_COOKIE || "";
-const FORBID_BODY_TEXT = __ENV.FORBID_BODY_TEXT || "";
+// "|"-separated: any one of these in a page body fails the check (an access-denied
+// message, or another tenant's record name, which would be an isolation failure).
+const FORBID_BODY_TEXT = (__ENV.FORBID_BODY_TEXT || "").split("|").filter(Boolean);
 const REQUIRE_BODY_TEXT = __ENV.REQUIRE_BODY_TEXT || "";
 
 if (STAGES.some((n) => !Number.isInteger(n) || n < 1) || !(STAGE_SECONDS > 0)) {
@@ -78,7 +80,15 @@ export const options = {
     },
   },
   // No pass/fail thresholds here: a threshold is a claim, and claims come from
-  // Phase 6 after the numbers exist.
+  // Phase 6 after the numbers exist. These entries exist only to make k6 report a
+  // per-status request count (a submetric appears in the summary only if something
+  // references it), giving the HTTP status distribution of every run.
+  thresholds: Object.fromEntries(
+    ["200", "301", "302", "307", "400", "401", "403", "404", "409", "429", "500", "502", "503", "504", "0"].map((s) => [
+      `http_reqs{status:${s}}`,
+      ["count>=0"],
+    ]),
+  ),
   summaryTrendStats: ["avg", "min", "med", "p(90)", "p(95)", "p(99)", "max"],
 };
 
@@ -98,8 +108,11 @@ export default function () {
     // Verity renders an access-denied screen with HTTP 200, so status alone
     // cannot tell a page from a refusal. FORBID_BODY_TEXT names text whose
     // presence means the request was refused.
-    if (FORBID_BODY_TEXT) {
-      check(res, { "not an access-denied page": (r) => !String(r.body).includes(FORBID_BODY_TEXT) });
+    if (FORBID_BODY_TEXT.length > 0) {
+      check(res, {
+        "no forbidden text (denied page or another tenant's data)": (r) =>
+          FORBID_BODY_TEXT.every((t) => !String(r.body).includes(t)),
+      });
     }
     // REQUIRE_BODY_TEXT proves the page carried the signed-in tenant's own data
     // (for example a seeded record's name), not merely an empty shell.
