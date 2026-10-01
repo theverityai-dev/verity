@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative as relativeNative } from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { toPosix } from "./helpers/write-confinement";
+
+// Always posix. On Windows the native `relative` returns backslashes, which made
+// every `startsWith("src/...")` and `/src\/app\/.../` check below silently match
+// nothing, so those boundary tests passed vacuously off CI.
+const relative = (from: string, to: string): string => toPosix(relativeNative(from, to));
 
 /**
  * Foundation conformance suite.
@@ -217,10 +223,6 @@ describe("conformance: capability contracts (Phase E)", () => {
     dinein: new Set(["recipe", "crm", "loyalty"]),
   };
 
-  // This helper is deliberately invoked by dine-in's authorized generate-bill
-  // command. It does not expose a second command or permission surface.
-  const COMMAND_OWNED_MUTATION_HELPERS = new Set(["src\\server\\capabilities\\crm\\index.ts"]);
-
   const capabilityDirs = readdirSync(join(ROOT, "src/server/capabilities")).filter((entry) =>
     statSync(join(ROOT, "src/server/capabilities", entry)).isDirectory(),
   );
@@ -246,23 +248,10 @@ describe("conformance: capability contracts (Phase E)", () => {
     expect(violations).toEqual([]);
   });
 
-  it("routes every capability mutation through a command definition", () => {
-    // A capability that mutates outside a CommandDefinition bypasses
-    // authorization, events and audit in one step, which is the single most
-    // damaging shortcut available to it.
-    const violations: string[] = [];
-
-    for (const capability of capabilityDirs) {
-      for (const file of sourceFiles(join(ROOT, "src/server/capabilities", capability))) {
-        const text = readFileSync(file, "utf8");
-        const mutates = /\.(create|update|delete|createMany|updateMany|deleteMany|upsert)\(/.test(text);
-        if (mutates && !text.includes("CommandDefinition") && !COMMAND_OWNED_MUTATION_HELPERS.has(relative(ROOT, file))) {
-          violations.push(relative(ROOT, file));
-        }
-      }
-    }
-    expect(violations).toEqual([]);
-  });
+  // "Every capability mutation goes through a command" is enforced by
+  // write-confinement.test.ts. It replaced a per-file text heuristic (a file that
+  // writes must contain the word CommandDefinition) that both flagged a legitimate
+  // shared helper and passed any file that merely mentioned the word.
 
   it("declares a verb and an entity on every command", () => {
     const violations: string[] = [];
