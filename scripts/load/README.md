@@ -7,9 +7,20 @@ run first.
 
 ## What is here
 
-- `verity.k6.js` — k6 ramp over a readiness probe plus authenticated page reads.
-  Every knob is required; there is no default load. Emits one JSON artifact per
-  run into `scripts/load/results/`.
+- `verity.k6.js` — methodology v2, one VU level per invocation. Two scenarios
+  with separate metrics: `app` (authenticated business pages, ramp then hold,
+  every request tagged `route` and `phase:ramp|hold`; headline numbers come from
+  `phase:hold` only) and `readiness` (`/api/ready` at a fixed low rate, reported
+  separately, never blended into the business numbers). Every knob is required
+  (`VUS`, `RAMP_SECONDS`, `HOLD_SECONDS`, `THINK_SECONDS`, `READ_ROUTES`,
+  `READY_EVERY_SECONDS`, `AUTH_COOKIE`, `RUN_LABEL`, `OUT_FILE`); there is no
+  default load. Writes one JSON artifact to `OUT_FILE` recording the exact config.
+  v1 put `/api/ready` in every iteration and was retired after the run-06 review
+  (`verityplus-docs/10-execution/audit/benchmark-methodology-review-run06.md`).
+- `oidc-login.mjs` — signs in through the real OIDC flow, writes the session cookie.
+- Orchestration (series of levels, repetitions, telemetry sampler, comparison) is
+  lab tooling and lives with the program docs in
+  `verityplus-docs/10-execution/lab/`, not in this repository.
 
 ## What is deliberately not here
 
@@ -33,8 +44,12 @@ run first.
 2. Seed volume: `SCALE_CONFIRM_DISPOSABLE=1 TENANTS=.. EVIDENCE_PER_VISIT=..
    SCALE_VISITS=.. npm run seed:scale` (or the `WORKERS` workload form). Read-path
    and index measurement only; the seed writes no events or audit rows.
-3. Run k6 with the stages you mean to claim.
-4. Repeat the whole run. A number is a number only when a second run agrees.
+3. Run k6 from a different machine than the system under test where possible
+   (the generator competes for CPU otherwise), with a hold of minutes, one level
+   per invocation.
+4. Repeat the whole series on a fresh app process. A number is a number only when
+   a second run agrees within a tolerance stated before the run, and repetitions
+   are reported separately, not averaged.
 
 ## Gotchas found on the first authenticated run (2026-10-01)
 
