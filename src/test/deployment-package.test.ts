@@ -25,7 +25,7 @@ const MINIO = "deploy/compose/docker-compose.minio.yml";
 const ENV_EXAMPLE = "deploy/config/verity.env.example";
 
 const SCRIPTS = [
-  "install", "migrate", "bootstrap", "backup", "restore", "health", "upgrade",
+  "install", "migrate", "bootstrap", "backup", "restore", "health", "upgrade", "ensure-bucket",
 ] as const;
 
 describe("package shape (AC-01)", () => {
@@ -233,6 +233,43 @@ describe("startup and schema (AC-05)", () => {
 
   it("waits for the database before migrating rather than racing it", () => {
     expect(read("deploy/scripts/migrate.sh")).toMatch(/pg_isready/);
+  });
+});
+
+describe("the object-store bucket is provisioned before the final health gate (drill finding F5)", () => {
+  const install = read("deploy/scripts/install.sh");
+  const at = (needle: string) => install.indexOf(needle);
+
+  it("runs ensure-bucket after the object store is started and before the application and the final health check", () => {
+    expect(at("ensure-bucket.sh")).toBeGreaterThan(-1);
+    expect(at("ensure-bucket.sh")).toBeGreaterThan(at("compose up -d objects"));
+    expect(at("ensure-bucket.sh")).toBeGreaterThan(at("migrate.sh"));
+    expect(at("ensure-bucket.sh")).toBeLessThan(at("compose up -d web scheduler"));
+    expect(at("ensure-bucket.sh")).toBeLessThan(at("health.sh"));
+    // health.sh is the last gate: nothing may follow it except the completion message.
+    expect(install.slice(at("health.sh")).split("\n").filter((l) => l.trim() && !l.startsWith("#"))).toHaveLength(2);
+  });
+
+  it("stops the install if provisioning fails, rather than continuing to a doomed health check", () => {
+    expect(read("deploy/scripts/_common.sh")).toMatch(/set -euo pipefail/);
+    const line = install.split("\n").find((l) => l.includes("ensure-bucket.sh")) ?? "";
+    expect(line, "ensure-bucket must not be allowed to fail silently").not.toMatch(/\|\||;\s*true/);
+  });
+
+  it("runs the provisioning in the tools image, as the other operator steps do, and only that", () => {
+    const script = read("deploy/scripts/ensure-bucket.sh");
+    expect(script).toMatch(/--profile tools run/);
+    expect(script).toMatch(/ensure-storage-bucket\.ts/);
+    expect(script).toMatch(/require_env_file/);
+  });
+
+  it("passes the setting to the tools container and documents it, defaulting to true", () => {
+    expect(read(COMPOSE)).toMatch(/VERITY_STORAGE_CREATE_BUCKET: \$\{VERITY_STORAGE_CREATE_BUCKET:-true\}/);
+    expect(read(ENV_EXAMPLE)).toMatch(/^VERITY_STORAGE_CREATE_BUCKET=true$/m);
+  });
+
+  it("has preflight reject a value that is not exactly true or false", () => {
+    expect(read("deploy/security/preflight.sh")).toMatch(/VERITY_STORAGE_CREATE_BUCKET/);
   });
 });
 

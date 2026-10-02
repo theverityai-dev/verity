@@ -23,6 +23,7 @@ export default defineConfig({
       "src/test/deploy-env-mode.test.ts",
       "src/test/storage-s3-presign.test.ts",
       "src/test/storage-s3-matrix.test.ts",
+      "src/test/storage-s3-ensure-bucket.test.ts",
       "src/server/platform/pack-manifest.test.ts",
       "src/test/agent-chat-route.test.ts",
       "src/test/decision-node.test.ts",

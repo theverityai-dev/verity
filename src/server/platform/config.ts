@@ -129,6 +129,20 @@ const configSchema = z.object({
      */
     driver: z.enum(["supabase", "s3"]).default("supabase"),
 
+    /**
+     * Whether the installer provisions the S3 bucket when it is missing (default
+     * true). `false` means the customer owns provisioning: the installer then
+     * FAILS if the bucket does not exist rather than assuming it does, and never
+     * creates one. Exactly "true" or "false": `z.coerce.boolean()` would make
+     * "false" mean true (Boolean("false") is true), and a bucket created against a
+     * customer's explicit wish is the worse mistake. Used only by the install-time
+     * ensure-bucket step; the running application never creates a bucket.
+     */
+    createBucket: z
+      .enum(["true", "false"], { error: "VERITY_STORAGE_CREATE_BUCKET must be exactly true or false" })
+      .default("true")
+      .transform((value) => value === "true"),
+
     /** Supabase Storage. `SUPABASE_URL` overrides the public URL when set. */
     supabaseUrl: z.string().optional(),
     serviceRoleKey: z.string().optional(),
@@ -236,6 +250,7 @@ function loadConfig(): RuntimeConfig {
     },
     storage: {
       driver: env("VERITY_STORAGE_DRIVER"),
+      createBucket: env("VERITY_STORAGE_CREATE_BUCKET"),
       // Passed as undefined rather than a half-filled object when the bucket is
       // absent, so an incomplete configuration binds nothing instead of failing
       // deep inside the SDK on first use.

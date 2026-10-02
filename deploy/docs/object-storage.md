@@ -13,9 +13,42 @@ key pair, and an addressing style (`VERITY_S3_*`, see `install.md`). It requires
 - a presigned PUT that accepts the `If-None-Match: *` header the driver returns with the URL;
 - a server-side PutObject that honours `If-None-Match: *` (a second write to the same key is refused);
 - DeleteObject and HeadBucket;
-- a **pre-existing bucket**. The driver does not create one.
+- a bucket that exists by the time the application starts. The running application never creates one; the installer
+  ensures it (next section), or you do.
 
 It does **not** require, and does not send, a flexible checksum.
+
+## Bucket provisioning
+
+Readiness fails if the configured bucket does not exist, and `install.sh` ends by requiring readiness, so the installer
+ensures the bucket after the object store is started and before the application and the final health check
+(`deploy/scripts/ensure-bucket.sh`; it can also be re-run on its own, safely).
+
+`VERITY_STORAGE_CREATE_BUCKET` decides who owns the bucket. It must be exactly `true` or `false`; anything else is
+rejected (by preflight and by the configuration boundary), so `False` or `0` can never silently mean `true`.
+
+| Setting | Bucket exists | Bucket missing |
+|---|---|---|
+| `true` (default) | left exactly as it is | created, then confirmed reachable |
+| `false` (the customer owns the bucket) | left exactly as it is | **install fails, creating nothing**, with `E_STORAGE_BUCKET_MISSING` |
+
+Guarantees, each pinned by a test:
+
+- **Provisioning, never reconciliation.** An existing bucket is never read beyond a reachability check, compared, changed,
+  recreated or deleted, whatever its settings, policy, versioning, ownership or contents. It is the customer's state.
+- When it creates a bucket it sends the name alone (plus a location constraint only for AWS outside `us-east-1`). It sets no
+  ACL, policy, versioning, object lock or lifecycle.
+- It sends only a bucket-existence check and a bucket creation. It never sends a delete.
+- A permission error, server error or unreachable endpoint is reported with its cause and **nothing is created**. A bucket
+  name already taken by another account (`E_STORAGE_BUCKET_UNAVAILABLE`) and a creation that is refused are reported, not
+  retried. Losing a creation race to ourselves counts as success.
+- An object store that is still starting is waited for (up to a minute) only while it gives no HTTP answer at all.
+- A deployment that does not use the S3 driver has nothing to provision and the step exits 0.
+
+Creating a bucket needs permission to do so. Where credentials are deliberately limited to existing buckets, set
+`VERITY_STORAGE_CREATE_BUCKET=false` and create the bucket yourself first. Creation was verified against the servers in the
+table below; AWS S3 is **not** verified (its location-constraint rule is implemented from the S3 API and covered by a unit
+test only).
 
 ## How checksums behave (and why)
 

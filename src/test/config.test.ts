@@ -28,6 +28,11 @@ const SNAPSHOT_KEYS = [
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "SUPABASE_MEDIA_BUCKET",
+  "VERITY_STORAGE_DRIVER",
+  "VERITY_S3_BUCKET",
+  "VERITY_S3_ACCESS_KEY_ID",
+  "VERITY_S3_SECRET_ACCESS_KEY",
+  "VERITY_STORAGE_CREATE_BUCKET",
   "CRON_SECRET",
   "VERITY_TX_TIMEOUT_MS",
   "VERITY_TX_MAX_WAIT_MS",
@@ -134,6 +139,39 @@ describe("runtime configuration boundary", () => {
     // service key and bucket, which installStorage() also requires, do not.
     expect(runtimeConfig.storage.serviceRoleKey).toBeUndefined();
     expect(runtimeConfig.storage.bucket).toBeUndefined();
+  });
+
+  describe("VERITY_STORAGE_CREATE_BUCKET (drill finding F5)", () => {
+    const S3 = {
+      VERITY_STORAGE_DRIVER: "s3",
+      VERITY_S3_BUCKET: "verity-media",
+      VERITY_S3_ACCESS_KEY_ID: "test-access-key-id",
+      VERITY_S3_SECRET_ACCESS_KEY: "test-secret-access-key",
+    };
+
+    it("defaults to true, so the installer provisions the bucket unless told not to", async () => {
+      Object.assign(process.env, REQUIRED_ENV, S3);
+      delete process.env.VERITY_STORAGE_CREATE_BUCKET;
+      expect((await importConfig()).runtimeConfig.storage.createBucket).toBe(true);
+    });
+
+    it("accepts an explicit true and an explicit false (the customer owns the bucket)", async () => {
+      Object.assign(process.env, REQUIRED_ENV, S3);
+      process.env.VERITY_STORAGE_CREATE_BUCKET = "true";
+      expect((await importConfig()).runtimeConfig.storage.createBucket).toBe(true);
+      vi.resetModules(); // runtimeConfig is parsed once per module instance
+      process.env.VERITY_STORAGE_CREATE_BUCKET = "false";
+      expect((await importConfig()).runtimeConfig.storage.createBucket).toBe(false);
+    });
+
+    it("rejects anything else rather than guessing, so 'False' or '0' can never silently mean true", async () => {
+      Object.assign(process.env, REQUIRED_ENV, S3);
+      for (const value of ["False", "0", "no", "yes", "1"]) {
+        vi.resetModules(); // each value must be judged on its own, not on a cached failure
+        process.env.VERITY_STORAGE_CREATE_BUCKET = value;
+        await expect(importConfig(), value).rejects.toThrow(/VERITY_STORAGE_CREATE_BUCKET must be exactly true or false/);
+      }
+    });
   });
 
   it("prefers the public Supabase API URL for the storage endpoint", async () => {

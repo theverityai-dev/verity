@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
+import { DeleteBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { describe, expect, it } from "vitest";
-import { probeS3Storage, resetS3Client, s3StorageDriver, type S3Settings } from "@/server/storage/s3";
+import { ensureS3Bucket, probeS3Storage, resetS3Client, s3StorageDriver, type S3Settings } from "@/server/storage/s3";
 
 /**
  * Live S3-provider matrix (object-storage audit, 2026-10-01; drill finding F4).
@@ -103,6 +104,31 @@ function settingsFor(e: Entry): S3Settings {
 
         await expect(d.storeVerified(key, bytes, "text/plain")).rejects.toBeDefined();
         await d.delete(key);
+      }, 60_000);
+
+      it("ensureS3Bucket: creates a missing bucket, is idempotent, and refuses when creation is disabled", async () => {
+        resetS3Client();
+        const settings = { ...settingsFor(entry), bucket: `verity-ensure-${randomUUID().slice(0, 8)}` };
+        const cleanup = new S3Client({
+          region: settings.region,
+          ...(settings.endpoint ? { endpoint: settings.endpoint } : {}),
+          forcePathStyle: settings.forcePathStyle,
+          credentials: { accessKeyId: settings.accessKeyId, secretAccessKey: settings.secretAccessKey },
+        });
+        try {
+          // disabled + missing: deterministic failure, and nothing was created
+          await expect(ensureS3Bucket(settings, { create: false })).rejects.toThrow(/E_STORAGE_BUCKET_MISSING/);
+          await expect(probeS3Storage(settings, AbortSignal.timeout(10_000))).rejects.toBeDefined();
+          // enabled + missing: created
+          await expect(ensureS3Bucket(settings, { create: true })).resolves.toBe("created");
+          await expect(probeS3Storage(settings, AbortSignal.timeout(10_000))).resolves.toBeUndefined();
+          // second run, either setting: exists, no change
+          await expect(ensureS3Bucket(settings, { create: true })).resolves.toBe("exists");
+          await expect(ensureS3Bucket(settings, { create: false })).resolves.toBe("exists");
+        } finally {
+          // only ever removes the uniquely named bucket this test created
+          await cleanup.send(new DeleteBucketCommand({ Bucket: settings.bucket })).catch(() => undefined);
+        }
       }, 60_000);
 
       it("reports an existing bucket as reachable and a missing bucket as an error", async () => {

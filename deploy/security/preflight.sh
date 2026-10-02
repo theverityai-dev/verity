@@ -88,6 +88,11 @@ if [ "${DRIVER}" = "s3" ]; then
     CHANGE_ME*) fail "VERITY_S3_SECRET_ACCESS_KEY is still the example placeholder" ;;
     *) [ "${#s3_secret}" -ge 16 ] || fail "VERITY_S3_SECRET_ACCESS_KEY is shorter than 16 characters" ;;
   esac
+  create_bucket="$(env_value VERITY_STORAGE_CREATE_BUCKET)"
+  case "${create_bucket:-true}" in
+    true|false) ;;
+    *) fail "VERITY_STORAGE_CREATE_BUCKET must be exactly true or false (got ${create_bucket})" ;;
+  esac
   endpoint="$(env_value VERITY_S3_ENDPOINT)"
   style="$(env_value VERITY_S3_FORCE_PATH_STYLE)"
   # SignatureDoesNotMatch from a virtual-hosted signature against a path-style

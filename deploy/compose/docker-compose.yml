@@ -230,6 +230,9 @@ services:
       VERITY_S3_ACCESS_KEY_ID: ${VERITY_S3_ACCESS_KEY_ID:-}
       VERITY_S3_SECRET_ACCESS_KEY: ${VERITY_S3_SECRET_ACCESS_KEY:-}
       VERITY_S3_FORCE_PATH_STYLE: ${VERITY_S3_FORCE_PATH_STYLE:-}
+      # Read only by the install-time ensure-bucket step. false = the customer
+      # owns the bucket and install fails if it is missing (drill finding F5).
+      VERITY_STORAGE_CREATE_BUCKET: ${VERITY_STORAGE_CREATE_BUCKET:-true}
 
 volumes:
   verity-db-data:

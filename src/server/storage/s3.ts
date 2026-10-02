@@ -1,5 +1,7 @@
 import "server-only";
 import {
+  type BucketLocationConstraint,
+  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
@@ -98,6 +100,116 @@ export function resetS3Client(): void {
 /** Non-destructive bucket reachability/authorization probe for readiness. */
 export async function probeS3Storage(settings: S3Settings, signal: AbortSignal): Promise<void> {
   await clientFor(settings).send(new HeadBucketCommand({ Bucket: settings.bucket }), { abortSignal: signal });
+}
+
+export type EnsureBucketOutcome = "exists" | "created";
+
+function errorName(error: unknown): string {
+  return (error as { name?: string } | null)?.name ?? "Error";
+}
+
+function errorStatus(error: unknown): number | undefined {
+  return (error as { $metadata?: { httpStatusCode?: number } } | null)?.$metadata?.httpStatusCode;
+}
+
+/** "Forbidden, HTTP 403: <sanitized text>": enough to act on, never a credential. */
+function describeError(error: unknown): string {
+  const status = errorStatus(error);
+  const text = message(error);
+  const name = errorName(error);
+  return `${name}${status ? `, HTTP ${status}` : ""}${text && text !== name ? `: ${text}` : ""}`;
+}
+
+/**
+ * Makes sure the configured bucket exists. PROVISIONING, NEVER RECONCILIATION.
+ *
+ * Drill finding F5: nothing created the bucket, readiness fails without it, and
+ * the installer ends by requiring readiness, so every first install needed a
+ * hand-run step the documentation never mentioned.
+ *
+ * What it does, and all it does:
+ *  - the bucket exists: nothing else happens. Its settings, policy, versioning,
+ *    ownership, contents and metadata are not read, compared or touched. An
+ *    existing bucket is a customer's state, however unexpected it looks.
+ *  - it is missing and `create` is true: one CreateBucket (the name only, plus a
+ *    location where the service requires one), then a confirming probe.
+ *  - it is missing and `create` is false: a deterministic failure that creates
+ *    nothing. `false` means the customer owns provisioning; it is never read as
+ *    "assume it exists".
+ *  - anything else (no permission, server error, network): the error, clearly,
+ *    and no attempt to create.
+ *
+ * It sends only HeadBucket and CreateBucket. No delete, no ACL, no policy, no
+ * versioning, no lifecycle: a test asserts the command set.
+ */
+export async function ensureS3Bucket(
+  settings: S3Settings,
+  options: { create: boolean; signal?: AbortSignal },
+  deps: { client?: S3Client } = {},
+): Promise<EnsureBucketOutcome> {
+  const client = deps.client ?? clientFor(settings);
+  const { bucket } = settings;
+  const head = () =>
+    client.send(new HeadBucketCommand({ Bucket: bucket }), options.signal ? { abortSignal: options.signal } : undefined);
+
+  try {
+    await head();
+    return "exists";
+  } catch (error) {
+    const missing = errorName(error) === "NotFound" || errorName(error) === "NoSuchBucket" || errorStatus(error) === 404;
+    if (!missing) {
+      throw new Error(
+        `E_STORAGE: could not check bucket "${bucket}" (${describeError(error)}); nothing was created. ` +
+          "Check that the endpoint is reachable and that the credentials may access this bucket.",
+        // Kept so the installer can tell "the server is not up yet" (no HTTP answer) from a real refusal.
+        { cause: error },
+      );
+    }
+    if (!options.create) {
+      throw new Error(
+        `E_STORAGE_BUCKET_MISSING: bucket "${bucket}" does not exist and VERITY_STORAGE_CREATE_BUCKET is false, ` +
+          "so the installer will not create it. Create the bucket yourself, or set VERITY_STORAGE_CREATE_BUCKET=true.",
+      );
+    }
+  }
+
+  // A bucket that is created but cannot then be reached is not a success.
+  const confirm = () =>
+    head().catch((error: unknown) => {
+      throw new Error(`E_STORAGE: bucket "${bucket}" is still unreachable after creating it (${describeError(error)}).`);
+    });
+
+  // Outside us-east-1 the AWS service demands a location; a custom endpoint is
+  // sent the bucket name alone, which every server tried so far accepts.
+  const needsLocation = !settings.endpoint && settings.region !== "us-east-1";
+  try {
+    await client.send(
+      new CreateBucketCommand({
+        Bucket: bucket,
+        ...(needsLocation
+          ? { CreateBucketConfiguration: { LocationConstraint: settings.region as BucketLocationConstraint } }
+          : {}),
+      }),
+      options.signal ? { abortSignal: options.signal } : undefined,
+    );
+  } catch (error) {
+    const name = errorName(error);
+    if (name === "BucketAlreadyOwnedByYou") {
+      // Lost a creation race to ourselves: it exists and is ours.
+    } else if (name === "BucketAlreadyExists") {
+      throw new Error(
+        `E_STORAGE_BUCKET_UNAVAILABLE: the bucket name "${bucket}" is already taken by another account. ` +
+          "Choose a different VERITY_S3_BUCKET.",
+      );
+    } else {
+      throw new Error(`E_STORAGE: could not create bucket "${bucket}" (${describeError(error)}).`);
+    }
+    await confirm();
+    return "exists";
+  }
+
+  await confirm();
+  return "created";
 }
 
 export function s3StorageDriver(

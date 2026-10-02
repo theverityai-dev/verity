@@ -54,6 +54,11 @@ compose up -d db
 "${SCRIPT_DIR}/migrate.sh"
 "${SCRIPT_DIR}/bootstrap.sh" || warn "bootstrap did not complete — see above; the application is still installed"
 
+# The bucket must exist before the readiness check below, which fails without it
+# (drill finding F5). No `|| warn`: a deployment that cannot reach or provision its
+# storage must stop here with the reason, not at a health check that only says 503.
+"${SCRIPT_DIR}/ensure-bucket.sh"
+
 log "starting the application and scheduler"
 compose up -d web scheduler
 
