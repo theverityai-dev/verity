@@ -82,7 +82,19 @@ project is archived (drill finding F2).
   enterprise deployment.
 - Migrating from a MinIO deployment is **not** automatic. The old data is in the `verity-object-data` volume, which this
   store never reads. Copy objects across with any S3 client before switching if they matter.
+- Its startup log records the administrator's access key **ID** ("Added admin identity from AWS environment variables");
+  the secret key was not found in any log. Treat container logs accordingly.
 - Object bytes are still not included in `backup.sh`; see `backup-restore.md`.
+
+**Verified (2026-10-02, fresh install of commit `7946811`, new Compose project, Keycloak as the IdP).** `install.sh` with
+`VERITY_WITH_BUNDLED_STORAGE=1` ran to "install complete" (exit 0): the store became healthy, migrations applied, **the
+installer created the bucket** (a re-run reported it already exists and left it unchanged), and liveness and readiness
+were both 200. Both tenants signed in through Keycloak and the tenant isolation checks passed. Through the platform's own
+file functions and the real driver: the presigned PUT was accepted (no checksum parameters), `confirmUpload` marked the file
+`Stored`, and size and sha256 read back identical; a deliberately corrupted upload was quarantined and never served. After a
+restart of every service, `health.sh` passed, the first file was still stored and byte-identical, and a second upload for
+each tenant succeeded. Not covered: AWS S3, production HTTPS, an upload through the browser (the only caller today is the
+outreach capability's commands), and a very large file.
 
 `VERITY_WITH_MINIO=1` is a deprecated alias for `VERITY_WITH_BUNDLED_STORAGE=1` and prints a warning on every run that says
 the store changed and nothing was migrated.
