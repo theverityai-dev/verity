@@ -33,6 +33,14 @@ const SNAPSHOT_KEYS = [
   "VERITY_S3_ACCESS_KEY_ID",
   "VERITY_S3_SECRET_ACCESS_KEY",
   "VERITY_STORAGE_CREATE_BUCKET",
+  "VERITY_PUBLIC_URL",
+  "VERITY_ENVIRONMENT",
+  "VERITY_AUTH_PROVIDER",
+  "VERITY_OIDC_ISSUER",
+  "VERITY_OIDC_CLIENT_ID",
+  "VERITY_OIDC_REDIRECT_URI",
+  "NODE_ENV",
+  "PORT",
   "CRON_SECRET",
   "VERITY_TX_TIMEOUT_MS",
   "VERITY_TX_MAX_WAIT_MS",
@@ -48,7 +56,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const key of SNAPSHOT_KEYS) {
     if (snapshot[key] === undefined) delete process.env[key];
-    else process.env[key] = snapshot[key];
+    else (process.env as Record<string, string | undefined>)[key] = snapshot[key];
   }
 });
 
@@ -139,6 +147,72 @@ describe("runtime configuration boundary", () => {
     // service key and bucket, which installStorage() also requires, do not.
     expect(runtimeConfig.storage.serviceRoleKey).toBeUndefined();
     expect(runtimeConfig.storage.bucket).toBeUndefined();
+  });
+
+  describe("VERITY_PUBLIC_URL (ADR-032, finding F6)", () => {
+    const OIDC = {
+      VERITY_AUTH_PROVIDER: "oidc",
+      VERITY_OIDC_ISSUER: "https://idp.example.com/realms/x",
+      VERITY_OIDC_CLIENT_ID: "verity-web",
+      VERITY_OIDC_REDIRECT_URI: "https://verity.example.com/api/auth/oidc/callback",
+    };
+    const load = async (env: Record<string, string>) => {
+      vi.resetModules(); // runtimeConfig is parsed once per module instance
+      for (const key of ["VERITY_PUBLIC_URL", "VERITY_ENVIRONMENT", "VERITY_AUTH_PROVIDER", "VERITY_OIDC_ISSUER", "VERITY_OIDC_CLIENT_ID", "VERITY_OIDC_REDIRECT_URI", "NODE_ENV", "PORT"]) delete process.env[key];
+      Object.assign(process.env, REQUIRED_ENV, env);
+      return (await importConfig()).runtimeConfig;
+    };
+
+    it("normalises to the origin: lower-case host, default port and trailing slash dropped", async () => {
+      expect((await load({ ...OIDC, VERITY_PUBLIC_URL: "https://verity.example.com/" })).publicUrl).toBe("https://verity.example.com");
+      expect((await load({ ...OIDC, VERITY_PUBLIC_URL: "https://Verity.Example.com:443" })).publicUrl).toBe("https://verity.example.com");
+      expect((await load({ ...OIDC, VERITY_PUBLIC_URL: "https://verity.example.com:8443/", VERITY_OIDC_REDIRECT_URI: "https://verity.example.com:8443/api/auth/oidc/callback" })).publicUrl).toBe("https://verity.example.com:8443");
+    });
+
+    it("rejects anything that is not an origin, naming the variable", async () => {
+      for (const bad of [
+        "verity.example.com", "ftp://verity.example.com", "/just/a/path", "https://verity.example.com/app",
+        "https://verity.example.com/?x=1", "https://verity.example.com/#frag", "https://user:pw@verity.example.com",
+        "javascript:alert(1)", "https://",
+      ]) {
+        await expect(load({ ...OIDC, VERITY_PUBLIC_URL: bad }), bad).rejects.toThrow(/VERITY_PUBLIC_URL/);
+      }
+    });
+
+    it("is required for an OIDC deployment in production", async () => {
+      Object.assign(process.env, { NODE_ENV: "production" });
+      delete process.env.VERITY_PUBLIC_URL;
+      await expect(load({ ...OIDC, NODE_ENV: "production" })).rejects.toThrow(/VERITY_PUBLIC_URL is required/);
+    });
+
+    it("is not required outside production, or for a deployment that does not use OIDC", async () => {
+      delete process.env.VERITY_PUBLIC_URL;
+      expect((await load({ ...OIDC, NODE_ENV: "development" })).publicUrl).toBeUndefined();
+      expect((await load({ ...OIDC, NODE_ENV: "test" })).publicUrl).toBeUndefined();
+      expect((await load({ NODE_ENV: "production" })).publicUrl).toBeUndefined();
+    });
+
+    it("must be https in production, but may be http for staging", async () => {
+      await expect(load({ ...OIDC, NODE_ENV: "production", VERITY_PUBLIC_URL: "http://verity.example.com", VERITY_OIDC_REDIRECT_URI: "http://verity.example.com/api/auth/oidc/callback" }))
+        .rejects.toThrow(/VERITY_PUBLIC_URL must be https/);
+      delete process.env.VERITY_ENVIRONMENT;
+      await expect(load({ ...OIDC, NODE_ENV: "production", VERITY_ENVIRONMENT: "production", VERITY_PUBLIC_URL: "http://verity.example.com", VERITY_OIDC_REDIRECT_URI: "http://verity.example.com/api/auth/oidc/callback" }))
+        .rejects.toThrow(/VERITY_PUBLIC_URL must be https/);
+      const staging = await load({ ...OIDC, NODE_ENV: "production", VERITY_ENVIRONMENT: "staging", VERITY_PUBLIC_URL: "http://verity.example.com", VERITY_OIDC_REDIRECT_URI: "http://verity.example.com/api/auth/oidc/callback" });
+      expect(staging.publicUrl).toBe("http://verity.example.com");
+    });
+
+    it("must be on the same origin as the OIDC redirect URI, so the two cannot disagree", async () => {
+      await expect(load({ ...OIDC, VERITY_PUBLIC_URL: "https://other.example.com" })).rejects.toThrow(/VERITY_OIDC_REDIRECT_URI must be on VERITY_PUBLIC_URL/);
+      expect((await load({ ...OIDC, VERITY_PUBLIC_URL: "https://verity.example.com" })).publicUrl).toBe("https://verity.example.com");
+    });
+
+    it("exposes a validated development port, never derived from a request", async () => {
+      expect((await load({ PORT: "3100" })).port).toBe(3100);
+      delete process.env.PORT;
+      expect((await load({})).port).toBe(3000);
+      await expect(load({ PORT: "not-a-port" })).rejects.toThrow(/E_CONFIG_INVALID/);
+    });
   });
 
   describe("VERITY_STORAGE_CREATE_BUCKET (drill finding F5)", () => {

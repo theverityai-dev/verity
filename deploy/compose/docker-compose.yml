@@ -118,6 +118,9 @@ services:
       VERITY_OIDC_ISSUER: ${VERITY_OIDC_ISSUER:-}
       VERITY_OIDC_CLIENT_ID: ${VERITY_OIDC_CLIENT_ID:-}
       VERITY_OIDC_REDIRECT_URI: ${VERITY_OIDC_REDIRECT_URI:-}
+      # The origin browsers reach this deployment on (ADR-032). HOSTNAME=0.0.0.0
+      # in the image is a bind address and never a browser-facing URL.
+      VERITY_PUBLIC_URL: ${VERITY_PUBLIC_URL:-}
       VERITY_OIDC_CLIENT_SECRET: ${VERITY_OIDC_CLIENT_SECRET:-}
       VERITY_OIDC_AUDIENCE: ${VERITY_OIDC_AUDIENCE:-}
       VERITY_OIDC_JWKS_URI: ${VERITY_OIDC_JWKS_URI:-}
@@ -220,6 +223,8 @@ services:
       VERITY_OIDC_ISSUER: ${VERITY_OIDC_ISSUER:-}
       VERITY_OIDC_CLIENT_ID: ${VERITY_OIDC_CLIENT_ID:-}
       VERITY_OIDC_REDIRECT_URI: ${VERITY_OIDC_REDIRECT_URI:-}
+      VERITY_PUBLIC_URL: ${VERITY_PUBLIC_URL:-}
+      VERITY_ENVIRONMENT: ${VERITY_ENVIRONMENT:-production}
       VERITY_OIDC_CLIENT_SECRET: ${VERITY_OIDC_CLIENT_SECRET:-}
       # Storage, so an operator (and Task 43's acceptance) can exercise the
       # object store through the same driver the application uses.

@@ -45,6 +45,9 @@ services:
       VERITY_OIDC_CLIENT_ID: verity-web
       VERITY_OIDC_CLIENT_SECRET: lab-oidc-client-secret-not-for-production
       VERITY_OIDC_REDIRECT_URI: http://localhost:3000/api/auth/oidc/callback
+      # Lab only: a local http origin, which a production environment would refuse (ADR-032).
+      VERITY_PUBLIC_URL: http://localhost:3000
+      VERITY_ENVIRONMENT: staging
       VERITY_OIDC_AUDIENCE: verity-web
       VERITY_OIDC_JWKS_URI: http://dex:5556/dex/keys
       VERITY_OIDC_PRINCIPAL_CLAIM: sub

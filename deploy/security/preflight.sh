@@ -72,6 +72,27 @@ case "${PROVIDER}" in
       https://*/api/auth/oidc/callback) ;;
       *) [ "${ENVIRONMENT}" = "production" ] && fail "VERITY_OIDC_REDIRECT_URI must be the HTTPS Verity callback URL" ;;
     esac
+    # ADR-032: the browser-facing origin is configured, never taken from the request.
+    public_url="$(env_value VERITY_PUBLIC_URL)"
+    if [ -z "${public_url}" ]; then
+      fail "VERITY_AUTH_PROVIDER=oidc but VERITY_PUBLIC_URL is empty (set it to the origin browsers use, e.g. https://verity.example.com)"
+    else
+      case "${public_url}" in
+        http://*|https://*) ;;
+        *) fail "VERITY_PUBLIC_URL must be an absolute http:// or https:// URL (got ${public_url})" ;;
+      esac
+      # Origin only: nothing after the host (and optional port) except one optional slash.
+      printf '%s' "${public_url}" | grep -Eq '^https?://[^/?#@]+/?$' \
+        || fail "VERITY_PUBLIC_URL must be an origin only, with no path, query, fragment or credentials (got ${public_url})"
+      case "${public_url}" in
+        https://*) ;;
+        *) [ "${ENVIRONMENT}" = "production" ] && fail "VERITY_PUBLIC_URL must be https in production (got ${public_url})" ;;
+      esac
+      case "${redirect_uri}" in
+        "${public_url%/}"/*) ;;
+        *) fail "VERITY_OIDC_REDIRECT_URI must be on VERITY_PUBLIC_URL (${public_url%/})" ;;
+      esac
+    fi
     ;;
   *) fail "VERITY_AUTH_PROVIDER must be supabase or oidc (got ${PROVIDER})" ;;
 esac

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/server/platform/db";
 import { runtimeConfig } from "@/server/platform/config";
+import { publicUrl } from "@/server/platform/public-url";
 import {
   OIDC_TRANSACTION_COOKIE,
   createOidcAuthorization,
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   if (runtimeConfig.auth.provider !== "oidc" || !runtimeConfig.auth.oidc) {
-    return NextResponse.redirect(new URL("/sign-in", request.url));
+    return NextResponse.redirect(publicUrl("/sign-in"));
   }
 
   const authorization = await createOidcAuthorization(

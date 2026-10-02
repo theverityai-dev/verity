@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/server/platform/db";
 import { runtimeConfig } from "@/server/platform/config";
 import { discoverProviderMetadata } from "@/server/platform/oidc";
+import { publicUrl } from "@/server/platform/public-url";
 import {
   OIDC_SESSION_COOKIE,
   OIDC_TRANSACTION_COOKIE,
@@ -29,7 +30,15 @@ function failed(request: NextRequest, reason: string, error?: unknown): NextResp
   increment("authentication_failed_total", { provider: "oidc", reason });
   log("warn", "OIDC authentication refused", { reason });
   if (error) captureError(error, { route: "oidc_callback", reason });
-  const response = NextResponse.redirect(new URL("/sign-in?error=oidc", request.url));
+  let destination: URL;
+  try {
+    destination = publicUrl("/sign-in?error=oidc");
+  } catch (configError) {
+    // No public origin to send a browser to (ADR-032): refuse rather than guess one from the request.
+    captureError(configError, { route: "oidc_callback_origin" });
+    return NextResponse.json({ error: "E_CONFIG_INVALID" }, { status: 500, headers: { "cache-control": "no-store" } });
+  }
+  const response = NextResponse.redirect(destination);
   response.cookies.delete(OIDC_TRANSACTION_COOKIE);
   response.cookies.delete(OIDC_SESSION_COOKIE);
   response.headers.set("cache-control", "no-store");
@@ -84,7 +93,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       captureError(auditError, { route: "oidc_callback_audit" });
     }
 
-    const response = NextResponse.redirect(new URL(transaction.returnTo, request.url));
+    const response = NextResponse.redirect(publicUrl(transaction.returnTo));
     response.cookies.delete(OIDC_TRANSACTION_COOKIE);
     response.cookies.set(OIDC_SESSION_COOKIE, session, {
       httpOnly: true,

@@ -7,6 +7,8 @@ export default defineConfig({
     environment: "node",
     include: [
       "src/test/config.test.ts",
+      "src/test/auth-origin.test.ts",
+      "src/test/deploy-public-url-preflight.test.ts",
       "src/test/health-readiness.test.ts",
       "src/test/observability.test.ts",
       "src/server/platform/telemetry-scrub.test.ts",

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { runtimeConfig } from "@/server/platform/config";
 import { discoverProviderMetadata } from "@/server/platform/oidc";
+import { publicUrl } from "@/server/platform/public-url";
 import {
   OIDC_SESSION_COOKIE,
   OIDC_TRANSACTION_COOKIE,
@@ -11,14 +12,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const settings = runtimeConfig.auth.oidc;
-  let destination = new URL("/sign-in", request.url);
+  const signIn = publicUrl("/sign-in");
+  let destination = signIn;
   if (runtimeConfig.auth.provider === "oidc" && settings) {
     try {
       const metadata = await discoverProviderMetadata(settings.issuer);
       if (metadata.endSessionEndpoint) {
         destination = new URL(metadata.endSessionEndpoint);
         destination.searchParams.set("client_id", settings.clientId);
-        destination.searchParams.set("post_logout_redirect_uri", new URL("/sign-in", settings.redirectUri).toString());
+        destination.searchParams.set("post_logout_redirect_uri", signIn.toString());
       }
     } catch (error) {
       captureError(error, { route: "oidc_logout" });

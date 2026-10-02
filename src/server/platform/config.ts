@@ -31,8 +31,45 @@ import { z } from "zod";
  * function that must never throw through it would defeat both.
  */
 
+/**
+ * `VERITY_PUBLIC_URL` (ADR-032): the origin a browser reaches this deployment on.
+ * Normalised to the origin so a trailing slash cannot double up when a path is
+ * appended; anything that is not a bare http(s) origin is refused, so the value
+ * cannot smuggle a path, query, fragment or credentials into URLs built from it.
+ */
+const publicOrigin = z.string().transform((value, ctx) => {
+  const fail = (why: string) => {
+    ctx.issues.push({ code: "custom", message: `VERITY_PUBLIC_URL ${why}`, input: value });
+    return z.NEVER;
+  };
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return fail("must be an absolute http:// or https:// URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return fail("must be an http:// or https:// URL");
+  if (parsed.username || parsed.password) return fail("must not contain credentials");
+  // Checked on the text, not the parsed URL: `new URL` hides an empty `?` or `#`.
+  if (!/^https?:\/\/[^/?#]+\/?$/i.test(value)) return fail("must be an origin only (no path, query or fragment)");
+  return parsed.origin;
+});
+
 const configSchema = z.object({
   nodeEnv: z.enum(["development", "production", "test"]).default("development"),
+
+  /**
+   * Deployment environment as the installer names it (`VERITY_ENVIRONMENT`,
+   * default `production`). Free-form like the preflight reads it; only the exact
+   * value `production` carries the HTTPS requirement.
+   */
+  environment: z.string().min(1).default("production"),
+
+  /** The server's own listen port. Used only to name the development origin. */
+  port: z.coerce.number().int().min(1).max(65_535).default(3000),
+
+  /** See `publicOrigin`. Never derived from a request (ADR-032). */
+  publicUrl: publicOrigin.optional(),
 
   database: z.object({
     /** Prisma reads this itself via `env("DATABASE_URL")` in schema.prisma —
@@ -171,6 +208,34 @@ const configSchema = z.object({
       })
       .optional(),
   }),
+}).superRefine((config, ctx) => {
+  const origin = config.publicUrl;
+  if (config.nodeEnv === "production" && config.auth.provider === "oidc" && !origin) {
+    ctx.addIssue({
+      code: "custom",
+      message:
+        "VERITY_PUBLIC_URL is required when VERITY_AUTH_PROVIDER=oidc in production (the https:// origin browsers use)",
+    });
+  }
+  if (!origin) return;
+  if (config.nodeEnv === "production" && config.environment === "production" && !origin.startsWith("https://")) {
+    ctx.addIssue({ code: "custom", message: `VERITY_PUBLIC_URL must be https:// in a production environment (got ${origin})` });
+  }
+  const redirectUri = config.auth.oidc?.redirectUri;
+  if (redirectUri) {
+    let redirectOrigin: string | undefined;
+    try {
+      redirectOrigin = new URL(redirectUri).origin;
+    } catch {
+      redirectOrigin = undefined;
+    }
+    if (redirectOrigin !== origin) {
+      ctx.addIssue({
+        code: "custom",
+        message: `VERITY_OIDC_REDIRECT_URI must be on VERITY_PUBLIC_URL (${origin})`,
+      });
+    }
+  }
 });
 
 export type RuntimeConfig = z.infer<typeof configSchema>;
@@ -213,6 +278,9 @@ function env(name: string): string | undefined {
 function loadConfig(): RuntimeConfig {
   const result = configSchema.safeParse({
     nodeEnv: env("NODE_ENV"),
+    environment: env("VERITY_ENVIRONMENT"),
+    port: env("PORT"),
+    publicUrl: env("VERITY_PUBLIC_URL"),
     database: {
       url: env("DATABASE_URL"),
       directUrl: env("DIRECT_URL"),
