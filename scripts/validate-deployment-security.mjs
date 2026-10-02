@@ -2,9 +2,9 @@ import { readFile } from "node:fs/promises";
 import { parse } from "yaml";
 
 const root = new URL("../", import.meta.url);
-const [composeSource, minioComposeSource, dockerfile, nextConfig, packageSource, restoreScript, backupScript] = await Promise.all([
+const [composeSource, storageComposeSource, dockerfile, nextConfig, packageSource, restoreScript, backupScript] = await Promise.all([
   readFile(new URL("deploy/compose/docker-compose.yml", root), "utf8"),
-  readFile(new URL("deploy/compose/docker-compose.minio.yml", root), "utf8"),
+  readFile(new URL("deploy/compose/docker-compose.bundled-storage.yml", root), "utf8"),
   readFile(new URL("Dockerfile", root), "utf8"),
   readFile(new URL("next.config.ts", root), "utf8"),
   readFile(new URL("package.json", root), "utf8"),
@@ -45,8 +45,13 @@ if (!dockerfile.startsWith("# Verity") || !/FROM node:22-bookworm-slim@sha256:[a
 if (!/image:\s+postgres:16-alpine@sha256:[a-f0-9]{64}/.test(composeSource)) {
   failures.push("PostgreSQL image must be digest-pinned");
 }
-if (!/image:\s+quay\.io\/minio\/minio:[^\s]+@sha256:[a-f0-9]{64}/.test(minioComposeSource)) {
-  failures.push("MinIO image must be digest-pinned");
+// The bundled object store is whichever image the overlay names, in any registry, but it must be a
+// version tag AND an exact digest: the digest is what is trusted, `latest` is not a version.
+const storageImage = /^\s*image:\s+(\S+?):([^\s@]+)@sha256:[a-f0-9]{64}\s*$/m.exec(storageComposeSource);
+if (!storageImage) {
+  failures.push("the bundled object-store image must be pinned as <image>:<version>@sha256:<digest>");
+} else if (storageImage[2] === "latest") {
+  failures.push("the bundled object-store image must not use the latest tag");
 }
 if (packageJson.engines?.node !== "22.x") {
   failures.push("package.json must declare the Node 22 runtime line");

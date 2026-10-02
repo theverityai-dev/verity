@@ -37,7 +37,7 @@ jobs:
       - name: Generate the lab env file
         run: ./deploy/scripts/install.sh # first call only writes the env file and exits 0
 
-      - name: Point storage at the lab's MinIO (readiness requires a reachable object store)
+      - name: Point storage at the bundled object store (readiness requires a reachable object store and its bucket)
         run: |
           sed -i \
             -e 's|^VERITY_STORAGE_DRIVER=.*|VERITY_STORAGE_DRIVER=s3|' \
@@ -47,14 +47,9 @@ jobs:
             -e 's|^VERITY_S3_FORCE_PATH_STYLE=.*|VERITY_S3_FORCE_PATH_STYLE=true|' \
             deploy/config/verity.env
 
-      - name: Install the deployment (build, migrate, start db/objects/web/scheduler)
-        run: VERITY_WITH_MINIO=1 ./deploy/scripts/install.sh
-
-      - name: Create the lab bucket
-        run: |
-          docker run --rm --network verity_default \
-            -e MC_HOST_lab="http://$(sed -n 's/^VERITY_S3_ACCESS_KEY_ID=//p' deploy/config/verity.env):$(sed -n 's/^VERITY_S3_SECRET_ACCESS_KEY=//p' deploy/config/verity.env)@objects:9000" \
-            minio/mc:latest mb -p lab/verity-lab
+      # install.sh ensures the bucket itself (ensure-bucket.sh), before its own final health check.
+      - name: Install the deployment (build, migrate, create the bucket, start db/objects/web/scheduler)
+        run: VERITY_WITH_BUNDLED_STORAGE=1 ./deploy/scripts/install.sh
 
       - name: Health check (readiness, not just liveness)
         run: ./deploy/scripts/health.sh
@@ -95,7 +90,7 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose --project-name verity --env-file deploy/config/verity.env -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.minio.yml down -v
+        run: docker compose --project-name verity --env-file deploy/config/verity.env -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.bundled-storage.yml down -v
 
   lab-oidc-lifecycle:
     # WP-09 §"Authentication/session" track + WP-05's exit criterion. See this
@@ -114,7 +109,7 @@ jobs:
       - name: Generate the lab env file
         run: ./deploy/scripts/install.sh
 
-      - name: Point storage at the lab's MinIO
+      - name: Point storage at the bundled object store
         run: |
           sed -i \
             -e 's|^VERITY_STORAGE_DRIVER=.*|VERITY_STORAGE_DRIVER=s3|' \
@@ -137,18 +132,15 @@ jobs:
       - name: Build and start db + objects + dex
         run: |
           docker compose --project-name verity --env-file deploy/config/verity.env \
-            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.minio.yml -f deploy/compose/docker-compose.lab-oidc.yml \
+            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.bundled-storage.yml -f deploy/compose/docker-compose.lab-oidc.yml \
             build web scheduler
           docker compose --project-name verity --env-file deploy/config/verity.env \
-            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.minio.yml -f deploy/compose/docker-compose.lab-oidc.yml \
+            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.bundled-storage.yml -f deploy/compose/docker-compose.lab-oidc.yml \
             up -d db objects dex
 
       - run: ./deploy/scripts/migrate.sh
-      - name: Create the lab bucket
-        run: |
-          docker run --rm --network verity_default \
-            -e MC_HOST_lab="http://$(sed -n 's/^VERITY_S3_ACCESS_KEY_ID=//p' deploy/config/verity.env):$(sed -n 's/^VERITY_S3_SECRET_ACCESS_KEY=//p' deploy/config/verity.env)@objects:9000" \
-            minio/mc:latest mb -p lab/verity-lab
+      - name: Ensure the lab bucket (the same step install.sh runs)
+        run: VERITY_WITH_BUNDLED_STORAGE=1 ./deploy/scripts/ensure-bucket.sh
 
       - name: Pre-provision the OIDC test identity (ADR-020 — never implicit)
         run: |
@@ -159,7 +151,7 @@ jobs:
       - name: Start web + scheduler
         run: |
           docker compose --project-name verity --env-file deploy/config/verity.env \
-            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.minio.yml -f deploy/compose/docker-compose.lab-oidc.yml \
+            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.bundled-storage.yml -f deploy/compose/docker-compose.lab-oidc.yml \
             up -d web scheduler
       - run: ./deploy/scripts/health.sh
 
@@ -182,6 +174,6 @@ jobs:
         if: always()
         run: |
           docker compose --project-name verity --env-file deploy/config/verity.env \
-            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.minio.yml -f deploy/compose/docker-compose.lab-oidc.yml \
+            -f deploy/compose/docker-compose.yml -f deploy/compose/docker-compose.bundled-storage.yml -f deploy/compose/docker-compose.lab-oidc.yml \
             down -v
           rm -f deploy/lab/dex-config.yaml

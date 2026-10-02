@@ -1,0 +1,23 @@
+name: image-pins
+
+# Drill finding F2. A digest pin says which image to run; it cannot say the publisher still hosts it.
+# The bundled object store's previous image disappeared from its registry and the first sign was a
+# failed install. This asks each registry, once a week, whether every pinned manifest still exists.
+# Deliberately tiny: no pull, no build, no secrets. A failure here means "replace a pin", nothing more.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pins:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Resolve every pinned image reference
+        run: ./deploy/scripts/check-image-pins.sh

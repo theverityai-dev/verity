@@ -24,9 +24,15 @@ git clone <repository> verity && cd verity
 # complete profile, builds, migrates, bootstraps, starts, and verifies.
 ./deploy/scripts/install.sh
 
-# To start the optional object store on that second run:
-VERITY_WITH_MINIO=1 ./deploy/scripts/install.sh
+# To start the optional bundled object store (SeaweedFS) on that second run:
+VERITY_WITH_BUNDLED_STORAGE=1 ./deploy/scripts/install.sh
 ```
+
+`VERITY_WITH_MINIO=1` is a **deprecated alias** for the line above and prints a warning. The bundled store is no longer
+MinIO (its public images were withdrawn and the project is archived), it is SeaweedFS, and nothing from an old MinIO
+volume is migrated. See `object-storage.md` for the bundled store, the S3 contract, and bucket provisioning. An external
+S3-compatible store (point `VERITY_S3_*` at it, do not set the bundled-storage variable) remains the supported choice for
+enterprise deployments.
 
 The explicit two-stage flow prevents a fresh install from failing preflight on
 the intentionally blank provider fields, and prevents operators from bypassing

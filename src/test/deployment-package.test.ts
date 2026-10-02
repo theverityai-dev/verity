@@ -21,11 +21,11 @@ const DEPLOY = resolve(ROOT, "deploy");
 const read = (relative: string) => readFileSync(resolve(ROOT, relative), "utf8");
 
 const COMPOSE = "deploy/compose/docker-compose.yml";
-const MINIO = "deploy/compose/docker-compose.minio.yml";
+const STORAGE = "deploy/compose/docker-compose.bundled-storage.yml";
 const ENV_EXAMPLE = "deploy/config/verity.env.example";
 
 const SCRIPTS = [
-  "install", "migrate", "bootstrap", "backup", "restore", "health", "upgrade", "ensure-bucket",
+  "install", "migrate", "bootstrap", "backup", "restore", "health", "upgrade", "ensure-bucket", "check-image-pins",
 ] as const;
 
 describe("package shape (AC-01)", () => {
@@ -75,9 +75,11 @@ describe("no default or example secret can reach a deployment (AC-02, AC-10)", (
   });
 
   it("gives the object store no default credential either", () => {
-    const minio = read(MINIO);
-    expect(minio).toMatch(/MINIO_ROOT_USER: \$\{VERITY_S3_ACCESS_KEY_ID:\?/);
-    expect(minio).toMatch(/MINIO_ROOT_PASSWORD: \$\{VERITY_S3_SECRET_ACCESS_KEY:\?/);
+    const storage = read(STORAGE);
+    // Required, not defaulted. Without credentials the gateway would accept ANY key pair.
+    expect(storage).toMatch(/AWS_ACCESS_KEY_ID: \$\{VERITY_S3_ACCESS_KEY_ID:\?/);
+    expect(storage).toMatch(/AWS_SECRET_ACCESS_KEY: \$\{VERITY_S3_SECRET_ACCESS_KEY:\?/);
+    expect(storage).not.toMatch(/VERITY_S3_(ACCESS_KEY_ID|SECRET_ACCESS_KEY):-/);
   });
 
   it("marks every example credential with a placeholder preflight recognises", () => {
@@ -170,9 +172,9 @@ describe("exposure (AC-03)", () => {
     expect(compose).not.toMatch(/^\s*-\s*"?[\d.]*:?5432:5432/m);
   });
 
-  it("publishes no object-store port", () => {
-    const minio = read(MINIO);
-    expect(minio).not.toMatch(/^\s*-\s*"?[\d.]*:?900[01]:900[01]/m);
+  it("publishes no object-store port at all", () => {
+    // Stronger than checking known port numbers: the overlay may not publish anything.
+    expect(read(STORAGE)).not.toMatch(/^\s*ports:/m);
   });
 
   it("binds the application to localhost by default", () => {
@@ -233,6 +235,42 @@ describe("startup and schema (AC-05)", () => {
 
   it("waits for the database before migrating rather than racing it", () => {
     expect(read("deploy/scripts/migrate.sh")).toMatch(/pg_isready/);
+  });
+});
+
+describe("the bundled object store (drill finding F2)", () => {
+  const storage = read(STORAGE);
+
+  it("pins the image by version tag AND exact digest, never latest", () => {
+    const image = /^\s*image:\s+(\S+?):([^\s@]+)@sha256:([a-f0-9]{64})\s*$/m.exec(storage);
+    expect(image, "image must be <image>:<version>@sha256:<digest>").not.toBeNull();
+    expect(image?.[2]).not.toBe("latest");
+  });
+
+  it("is no longer MinIO: that image was withdrawn and its project is archived", () => {
+    expect(storage).not.toMatch(/^\s*image:.*minio/im);
+    expect(storage).not.toMatch(/MINIO_ROOT/);
+  });
+
+  it("runs unprivileged with every capability dropped and no privilege escalation", () => {
+    expect(storage).toMatch(/user: "1000:1000"/);
+    expect(storage).toMatch(/cap_drop:\s*\n\s*- ALL/);
+    expect(storage).toMatch(/no-new-privileges:true/);
+  });
+
+  it("serves S3 on 9000 so VERITY_S3_ENDPOINT=http://objects:9000 stays valid", () => {
+    expect(storage).toMatch(/- -s3\.port=9000/);
+    expect(read(ENV_EXAMPLE)).toMatch(/^VERITY_S3_ENDPOINT=http:\/\/objects:9000$/m);
+  });
+
+  it("is healthy before the application starts, and has a real health check", () => {
+    expect(storage).toMatch(/web:\s*\n\s*depends_on:\s*\n\s*objects:\s*\n\s*condition: service_healthy/);
+    expect(storage).toMatch(/healthcheck:/);
+  });
+
+  it("keeps its data in a new volume, never reading an old MinIO volume as SeaweedFS data", () => {
+    expect(storage).toMatch(/verity-bundled-storage-data:\/data/);
+    expect(storage).not.toMatch(/verity-object-data/);
   });
 });
 

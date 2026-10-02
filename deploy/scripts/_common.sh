@@ -55,10 +55,29 @@ require_env_file() {
 # an operator's shell cwd cannot change which deployment a command touches.
 compose() {
   local files=(-f "${COMPOSE_DIR}/docker-compose.yml")
-  if [ "${VERITY_WITH_MINIO:-0}" = "1" ]; then
-    files+=(-f "${COMPOSE_DIR}/docker-compose.minio.yml")
+  if bundled_storage_enabled; then
+    files+=(-f "${COMPOSE_DIR}/docker-compose.bundled-storage.yml")
   fi
   docker compose --project-name verity --env-file "${ENV_FILE}" "${files[@]}" "$@"
+}
+
+# Whether the bundled object store (docker-compose.bundled-storage.yml) is part of this deployment.
+#
+# VERITY_WITH_BUNDLED_STORAGE=1 is the setting. VERITY_WITH_MINIO=1 is a DEPRECATED alias, kept so an
+# existing install command does not suddenly start no object store at all, and it is loud on purpose:
+# the bundled store is no longer MinIO (its public images were withdrawn and the project is archived;
+# drill finding F2) but SeaweedFS, in a different volume, and nothing is migrated.
+_BUNDLED_STORAGE_WARNED=0
+bundled_storage_enabled() {
+  [ "${VERITY_WITH_BUNDLED_STORAGE:-0}" = "1" ] && return 0
+  if [ "${VERITY_WITH_MINIO:-0}" = "1" ]; then
+    if [ "${_BUNDLED_STORAGE_WARNED}" = "0" ]; then
+      _BUNDLED_STORAGE_WARNED=1
+      warn "VERITY_WITH_MINIO is deprecated and no longer starts MinIO: the bundled object store is now SeaweedFS. Use VERITY_WITH_BUNDLED_STORAGE=1. Objects held in an old MinIO volume (verity-object-data) are NOT migrated; the new store starts empty in verity-bundled-storage-data."
+    fi
+    return 0
+  fi
+  return 1
 }
 
 # Reads one value out of the env file without sourcing it. Sourcing would run

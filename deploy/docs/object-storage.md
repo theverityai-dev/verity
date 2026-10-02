@@ -50,6 +50,47 @@ Creating a bucket needs permission to do so. Where credentials are deliberately 
 table below; AWS S3 is **not** verified (its location-constraint rule is implemented from the S3 API and covered by a unit
 test only).
 
+## The bundled store (SeaweedFS)
+
+`VERITY_WITH_BUNDLED_STORAGE=1 ./deploy/scripts/install.sh` adds `docker-compose.bundled-storage.yml`, so a deployment
+has a working object store with no cloud account. It is a convenience for self-contained deployments, not the enterprise
+boundary: **an external S3-compatible store remains the supported choice for enterprise deployments** (leave the variable
+unset and point `VERITY_S3_*` at it). The bundled store replaced MinIO, whose public images were withdrawn and whose
+project is archived (drill finding F2).
+
+**Provenance of the pinned image.** The digest is what is trusted; the tag is only for the reader.
+
+| Field | Value |
+|---|---|
+| Image reference | `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d` |
+| What the digest is | The multi-architecture image index. The tags `4.48` and `latest` both resolved to it on the date below (linux/amd64 `aba492e2a4e4…`, linux/arm64 `f1f303474940…`, plus 386 and arm) |
+| Date observed | 2026-10-02 (Docker Hub `last_updated` 2026-09-28T18:58Z; release 4.48 published 2026-09-28T15:53Z) |
+| Source | Docker Hub `chrislusf/seaweedfs`, the project's own publisher, built from the `seaweedfs/seaweedfs` release 4.48. The repository also carries cosign signature tags; Verity does not verify them |
+| License and status | Apache-2.0; repository active (last push 2026-10-02) and not archived (GitHub API, 2026-10-02) |
+| Pull test | `docker pull` by this digest succeeded 2026-10-02, and `check-image-pins.sh` resolved it against the live registry the same day |
+
+**Behaviour.**
+
+- It runs as the image's own unprivileged user (uid 1000) with every capability dropped, a data volume named
+  `verity-bundled-storage-data`, and **no published ports**; the S3 gateway listens on 9000 inside the compose network, so
+  `VERITY_S3_ENDPOINT=http://objects:9000` is unchanged.
+- **Authentication is on.** With no credentials configured the gateway accepts any key pair, so the overlay requires
+  `VERITY_S3_ACCESS_KEY_ID` and `VERITY_S3_SECRET_ACCESS_KEY` and passes them as the administrator identity. A wrong secret
+  is refused (`SignatureDoesNotMatch`) and an anonymous request gets 403 (verified 2026-10-02).
+- The master, volume and filer processes inside the container have no authentication of their own and are reachable from
+  the other containers on the compose network. Acceptable for a convenience store; a reason to use external storage in an
+  enterprise deployment.
+- Migrating from a MinIO deployment is **not** automatic. The old data is in the `verity-object-data` volume, which this
+  store never reads. Copy objects across with any S3 client before switching if they matter.
+- Object bytes are still not included in `backup.sh`; see `backup-restore.md`.
+
+`VERITY_WITH_MINIO=1` is a deprecated alias for `VERITY_WITH_BUNDLED_STORAGE=1` and prints a warning on every run that says
+the store changed and nothing was migrated.
+
+**A pin can outlive its image.** `deploy/scripts/check-image-pins.sh` (run weekly by `.github/workflows/image-pins.yml`)
+asks each registry whether every pinned image still exists, so a withdrawn image is found within a week rather than by a
+failed install. `--list` prints the references offline.
+
 ## How checksums behave (and why)
 
 Uploads are two-phase. The client uploads straight to the server through a presigned URL, then Verity confirms: it reads

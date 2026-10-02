@@ -5,7 +5,8 @@
 # and migrate/bootstrap are themselves idempotent.
 #
 #   ./deploy/scripts/install.sh
-#   VERITY_WITH_MINIO=1 ./deploy/scripts/install.sh     # with the object store
+#   VERITY_WITH_BUNDLED_STORAGE=1 ./deploy/scripts/install.sh   # with the bundled object store
+#   (VERITY_WITH_MINIO=1 still works but is deprecated and warns: the bundled store is SeaweedFS now)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_common.sh"
 require_docker
@@ -46,7 +47,7 @@ compose build
 
 log "starting the database"
 compose up -d db
-[ "${VERITY_WITH_MINIO:-0}" = "1" ] && compose up -d objects
+bundled_storage_enabled && compose up -d objects
 
 # Explicit, ordered, visible. Never an image entrypoint: baking migration into
 # container start makes every restart — including an autoscaler's — a potential
