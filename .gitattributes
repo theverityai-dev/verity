@@ -3,3 +3,7 @@
 # "/bin/sh^M: bad interpreter". Scoped narrowly to the files that actually
 # execute inside a container; not a repo-wide line-ending policy change.
 *.sh text eol=lf
+
+# Everything in the deploy package is read by shell on Linux (env example, compose files, docs the
+# scripts quote). CRLF there broke env_value() and health.sh (drill finding F7).
+deploy/** text eol=lf

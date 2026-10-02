@@ -84,7 +84,9 @@ bundled_storage_enabled() {
 # whatever it contains, and this file is edited by hand.
 env_value() {
   local key="$1"
-  sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n 1
+  # tr drops a carriage return: a CRLF env file (a Windows checkout, or `git archive` on Windows) would
+  # otherwise give values ending in \r, and health.sh would curl "127.0.0.1\r" and report 000 (finding F7).
+  sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n 1 | tr -d '\r'
 }
 
 require_docker() {
