@@ -21,6 +21,8 @@ export default defineConfig({
       "scripts/scale/workload.test.ts",
       "src/test/write-confinement.test.ts",
       "src/test/deploy-env-mode.test.ts",
+      "src/test/storage-s3-presign.test.ts",
+      "src/test/storage-s3-matrix.test.ts",
       "src/server/platform/pack-manifest.test.ts",
       "src/test/agent-chat-route.test.ts",
       "src/test/decision-node.test.ts",

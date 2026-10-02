@@ -435,7 +435,8 @@ const hasLiveS3 = Boolean(liveEndpoint && liveBucket && liveKeyId && liveSecret)
     const key = storageKeyFor(randomUUID(), "round-trip.txt");
     const bytes = Buffer.from(`verity storage round trip ${randomUUID()}`, "utf8");
 
-    const upload = await driver.createUploadUrl(key, "text/plain");
+    // The production call shape: `reserveUpload` always passes the declared size.
+    const upload = await driver.createUploadUrl(key, "text/plain", bytes.byteLength);
     const put = await fetch(upload.url, { method: "PUT", headers: upload.headers, body: bytes });
     expect(put.ok, `PUT failed: ${put.status}`).toBe(true);
 

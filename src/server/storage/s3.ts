@@ -67,6 +67,24 @@ function clientFor(settings: S3Settings): S3Client {
       accessKeyId: settings.accessKeyId,
       secretAccessKey: settings.secretAccessKey,
     },
+    // CHECKSUM BEHAVIOUR: ONLY WHEN THE OPERATION REQUIRES ONE (drill finding F4)
+    //
+    // Since SDK v3.729 the default is WHEN_SUPPORTED, which makes a presigned
+    // PutObject carry `x-amz-checksum-crc32` and `x-amz-sdk-checksum-algorithm`
+    // in its query string. The CRC32 is computed over an EMPTY body, because the
+    // holder of the URL chooses the bytes later. A server that validates it
+    // against the real upload rejects every upload with BadDigest; one that
+    // ignores it accepts. AWS S3 itself is reported to reject it. A presigned
+    // GET likewise gains `x-amz-checksum-mode`.
+    //
+    // Verity needs neither: `confirmUpload` re-reads the stored bytes and checks
+    // size, sha256 and file type itself, so an upload is verified end to end by
+    // the platform and not by a transport checksum nobody can set correctly in
+    // advance. WHEN_REQUIRED sends a checksum only for operations that mandate
+    // one, which none of these (PutObject, GetObject, DeleteObject, HeadBucket)
+    // do. See deploy/docs/object-storage.md.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
   cached = { key, client };
   return client;
