@@ -67,7 +67,7 @@ import {
 /**
  * Plywood integrity foundation — slice 1.
  *
- * Plan: taskplans/45_plywood_workflow_program.md.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md.
  * Findings closed: PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-02, P0-03, P0-05,
  * P0-06, and the availability rule in §4.2.
  *

@@ -25,7 +25,7 @@ import {
 
 /**
  * Task 38 — Audit & Business History.
- * Plan: taskplans/38_audit_business_history.md.
+ * Plan: taskplans/archive/38_audit_business_history.md.
  *
  * The claim under test is the brief's: a sensitive business mutation can be
  * reconstructed — who did what, to which object, when, and what changed — and

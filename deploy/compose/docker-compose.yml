@@ -1,6 +1,6 @@
 # Verity — Enterprise Deployment Package (Task 42).
 #
-# Authority: taskplans/42_deployment_hardening.md.
+# Authority: taskplans/archive/42_deployment_hardening.md.
 #
 # The difference between this file and the repository-root docker-compose.yml
 # is that this one is written to be handed to a customer. The root file is a

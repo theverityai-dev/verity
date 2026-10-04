@@ -2,8 +2,8 @@
 
 **Authority:** User synthesis, 2026-10-01 — product owner cannot commit to large
 (₹10 lakh, on-premise) clients because Verity's scalability is architectural
-belief, not measured evidence. Builds on `taskplans/30_containerized_runtime.md`
-and `taskplans/31_migration_and_bootstrap.md` (existing `Dockerfile`,
+belief, not measured evidence. Builds on `taskplans/archive/30_containerized_runtime.md`
+and `taskplans/archive/31_migration_and_bootstrap.md` (existing `Dockerfile`,
 `docker-compose.yml`, `deploy/db/init/`), `taskplans/107_complete_verity_security_modularity_on_prem_audit_prompt.md`
 and `taskplans/108_complete_audit_remediation_and_upgrade_program.md` (on-prem
 audit), CLAUDE.md "Database connection roles" (INV-001 pooling and role

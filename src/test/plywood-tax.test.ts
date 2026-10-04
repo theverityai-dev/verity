@@ -73,7 +73,7 @@ import {
 /**
  * Tax — slice 6.
  *
- * Plan: taskplans/45_plywood_workflow_program.md §4.4.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md §4.4.
  * Closes: PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-07.
  * Specification §5, §58–§63.
  *

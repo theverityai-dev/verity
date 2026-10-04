@@ -10,7 +10,7 @@
 # those tasks' own briefs warned against.
 #
 # `docker compose up` starts Verity and a local Postgres. It does NOT run
-# migrations (see taskplans/30_containerized_runtime.md's "Database /
+# migrations (see taskplans/archive/30_containerized_runtime.md's "Database /
 # migration model") — that stays an explicit, operator-run step, deferred to
 # Task 31 for a real bootstrap design.
 

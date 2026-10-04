@@ -64,7 +64,7 @@ import {
 /**
  * The sales chain — slice 4.
  *
- * Plan: taskplans/45_plywood_workflow_program.md §9.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md §9.
  * Closes: PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04 (the issue half) and the
  * remainder of P0-03.
  *

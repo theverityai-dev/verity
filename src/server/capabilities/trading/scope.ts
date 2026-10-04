@@ -9,7 +9,7 @@ import type { TenantScopedClient } from "@/server/platform/tenancy";
 /**
  * Godown-level row scoping for the plywood capability.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §6 and §10;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §6 and §10;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md **P0-01**, the audit's first finding;
  * Spec PLA-AUT-004, PLA-ORG-002, PLA-ORG-003.
  *

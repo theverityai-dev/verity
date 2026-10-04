@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 /**
  * The provider-neutral background-job contract.
  *
- * Authority: taskplans/29_background_job_abstraction.md.
+ * Authority: taskplans/archive/29_background_job_abstraction.md.
  *
  * WHY THIS EXISTS, GIVEN NOTHING CALLS IT YET
  * The inventory this task performed (see the taskplan) found no discrete,

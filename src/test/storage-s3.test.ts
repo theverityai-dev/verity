@@ -7,7 +7,7 @@ import { checksumOf, storageKeyFor } from "@/server/platform/files";
 
 /**
  * Task 41 — the second storage provider.
- * Plan: taskplans/41_s3_storage_implementation.md.
+ * Plan: taskplans/archive/41_s3_storage_implementation.md.
  *
  * The claim under test is not "S3 works". It is that the seam Task 27 created
  * is real: a second implementation fits without `platform/files.ts` moving and

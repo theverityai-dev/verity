@@ -16,7 +16,7 @@ import {
 
 /**
  * Task 36 — Enterprise Identity / OIDC.
- * Plan: taskplans/36_enterprise_identity_oidc.md (P1..P10).
+ * Plan: taskplans/archive/36_enterprise_identity_oidc.md (P1..P10).
  *
  * No live identity provider and no database. `platform/oidc.ts` is pure by
  * design precisely so the rules an enterprise buys — issuer, audience,

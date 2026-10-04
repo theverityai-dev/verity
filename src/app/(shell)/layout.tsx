@@ -135,7 +135,7 @@ export default async function ShellLayout({
   /**
    * The sidebar, in the order a business reads it.
    *
-   * Authority: taskplans/45_plywood_workflow_program.md §8. The client's own
+   * Authority: taskplans/archive/45_plywood_workflow_program.md §8. The client's own
    * words — Trade, Inventory, Money, Insights — before the platform's own
    * "Platform" and "Capabilities", which are implementation vocabulary. A
    * client seeing "Capabilities" is the foundation leaking into the product.

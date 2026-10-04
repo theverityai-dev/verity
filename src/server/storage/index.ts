@@ -7,7 +7,7 @@ import { s3StorageDriver } from "./s3";
 /**
  * Storage provider selection.
  *
- * Authority: taskplans/41_s3_storage_implementation.md.
+ * Authority: taskplans/archive/41_s3_storage_implementation.md.
  *
  * The one place that decides which object store this deployment uses. Every
  * `if` about a provider lives here and nowhere else — a capability, a command

@@ -1831,7 +1831,7 @@ export const cancelPurchaseOrder: CommandDefinition<
  * What this customer currently owes us, plus what we have committed to supply
  * them and not yet billed.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §4.1 — the single
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §4.1 — the single
  * canonical formula. Any second definition of exposure anywhere in this
  * capability is a defect.
  *
@@ -2685,7 +2685,7 @@ export const reserveForOrder: CommandDefinition<
 /**
  * Material physically leaves the godown.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §5;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §5;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04; specification §45–§47.
  *
  * WHAT THIS REPLACES

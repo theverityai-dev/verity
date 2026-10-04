@@ -1,6 +1,6 @@
 # Verity — functional, conformance and security-control audit
 
-**Run:** 2026-09-07 · **Auditor:** Claude Code session · **Prompt:** `taskplans/102_functional_and_security_control_audit_prompt.md`
+**Run:** 2026-09-07 · **Auditor:** Claude Code session · **Prompt:** `taskplans/archive/102_functional_and_security_control_audit_prompt.md`
 **Status:** complete for the scope stated in "What was not tested". Nothing in the repository or the database was modified.
 
 ## Environment audited

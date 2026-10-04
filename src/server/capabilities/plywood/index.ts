@@ -1085,7 +1085,7 @@ export function registerPlywoodCapability(): void {
     navigation: [
       // The client's navigation, in the business's own words.
       //
-      // Authority: taskplans/45_plywood_workflow_program.md §8. Groups are the
+      // Authority: taskplans/archive/45_plywood_workflow_program.md §8. Groups are the
       // five the specification names — TRADE, INVENTORY, MONEY, INSIGHTS,
       // ADMINISTRATION — not the platform's own "Capabilities" and
       // "Administration", which are implementation vocabulary. A client seeing

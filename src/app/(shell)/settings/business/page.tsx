@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Business Settings — who this business legally is, and how it is registered
  * for tax.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §D-03;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §D-03;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-09; specification §4 and §5.
  *
  * This is the master identity the specification asks for: entered once, and

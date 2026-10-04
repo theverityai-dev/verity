@@ -6,7 +6,7 @@ license: Apache 2.0
 
 Authority: `taskplans/99_verity_custom_skills_plan.md` Skill 5. The
 erpclaw extraction (Tasks 72-95) and the twelve R&D audits
-(`taskplans/02_digit_works_audit.md` through `13_seaweedfs_audit.md`) were
+(`taskplans/archive/02_digit_works_audit.md` through `13_seaweedfs_audit.md`) were
 each a genuinely valuable but entirely manual process. This skill encodes
 the *method*, so a session mining a new repo (`n8n`, `frappe`, `odoo-19.0`,
 `Zam`, a second `calcom` clone, `liquid-glass-react`, or anything not yet

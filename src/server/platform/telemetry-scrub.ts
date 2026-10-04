@@ -1,7 +1,7 @@
 /**
  * What may leave the deployment in a crash report.
  *
- * Audit finding F-04 (`taskplans/46C_findings_ledger.md`). The platform already
+ * Audit finding F-04 (`taskplans/archive/46C_findings_ledger.md`). The platform already
  * redacts thoroughly — `redactMessage` and `redactFieldsForLog` in
  * `observability.ts` — but that redaction lives in `log()`, and Sentry does not
  * go through `log()`. Sentry captures thrown exceptions directly from the

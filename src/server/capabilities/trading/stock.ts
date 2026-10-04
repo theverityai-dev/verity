@@ -488,7 +488,7 @@ export const recordDamagedStock: CommandDefinition<
 /**
  * Material comes back from a customer.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §4.5; specification §66.
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §4.5; specification §66.
  *
  * TIED TO THE ISSUE IT CAME BACK FROM (slice 5)
  * `goodsIssueId` is optional in the type and expected in practice. Given, the
@@ -712,7 +712,7 @@ export const lowStock: QueryDefinition<
     // level — which is what this did — reports plenty while every sheet is
     // already promised to a customer, and the buyer finds out at goods issue.
     //
-    // Authority: taskplans/45_plywood_workflow_program.md §4.2:
+    // Authority: taskplans/archive/45_plywood_workflow_program.md §4.2:
     //   available = on_hand - reserved
     //   low_stock = available < reorder_level
     const held = await ctx.tx.tradingStockReservation.groupBy({

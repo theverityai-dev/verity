@@ -4,7 +4,7 @@ import { buildIdentity } from "@/server/platform/observability";
 /**
  * Liveness — "the process is alive and responding."
  *
- * Authority: taskplans/32_health_readiness.md.
+ * Authority: taskplans/archive/32_health_readiness.md.
  *
  * Deliberately does NOTHING beyond reading a constant. No database, no
  * storage, no external call — the whole point of a liveness probe is that

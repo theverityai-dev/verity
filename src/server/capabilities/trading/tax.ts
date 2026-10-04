@@ -25,7 +25,7 @@ import { resolveConfig } from "@/server/platform/capability";
 /**
  * Tax determination, input credit, and the working for a return.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §4.4;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §4.4;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-07; specification §5, §58–§63.
  *
  * TAX IS DERIVED, NEVER RE-KEYED
