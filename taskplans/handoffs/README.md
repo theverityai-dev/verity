@@ -11,7 +11,7 @@ line below matching recent commits), regenerate it from `git log` and the
 taskplans it points to before trusting it, same rule `00_STATUS_INDEX.md`
 already states for itself.
 
-**Last updated: 2026-09-30 (liquid-glass ADR-028; Task 116 Senior/Junior live verification; refreshed against `taskplans/122_...`)**
+**Last updated: 2026-10-04 (repo cleanup, deployment hardening 10-01/02; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
 
 ## How to use this folder
 
@@ -51,6 +51,27 @@ already states for itself.
   design-system.md` §2, REQ-004..009). `verity-design-companion` skill
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
+
+## Since 2026-09-30 (added 2026-10-04)
+
+- **Repository cleanup — IN PROGRESS, branch `chore/repo-cleanup`.** Phase 0 baseline in
+  `docs/audits/2026-10-04-repo-cleanup-baseline.md`. Done: lint errors fixed, generated output
+  untracked, `CONTRIBUTING.md`, repo-wide LF rule, and 68 closed taskplans moved to
+  `taskplans/archive/` (see its README). Remaining: regenerate `00_STATUS_INDEX.md` evidence,
+  dead-code pass, boundary lint rules, CI gates.
+- **Deployment hardening (2026-10-01/02), Mode A.** Bundled SeaweedFS replaces the withdrawn MinIO
+  image (fresh install verified); `install` ensures the object-store bucket; **ADR-032** — the public
+  origin is configured as `VERITY_PUBLIC_URL`, never derived from the request (ACCEPTED); runtime
+  role is read-only on `deployment_state`; CRLF-safe `env_value`, `deploy/` pinned to LF.
+- **Task 123 — scaffolding only, no measurement taken.** k6 harness is at methodology v2; the
+  client-tenant provisioning seed and OIDC login helper exist. **ADR-031** (Mode A first) is still
+  PROPOSED. **Task 124** (runtime role default privileges) is a PROPOSED design question.
+- **Task 118 — dispatch, batch consolidation and stock reservation BUILT 2026-10-01.**
+- **`enterprise-demo-prd/` (AstraGrid, fictional demo client) is committed but not authorized for
+  build.** It overlaps CRM, procurement and field service, which `CLAUDE.md` lists as out of scope; the
+  2026-09-30 scope decision covers only Tasks 118–120. Needs a fresh product-owner decision.
+- **Known baseline defect:** `deploy-public-url-preflight.test.ts` times out at 5 s on Windows (one
+  test); cause unconfirmed.
 
 ## Since 2026-09-18 (this file had not been updated; regenerated 2026-09-30)
 
