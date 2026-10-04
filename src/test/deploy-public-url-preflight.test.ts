@@ -59,7 +59,8 @@ describe.skipIf(!bashAvailable)("preflight: VERITY_PUBLIC_URL (ADR-032)", () => 
     expect(plain.status, plain.out).toBe(0);
     const slash = run({ VERITY_PUBLIC_URL: "https://verity.example.com/" });
     expect(slash.status, slash.out).toBe(0);
-  });
+    // Two bash spawns; Windows process start alone can exceed the 5 s default.
+  }, 30_000);
 
   it("fails when it is missing, naming the variable", () => {
     const r = run({ VERITY_PUBLIC_URL: null });

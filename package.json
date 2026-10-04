@@ -15,7 +15,6 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "db:sync": "prisma db push",
-    "db:reset": "prisma db push --force-reset && npm run seed:plywood",
     "start": "next start",
     "validate:workflow": "node scripts/validate-workflow.mjs",
     "validate:deployment-security": "node scripts/validate-deployment-security.mjs",
