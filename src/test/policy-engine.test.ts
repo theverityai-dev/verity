@@ -26,7 +26,7 @@ import {
 
 /**
  * Task 37 — the authorization decision point.
- * Plan: taskplans/37_enterprise_rbac_policy.md.
+ * Plan: taskplans/archive/37_enterprise_rbac_policy.md.
  *
  * Organization tree, the same shape `authorization-layers.test.ts` uses:
  *

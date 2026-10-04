@@ -8,7 +8,7 @@ Every command in Sections 2 and 3 has been run in this exact form against
 the real application and a real PostgreSQL database on 2026-08-30 (Step
 2b–2d against a genuinely fresh, freshly-migrated database; Step 1's
 `docker compose build`/`up` specifically were **not** — see
-`taskplans/34_portable_runtime_acceptance.md` for the exact acceptance
+`taskplans/archive/34_portable_runtime_acceptance.md` for the exact acceptance
 record and why). This is the procedure to follow, not a design document.
 
 ---
@@ -171,7 +171,7 @@ a genuinely empty data directory). Irreversible without a prior backup.
 
 ## 5. Troubleshooting
 
-Reproduced from `taskplans/30_containerized_runtime.md`'s own
+Reproduced from `taskplans/archive/30_containerized_runtime.md`'s own
 troubleshooting section, which remains accurate:
 
 * **Build fails on a Prisma "Environment variable not found" error** — a

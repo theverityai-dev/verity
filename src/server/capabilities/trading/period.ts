@@ -17,7 +17,7 @@ import { ENTITY_ACCOUNTING_PERIOD } from "./keys";
 /**
  * Accounting periods, the posting lock, and the close checklist.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §5 and §8;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §5 and §8;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-08; specification §76 and §77.
  *
  * A close is the moment a business says "this is what happened in August". It

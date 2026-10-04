@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * Month-end close.
  *
  * Authority: specification §76 and §77;
- * taskplans/45_plywood_workflow_program.md §8 — the close lives under Tax &
+ * taskplans/archive/45_plywood_workflow_program.md §8 — the close lives under Tax &
  * Compliance because closing is a compliance act and the checklist is mostly
  * tax exceptions.
  *

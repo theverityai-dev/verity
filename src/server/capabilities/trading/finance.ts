@@ -36,7 +36,7 @@ import {
 /**
  * The order states a financial document may be raised against.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §5 (state machines) and
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §5 (state machines) and
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-03.
  *
  * Allow-lists, not deny-lists. When the Goods Issue and Goods Receipt
@@ -3048,7 +3048,7 @@ export const marginReport: QueryDefinition<
 /**
  * Purchase order ↔ goods receipt ↔ supplier invoice.
  *
- * Authority: specification §29; taskplans/45_plywood_workflow_program.md §9
+ * Authority: specification §29; taskplans/archive/45_plywood_workflow_program.md §9
  * slice 3; PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04 and §4.6.
  *
  * The accountant's question is never "what did we order?" — it is "does what
@@ -3397,7 +3397,7 @@ export const goodsReceiptDetail: QueryDefinition<
 /**
  * Corrects a posted invoice, without touching it.
  *
- * Authority: specification §67; taskplans/45_plywood_workflow_program.md §5;
+ * Authority: specification §67; taskplans/archive/45_plywood_workflow_program.md §5;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-05.
  *
  * Slice 1 made a posted invoice immutable for every role including a

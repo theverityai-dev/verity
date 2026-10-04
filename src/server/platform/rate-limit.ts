@@ -1,7 +1,7 @@
 /**
  * Request throttling.
  *
- * Audit finding F-01 (`taskplans/46C_findings_ledger.md`): nothing in this
+ * Audit finding F-01 (`taskplans/archive/46C_findings_ledger.md`): nothing in this
  * application limited request rate anywhere, sign-in included. Failure
  * responses correctly refuse to distinguish "no such user" from "wrong
  * password", which closes the enumeration oracle — but it also means an

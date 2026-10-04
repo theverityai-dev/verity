@@ -22,7 +22,7 @@ import { httpIntegrationAdapter } from "@/server/integrations/http";
 
 /**
  * Task 39 — the integration boundary.
- * Plan: taskplans/39_integration_framework.md.
+ * Plan: taskplans/archive/39_integration_framework.md.
  *
  * The claim: a capability can exchange data with an external system without
  * naming it, and an inbound call is untrusted until three separate things are

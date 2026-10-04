@@ -12,7 +12,7 @@ import { ENTITY_BUSINESS_PROFILE, ENTITY_GST_REGISTRATION } from "./keys";
 /**
  * The business's own legal identity, and its GST registration.
  *
- * Authority: taskplans/45_plywood_workflow_program.md §D-03 and §4.4;
+ * Authority: taskplans/archive/45_plywood_workflow_program.md §D-03 and §4.4;
  * PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-09.
  *
  * WHAT THIS REPLACES

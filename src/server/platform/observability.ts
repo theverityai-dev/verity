@@ -5,7 +5,7 @@ import { redactMessage } from "./redaction";
 /**
  * The observability contract.
  *
- * Authority: taskplans/40_enterprise_observability.md; INV-001 (a log line is
+ * Authority: taskplans/archive/40_enterprise_observability.md; INV-001 (a log line is
  * still tenant data); MET-AUT-003 and Task 38 (secrets are never retained).
  *
  * ```text

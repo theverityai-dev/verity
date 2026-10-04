@@ -14,7 +14,7 @@ import type { StorageDriver } from "@/server/platform/files";
 /**
  * An S3-compatible object store as a `StorageDriver`.
  *
- * Authority: taskplans/41_s3_storage_implementation.md; Task 27 created the
+ * Authority: taskplans/archive/41_s3_storage_implementation.md; Task 27 created the
  * seam this fills.
  *
  * WHY A SECOND DRIVER EXISTS AT ALL

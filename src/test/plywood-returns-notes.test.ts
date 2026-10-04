@@ -67,7 +67,7 @@ import {
 /**
  * Returns and corrections — slice 5.
  *
- * Plan: taskplans/45_plywood_workflow_program.md §4.5, §5.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md §4.5, §5.
  * Specification §66 and §67.
  *
  * Two rules that look like one and are not: material coming back is a stock

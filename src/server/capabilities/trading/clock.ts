@@ -4,7 +4,7 @@ import type { TenantScopedClient } from "@/server/platform/tenancy";
 /**
  * When a business day and a business month begin.
  *
- * Audit finding U0-3 (`taskplans/68_plywood_usability_audit.md`). Every period
+ * Audit finding U0-3 (`taskplans/archive/68_plywood_usability_audit.md`). Every period
  * boundary in this capability was computed in UTC while the tenant reckons in
  * `Asia/Kolkata`. The consequences ran from cosmetic to filing-grade:
  *

@@ -1,6 +1,6 @@
 # Bundled object-store overlay: SeaweedFS's S3 gateway as the self-contained convenience store.
 #
-# Authority: taskplans/42_deployment_hardening.md §4.4 (an S3 backend that works with no cloud
+# Authority: taskplans/archive/42_deployment_hardening.md §4.4 (an S3 backend that works with no cloud
 # account); object-storage audit 2026-10-01, finding F2 (the previous bundled store could no
 # longer be pulled and is archived upstream).
 #

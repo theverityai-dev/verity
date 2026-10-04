@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { trailingDaysRange } from "@/lib/date-range";
 import { Button, DefinitionList, ErrorState, Field, Input, Panel, RowList, Row, Select } from "@/components/ui/primitives";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
@@ -9,6 +10,7 @@ type PayrollInputs = { daysWorked: number; hoursWorked: number; lateCount: numbe
 type Shift = { id: string; employeeId: string; date: string; label: string; startTime: string; endTime: string };
 
 function PayrollInputsPanel({ employees }: { employees: Array<{ id: string; name: string }> }) {
+  const [range] = useState(() => trailingDaysRange(30));
   const [result, setResult] = useState<PayrollInputs | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
@@ -39,10 +41,10 @@ function PayrollInputsPanel({ employees }: { employees: Array<{ id: string; name
           </Select>
         </Field>
         <Field label="From" htmlFor="fromDate" required>
-          <Input id="fromDate" name="fromDate" type="date" required defaultValue={new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)} />
+          <Input id="fromDate" name="fromDate" type="date" required defaultValue={range.fromDate} />
         </Field>
         <Field label="To" htmlFor="toDate" required>
-          <Input id="toDate" name="toDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
+          <Input id="toDate" name="toDate" type="date" required defaultValue={range.toDate} />
         </Field>
         <div className="sm:col-span-3">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "Loading…" : "Compute"}</Button>

@@ -14,7 +14,7 @@ import type { TenantScopedClient } from "./tenancy";
 /**
  * The authorization decision point.
  *
- * Authority: taskplans/37_enterprise_rbac_policy.md; Spec PLA-AUT-001→005,
+ * Authority: taskplans/archive/37_enterprise_rbac_policy.md; Spec PLA-AUT-001→005,
  * MET-ACT-002; ADR-005 (Organization is a nested hierarchy inside a Tenant);
  * PRN-001 (explainable automation).
  *

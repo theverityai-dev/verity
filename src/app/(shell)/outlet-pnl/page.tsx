@@ -1,5 +1,6 @@
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { FINANCE_CAPABILITY } from "@/server/capabilities/finance";
+import { trailingDaysRange } from "@/lib/date-range";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
@@ -24,8 +25,7 @@ async function OutletPnLPage() {
   const location = locations[0];
   if (!location) return <PageHeader title="Outlet P&L" description="No outlets in scope." />;
 
-  const toDate = new Date().toISOString().slice(0, 10);
-  const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { fromDate, toDate } = trailingDaysRange(30);
   const result = await runQuery<PnL>("verity.finance.get_outlet_pnl", { locationId: location.id, fromDate, toDate });
   if (!result.ok) return <ErrorState title="Could not load P&L" message={result.message} issues={result.issues} retryable={result.retryable} />;
   const pnl = result.data;

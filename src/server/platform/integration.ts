@@ -7,7 +7,7 @@ export { redactMessage } from "./redaction";
 /**
  * The integration boundary.
  *
- * Authority: taskplans/39_integration_framework.md; PLA-TEN-006 (tenant is
+ * Authority: taskplans/archive/39_integration_framework.md; PLA-TEN-006 (tenant is
  * never taken from a payload); MET-AUT-003 (secrets live in the encrypted
  * credential registry); PLA-EXT-001 (capabilities extend through registration).
  *

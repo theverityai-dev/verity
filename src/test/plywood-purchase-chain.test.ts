@@ -62,7 +62,7 @@ import {
 /**
  * The purchase chain — slice 3.
  *
- * Plan: taskplans/45_plywood_workflow_program.md §9.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md §9.
  * Closes: PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04 (the receipt half).
  *
  * The specification's §25 and §26 in one sentence: one action by a warehouse

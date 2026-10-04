@@ -24,8 +24,8 @@ async function CouponsPage() {
   if (!result.ok) return <ErrorState title="Could not load coupons" message={result.message} issues={result.issues} retryable={result.retryable} />;
 
   const coupons = result.data;
-  const now = Date.now();
-  const active = coupons.filter((c) => c.active && (!c.expiresAt || new Date(c.expiresAt).getTime() > now)).length;
+  const now = new Date();
+  const active = coupons.filter((c) => c.active && (!c.expiresAt || new Date(c.expiresAt) > now)).length;
   const expired = coupons.length - active;
 
   return (

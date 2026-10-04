@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Task 42 — the Verity Enterprise Deployment Package.
- * Plan: taskplans/42_deployment_hardening.md.
+ * Plan: taskplans/archive/42_deployment_hardening.md.
  *
  * A hardening document nothing enforces is a wish list. These tests are the
  * enforcement: they assert the properties `deploy/security/hardening.md`

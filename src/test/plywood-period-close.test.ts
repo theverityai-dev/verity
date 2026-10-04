@@ -82,7 +82,7 @@ import {
 /**
  * Period close — slice 7.
  *
- * Plan: taskplans/45_plywood_workflow_program.md §5.
+ * Plan: taskplans/archive/45_plywood_workflow_program.md §5.
  * Closes: PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-08.
  * Specification §76 and §77.
  *

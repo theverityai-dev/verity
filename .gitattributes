@@ -7,3 +7,13 @@
 # Everything in the deploy package is read by shell on Linux (env example, compose files, docs the
 # scripts quote). CRLF there broke env_value() and health.sh (drill finding F7).
 deploy/** text eol=lf
+
+# Repo-wide default: LF in the index and in working copies. The index is already all-LF,
+# so this normalises nothing; it stops Windows checkouts producing CRLF noise.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.docx binary
+*.mp4 binary
+*.woff2 binary

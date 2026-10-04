@@ -11,7 +11,7 @@ import {
 /**
  * The reference outbound REST adapter.
  *
- * Authority: taskplans/39_integration_framework.md.
+ * Authority: taskplans/archive/39_integration_framework.md.
  *
  * WHY IT LIVES OUTSIDE `src/server/platform/`
  * The same reason `server/storage/supabase.ts` does. A concrete integration is

@@ -25,7 +25,7 @@ import { AuthenticationRequiredError } from "@/server/platform/auth";
 
 /**
  * Task 40 — the observability contract.
- * Plan: taskplans/40_enterprise_observability.md.
+ * Plan: taskplans/archive/40_enterprise_observability.md.
  *
  * The five questions an operator must be able to answer from outside the
  * source: is it healthy, what is failing, which request caused it, which

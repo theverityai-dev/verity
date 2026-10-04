@@ -1,7 +1,7 @@
 /**
  * The provider-neutral authentication contract.
  *
- * Authority: taskplans/28_auth_provider_abstraction.md, Bible V5 §1.A.4
+ * Authority: taskplans/archive/28_auth_provider_abstraction.md, Bible V5 §1.A.4
  * (single global authentication realm), PLA-IDE-003.
  *
  * `Principal` is deliberately the only thing an `AuthProvider` returns: the
@@ -21,7 +21,7 @@
  * pluggable registry with a possibly-null active provider would model a state
  * that cannot occur.
  *
- * Task 36 (taskplans/36_enterprise_identity_oidc.md) added a second provider,
+ * Task 36 (taskplans/archive/36_enterprise_identity_oidc.md) added a second provider,
  * `OidcAuthProvider`, and moved the choice between them from compile time to
  * `runtimeConfig.auth.provider` — because an enterprise installing Verity
  * behind its own identity provider cannot be asked to recompile. That is

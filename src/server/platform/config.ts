@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * The single validated runtime configuration boundary.
  *
- * Authority: taskplans/26_runtime_configuration.md. Every deployment-specific
+ * Authority: taskplans/archive/26_runtime_configuration.md. Every deployment-specific
  * value — connection strings, the Supabase project's public/service
  * credentials, the transaction budget — was previously read as a raw
  * `process.env.X` at its point of use, scattered across five files with no
@@ -243,7 +243,7 @@ export type RuntimeConfig = z.infer<typeof configSchema>;
 /**
  * An environment variable's value, or `undefined` when it is absent *or blank*.
  *
- * FOUND IN TASK 43, BY RUNNING THE CONTAINER (taskplans/43_docker_acceptance_rerun.md).
+ * FOUND IN TASK 43, BY RUNNING THE CONTAINER (taskplans/archive/43_docker_acceptance_rerun.md).
  *
  * Docker Compose renders `${FOO:-}` for an unset optional variable as an
  * **empty string**, not as an absent one. `a ?? b` only falls through on

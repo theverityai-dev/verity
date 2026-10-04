@@ -14,7 +14,7 @@ import type { TenantScopedClient } from "@/server/platform/tenancy";
  *
  * Specification: target user flow §10 (product detail), §11 (godown detail),
  * §12 (stock), §13 (the movement ledger that explains a quantity).
- * Program: taskplans/53_plywood_connected_experience.md, slice 9.
+ * Program: taskplans/archive/53_plywood_connected_experience.md, slice 9.
  *
  * These are READS ONLY, and they are separated from `stock.ts` because they
  * answer a different question. `stock.ts` maintains the ledger and the balance

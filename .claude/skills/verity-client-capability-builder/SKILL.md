@@ -153,7 +153,7 @@ a standing bar every new capability clears before shipping):
 2. Cross-check its scope against the equivalent module in a reference
    system under `D:\Code\R&D\` — `odoo-19.0` first (broadest domain
    coverage, most actively maintained), `erpnext` second (already has a
-   full audit at `taskplans/05_erpnext_audit.md` — read that before
+   full audit at `taskplans/archive/05_erpnext_audit.md` — read that before
    re-deriving from source). This is narrower than `verity-rd-miner`'s
    full nine-section audit: not "what can Verity learn architecturally
    from this system," but "what would this domain's users consider too

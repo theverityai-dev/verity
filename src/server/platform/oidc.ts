@@ -4,7 +4,7 @@ import type { Principal } from "./authProvider";
 /**
  * OpenID Connect token verification and claim normalization.
  *
- * Authority: taskplans/36_enterprise_identity_oidc.md; Bible V5 §1.A.4 (single
+ * Authority: taskplans/archive/36_enterprise_identity_oidc.md; Bible V5 §1.A.4 (single
  * global authentication realm); PLA-IDE-003; PLA-TEN-006; ADR-007.
  *
  * This module is deliberately pure. It imports no `next/*`, no `@supabase/*`

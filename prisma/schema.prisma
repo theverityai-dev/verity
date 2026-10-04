@@ -3172,7 +3172,7 @@ model TradingStockReservation {
 // ---------------------------------------------------------------------------
 // Plywood — goods movement documents (slice 3)
 //
-// Authority: taskplans/45_plywood_workflow_program.md §5;
+// Authority: taskplans/archive/45_plywood_workflow_program.md §5;
 // PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04.
 //
 // Receipt used to be a field on a purchase order line that an action
@@ -3245,7 +3245,7 @@ model TradingGoodsReceiptLine {
 
 /// Goods physically left the godown. Immutable once posted.
 ///
-/// Authority: taskplans/45_plywood_workflow_program.md §5;
+/// Authority: taskplans/archive/45_plywood_workflow_program.md §5;
 /// PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-04.
 ///
 /// The counterpart to a Goods Receipt, and the ONLY door out of a godown now
@@ -3314,7 +3314,7 @@ model TradingGoodsIssueLine {
 // ---------------------------------------------------------------------------
 // Plywood — business identity (slice 2)
 //
-// Authority: taskplans/45_plywood_workflow_program.md §D-03 and §4.4;
+// Authority: taskplans/archive/45_plywood_workflow_program.md §D-03 and §4.4;
 // PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-09.
 //
 // Legally required document identity used to live nowhere. The invoice page
@@ -3648,7 +3648,7 @@ model TradingPurchaseBillConfirmation {
 /// disagree with the first.
 /// An accounting period, and whether it is still open to posting.
 ///
-/// Authority: taskplans/45_plywood_workflow_program.md §5, §8;
+/// Authority: taskplans/archive/45_plywood_workflow_program.md §5, §8;
 /// PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-08; specification §76, §77.
 ///
 /// Without this, backdated stock, invoices, payments and corrections can alter
@@ -3691,7 +3691,7 @@ model TradingAccountingPeriod {
 
 /// The tax that applies to an HSN code, under one registration, from a date.
 ///
-/// Authority: taskplans/45_plywood_workflow_program.md §4.4 and §D-03;
+/// Authority: taskplans/archive/45_plywood_workflow_program.md §4.4 and §D-03;
 /// PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-07.
 ///
 /// WHAT THIS REPLACES
@@ -3740,7 +3740,7 @@ model TradingTaxRule {
 
 /// A credit or debit note against a posted invoice.
 ///
-/// Authority: taskplans/45_plywood_workflow_program.md §5 (invoice state
+/// Authority: taskplans/archive/45_plywood_workflow_program.md §5 (invoice state
 /// machine) and §4.5; specification §67;
 /// PLYWOOD_TARGET_WORKFLOW_GAP_AUDIT.md P0-05.
 ///

@@ -5,7 +5,7 @@ import { buildIdentity, metricsSnapshot } from "@/server/platform/observability"
 /**
  * A metric snapshot for an operator.
  *
- * Authority: taskplans/40_enterprise_observability.md.
+ * Authority: taskplans/archive/40_enterprise_observability.md.
  *
  * Serves what the in-memory registry has measured **on this instance since it
  * started**. That limitation is stated rather than hidden: with more than one

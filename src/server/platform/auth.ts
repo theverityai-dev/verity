@@ -33,7 +33,7 @@ import { OIDC_SESSION_COOKIE, readOidcSession } from "./oidc-browser";
  * tenant it wants. The tenant is derived from the membership, and the membership
  * is verified against the database on every resolution.
  *
- * PROVIDER BOUNDARY (Task 28, taskplans/28_auth_provider_abstraction.md)
+ * PROVIDER BOUNDARY (Task 28, taskplans/archive/28_auth_provider_abstraction.md)
  * This file IS the Supabase adapter — the counterpart to
  * `server/storage/supabase.ts` for Task 27's storage boundary. `getAuthUser()`
  * returns `Principal` (`authProvider.ts`), never Supabase's `User` type,
@@ -130,7 +130,7 @@ class SupabaseAuthProvider implements AuthProvider {
 
 /**
  * An external OpenID Connect identity provider as an `AuthProvider`
- * (Task 36, taskplans/36_enterprise_identity_oidc.md).
+ * (Task 36, taskplans/archive/36_enterprise_identity_oidc.md).
  *
  * The counterpart to `SupabaseAuthProvider` above. All the verification rules
  * live in `platform/oidc.ts`, which is pure and testable without a live IdP;
