@@ -133,5 +133,7 @@ jobs:
 
       - run: npm run typecheck
       - run: npm run lint
+      # Dependencies nothing imports. Add a package to knip.json only with a reason.
+      - run: npm run check:deps
       - run: npm test
       - run: npm run build
