@@ -1,5 +1,6 @@
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { RECIPE_CAPABILITY } from "@/server/capabilities/recipe";
+import { trailingDaysRange } from "@/lib/date-range";
 import { requireActor } from "@/server/platform/auth";
 import { runQuery } from "@/server/actions/platform";
 import { DataTable } from "@/components/ui/DataTable";
@@ -19,8 +20,7 @@ function formatRupees(minor: number): string {
 /** §62 — Star/Plow Horse/Puzzle/Dog, last 30 days. */
 async function RecipesPage() {
   await requireActor();
-  const toDate = new Date().toISOString().slice(0, 10);
-  const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const { fromDate, toDate } = trailingDaysRange(30);
 
   const result = await runQuery<AnalyticsRow[]>("verity.recipe.get_menu_analytics", { fromDate, toDate });
   if (!result.ok) return <ErrorState title="Could not load menu analytics" message={result.message} issues={result.issues} retryable={result.retryable} />;

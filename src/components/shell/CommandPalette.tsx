@@ -55,7 +55,6 @@ export function CommandPalette() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // APPLE-P0-01: the top bar's "Search this page" field is a trigger, not its

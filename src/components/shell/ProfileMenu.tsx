@@ -86,7 +86,6 @@ export function ProfileMenu({
       document.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKey);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const onMenuKeyDown = (e: React.KeyboardEvent) => {
