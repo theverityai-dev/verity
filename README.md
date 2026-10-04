@@ -28,11 +28,27 @@ The canonical product and architecture authority lives in the following location
 
 ---
 
+## Start here
+
+- **What is being worked on:** [taskplans/handoffs/README.md](./taskplans/handoffs/README.md)
+- **How to contribute:** [CONTRIBUTING.md](./CONTRIBUTING.md)
+- **Rules, invariants and authority order:** [CLAUDE.md](./CLAUDE.md)
+- **Deploying and operating it:** [deploy/](./deploy/)
+
+## Related repository
+
+[`verity-explore`](https://github.com/theverityai-dev/verity-explore) is the public marketing site
+(theverityai.xyz) and brand films. It describes what Verity is for, business type by business type.
+Treat its pages as positioning, not as proof that a capability is built here; the handoffs README and
+`taskplans/00_STATUS_INDEX.md` record what is actually built.
+
 ## Development Commands
 
 ```bash
 npm run typecheck
-npm run test
+npm run lint
+npm run test:pure   # no database required
+npm run test        # full suite; requires a database
 npm run build
 ```
 
