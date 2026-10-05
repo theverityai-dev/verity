@@ -122,7 +122,7 @@ export function NewLeadForm({
             });
           }}
         >
-          <div className="sm:col-span-2 -mb-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+          <div className="sm:col-span-2 -mb-1 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             Qualification
           </div>
           <div className="sm:col-span-2">
@@ -217,7 +217,7 @@ export function NewLeadForm({
           submitStep1(new FormData(e.currentTarget), true);
         }}
       >
-        <div className="sm:col-span-2 -mb-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+        <div className="sm:col-span-2 -mb-1 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
           Company
         </div>
         <Field label="Company" htmlFor="companyName" required>
@@ -286,7 +286,7 @@ export function NewLeadForm({
           </Select>
         </Field>
 
-        <div className="sm:col-span-2 -mb-1 mt-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+        <div className="sm:col-span-2 -mb-1 mt-1 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
           Assignment
         </div>
         <Field label="Team" htmlFor="teamId" required>
@@ -313,7 +313,7 @@ export function NewLeadForm({
             ))}
           </Select>
         </Field>
-        <div className="sm:col-span-2 -mb-1 mt-1 text-[11px] font-medium uppercase tracking-wide text-text-tertiary">
+        <div className="sm:col-span-2 -mb-1 mt-1 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
           Why this prospect
         </div>
         <div className="sm:col-span-2">

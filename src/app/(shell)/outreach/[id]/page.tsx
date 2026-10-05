@@ -422,7 +422,7 @@ async function OutreachLeadDetailPage({
                           <span className="text-[14px] text-text">{r.title}</span>
                           <span className="flex shrink-0 items-center gap-2">
                             <Badge>{r.type}</Badge>
-                            <span className="text-[11px] text-text-tertiary">
+                            <span className="text-[12px] text-text-tertiary">
                               {r.createdAt.toISOString().slice(0, 16).replace("T", " ")}
                             </span>
                           </span>

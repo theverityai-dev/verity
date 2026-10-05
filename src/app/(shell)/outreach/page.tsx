@@ -329,7 +329,7 @@ async function OutreachPage({
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="m-0 text-[11px] uppercase tracking-wide text-text-tertiary">
+                  <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                     Current direction · {data.currentDirection.weekLabel}
                   </p>
                   <p className="m-0 mt-1 text-[18px] font-bold text-text">
@@ -464,7 +464,7 @@ async function OutreachPage({
                       {e.companyName}
                     </Link>
                     {e.note && <span className="text-[12px] text-text-secondary">{e.note}</span>}
-                    <span className="text-[11px] text-text-tertiary">Flagged by {e.by}</span>
+                    <span className="text-[12px] text-text-tertiary">Flagged by {e.by}</span>
                   </span>
                   <ResolveEscalationButton leadId={e.id} />
                 </Row>

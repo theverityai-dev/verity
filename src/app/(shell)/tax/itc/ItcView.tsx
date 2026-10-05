@@ -327,13 +327,13 @@ export function ItcView({ report }: { report: Report }) {
                         <p className="tabular m-0 text-[13px] text-text">
                           {row.booksTaxPaise === null ? "—" : rupees(row.booksTaxPaise)}
                         </p>
-                        <p className="m-0 text-[11px] text-text-tertiary">Books</p>
+                        <p className="m-0 text-[12px] text-text-tertiary">Books</p>
                       </div>
                       <div className="w-24">
                         <p className="tabular m-0 text-[13px] text-text">
                           {row.portalTaxPaise === null ? "—" : rupees(row.portalTaxPaise)}
                         </p>
-                        <p className="m-0 text-[11px] text-text-tertiary">Portal</p>
+                        <p className="m-0 text-[12px] text-text-tertiary">Portal</p>
                       </div>
                     </div>
                   </Row>

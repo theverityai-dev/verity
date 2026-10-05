@@ -104,7 +104,7 @@ export function InvoiceView({
       <section className="rounded-lg border border-line bg-surface p-8 print:border-0 print:p-0">
         <header className="flex flex-wrap items-start justify-between gap-6 border-b border-line pb-6">
           <div>
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
+            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               {sale ? "Tax invoice" : "Purchase invoice"}
             </p>
             <h1 className="mb-0 mt-2 text-[22px] font-normal leading-tight text-text">
@@ -126,7 +126,7 @@ export function InvoiceView({
 
         <div className="flex flex-wrap justify-between gap-6 border-b border-line py-5">
           <div>
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
+            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               {sale ? "Billed to" : "Billed by"}
             </p>
             <p className="mb-0 mt-2 text-[15px] text-text">{invoice.partyName}</p>
@@ -137,7 +137,7 @@ export function InvoiceView({
             )}
           </div>
           <div className="text-right">
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
+            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               Place of supply
             </p>
             <p className="tabular mb-0 mt-2 text-[15px] text-text">
@@ -158,7 +158,7 @@ export function InvoiceView({
                 <th
                   key={heading}
                   className={
-                    "border-b border-line px-2 py-3 text-[11px] font-normal uppercase tracking-[0.1em] text-text-tertiary " +
+                    "border-b border-line px-2 py-3 text-[13px] uppercase tracking-[0.02em] text-text-secondary " +
                     (index === 0 ? "text-left" : "text-right")
                   }
                 >
@@ -228,7 +228,7 @@ export function InvoiceView({
 
         {invoice.payments.length > 0 && (
           <div className="mt-8 border-t border-line pt-5">
-            <p className="m-0 text-[11px] uppercase tracking-[0.14em] text-text-tertiary">
+            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               Payments received
             </p>
             <ul className="m-0 mt-3 list-none p-0">
@@ -248,7 +248,7 @@ export function InvoiceView({
           </div>
         )}
 
-        <p className="mb-0 mt-8 text-[11px] leading-relaxed text-text-tertiary">
+        <p className="mb-0 mt-8 text-[12px] leading-relaxed text-text-tertiary">
           Computer-generated tax invoice. Amounts are in Indian rupees.
           {invoice.interState
             ? " Integrated GST applies because the place of supply is outside the supplier's state."

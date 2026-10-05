@@ -159,7 +159,7 @@ export function ConfigurationEditor({ parameters }: { parameters: Parameter[] })
                     }
                   >
                     {label}
-                    <span className="ml-1.5 text-[11px] text-text-tertiary">{rows.length}</span>
+                    <span className="ml-1.5 text-[12px] text-text-tertiary">{rows.length}</span>
                   </button>
                 </li>
               ))}

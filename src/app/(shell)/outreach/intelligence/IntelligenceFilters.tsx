@@ -28,7 +28,7 @@ export function IntelligenceFilters({ teams, owners }: { teams: Option[]; owners
   return (
     <div className="mb-6 flex flex-wrap gap-3">
       <label className="flex min-w-[160px] flex-1 flex-col gap-1 sm:flex-none sm:w-56">
-        <span className="text-[11px] uppercase tracking-wide text-text-tertiary">Team</span>
+        <span className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">Team</span>
         <Select value={params.get("team") ?? ""} onChange={(e) => setParam("team", e.target.value)}>
           <option value="">All teams</option>
           {teams.map((t) => (
@@ -39,7 +39,7 @@ export function IntelligenceFilters({ teams, owners }: { teams: Option[]; owners
         </Select>
       </label>
       <label className="flex min-w-[160px] flex-1 flex-col gap-1 sm:flex-none sm:w-56">
-        <span className="text-[11px] uppercase tracking-wide text-text-tertiary">Owner</span>
+        <span className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">Owner</span>
         <Select value={params.get("owner") ?? ""} onChange={(e) => setParam("owner", e.target.value)}>
           <option value="">Anyone</option>
           {owners.map((o) => (

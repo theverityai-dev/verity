@@ -68,7 +68,7 @@ export function TaskPanel({
                 </span>
               </div>
               {t.description && <p className="m-0 text-[12px] text-text-secondary">{t.description}</p>}
-              <span className="text-[11px] text-text-tertiary">
+              <span className="text-[12px] text-text-tertiary">
                 {partyName.get(t.assignedToPartyId) ?? "—"}
                 {t.dueAt && ` · Due ${new Date(t.dueAt).toISOString().slice(0, 10)}`}
                 {" · "}

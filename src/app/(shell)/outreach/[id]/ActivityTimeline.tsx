@@ -70,7 +70,7 @@ export function ActivityTimeline({ activities, partyName }: { activities: Activi
                 </span>
                 {a.message && <span className="text-[12px] text-text-secondary">{a.message}</span>}
                 {a.response && <span className="text-[12px] text-text-tertiary">Response: {a.response}</span>}
-                <span className="text-[11px] text-text-tertiary">{partyName.get(a.actorPartyId) ?? "—"}</span>
+                <span className="text-[12px] text-text-tertiary">{partyName.get(a.actorPartyId) ?? "—"}</span>
               </span>
               <span className="tabular shrink-0 text-[12px] text-text-tertiary">
                 {a.occurredAt.slice(0, 16).replace("T", " ")}

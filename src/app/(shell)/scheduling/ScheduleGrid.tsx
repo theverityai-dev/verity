@@ -47,7 +47,7 @@ export function ScheduleGrid({
             {days.map((day) => (
               <div
                 key={day.toISOString()}
-                className="tabular flex-1 border-l border-line py-2 text-center text-[11px] text-text-tertiary first:border-l-0"
+                className="tabular flex-1 border-l border-line py-2 text-center text-[12px] text-text-tertiary first:border-l-0"
               >
                 {day.getUTCDate()}
               </div>
@@ -93,7 +93,7 @@ export function ScheduleGrid({
                           style={{ left: `${pos.left}%`, width: `${Math.max(pos.width, 1.2)}%` }}
                           title={`${booking.subject}: ${booking.startsAt} → ${booking.endsAt}`}
                         >
-                          <span className="whitespace-nowrap text-[11px] font-medium text-accent-on">{booking.subject}</span>
+                          <span className="whitespace-nowrap text-[12px] font-medium text-accent-on">{booking.subject}</span>
                         </div>
                       );
                     })}

@@ -40,14 +40,14 @@ export function RemoveMemberButton({
               setConfirming(false);
             });
           }}
-          className="cursor-pointer rounded border-none bg-transparent p-0 text-[11px] text-danger underline"
+          className="cursor-pointer rounded border-none bg-transparent p-0 text-[12px] text-danger underline"
         >
           Confirm
         </button>
         <button
           type="button"
           onClick={() => setConfirming(false)}
-          className="cursor-pointer rounded border-none bg-transparent p-0 text-[11px] text-text-tertiary underline"
+          className="cursor-pointer rounded border-none bg-transparent p-0 text-[12px] text-text-tertiary underline"
         >
           No
         </button>

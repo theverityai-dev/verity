@@ -70,7 +70,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
 
   const select = (key: string, label: string, opts: Option[], allLabel: string) => (
     <label className="flex min-w-[150px] flex-1 flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-text-tertiary">{label}</span>
+      <span className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">{label}</span>
       <Select value={params.get(key) ?? ""} onChange={(e) => setParam(key, e.target.value)}>
         <option value="">{allLabel}</option>
         {opts.some((o) => o.group)
@@ -167,7 +167,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
         {options.teams && options.teams.length > 1 && select("team", "Team", options.teams, "All teams")}
         {options.owners && options.owners.length > 0 && select("owner", "Assigned to", options.owners, "Anyone")}
         <label className="flex min-w-[150px] flex-1 flex-col gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-text-tertiary">Sort</span>
+          <span className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">Sort</span>
           <Select
             value={params.get("sort") ?? "updated"}
             onChange={(e) => setParam("sort", e.target.value === "updated" ? "" : e.target.value)}

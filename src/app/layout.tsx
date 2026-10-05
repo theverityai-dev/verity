@@ -2,7 +2,6 @@ import type { CSSProperties, ReactNode } from "react";
 import { cookies } from "next/headers";
 import { accentStyle, DEFAULT_ACCENT } from "@/server/platform/accent";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
-import { LiquidGlass } from "@/components/ui/LiquidGlass";
 import "./globals.css";
 
 /**
@@ -43,10 +42,10 @@ export const viewport = {
   // Never block zoom; some users need it and the layout does not depend on it.
   maximumScale: 5,
   themeColor: [
-    // The design source's own `--base`. This is the colour the OS paints around
-    // the viewport, so a mismatch shows as a seam at the top of a phone screen.
-    { media: "(prefers-color-scheme: light)", color: "#f5f5f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0f14" },
+    // iOS systemGroupedBackground (ADR-033). This is the colour the OS paints
+    // around the viewport, so a mismatch shows as a seam at the top of a phone.
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 
@@ -94,13 +93,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       suppressHydrationWarning
     >
       <body>
-        {/* Level 0. Fixed, behind everything, never interactive. */}
-        <div className="verity-atmosphere" aria-hidden="true" />
-        {/* Unblurred grain, on top of the atmosphere: dithers its gradient so
-            it stays smooth at this size instead of banding. See globals.css. */}
-        <div className="verity-grain" aria-hidden="true" />
-        {/* Chromium-only refraction over the glass classes; no-op elsewhere. */}
-        <LiquidGlass />
+        {/* ADR-033: iOS backgrounds are flat grouped colours. The atmospheric
+            field, grain and liquid-glass refraction of ADR-024/026/028 are retired. */}
         {/* First stop for a keyboard user on every page. */}
         <a
           href="#main"

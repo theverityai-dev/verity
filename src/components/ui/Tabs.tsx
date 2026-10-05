@@ -82,7 +82,7 @@ export function Tabs({ tabs, defaultTab }: { tabs: TabDef[]; defaultTab?: string
             {typeof t.count === "number" && (
               <span
                 className={
-                  "rounded-full px-1.5 py-0.5 text-[11px] tabular leading-none " +
+                  "rounded-full px-1.5 py-0.5 text-[12px] tabular leading-none " +
                   (t.id === active ? "bg-accent-subtle text-accent-ink" : "bg-surface-sunken text-text-tertiary")
                 }
               >

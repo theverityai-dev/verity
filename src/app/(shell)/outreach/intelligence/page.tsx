@@ -121,7 +121,7 @@ async function IntelligencePage({
               <div className="overflow-x-auto px-6 pb-2">
                 <table className="w-full min-w-[640px] border-collapse text-[13px]">
                   <thead>
-                    <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+                    <tr className="border-b border-line text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                       <th className="py-2 font-medium">Stage</th>
                       <th className="w-[40%] py-2 font-medium">Reached</th>
                       <th className="py-2 text-right font-medium">At stage now</th>

@@ -148,7 +148,7 @@ function MonthGrid({
       </div>
       <div className="grid grid-cols-7 gap-0.5">
         {WEEKDAY_LABELS.map((w, i) => (
-          <span key={i} aria-hidden="true" className="grid h-7 place-items-center text-[11px] text-text-tertiary">
+          <span key={i} aria-hidden="true" className="grid h-7 place-items-center text-[12px] text-text-tertiary">
             {w}
           </span>
         ))}

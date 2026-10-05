@@ -84,7 +84,7 @@ export function OrganizationSwitcher({
         <Icon name="building" size={16} className="shrink-0 text-text-tertiary" />
         <span className="min-w-0">
           <span className="block truncate text-[13px] text-text">{active.organizationName}</span>
-          <span className="block truncate text-[11px] text-text-tertiary">{active.tenantName}</span>
+          <span className="block truncate text-[12px] text-text-tertiary">{active.tenantName}</span>
         </span>
       </div>
     );

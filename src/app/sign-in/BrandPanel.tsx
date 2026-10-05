@@ -32,7 +32,7 @@ export function BrandPanel() {
       <div className="relative z-10 flex h-full flex-col px-14 pt-14">
         <div>
           <VerityLockup size={30} className="text-text" />
-          <p className="m-0 mt-4 text-[11px] font-medium uppercase tracking-[0.28em] text-text-tertiary">
+          <p className="m-0 mt-4 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             Operate. Optimize. <span className="text-accent-ink">Outperform.</span>
           </p>
         </div>
@@ -73,7 +73,7 @@ export function BrandPanel() {
           </div>
         </div>
 
-        <p className="relative z-10 mb-10 mt-6 text-right text-[10px] uppercase tracking-[0.24em] text-text-tertiary">
+        <p className="relative z-10 mb-10 mt-6 text-right text-[13px] uppercase tracking-[0.02em] text-text-secondary">
           Real operations. Tangible impact.
         </p>
       </div>

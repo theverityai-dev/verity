@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 function VelocityStat({ label, stat }: { label: string; stat: { average: number | null; median: number | null; sampleSize: number } }) {
   return (
     <div className="rounded-lg border border-line px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-text-tertiary">{label}</p>
+      <p className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">{label}</p>
       {stat.sampleSize === 0 ? (
         <p className="mt-1 text-[13px] text-text-tertiary">No pairs yet</p>
       ) : (
@@ -121,7 +121,7 @@ async function DomainDetailPage({
               <div className="overflow-x-auto px-6 pb-2">
                 <table className="w-full min-w-[640px] border-collapse text-[13px]">
                   <thead>
-                    <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+                    <tr className="border-b border-line text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                       <th className="py-2 font-medium">Stage</th>
                       <th className="w-[40%] py-2 font-medium">Reached</th>
                       <th className="py-2 text-right font-medium">At stage now</th>
@@ -174,15 +174,15 @@ async function DomainDetailPage({
           <div className="grid grid-cols-3 gap-3 px-6 pt-4 pb-2 sm:grid-cols-3">
             <div className="rounded-lg border border-line px-4 py-3 text-center">
               <p className="text-[20px] font-medium tabular text-text">{data.aging!.over7d}</p>
-              <p className="text-[11px] text-text-tertiary">7-14 days idle</p>
+              <p className="text-[12px] text-text-tertiary">7-14 days idle</p>
             </div>
             <div className="rounded-lg border border-line px-4 py-3 text-center">
               <p className="text-[20px] font-medium tabular text-text">{data.aging!.over14d}</p>
-              <p className="text-[11px] text-text-tertiary">14-30 days idle</p>
+              <p className="text-[12px] text-text-tertiary">14-30 days idle</p>
             </div>
             <div className="rounded-lg border border-danger/25 bg-danger-subtle px-4 py-3 text-center">
               <p className="text-[20px] font-medium tabular text-text">{data.aging!.over30d}</p>
-              <p className="text-[11px] text-text-tertiary">30+ days idle</p>
+              <p className="text-[12px] text-text-tertiary">30+ days idle</p>
             </div>
           </div>
           {data.aging!.leads.length === 0 ? (
@@ -210,7 +210,7 @@ async function DomainDetailPage({
             <div className="overflow-x-auto px-6">
               <table className="w-full min-w-[480px] border-collapse text-[13px]">
                 <thead>
-                  <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+                  <tr className="border-b border-line text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                     <th className="py-2 font-medium">Team</th>
                     <th className="py-2 text-right font-medium">Leads</th>
                     <th className="py-2 text-right font-medium">Outreach</th>
@@ -244,7 +244,7 @@ async function DomainDetailPage({
             <div className="overflow-x-auto px-6">
               <table className="w-full min-w-[480px] border-collapse text-[13px]">
                 <thead>
-                  <tr className="border-b border-line text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+                  <tr className="border-b border-line text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                     <th className="py-2 font-medium">Channel</th>
                     <th className="py-2 text-right font-medium">Outreach</th>
                     <th className="py-2 text-right font-medium">Rate</th>
@@ -258,7 +258,7 @@ async function DomainDetailPage({
                       <td className="tabular py-2.5 text-right text-text-secondary">{c.outreach}</td>
                       <td className="tabular py-2.5 text-right text-text-secondary">
                         {percent(c.responseRate)}
-                        {c.thinSample && c.responseRate != null && <span className="ml-1 text-[11px] text-text-tertiary">thin</span>}
+                        {c.thinSample && c.responseRate != null && <span className="ml-1 text-[12px] text-text-tertiary">thin</span>}
                       </td>
                       <td className="tabular py-2.5 text-right font-medium text-text">{c.closed}</td>
                     </tr>

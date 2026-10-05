@@ -144,7 +144,7 @@ async function MyWorkspacePage() {
 
       {data.direction && (
         <div className="mb-8 rounded-lg border border-line bg-surface-sunken px-4 py-3">
-          <p className="m-0 text-[11px] uppercase tracking-wide text-text-tertiary">
+          <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             This week's direction · {data.direction.weekLabel}
           </p>
           <p className="mb-0 mt-1 text-[13px] text-text">
@@ -200,7 +200,7 @@ async function MyWorkspacePage() {
           <ol className="m-0 mb-8 flex list-none flex-col gap-1 p-0">
             {data.timeline.map((a) => (
               <li key={a.id} className="flex items-baseline gap-3 rounded-lg px-3 py-2 text-[13px]">
-                <span className="tabular w-14 shrink-0 text-[11px] text-text-tertiary">
+                <span className="tabular w-14 shrink-0 text-[12px] text-text-tertiary">
                   {a.occurredAt.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                 </span>
                 <span className="flex-1 truncate text-text-secondary">

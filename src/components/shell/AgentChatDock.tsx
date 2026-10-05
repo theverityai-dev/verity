@@ -131,7 +131,7 @@ export function AgentChatDock() {
           id="agent-chat-panel"
           role="complementary"
           aria-label="Assistant"
-          className="glass-overlay fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-6 z-40 flex h-[min(560px,70dvh)] w-[min(380px,calc(100vw-3rem))] flex-col overflow-hidden rounded-2xl print:hidden lg:bottom-24"
+          className="glass-overlay fixed bottom-[calc(8.5rem+env(safe-area-inset-bottom))] right-6 z-40 flex h-[min(560px,70dvh)] w-[min(380px,calc(100vw-3rem))] flex-col overflow-hidden rounded-[14px] print:hidden lg:bottom-24"
         >
           <div className="flex shrink-0 items-center justify-between border-b border-line px-4 py-3.5">
             <span className="text-[14px] font-medium text-text">Assistant</span>

@@ -27,7 +27,7 @@ export function FileShelf({ entries }: { entries: ResearchEntry[] }) {
           </p>
           <div className="flex items-center justify-between gap-2">
             <Badge>{f.type}</Badge>
-            <span className="text-[11px] text-text-tertiary">{f.createdAt.toISOString().slice(0, 10)}</span>
+            <span className="text-[12px] text-text-tertiary">{f.createdAt.toISOString().slice(0, 10)}</span>
           </div>
           <ViewFileLink entryId={f.id} label="Open" />
         </div>

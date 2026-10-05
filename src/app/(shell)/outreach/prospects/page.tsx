@@ -356,7 +356,7 @@ async function ProspectsPage({ searchParams }: { searchParams: Promise<Search> }
                     {c.qualityScore != null && (
                       <span className="shrink-0 text-right" title="Fit score">
                         <span className="tabular text-[20px] font-bold leading-none text-text">{c.qualityScore}</span>
-                        <span className="text-[11px] text-text-tertiary">/10</span>
+                        <span className="text-[12px] text-text-tertiary">/10</span>
                       </span>
                     )}
                   </header>
@@ -430,7 +430,7 @@ function Detail({ term, value, clamp = 3 }: { term: string; value: string; clamp
   const clampClass = clamp === 1 ? "line-clamp-1" : clamp === 2 ? "line-clamp-2" : "line-clamp-3";
   return (
     <div>
-      <dt className="text-[11px] uppercase tracking-wide text-text-tertiary">{term}</dt>
+      <dt className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">{term}</dt>
       <dd className={`m-0 mt-0.5 text-text ${clampClass}`}>{value}</dd>
     </div>
   );

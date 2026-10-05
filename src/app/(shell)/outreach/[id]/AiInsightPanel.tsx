@@ -102,10 +102,10 @@ export function AiInsightPanel({
           {insights.map((i) => (
             <li key={i.id} className="flex flex-col gap-1.5 border-b border-line pb-4 last:border-none last:pb-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span className="text-[11px] uppercase tracking-wide text-text-tertiary">
+                <span className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                   AI suggestion · {KIND_LABEL[i.kind] ?? i.kind}
                 </span>
-                <time dateTime={i.createdAt} className="text-[11px] text-text-tertiary">
+                <time dateTime={i.createdAt} className="text-[12px] text-text-tertiary">
                   {new Date(i.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                 </time>
               </div>

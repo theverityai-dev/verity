@@ -149,7 +149,7 @@ async function OverviewPage() {
     <>
       <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="m-0 text-[11px] font-medium uppercase tracking-[0.18em] text-text-tertiary">
+          <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             {greeting()}
           </p>
           <h1 className="mt-1.5 truncate">Here's what's happening with your business.</h1>

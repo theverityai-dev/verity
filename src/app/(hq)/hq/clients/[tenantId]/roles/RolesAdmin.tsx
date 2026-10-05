@@ -260,7 +260,7 @@ export function RolesAdmin({
                               <div className="overflow-hidden rounded-lg border border-line">
                                 <table className="w-full border-collapse text-[13px]">
                                   <thead>
-                                    <tr className="bg-surface-sunken text-left text-[11px] uppercase tracking-wide text-text-tertiary">
+                                    <tr className="bg-surface-sunken text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                                       <th className="px-3 py-2 font-medium">Entity</th>
                                       <th className="w-[90px] px-3 py-2 font-medium">View</th>
                                       <th className="w-[90px] px-3 py-2 font-medium">Manage</th>

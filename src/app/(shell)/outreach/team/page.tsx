@@ -240,12 +240,12 @@ async function TeamCommandPage() {
                   <span className="flex flex-1 flex-col gap-0.5">
                     <span className="flex items-center gap-2 text-[14px] text-text">
                       {e.companyName}
-                      {e.type && <span className="text-[11px] text-text-tertiary">· {e.type.replace(/([A-Z])/g, " $1").trim()}</span>}
-                      {e.urgency === "Critical" && <span className="text-[11px] font-medium text-danger">Critical</span>}
-                      {e.urgency === "High" && <span className="text-[11px] font-medium text-warning">High</span>}
+                      {e.type && <span className="text-[12px] text-text-tertiary">· {e.type.replace(/([A-Z])/g, " $1").trim()}</span>}
+                      {e.urgency === "Critical" && <span className="text-[12px] font-medium text-danger">Critical</span>}
+                      {e.urgency === "High" && <span className="text-[12px] font-medium text-warning">High</span>}
                     </span>
                     {e.note && <span className="text-[12px] text-text-secondary">{e.note}</span>}
-                    <span className="text-[11px] text-text-tertiary">Flagged by {e.by}</span>
+                    <span className="text-[12px] text-text-tertiary">Flagged by {e.by}</span>
                   </span>
                   <ResolveEscalationButton leadId={e.id} />
                 </div>
@@ -292,7 +292,7 @@ async function TeamCommandPage() {
       <div className="mb-6">
         <Panel title="Team members" flush action={data.canManage ? <AddMemberForm teamId={data.teamId} candidates={data.availableParties} /> : undefined}>
           <div className="flex flex-col divide-y divide-line px-6">
-            <div className="flex items-center gap-4 py-2 text-[11px] uppercase tracking-wide text-text-tertiary">
+            <div className="flex items-center gap-4 py-2 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               <span className="w-8" />
               <span className="flex-1">Member</span>
               <span className="w-16 text-right">Leads</span>
@@ -311,7 +311,7 @@ async function TeamCommandPage() {
                       second dot competing with the badge. */}
                   <span
                     aria-hidden="true"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-[11px] font-medium text-accent-ink"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-subtle text-[12px] font-medium text-accent-ink"
                   >
                     {initials(m.name)}
                   </span>

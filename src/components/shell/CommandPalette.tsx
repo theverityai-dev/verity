@@ -146,7 +146,7 @@ export function CommandPalette() {
             role="dialog"
             aria-modal="true"
             aria-label="Search Outreach leads, domains, and teams"
-            className="glass-overlay relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-2xl"
+            className="glass-overlay relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px]"
             onKeyDown={(e) => {
           onTrapKeyDown(e);
           if (e.key === "ArrowDown") {
@@ -170,7 +170,7 @@ export function CommandPalette() {
             placeholder="Search leads, domains, teams…"
             className="h-8 w-full border-0 bg-transparent text-[14px] text-text placeholder:text-text-tertiary focus:outline-none"
           />
-          <kbd className="hidden shrink-0 rounded border border-line px-1.5 py-0.5 text-[11px] text-text-tertiary sm:inline">Esc</kbd>
+          <kbd className="hidden shrink-0 rounded border border-line px-1.5 py-0.5 text-[12px] text-text-tertiary sm:inline">Esc</kbd>
         </div>
         <div className="max-h-[360px] overflow-y-auto p-2">
           {q.trim().length < 2 ? (
@@ -199,7 +199,7 @@ export function CommandPalette() {
                     <span className="min-w-0 flex-1 truncate">
                       {r.label} <span className="text-text-tertiary">· {r.sublabel}</span>
                     </span>
-                    <span className="shrink-0 text-[11px] uppercase tracking-wide text-text-tertiary">{TYPE_LABEL[r.type]}</span>
+                    <span className="shrink-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">{TYPE_LABEL[r.type]}</span>
                   </button>
                   {r.type === "lead" && (
                     <div className="flex gap-1 px-3 pb-2">
@@ -211,7 +211,7 @@ export function CommandPalette() {
                         <button
                           key={action}
                           onClick={() => go(`${r.href}?action=${action}`)}
-                          className="rounded-md border border-line px-2 py-1 text-[11px] text-text-secondary hover:bg-accent-subtle hover:text-text"
+                          className="rounded-md border border-line px-2 py-1 text-[12px] text-text-secondary hover:bg-accent-subtle hover:text-text"
                         >
                           {label}
                         </button>

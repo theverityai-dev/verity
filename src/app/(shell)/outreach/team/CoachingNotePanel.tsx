@@ -45,7 +45,7 @@ export function CoachingNotePanel({ teamId, aboutPartyId, aboutName }: { teamId:
             <div key={n.id} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Badge>{n.visibility === "LeaderPrivate" ? "Private" : "Visible to them"}</Badge>
-                <span className="text-[11px] text-text-tertiary">{new Date(n.createdAt).toISOString().slice(0, 10)}</span>
+                <span className="text-[12px] text-text-tertiary">{new Date(n.createdAt).toISOString().slice(0, 10)}</span>
               </div>
               <p className="m-0 text-[13px] text-text-secondary">{n.content}</p>
             </div>

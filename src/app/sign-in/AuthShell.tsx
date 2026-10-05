@@ -26,7 +26,7 @@ export function AuthShell({ title, lead, children }: { title: string; lead: stri
           </div>
           <div className="flex flex-col items-center gap-2 pb-2 pt-10">
             <VerityLockup size={20} className="text-text" />
-            <p className="m-0 text-[10px] uppercase tracking-[0.24em] text-text-tertiary">Operate. Optimize. Outperform.</p>
+            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">Operate. Optimize. Outperform.</p>
           </div>
         </div>
     </main>

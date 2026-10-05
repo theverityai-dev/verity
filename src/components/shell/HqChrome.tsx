@@ -55,7 +55,7 @@ export function HqChrome({
           <Link href="/hq" aria-label="Verity HQ" className="block no-underline">
             <VerityLockup size={30} />
           </Link>
-          <span className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-accent-subtle px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] text-accent-ink uppercase">
+          <span className="mt-2 inline-flex items-center gap-1.5 rounded-pill bg-accent-subtle px-2.5 py-1 text-[12px] font-medium tracking-[0.08em] text-accent-ink uppercase">
             Platform
           </span>
         </div>
