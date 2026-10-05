@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/server/platform/db";
 import { assertRlsEnforceable, withTenant } from "@/server/platform/tenancy";
 import { activateCapability, invalidateCapabilityCache } from "@/server/platform/capability";
+import { checksumOf, registerStorageDriver } from "@/server/platform/files";
 import { clearCommands, clearHooks, executeCommand, type ActorContext } from "@/server/platform/command";
 import { clearQueries, executeQuery } from "@/server/platform/query";
 import { ForbiddenError, clearScopeResolvers } from "@/server/platform/authorization";
@@ -455,6 +456,17 @@ describeDb("capability: Outreach", () => {
     });
 
     it("reserves and confirms a file upload, creating a research entry", async () => {
+      // No backend is bound in tests; stand one in that serves exactly the bytes
+      // the confirm step will verify (size, checksum and PDF signature).
+      const bytes = Buffer.concat([Buffer.from("%PDF-1.4 "), Buffer.alloc(1015)]);
+      registerStorageDriver({
+        name: "test",
+        createUploadUrl: async (key) => ({ url: `https://test.invalid/put/${key}` }),
+        createReadUrl: async (key) => `https://test.invalid/get/${key}`,
+        storeVerified: async () => {},
+        delete: async () => {},
+      });
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(bytes)));
       const lead = await executeCommand(founder, createOutreachLead, {
         teamId: teamAId,
         companyName: "Research File Co",
@@ -477,12 +489,14 @@ describeDb("capability: Outreach", () => {
       const confirmed = await executeCommand(founder, confirmResearchFileUpload, {
         leadId: lead.id,
         fileId: reserved.fileId,
-        checksum: "deadbeef",
+        checksum: checksumOf(bytes),
         byteSize: 1024,
         type: "Pdf",
         title: "Annual report",
       });
       expect(confirmed.status).toBe("Stored");
+      vi.unstubAllGlobals();
+      registerStorageDriver(null);
 
       const entries = await executeQuery(founder, listResearchEntries, { leadId: lead.id });
       expect(entries).toHaveLength(1);
@@ -1259,7 +1273,8 @@ describeDb("capability: Outreach", () => {
       const rows = await executeQuery(founder, getTeamComparison, {});
       const teamA = rows.find((r) => r.teamId === teamAId)!;
       expect(teamA.leaderName).toBe("Senior A");
-      expect(teamA.target).toBeNull();
+      // The Targets test above set a 10-per-period target for this team.
+      expect(teamA.target).toBe(10);
       expect(teamA.outreach).toBeGreaterThanOrEqual(1);
       expect(teamA.responseRate).not.toBeNull();
 
