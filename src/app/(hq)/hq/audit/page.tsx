@@ -44,6 +44,11 @@ export default async function HqAuditPage() {
       <PageHeader
         title="Platform audit"
         description="Recent changes across every client. Operator actions are marked; payload values stay inside the client they belong to."
+        actions={
+          <a href="/api/hq/audit" download className="inline-flex min-h-11 items-center rounded-[10px] bg-control px-4 text-[15px] font-semibold text-accent-ink no-underline hover:bg-control-strong">
+            Download CSV
+          </a>
+        }
       />
 
       <Panel title={`${rows.length} most recent`} flush>

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { listMemberships, setActiveMembership } from "@/server/platform/auth";
 import { redirect } from "next/navigation";
 import {
   applyPackRelease,
@@ -207,4 +208,18 @@ export async function upgradeCapabilityAction(tenantId: string, capabilityId: st
   }
   revalidatePath(`/hq/clients/${tenantId}/modules`);
   return { ok: true };
+}
+
+/**
+ * Ends a support session: makes the operator's platform membership the active
+ * one again and opens HQ. HQ refuses an operator whose active membership is a
+ * client (resolveOperator), so a plain link back would land on a refusal.
+ * Only the caller's own memberships are considered (listMemberships).
+ */
+export async function returnToHqAction(): Promise<void> {
+  const memberships = await listMemberships();
+  const platform = memberships.find((m) => m.isPlatform);
+  if (!platform) redirect("/");
+  await setActiveMembership(platform.membershipId);
+  redirect("/hq");
 }

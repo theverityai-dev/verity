@@ -30,6 +30,8 @@ export type WastageRow = {
   value: string;
   recordedBy: string;
   notes: string;
+  /** Set when the value is over the manager-review threshold (DECISIONS.md #4). */
+  review: string;
 };
 export type CategoryRow = { id: string; name: string; items: number };
 type Outlet = { id: string; name: string };
@@ -370,6 +372,7 @@ function WastageTab({ wastage }: { wastage: WastageRow[] }) {
         { key: "reason", header: "Reason", sortable: true },
         { key: "value", header: "Value", numeric: true },
         { key: "recordedBy", header: "Recorded by", sortable: true },
+        { key: "review", header: "Review", sortable: true },
       ]}
       rows={wastage}
     />

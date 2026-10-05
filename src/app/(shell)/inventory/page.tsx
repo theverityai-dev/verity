@@ -13,6 +13,12 @@ export const dynamic = "force-dynamic";
 type OnHand = { itemId: string; itemSku: string; locationId: string; qty: number };
 
 const WASTAGE_WINDOW_DAYS = 30;
+/**
+ * Wastage is a loss that has already happened, so it is recorded at once and
+ * a large one is flagged for the manager to review rather than blocked
+ * (DECISIONS.md #4, Rs 2,000).
+ */
+const WASTAGE_REVIEW_PAISE = 200_000;
 
 /**
  * PRD §17–§20: what each outlet holds, what it is worth, what was wasted.
@@ -96,6 +102,7 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
     value: rupees(w.valuePaise),
     recordedBy: recorderName.get(w.movement.movedById) ?? "Unknown",
     notes: w.notes ?? "",
+    review: w.valuePaise > WASTAGE_REVIEW_PAISE ? "Over ₹2,000: manager to review" : "",
   }));
 
   const categoryRows: CategoryRow[] = groups.map((g) => ({ id: g.id, name: g.name, items: g._count.items }));

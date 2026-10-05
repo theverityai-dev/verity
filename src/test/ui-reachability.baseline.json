@@ -1,7 +1,7 @@
 {
   "verity.accounting.list_accounts": "Read query, not referenced by a screen; serves the API and agent channel. /accounting reads accounts directly.",
   "verity.approval.list_pending": "Read query, not referenced by a screen; serves the API and agent channel.",
-  "verity.approval.request": "OPEN: no caller yet. Planned callers are the wastage, purchase order and expense approval thresholds (clients/colonel-kebabz/reference-parity).",
+  "verity.approval.request": "Reviewed 2026-10-06: generic approval kept for future multi-step workflows. Purchase-order and expense approvals are capability-native, and wastage over Rs 2,000 is flagged for review rather than blocked (clients/colonel-kebabz/reference-parity/DECISIONS.md #4).",
   "verity.billing.period_invoices": "Read query, not referenced by a screen; serves the API and agent channel. /billing lists invoices directly.",
   "verity.evidence.list_for": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.hr.list_employees": "Read query, not referenced by a screen; serves the API and agent channel. /hr reads employees directly.",

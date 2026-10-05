@@ -1,3 +1,4 @@
+import { returnToHqAction } from "@/server/actions/hq";
 import { CommandAccessProvider } from "@/components/ui/CommandAccess";
 import { listCommands } from "@/server/platform/command";
 import type { ReactNode } from "react";
@@ -268,7 +269,11 @@ export default async function ShellLayout({
           <span>
             Support session in <strong>{active.tenantName}</strong>. Everything you do here is recorded in this client&apos;s audit trail.
           </span>
-          <a href="/hq" className="font-semibold text-accent-ink no-underline hover:underline">Back to HQ</a>
+          <form action={returnToHqAction}>
+            <button type="submit" className="min-h-11 cursor-pointer border-0 bg-transparent px-0 font-semibold text-accent-ink hover:underline">
+              End session and return to HQ
+            </button>
+          </form>
         </div>
       )}
       <CommandAccessProvider commandKeys={commandKeys}>{children}</CommandAccessProvider>
