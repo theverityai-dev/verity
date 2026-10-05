@@ -103,7 +103,7 @@ damaged, returned) on a different data model.
 | Movement ledger: Receipt, Issue, Adjustment, Transfer | `record_stock_movement`; Receive / Use / Count on `/inventory`; ledger with running balance on `/inventory/[itemId]` | Built (unverified); Transfer not on screen |
 | Consumption from sales | recipe `postConsumptionForOrder` on `settle_bill` | Built (no screen shows it) |
 | Wastage with the 10 PRD reasons, value snapshot, notes, photo (evidence) | `record_wastage`; Waste on `/inventory`, 30-day log | Built (unverified); photo and approval not on screen |
-| Stock count (full / category / selected) with variance | none | Missing |
+| Stock count (full / category / selected) with variance | `apply_stock_count`; Count stock on `/inventory` | Built (unverified in browser) |
 | Transfer request → approval → dispatch → transit → receive | `Transfer` is a single movement kind; no request, no transit, no receive | Missing |
 | Opening / closing per period | not computed | Missing |
 | Reorder alerts / replenishment | `reorderLevel` stored; no alert or screen | Partial |

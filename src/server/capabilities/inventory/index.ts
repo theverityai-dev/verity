@@ -207,45 +207,7 @@ export const recordStockMovement: CommandDefinition<
     }
   },
   handler: async (ctx, input) => {
-    // Total on-hand across every location BEFORE this movement — the base
-    // the moving average weights against. Read before either write below.
-    const priorTotal = input.unitCostPaise === undefined ? 0 : await totalOnHand(ctx.tx, input.itemId);
-
-    await ctx.tx.inventoryStockMovement.create({
-      data: {
-        tenantId: ctx.actor.tenantId,
-        itemId: input.itemId,
-        locationId: input.locationId,
-        kind: input.kind,
-        qty: input.qty,
-        reference: input.reference ?? null,
-        unitCostPaise: input.unitCostPaise ?? null,
-        movedById: ctx.actor.userId,
-      },
-    });
-
-    const balance = await ctx.tx.inventoryStockBalance.upsert({
-      where: {
-        tenantId_itemId_locationId: { tenantId: ctx.actor.tenantId, itemId: input.itemId, locationId: input.locationId },
-      },
-      create: { tenantId: ctx.actor.tenantId, itemId: input.itemId, locationId: input.locationId, qty: input.qty },
-      update: { qty: { increment: input.qty } },
-    });
-
-    if (input.unitCostPaise !== undefined) {
-      const item = await ctx.tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
-      const newAvg =
-        item.avgUnitCostPaise === null || priorTotal <= 0
-          ? input.unitCostPaise
-          : Math.round(
-              (item.avgUnitCostPaise * priorTotal + input.unitCostPaise * input.qty) / (priorTotal + input.qty),
-            );
-      await ctx.tx.inventoryItem.update({
-        where: { id: input.itemId },
-        data: { avgUnitCostPaise: newAvg },
-      });
-    }
-
+    const balance = await applyMovement(ctx.tx, ctx.actor, input);
     return {
       result: { balanceId: balance.id, qty: balance.qty },
       events: [
@@ -259,6 +221,62 @@ export const recordStockMovement: CommandDefinition<
   },
 };
 
+type MovementInput = {
+  itemId: string;
+  locationId: string;
+  kind: MovementKind;
+  qty: number;
+  reference?: string;
+  unitCostPaise?: number;
+};
+
+/** Writes the movement and moves the balance in the caller's transaction. */
+async function applyMovement(
+  tx: import("@/server/platform/tenancy").TenantScopedClient,
+  actor: { tenantId: string; userId: string },
+  input: MovementInput,
+) {
+  // Total on-hand across every location BEFORE this movement — the base
+  // the moving average weights against. Read before either write below.
+  const priorTotal = input.unitCostPaise === undefined ? 0 : await totalOnHand(tx, input.itemId);
+
+  await tx.inventoryStockMovement.create({
+    data: {
+      tenantId: actor.tenantId,
+      itemId: input.itemId,
+      locationId: input.locationId,
+      kind: input.kind,
+      qty: input.qty,
+      reference: input.reference ?? null,
+      unitCostPaise: input.unitCostPaise ?? null,
+      movedById: actor.userId,
+    },
+  });
+
+  const balance = await tx.inventoryStockBalance.upsert({
+    where: {
+      tenantId_itemId_locationId: { tenantId: actor.tenantId, itemId: input.itemId, locationId: input.locationId },
+    },
+    create: { tenantId: actor.tenantId, itemId: input.itemId, locationId: input.locationId, qty: input.qty },
+    update: { qty: { increment: input.qty } },
+  });
+
+  if (input.unitCostPaise !== undefined) {
+    const item = await tx.inventoryItem.findUniqueOrThrow({ where: { id: input.itemId } });
+    const newAvg =
+      item.avgUnitCostPaise === null || priorTotal <= 0
+        ? input.unitCostPaise
+        : Math.round(
+            (item.avgUnitCostPaise * priorTotal + input.unitCostPaise * input.qty) / (priorTotal + input.qty),
+          );
+    await tx.inventoryItem.update({
+      where: { id: input.itemId },
+      data: { avgUnitCostPaise: newAvg },
+    });
+  }
+  return balance;
+}
+
 async function totalOnHand(
   tx: import("@/server/platform/tenancy").TenantScopedClient,
   itemId: string,
@@ -266,6 +284,84 @@ async function totalOnHand(
   const agg = await tx.inventoryStockBalance.aggregate({ where: { itemId }, _sum: { qty: true } });
   return agg._sum.qty ?? 0;
 }
+
+/* ================================ stock count ================================ */
+
+export type StockCountVariance = {
+  itemId: string;
+  expectedQty: number;
+  countedQty: number;
+  differenceQty: number;
+};
+
+/**
+ * Applies a physical count for one outlet (PRD §19). The expected quantity is
+ * read inside this transaction, never taken from the screen, so a sale or
+ * receipt that landed while the count was being entered is respected: the
+ * adjustment is "counted minus what the ledger says now". Each difference is an
+ * Adjustment movement, so the ledger shows who counted and the reason; lines
+ * that match are left alone and post no movement.
+ */
+export const applyStockCount: CommandDefinition<
+  { locationId: string; note?: string; lines: Array<{ itemId: string; countedQty: number }> },
+  { variances: StockCountVariance[]; adjusted: number; unchanged: number }
+> = {
+  key: "verity.inventory.apply_stock_count",
+  entity: ENTITY_INVENTORY_STOCK,
+  verb: "Create",
+  input: z.object({
+    locationId: z.string().uuid(),
+    note: z.string().max(200).optional(),
+    lines: z
+      .array(z.object({ itemId: z.string().uuid(), countedQty: z.number().int().min(0) }))
+      .min(1)
+      .max(500),
+  }),
+  preconditions: async (ctx, input) => {
+    const ids = input.lines.map((l) => l.itemId);
+    if (new Set(ids).size !== ids.length) {
+      throw new ValidationError("E_VALIDATION: an item appears twice in the count");
+    }
+    const found = await ctx.tx.inventoryItem.findMany({ where: { id: { in: ids } }, select: { id: true, active: true } });
+    if (found.length !== ids.length) throw new ValidationError("E_VALIDATION: an item is not in this tenant");
+    if (found.some((i) => !i.active)) throw new ValidationError("E_VALIDATION: a deactivated item cannot be counted");
+    const location = await ctx.tx.location.findUnique({ where: { id: input.locationId }, select: { id: true } });
+    if (!location) throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+  },
+  handler: async (ctx, input) => {
+    const balances = await ctx.tx.inventoryStockBalance.findMany({
+      where: { locationId: input.locationId, itemId: { in: input.lines.map((l) => l.itemId) } },
+      select: { itemId: true, qty: true },
+    });
+    const expected = new Map(balances.map((b) => [b.itemId, b.qty]));
+    const reference = input.note ? `Stock count: ${input.note}` : "Stock count";
+
+    const variances: StockCountVariance[] = [];
+    const events: Array<{ name: string; entityId: string; payload: Record<string, unknown> }> = [];
+    for (const line of input.lines) {
+      const expectedQty = expected.get(line.itemId) ?? 0;
+      const differenceQty = line.countedQty - expectedQty;
+      if (differenceQty === 0) continue;
+      await applyMovement(ctx.tx, ctx.actor, {
+        itemId: line.itemId,
+        locationId: input.locationId,
+        kind: "Adjustment",
+        qty: differenceQty,
+        reference,
+      });
+      variances.push({ itemId: line.itemId, expectedQty, countedQty: line.countedQty, differenceQty });
+      events.push({
+        name: "verity.inventory.stock_moved",
+        entityId: line.itemId,
+        payload: { kind: "Adjustment", qty: differenceQty, locationId: input.locationId },
+      });
+    }
+    return {
+      result: { variances, adjusted: variances.length, unchanged: input.lines.length - variances.length },
+      events,
+    };
+  },
+};
 
 /* =================================== wastage =================================== */
 
@@ -439,6 +535,7 @@ export function registerInventoryCapability(): void {
   registerCommand(createItem);
   registerCommand(setItemActive);
   registerCommand(recordStockMovement);
+  registerCommand(applyStockCount);
   registerCommand(recordWastage);
   registerQuery(listItems);
   registerQuery(stockOnHand);

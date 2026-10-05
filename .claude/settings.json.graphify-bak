@@ -1,0 +1,37 @@
+{
+  "skills": [
+    "D:\\Code\\myskills\\ui-ux-pro-max",
+    "D:\\Code\\myskills\\db-migration-helper",
+    "D:\\Code\\myskills\\franchise-ops-helper",
+    "D:\\Code\\myskills\\emilkowalski-skills\\skills\\improve-animations",
+    "D:\\Code\\myskills\\emilkowalski-skills\\skills\\apple-design",
+    "D:\\Code\\myskills\\emilkowalski-skills\\skills\\animate"
+  ],
+  "permissions": {
+    "allow": [
+      "Skill(design-sync)",
+      "Skill(design-sync:*)",
+      "Skill(ui-ux-pro-max)",
+      "Skill(ui-ux-pro-max:*)",
+      "Skill(db-migration-helper)",
+      "Skill(db-migration-helper:*)",
+      "Skill(franchise-ops-helper)",
+      "Skill(franchise-ops-helper:*)",
+      "Skill(improve-animations)",
+      "Skill(improve-animations:*)",
+      "Skill(apple-design)",
+      "Skill(apple-design:*)",
+      "Skill(animate)",
+      "Skill(animate:*)",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(python -)",
+      "Bash(git mv *)",
+      "Bash(npm run *)",
+      "Bash(git stash *)",
+      "Bash(git check-ignore *)",
+      "Bash(npx vitest *)",
+      "Bash(npx tsx *)",
+      "Bash(npx prisma *)"
+    ]
+  }
+}

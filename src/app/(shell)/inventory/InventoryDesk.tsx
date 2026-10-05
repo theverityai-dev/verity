@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { StockCount } from "./StockCount";
 
 export type StockRow = {
   id: string;
@@ -227,6 +228,7 @@ function StockTab({
                 ))}
               </Select>
             )}
+            <StockCount stock={stock} outletName={outletName} outletId={outletId} />
             <Button variant="primary" onClick={() => setAdding(true)}>Add item</Button>
           </>
         }
