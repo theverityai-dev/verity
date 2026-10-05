@@ -87,14 +87,7 @@ template sections 4–8 and is linked in §3 when written.
 7. Staff: verify `/hr`, employee detail, roster on `scheduling`, lateness and overtime — `staff.md`.
 8. Guests and offers: edit/merge, saved segments, one-tap redeem, offer conditions — `crm-loyalty.md`.
 
-**Decisions needed from the product owner before the affected build starts:**
-- Procurement: generalise trading's purchase lines to inventory items (ADR-018 direction, recommended) or
-  add purchasing to `inventory` (`procurement.md` §7). This is an implementation decision required.
-- Attendance kiosk PIN on a shared tablet touches identity (ADR-020) — design review first (`staff.md`).
-- Salary storage and its permission (labour cost in P&L depends on it) — `staff.md`, `finance.md`.
-- Thresholds: wastage approval, PO approval, expense approval; refund approval vs manager permission.
-- Whether HQ price changes need approval; whether offers stack with points.
-- Every Include / Defer row in the depth documents is proposed by engineering and awaits confirmation.
+**Decisions:** all taken 2026-10-06, with basis, in [DECISIONS.md](DECISIONS.md) (procurement is inventory-native; no PIN identity; salary behind its own permission; approval thresholds; no offer stacking). The product owner can reverse any of them.
 
 **Not covered by the reference systems' source:** ERPNext has no restaurant module and its HR moved to
 the separate HRMS app; Odoo shift planning, payroll, helpdesk, approvals and documents are Enterprise.
