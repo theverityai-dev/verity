@@ -496,6 +496,8 @@ describeDb("conformance: database enforcement", () => {
         "domain_event",
         "evidence",
         "hr_leave_decision",
+        "inventory_goods_receipt",
+        "inventory_goods_receipt_line",
         "inventory_stock_movement",
         "inventory_wastage_record",
         "journal_entry",

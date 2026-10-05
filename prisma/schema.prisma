@@ -153,6 +153,11 @@ model Tenant {
   inventoryStockBalances  InventoryStockBalance[]
   inventoryStockMovements InventoryStockMovement[]
   inventoryWastageRecords InventoryWastageRecord[]
+  inventoryVendors             InventoryVendor[]
+  inventoryPurchaseOrders      InventoryPurchaseOrder[]
+  inventoryPurchaseOrderLines  InventoryPurchaseOrderLine[]
+  inventoryGoodsReceipts       InventoryGoodsReceipt[]
+  inventoryGoodsReceiptLines   InventoryGoodsReceiptLine[]
 
   // Capability: manufacturing (Task 118 minimal slice). Back-relations only.
   manufacturingOrders     ManufacturingOrder[]
@@ -1539,6 +1544,7 @@ model Location {
 
   // Capability: inventory (Task 73). Back-relations only, as above.
   inventoryStockBalances  InventoryStockBalance[]
+  inventoryPurchaseOrders InventoryPurchaseOrder[]
   inventoryStockMovements InventoryStockMovement[]
 
   // Capability: manufacturing (Task 118 minimal slice). Back-relations only.
@@ -4020,6 +4026,7 @@ model InventoryItem {
   tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   itemGroup         InventoryItemGroup?      @relation(fields: [itemGroupId], references: [id], onDelete: SetNull)
   balances          InventoryStockBalance[]
+  purchaseOrderLines InventoryPurchaseOrderLine[]
   movements         InventoryStockMovement[]
   recipeIngredients RecipeIngredient[]
   manufacturingOrderOutputs    ManufacturingOrder[]     @relation("ManufacturingOrderOutput")
@@ -4114,6 +4121,121 @@ model InventoryWastageRecord {
   movement InventoryStockMovement @relation(fields: [movementId], references: [id], onDelete: Cascade)
 
   @@map("inventory_wastage_record")
+}
+
+// ===========================================================================
+// CAPABILITY: Inventory procurement (Colonel Kebabz parity, procurement.md §7;
+// decision 2026-10-06: inventory-native, trading's purchase flow untouched).
+// A purchase order buys `InventoryItem`s for one outlet; receiving goods posts
+// Receipt movements to the same ledger a count or a sale uses, so there is one
+// stock ledger. Money is paise, like the rest of inventory. A goods receipt is
+// a historical fact (append-only); the order's received/rejected totals are the
+// running summary of its receipts.
+// ===========================================================================
+
+model InventoryVendor {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  name             String
+  gstin            String?
+  phone            String?
+  paymentTermsDays Int      @default(0) @map("payment_terms_days")
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseOrders InventoryPurchaseOrder[]
+
+  @@unique([tenantId, name])
+  @@map("inventory_vendor")
+}
+
+model InventoryPurchaseOrder {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  /// Per-tenant running number; shown as PO-0001.
+  seq          Int
+  vendorId     String    @map("vendor_id") @db.Uuid
+  locationId   String    @map("location_id") @db.Uuid
+  /// Closed set owned by the capability (`PO_STATUSES`), CHECKed in the database.
+  status       String    @default("Draft")
+  expectedDate DateTime? @map("expected_date") @db.Date
+  notes        String?
+  totalPaise   Int       @map("total_paise")
+  createdById  String    @map("created_by_id") @db.Uuid
+  approvedById String?   @map("approved_by_id") @db.Uuid
+  approvedAt   DateTime? @map("approved_at")
+  cancelReason String?   @map("cancel_reason")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendor   InventoryVendor              @relation(fields: [vendorId], references: [id])
+  location Location                     @relation(fields: [locationId], references: [id])
+  lines    InventoryPurchaseOrderLine[]
+  receipts InventoryGoodsReceipt[]
+
+  @@unique([tenantId, seq])
+  @@index([tenantId, status])
+  @@map("inventory_purchase_order")
+}
+
+model InventoryPurchaseOrderLine {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  orderId        String @map("order_id") @db.Uuid
+  itemId         String @map("item_id") @db.Uuid
+  qty            Int
+  unitPricePaise Int    @map("unit_price_paise")
+  /// Accepted into stock so far. A rejected quantity is not received: the line
+  /// stays open for the replacement.
+  receivedQty    Int    @default(0) @map("received_qty")
+  rejectedQty    Int    @default(0) @map("rejected_qty")
+
+  tenant       Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order        InventoryPurchaseOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item         InventoryItem               @relation(fields: [itemId], references: [id])
+  receiptLines InventoryGoodsReceiptLine[]
+
+  @@index([orderId])
+  @@map("inventory_purchase_order_line")
+}
+
+model InventoryGoodsReceipt {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  orderId      String   @map("order_id") @db.Uuid
+  receivedById String   @map("received_by_id") @db.Uuid
+  /// The supplier's invoice or delivery note number, as written on the paper.
+  invoiceRef   String?  @map("invoice_ref")
+  receivedAt   DateTime @default(now()) @map("received_at")
+
+  tenant Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  InventoryPurchaseOrder      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  lines  InventoryGoodsReceiptLine[]
+
+  @@index([orderId])
+  @@map("inventory_goods_receipt")
+}
+
+model InventoryGoodsReceiptLine {
+  id             String  @id @default(uuid()) @db.Uuid
+  tenantId       String  @map("tenant_id") @db.Uuid
+  receiptId      String  @map("receipt_id") @db.Uuid
+  orderLineId    String  @map("order_line_id") @db.Uuid
+  acceptedQty    Int     @map("accepted_qty")
+  rejectedQty    Int     @default(0) @map("rejected_qty")
+  rejectReason   String? @map("reject_reason")
+  /// The price actually charged, which can differ from the order.
+  unitPricePaise Int     @map("unit_price_paise")
+
+  tenant    Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  receipt   InventoryGoodsReceipt      @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  orderLine InventoryPurchaseOrderLine @relation(fields: [orderLineId], references: [id])
+
+  @@index([receiptId])
+  @@map("inventory_goods_receipt_line")
 }
 
 // ===========================================================================

@@ -151,6 +151,20 @@ Then, for this client:
 5. **Vendor page**: categories supplied, payment terms, GST, rating; performance tab (price trend,
    on-time %, rejection rate) and price history per item.
 
+## 7a. Built 2026-10-06 (inventory-native, per DECISIONS.md #1)
+
+Vendors, purchase orders (Draft → Approved, or Waiting for approval over the tenant threshold, default
+₹25,000 → Approved → Partly received → Received, Cancelled with a reason) and goods receipts with
+accepted / rejected quantity, rejection reason, price actually paid and invoice number. Accepted
+quantity posts a Receipt movement through the shared stock ledger and updates the moving-average cost
+(so recipe cost moves). Screens: `/inventory/purchase-orders` (Orders, Vendors) and
+`/inventory/purchase-orders/[orderId]`. Tested: `src/test/capability-procurement.test.ts`.
+
+Not built yet: purchase requests and the low-stock → draft request, vendor performance and price
+history views, purchase bill and payment from a receipt, invoice photo on receipt, sending the order
+to the vendor (no email/WhatsApp transport exists, so there is deliberately no "Sent" state).
+Not verified in a browser.
+
 ## 8. Acceptance
 
 Module completeness bar (`docs/reference/module-completeness-bar.md`), plus live walk-through:
