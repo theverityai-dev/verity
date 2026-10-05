@@ -318,20 +318,37 @@ describeDb("future capability composition", () => {
  * discovers and executes it through the public contract, under tenancy, without
  * the platform knowing anything about the domain.
  */
+const SCHEDULE_CAPABILITY = "verity.capability.hypothetical";
 describeDb("composition: scheduled work contributes like any other surface", () => {
   const tenantId = randomUUID();
 
   beforeAll(async () => {
     await assertRlsEnforceable();
+    // Scheduled work fails closed unless the tenant really has the capability
+    // active, so the stand-in needs a definition and an activation.
+    const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
+    try {
+      await admin.capabilityDefinition.upsert({
+        where: { id: SCHEDULE_CAPABILITY },
+        create: { id: SCHEDULE_CAPABILITY, name: "Hypothetical scheduled capability", version: "0.0.1" },
+        update: {},
+      });
+    } finally { await admin.$disconnect(); }
     await withTenant(tenantId, async (tx) => {
       await tx.tenant.create({ data: { id: tenantId, name: "Composition Schedule" } });
+      await activateCapability(tx, tenantId, SCHEDULE_CAPABILITY);
     });
+    invalidateCapabilityCache();
   });
 
   afterAll(async () => {
     await withTenant(tenantId, async (tx) => {
       await tx.tenant.deleteMany({ where: { id: tenantId } });
     });
+    const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
+    try {
+      await admin.capabilityDefinition.deleteMany({ where: { id: SCHEDULE_CAPABILITY } });
+    } finally { await admin.$disconnect(); }
   });
 
   afterEach(() => clearContributions());
