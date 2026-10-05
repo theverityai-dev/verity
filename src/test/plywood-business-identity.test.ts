@@ -115,7 +115,9 @@ describe("the Logistics module is absent (P0-10, §D-01)", () => {
 
   it("has no logistics route, capability module or command", () => {
     const sources = files(resolve(ROOT, "src"))
-      .filter((file) => !file.includes(`${"src"}/test/`))
+      // The manufacturing capability has its own dispatch/confirmDelivery
+      // commands (a different capability from the removed plywood Logistics).
+      .filter((file) => { const f = file.split(String.fromCharCode(92)).join("/"); return !f.includes("/src/test/") && !f.includes("/capabilities/manufacturing/"); })
       .map((file) => ({ file, body: readFileSync(file, "utf8") }));
 
     const offenders = sources.filter(({ body }) =>
@@ -164,7 +166,8 @@ describe("navigation speaks the business's language (§8)", () => {
     // A sighted user was being given strictly less structure than a
     // screen-reader user, which is a strange way round.
     expect(chrome).toMatch(/area\.items\.length > 1/);
-    expect(chrome).toMatch(/uppercase tracking/);
+    // ADR-033: iOS section header — footnote size, semibold, secondary label.
+    expect(chrome).toMatch(/text-\[13px\] font-semibold text-text-secondary/);
   });
 });
 
