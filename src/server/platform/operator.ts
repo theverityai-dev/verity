@@ -6,6 +6,15 @@ import { recordSecurityEvent } from "./audit";
 import { withTenant } from "./tenancy";
 import { ForbiddenError } from "./authorization";
 import type { ActorContext } from "./command";
+import {
+  applyPlannedPackOperation,
+  planPackOperation,
+  previewPack,
+  removePackInstance,
+  rollbackPackOperation,
+  type PackPreviewDiff,
+} from "./pack";
+import { applyCapabilityUpgrade, planCapabilityUpgrade } from "./capability-upgrade";
 
 /**
  * Global HQ operator authority.
@@ -228,6 +237,45 @@ export async function platformAudit(
     fieldChanged: r.field_changed,
     actorUserId: r.actor_user_id,
     isOperator: r.is_operator,
+  }));
+}
+
+/* ------------------------------------------------------------------------- *
+ * Scheduled jobs — installation-wide (A6)
+ * ------------------------------------------------------------------------- */
+
+export type SchedulerRunSummary = {
+  cadence: string;
+  status: string;
+  startedAt: Date;
+  finishedAt: Date | null;
+  durationMs: number | null;
+  tenantCount: number | null;
+  workCount: number | null;
+};
+
+/**
+ * The latest run of each scheduler cadence. `scheduler_run` holds no tenant
+ * data (a cadence, a status, counts), so this is not a cross-tenant read; it is
+ * still operator-only because it describes the installation.
+ */
+export async function schedulerRunSummary(operator: OperatorContext): Promise<SchedulerRunSummary[]> {
+  void operator; // the parameter is the proof of authority, as for the projections
+  const rows = await prisma.$queryRaw<
+    {
+      cadence: string; status: string; started_at: Date; finished_at: Date | null;
+      duration_ms: number | null; tenant_count: number | null; work_count: number | null;
+    }[]
+  >`SELECT DISTINCT ON (cadence) cadence, status, started_at, finished_at, duration_ms, tenant_count, work_count
+     FROM scheduler_run ORDER BY cadence, started_at DESC`;
+  return rows.map((r) => ({
+    cadence: r.cadence,
+    status: r.status,
+    startedAt: r.started_at,
+    finishedAt: r.finished_at,
+    durationMs: r.duration_ms,
+    tenantCount: r.tenant_count,
+    workCount: r.work_count,
   }));
 }
 
@@ -623,4 +671,122 @@ export const OPERATOR_GRANTS = [
   // doing (PLA-AUT-003).
   { verb: "ActionExecute" as const, entity: "verity.platform.tenant" },
   { verb: "Edit" as const, entity: "verity.platform.tenant" },
+  // Industry Packs and capability pins (HQ audit B1, B2; ADR-021, ADR-022).
+  { verb: "Read" as const, entity: "verity.platform.pack" },
+  { verb: "ActionExecute" as const, entity: "verity.platform.pack" },
+  { verb: "ActionExecute" as const, entity: "verity.platform.capability_upgrade" },
 ];
+
+/* ------------------------------------------------------------------------- *
+ * Industry Packs and capability upgrades for one client (HQ audit B1, B2)
+ *
+ * Every function goes through `operatorActorFor`, so the operator acts inside
+ * the client with an ordinary membership and the pack/upgrade modules enforce
+ * their own policy exactly as for anyone else. Nothing here reads across
+ * tenants: releases are global platform metadata readable in any tenant scope,
+ * and instances are the client's own rows.
+ * ------------------------------------------------------------------------- */
+
+export type PackReleaseView = {
+  releaseId: string;
+  key: string;
+  version: string;
+  name: string;
+  publisher: string;
+  importedAt: Date;
+  diff: PackPreviewDiff | null;
+  previewError: string | null;
+  /** What applying this release would be for this client. */
+  kind: "Apply" | "Upgrade" | "Reapply";
+};
+
+export type PackInstanceView = {
+  instanceId: string;
+  packKey: string;
+  state: string;
+  appliedVersion: string | null;
+};
+
+export async function clientPacks(tenantId: string): Promise<{ releases: PackReleaseView[]; instances: PackInstanceView[] }> {
+  await operatorActorFor(tenantId); // proof of operator authority for this client
+  return withTenant(tenantId, async (tx) => {
+    const [releases, instances] = await Promise.all([
+      tx.packRelease.findMany({ orderBy: [{ key: "asc" }, { importedAt: "desc" }] }),
+      tx.packInstance.findMany({ include: { appliedRelease: { select: { version: true } } }, orderBy: { packKey: "asc" } }),
+    ]);
+    const instanceByKey = new Map(instances.map((i) => [i.packKey, i]));
+
+    const views: PackReleaseView[] = [];
+    for (const release of releases) {
+      const manifest = release.manifest as { name?: string };
+      let diff: PackPreviewDiff | null = null;
+      let previewError: string | null = null;
+      try {
+        diff = (await previewPack(tx, tenantId, release.id)).diff;
+      } catch (error) {
+        previewError = error instanceof Error ? error.message : "Preview failed";
+      }
+      const instance = instanceByKey.get(release.key);
+      const kind: PackReleaseView["kind"] =
+        instance?.state === "Active" && instance.appliedReleaseId === release.id
+          ? "Reapply"
+          : instance?.state === "Active"
+            ? "Upgrade"
+            : "Apply";
+      views.push({
+        releaseId: release.id,
+        key: release.key,
+        version: release.version,
+        name: manifest.name ?? release.key,
+        publisher: release.publisher,
+        importedAt: release.importedAt,
+        diff,
+        previewError,
+        kind,
+      });
+    }
+
+    return {
+      releases: views,
+      instances: instances.map((i) => ({
+        instanceId: i.id,
+        packKey: i.packKey,
+        state: i.state,
+        appliedVersion: i.appliedRelease?.version ?? null,
+      })),
+    };
+  });
+}
+
+/**
+ * Plan then apply in one transaction. The plan recomputes the diff on the
+ * server and apply checks the hash of the plan it just made, so what is applied
+ * is the diff re-derived here, never one trusted from the browser.
+ */
+export async function applyPackRelease(tenantId: string, releaseId: string, kind: PackReleaseView["kind"]): Promise<void> {
+  const actor = await operatorActorFor(tenantId);
+  await withTenant(tenantId, async (tx) => {
+    const planned = await planPackOperation(tx, actor, releaseId, kind);
+    await applyPlannedPackOperation(tx, actor, planned.operation.id, planned.planHash);
+  });
+}
+
+export async function rollbackPack(tenantId: string, instanceId: string): Promise<void> {
+  const actor = await operatorActorFor(tenantId);
+  await withTenant(tenantId, (tx) => rollbackPackOperation(tx, actor, instanceId));
+}
+
+export async function removePack(tenantId: string, instanceId: string): Promise<void> {
+  const actor = await operatorActorFor(tenantId);
+  await withTenant(tenantId, (tx) => removePackInstance(tx, actor, instanceId));
+}
+
+/** Moves one capability's pin to the installed version (ADR-021), reversibly. */
+export async function upgradeCapability(tenantId: string, capabilityId: string): Promise<string> {
+  const actor = await operatorActorFor(tenantId);
+  return withTenant(tenantId, async (tx) => {
+    const planned = await planCapabilityUpgrade(tx, actor, capabilityId, { reversible: true });
+    const applied = await applyCapabilityUpgrade(tx, actor, planned.operationId);
+    return applied.pinnedVersion;
+  });
+}

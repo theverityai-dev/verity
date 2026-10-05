@@ -17,6 +17,7 @@ const TABS = [
   { slug: "roles", label: "Roles" },
   { slug: "organizations", label: "Organizations" },
   { slug: "modules", label: "Modules" },
+  { slug: "packs", label: "Packs" },
   { slug: "operations", label: "Operations" },
   { slug: "settings", label: "Settings" },
 ];

@@ -2,7 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient, enterClient, operatorActorFor, setClientStatus, type ClientStatus } from "@/server/platform/operator";
+import {
+  applyPackRelease,
+  createClient,
+  enterClient,
+  operatorActorFor,
+  removePack,
+  rollbackPack,
+  setClientStatus,
+  upgradeCapability,
+  type ClientStatus,
+  type PackReleaseView,
+} from "@/server/platform/operator";
 import { executeCommand, getCommand } from "@/server/platform/command";
 import { executeQuery, getQuery } from "@/server/platform/query";
 import { installAdministration } from "@/server/platform/administration";
@@ -147,4 +158,53 @@ export async function runClientQuery<T = unknown>(
   } catch (error) {
     return toActionFailure(error);
   }
+}
+
+/* ------------------------- packs and upgrades (B1, B2) ------------------------- */
+
+function packMessage(error: unknown): string {
+  const text = error instanceof Error ? error.message : "";
+  const coded = /^(E_PACK_[A-Z_]+|E_UPGRADE_[A-Z_]+):\s*(.*)$/.exec(text);
+  if (coded) return coded[2] || coded[1]!;
+  return message(error);
+}
+
+export async function applyPackAction(tenantId: string, releaseId: string, kind: PackReleaseView["kind"]): Promise<HqActionResult> {
+  try {
+    await applyPackRelease(tenantId, releaseId, kind);
+  } catch (error) {
+    return { ok: false, message: packMessage(error) };
+  }
+  revalidatePath(`/hq/clients/${tenantId}/packs`);
+  return { ok: true };
+}
+
+export async function rollbackPackAction(tenantId: string, instanceId: string): Promise<HqActionResult> {
+  try {
+    await rollbackPack(tenantId, instanceId);
+  } catch (error) {
+    return { ok: false, message: packMessage(error) };
+  }
+  revalidatePath(`/hq/clients/${tenantId}/packs`);
+  return { ok: true };
+}
+
+export async function removePackAction(tenantId: string, instanceId: string): Promise<HqActionResult> {
+  try {
+    await removePack(tenantId, instanceId);
+  } catch (error) {
+    return { ok: false, message: packMessage(error) };
+  }
+  revalidatePath(`/hq/clients/${tenantId}/packs`);
+  return { ok: true };
+}
+
+export async function upgradeCapabilityAction(tenantId: string, capabilityId: string): Promise<HqActionResult> {
+  try {
+    await upgradeCapability(tenantId, capabilityId);
+  } catch (error) {
+    return { ok: false, message: packMessage(error) };
+  }
+  revalidatePath(`/hq/clients/${tenantId}/modules`);
+  return { ok: true };
 }

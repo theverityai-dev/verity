@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ErrorState, Panel } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { runClientCommand } from "@/server/actions/hq";
+import { runClientCommand, upgradeCapabilityAction } from "@/server/actions/hq";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { ModuleRow } from "@/server/platform/administration";
 
@@ -45,8 +45,22 @@ export function ModulesAdmin({ tenantId, modules }: { tenantId: string; modules:
     });
   }
 
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  // B2: move a client's pin to the installed version, one capability at a time.
+  function upgrade(capabilityId: string) {
+    setUpgradeError(null);
+    startTransition(async () => {
+      const result = await upgradeCapabilityAction(tenantId, capabilityId);
+      if (result.ok) router.refresh();
+      else setUpgradeError(result.message);
+    });
+  }
+
   return (
     <>
+      {upgradeError && (
+        <p role="alert" className="mb-4 mt-0 rounded-[12px] bg-danger-subtle px-4 py-3 text-[13px] text-danger">{upgradeError}</p>
+      )}
       {failure && (
         <div className="mb-4">
           <ErrorState
@@ -78,10 +92,18 @@ export function ModulesAdmin({ tenantId, modules }: { tenantId: string; modules:
                 : module.dependencies.map((id) => modules.find((m) => m.capabilityId === id)?.name ?? id).join(", "),
             status: module.status,
             active: module.status === "Active",
+            behind: module.status === "Active" && module.pinnedVersion !== null && module.pinnedVersion !== module.version,
+            installed: module.version,
           }))}
           caption="Capabilities available to this client"
           emptyTitle="No capabilities are installed on this platform"
           rowActions={(row) => (
+            <div className="flex flex-wrap justify-end gap-2">
+            {Boolean(row.behind) && (
+              <Button size="sm" variant="primary" disabled={pending} aria-label={`Upgrade ${row.name} to ${row.installed}`} onClick={() => upgrade(String(row.capabilityId))}>
+                Upgrade to {String(row.installed)}
+              </Button>
+            )}
             <Button
               size="sm"
               variant={row.active ? "secondary" : "primary"}
@@ -94,6 +116,7 @@ export function ModulesAdmin({ tenantId, modules }: { tenantId: string; modules:
             >
               {row.active ? "Disable" : "Enable"}
             </Button>
+            </div>
           )}
         />
       </Panel>

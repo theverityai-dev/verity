@@ -4,9 +4,13 @@ import {
   clientDirectory,
   platformActivity,
   requireOperator,
+  schedulerRunSummary,
 } from "@/server/platform/operator";
 
 export const dynamic = "force-dynamic";
+
+/** A live client with no change for this long is shown as gone quiet (B4). */
+const QUIET_DAYS = 14;
 
 const columns: Column[] = [
   { key: "name", header: "Client", sortable: true, variant: "link", href: "/hq/clients" },
@@ -26,9 +30,10 @@ const columns: Column[] = [
  */
 export default async function HqOverviewPage() {
   const operator = await requireOperator();
-  const [clients, activity] = await Promise.all([
+  const [clients, activity, jobs] = await Promise.all([
     clientDirectory(operator),
     platformActivity(operator),
+    schedulerRunSummary(operator),
   ]);
 
   const totalMembers = clients.reduce((sum, c) => sum + c.memberCount, 0);
@@ -36,6 +41,8 @@ export default async function HqOverviewPage() {
   const totalSecurity = activity.reduce((sum, a) => sum + a.securityEvents30d, 0);
 
   // ADR-034: which clients need someone to look, and why. Counts only.
+  // eslint-disable-next-line react-hooks/purity -- a server component reads the clock once per request
+  const now = Date.now();
   const statusById = new Map(clients.map((c) => [c.tenantId, c.status]));
   const attention = activity
     .map((a) => {
@@ -47,6 +54,11 @@ export default async function HqOverviewPage() {
       if (a.syncExceptions > 0) reasons.push(`${a.syncExceptions} sync problems`);
       if (a.slaBreached > 0) reasons.push(`${a.slaBreached} late against SLA`);
       if (a.peopleInvited > 0) reasons.push(`${a.peopleInvited} people never signed in`);
+      if (status === "active") {
+        const quietDays = a.lastActivityAt ? Math.floor((now - a.lastActivityAt.getTime()) / 86_400_000) : null;
+        if (quietDays === null) reasons.push("No activity yet");
+        else if (quietDays >= QUIET_DAYS) reasons.push(`No changes in ${quietDays} days`);
+      }
       return { id: a.tenantId, tenantId: a.tenantId, name: a.name, why: reasons.join(" · "), count: reasons.length };
     })
     .filter((row) => row.count > 0);
@@ -75,6 +87,30 @@ export default async function HqOverviewPage() {
           caption="Clients with something to look at"
           emptyTitle="Every client looks healthy"
           emptyDescription="No undelivered events, sync problems, late work, unused invitations or suspended clients."
+          filterable={false}
+        />
+      </Panel>
+
+      <div className="mt-6" />
+
+      <Panel title="Scheduled jobs" flush>
+        <DataTable
+          columns={[
+            { key: "cadence", header: "Job" },
+            { key: "status", header: "Last result" },
+            { key: "when", header: "Last run" },
+            { key: "work", header: "Clients · items", numeric: true },
+          ]}
+          rows={jobs.map((job) => ({
+            id: job.cadence,
+            cadence: job.cadence.charAt(0).toUpperCase() + job.cadence.slice(1),
+            status: job.status,
+            when: job.startedAt.toISOString().slice(0, 16).replace("T", " "),
+            work: `${job.tenantCount ?? 0} · ${job.workCount ?? 0}`,
+          }))}
+          caption="The latest run of each scheduled job on this installation (UTC)"
+          emptyTitle="No scheduled job has run"
+          emptyDescription="Late-order alerts, reminders and sweeps run on a schedule. If this stays empty, the scheduler is not reaching the app."
           filterable={false}
         />
       </Panel>
