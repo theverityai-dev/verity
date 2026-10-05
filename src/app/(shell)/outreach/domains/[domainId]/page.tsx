@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-syntax -- Task 121 grandfathered debt (bare <table>), migrate to DataTable/SmartTable opportunistically. The config `ignores` array's glob for this path is a known no-op: minimatch treats a literal `[domainId]` route segment as a bracket character class, not literal text, so it never matches — this inline comment is the only mechanism that actually protects this file. Same bug likely affects every other bracketed-route entry in that list; they're currently harmless only because each of those files also carries this same inline comment. */
 import Link from "next/link";
+import { RenameDomainButton } from "../../OutreachForms";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
@@ -101,6 +102,7 @@ async function DomainDetailPage({
               Back to Domains
             </Link>
             <RangeSwitch basePath={`/outreach/domains/${domainId}`} active={range} />
+            <RenameDomainButton domainId={domainId} currentName={data.domain.name} />
           </>
         }
       />

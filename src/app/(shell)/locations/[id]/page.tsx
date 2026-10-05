@@ -21,6 +21,7 @@ import { AuditTrail } from "@/components/shell/AuditTrail";
 import { buildFormDescriptor } from "@/server/platform/experience";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { CustomFieldsPanel } from "./CustomFieldsPanel";
+import { LocationActions } from "./LocationActions";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +64,14 @@ async function LocationDetailPage({
     // appears without this page changing (PLA-EXT-002).
     const descriptor = await buildFormDescriptor(tx, ENTITY_LOCATION);
     const canEdit = await hasTenantPermission(tx, actor.roleId, "Edit", ENTITY_LOCATION);
-    return { location, history, descriptor, canEdit };
+    // People who can be assigned: users of this tenant not already at this site.
+    const assigned = new Set(location.assignments.map((a) => a.userId));
+    const users = await tx.user.findMany({ select: { id: true, party: { select: { displayName: true } } } });
+    const people = users
+      .filter((u) => !assigned.has(u.id))
+      .map((u) => ({ userId: u.id, name: u.party.displayName }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { location, history, descriptor, canEdit, people };
   });
 
   if ("notFound" in data) notFound();
@@ -87,6 +95,19 @@ async function LocationDetailPage({
           location.place
             ? `${location.organization.name} · sited at ${location.place.name}.`
             : `${location.organization.name} · no place linked, so this site has no physical coordinates.`
+        }
+        actions={
+          data.canEdit ? (
+            <LocationActions
+              locationId={location.id}
+              people={data.people}
+              defaultCentre={
+                location.place?.latitude && location.place?.longitude
+                  ? { lat: String(location.place.latitude), lng: String(location.place.longitude) }
+                  : null
+              }
+            />
+          ) : undefined
         }
       />
 

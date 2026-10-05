@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RepReportingActions } from "../OutreachForms";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasPermission } from "@/server/platform/authorization";
@@ -95,6 +96,10 @@ async function MyWorkspacePage() {
         <p className="m-0 text-[13px] text-text-tertiary">{today}</p>
         <h1 className="mt-1">Hi, {data.firstName}.</h1>
       </header>
+
+      <RepReportingActions
+        leads={[...data.overdue, ...data.active].map((l) => ({ id: l.id, name: l.companyName }))}
+      />
 
       <div className="mb-6 flex gap-8">
         <div>

@@ -1,13 +1,10 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
+import { useState } from "react";
 import { DataTable } from "@/components/ui/DataTable";
-import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
-import { Button, ErrorState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
-import { runCommand } from "@/server/actions/platform";
-import type { ActionFailure } from "@/server/platform/action-error";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 
 export type EmployeeRow = {
   id: string;
@@ -30,98 +27,14 @@ export type LeaveRow = {
 };
 export type PartyOption = { id: string; displayName: string };
 
-/** One command at a time, refreshing the server data on success. */
-function useCommand() {
-  const router = useRouter();
-  const [failure, setFailure] = useState<ActionFailure | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function run(key: string, input: unknown, onDone?: () => void) {
-    setFailure(null);
-    startTransition(async () => {
-      const result = await runCommand(key, input, "/hr");
-      if (result.ok) {
-        onDone?.();
-        router.refresh();
-      } else {
-        setFailure(result);
-      }
-    });
-  }
-
-  return { run, pending, failure, clear: () => setFailure(null) };
-}
-
-function Failure({ failure, title }: { failure: ActionFailure | null; title: string }) {
-  if (!failure) return null;
-  return <ErrorState title={title} message={failure.message} issues={failure.issues} retryable={failure.retryable} />;
-}
-
-/** A form inside a Modal; the submit button lives in the footer, tied to the form by id. */
-function FormModal({
-  title,
-  description,
-  open,
-  onClose,
-  submitLabel,
-  pending,
-  failure,
-  failureTitle,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  description: string;
-  open: boolean;
-  onClose: () => void;
-  submitLabel: string;
-  pending: boolean;
-  failure: ActionFailure | null;
-  failureTitle: string;
-  onSubmit: (form: FormData) => void;
-  children: React.ReactNode;
-}) {
-  const formId = useId();
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      description={description}
-      footer={
-        <>
-          <ModalCancel onClose={onClose} disabled={pending} />
-          <Button type="submit" form={formId} variant="primary" disabled={pending}>
-            {pending ? "Saving…" : submitLabel}
-          </Button>
-        </>
-      }
-    >
-      <form
-        id={formId}
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(new FormData(e.currentTarget));
-        }}
-      >
-        {children}
-        <Failure failure={failure} title={failureTitle} />
-      </form>
-    </Modal>
-  );
-}
-
-const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
-const optional = (form: FormData, name: string) => text(form, name) || undefined;
 const startOfDay = (date: string) => `${date}T00:00:00.000Z`;
 
 /* -------------------------------- employees -------------------------------- */
 
 function EmployeesTab({ employees, departments, parties }: { employees: EmployeeRow[]; departments: DepartmentRow[]; parties: PartyOption[] }) {
   const [open, setOpen] = useState(false);
-  const add = useCommand();
-  const toggle = useCommand();
+  const add = useCommand("/hr");
+  const toggle = useCommand("/hr");
 
   const rows = employees.map((e) => ({ ...e, status: e.active ? "Active" : "Inactive" }));
 
@@ -158,7 +71,7 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
           );
         }}
       />
-      <Failure failure={toggle.failure} title="Could not update employee" />
+      <CommandFailure failure={toggle.failure} title="Could not update employee" />
       {parties.length === 0 && (
         <p className="mt-3 text-[13px] text-text-tertiary">
           Everyone in your contacts is already an employee. Add the person under People first, then return here.
@@ -177,13 +90,13 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
         failure={add.failure}
         failureTitle="Could not add employee"
         onSubmit={(form) => {
-          const joined = optional(form, "dateOfJoining");
+          const joined = formOptional(form, "dateOfJoining");
           add.run(
             "verity.hr.create_employee",
             {
-              partyId: text(form, "partyId"),
-              departmentId: optional(form, "departmentId"),
-              designation: optional(form, "designation"),
+              partyId: formText(form, "partyId"),
+              departmentId: formOptional(form, "departmentId"),
+              designation: formOptional(form, "designation"),
               dateOfJoining: joined ? startOfDay(joined) : undefined,
             },
             () => setOpen(false),
@@ -221,7 +134,7 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
 
 function DepartmentsTab({ departments }: { departments: DepartmentRow[] }) {
   const [open, setOpen] = useState(false);
-  const add = useCommand();
+  const add = useCommand("/hr");
 
   return (
     <>
@@ -249,7 +162,7 @@ function DepartmentsTab({ departments }: { departments: DepartmentRow[] }) {
         pending={add.pending}
         failure={add.failure}
         failureTitle="Could not add department"
-        onSubmit={(form) => add.run("verity.hr.create_department", { name: text(form, "name") }, () => setOpen(false))}
+        onSubmit={(form) => add.run("verity.hr.create_department", { name: formText(form, "name") }, () => setOpen(false))}
       >
         <Field label="Name" htmlFor="hr-dept-name" required>
           <Input id="hr-dept-name" name="name" required maxLength={120} autoFocus />
@@ -264,9 +177,9 @@ function DepartmentsTab({ departments }: { departments: DepartmentRow[] }) {
 function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTypes: LeaveTypeRow[]; employees: EmployeeRow[] }) {
   const [applying, setApplying] = useState(false);
   const [addingType, setAddingType] = useState(false);
-  const apply = useCommand();
-  const addType = useCommand();
-  const decide = useCommand();
+  const apply = useCommand("/hr");
+  const addType = useCommand("/hr");
+  const decide = useCommand("/hr");
 
   const activeEmployees = employees.filter((e) => e.active);
 
@@ -319,7 +232,7 @@ function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTy
           return null;
         }}
       />
-      <Failure failure={decide.failure} title="Could not record the decision" />
+      <CommandFailure failure={decide.failure} title="Could not record the decision" />
 
       <FormModal
         title="Record leave"
@@ -337,11 +250,11 @@ function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTy
           apply.run(
             "verity.hr.apply_for_leave",
             {
-              employeeId: text(form, "employeeId"),
-              leaveTypeId: text(form, "leaveTypeId"),
-              fromDate: startOfDay(text(form, "fromDate")),
-              toDate: startOfDay(text(form, "toDate")),
-              reason: optional(form, "reason"),
+              employeeId: formText(form, "employeeId"),
+              leaveTypeId: formText(form, "leaveTypeId"),
+              fromDate: startOfDay(formText(form, "fromDate")),
+              toDate: startOfDay(formText(form, "toDate")),
+              reason: formOptional(form, "reason"),
             },
             () => setApplying(false),
           )
@@ -391,7 +304,7 @@ function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTy
         onSubmit={(form) =>
           addType.run(
             "verity.hr.create_leave_type",
-            { name: text(form, "name"), daysPerYear: Number(text(form, "daysPerYear")) },
+            { name: formText(form, "name"), daysPerYear: Number(formText(form, "daysPerYear")) },
             () => setAddingType(false),
           )
         }

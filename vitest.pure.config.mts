@@ -23,6 +23,7 @@ export default defineConfig({
       "scripts/scheduler-time.test.mjs",
       "scripts/scale/workload.test.ts",
       "src/test/write-confinement.test.ts",
+      "src/test/ui-reachability.test.ts",
       "src/test/deploy-env-mode.test.ts",
       "src/test/storage-s3-presign.test.ts",
       "src/test/storage-s3-matrix.test.ts",

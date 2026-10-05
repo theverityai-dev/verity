@@ -4,9 +4,9 @@ import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_ROUTE, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
 import { CreateRouteForm } from "./CreateRouteForm";
+import { RoutesTable } from "./RoutesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -52,18 +52,7 @@ async function RoutesPage() {
         <Stat label="Archived" value={rows.filter((r) => r.state === "archived").length} />
       </StatRow>
 
-      <DataTable
-        caption="Production routes"
-        rows={rows}
-        columns={[
-          { key: "code", header: "Code", sortable: true, subKey: "name" },
-          { key: "chain", header: "Stages" },
-          { key: "stages", header: "Count", numeric: true },
-          { key: "state", header: "State", variant: "state", categoryKey: "category" },
-        ]}
-        emptyTitle="No routes yet"
-        emptyDescription="Create one to plan orders into stages such as cutting, stitching and packing."
-      />
+      <RoutesTable rows={rows} />
     </>
   );
 }

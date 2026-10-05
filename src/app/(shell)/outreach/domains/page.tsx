@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DomainTaxonomyActions } from "../OutreachForms";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasPermission } from "@/server/platform/authorization";
@@ -34,12 +35,15 @@ async function DomainsPage() {
         title="Domains"
         description="Every market group and domain in the taxonomy. Open one for its funnel, velocity, aging, and team/channel breakdown."
         actions={
+          <>
+          <DomainTaxonomyActions groups={groups.map((g) => ({ id: g.id, name: g.name }))} />
           <Link
             href="/outreach/intelligence"
             className="rounded-md border border-line px-3 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
           >
             Company intelligence
           </Link>
+          </>
         }
       />
 

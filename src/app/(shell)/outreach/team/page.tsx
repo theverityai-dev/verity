@@ -11,7 +11,10 @@ import { RemoveMemberButton } from "./RemoveMemberButton";
 import { AddMemberForm } from "./AddMemberForm";
 import { RenameTeamForm } from "./RenameTeamForm";
 import { ResolveEscalationButton } from "../ResolveEscalationButton";
+import { TeamLeadActions } from "../OutreachForms";
 import { LeadQueuePanel } from "./LeadQueuePanel";
+import { TeamOpsPanels } from "./TeamOpsPanels";
+import { runQuery } from "@/server/actions/platform";
 import { CoachingNotePanel } from "./CoachingNotePanel";
 
 export const dynamic = "force-dynamic";
@@ -160,6 +163,22 @@ async function TeamCommandPage() {
 
   const weekOf = new Date().toLocaleDateString(undefined, { month: "long", day: "numeric" });
 
+  // A lead's operating lists, each through the capability's own query so its
+  // team-scope rule applies. Loaded only for someone who manages the team.
+  type Rec = Record<string, unknown>;
+  const memberName = new Map(data.memberRows.map((m) => [m.id, m.name]));
+  const ops = data.canManage
+    ? await Promise.all([
+        runQuery<Rec[]>("verity.outreach.list_team_check_ins", { teamId: data.teamId, date: new Date().toISOString() }),
+        runQuery<Rec[]>("verity.outreach.list_assignments", { teamId: data.teamId }),
+        runQuery<Rec[]>("verity.outreach.list_targets", { teamId: data.teamId }),
+        runQuery<Rec[]>("verity.outreach.list_escalations", { teamId: data.teamId }),
+      ])
+    : null;
+  const rows = (result: { ok: boolean; data?: Rec[] } | undefined) => (result && result.ok && result.data ? result.data : []);
+  const nameOf = (id: unknown) => (typeof id === "string" ? memberName.get(id) ?? "Unknown" : "Team");
+  const day = (value: unknown) => (value ? new Date(String(value)).toISOString().slice(0, 10) : "");
+
   return (
     <>
       {/* Cockpit framing: team name is the identity, week is the operating
@@ -173,6 +192,9 @@ async function TeamCommandPage() {
         </p>
         {data.canManage && <div className="mt-3">
           <RenameTeamForm teamId={data.teamId} currentName={data.teamName} />
+          <div className="mt-3">
+            <TeamLeadActions teamId={data.teamId} members={data.memberRows.map((m) => ({ id: m.id, name: m.name }))} />
+          </div>
         </div>}
       </header>
 
@@ -235,6 +257,36 @@ async function TeamCommandPage() {
 
       <div className="mb-6">
         <LeadQueuePanel teamId={data.teamId} />
+        {ops && (
+          <TeamOpsPanels
+            checkIns={rows(ops[0]).map((c) => {
+              const review = c.currentReview as { reviewStatus?: string } | null;
+              return {
+                id: String(c.id),
+                member: nameOf(c.partyId),
+                summary: String(c.summary ?? ""),
+                blocker: String(c.blocker ?? ""),
+                review: review?.reviewStatus === "NeedsClarification" ? "Needs clarification" : review?.reviewStatus ?? "Not reviewed",
+              };
+            })}
+            assignments={rows(ops[1])
+              .filter((a) => a.active !== false)
+              .map((a) => ({ id: String(a.id), member: nameOf(a.partyId), kind: String(a.scope), value: String(a.value) }))}
+            targets={rows(ops[2]).map((t) => ({
+              id: String(t.id),
+              who: t.partyId ? nameOf(t.partyId) : "Whole team",
+              metric: String(t.metric).replace(/([a-z])([A-Z])/g, "$1 $2"),
+              target: String(t.targetValue),
+              period: `${String(t.period)} · ${day(t.periodStart)} – ${day(t.periodEnd)}`,
+            }))}
+            escalations={rows(ops[3]).map((e) => ({
+              id: String(e.id),
+              company: String((e.lead as { companyName?: string } | undefined)?.companyName ?? "Lead"),
+              note: String(e.note ?? ""),
+              status: e.status === "InReview" ? "In review" : String(e.status),
+            }))}
+          />
+        )}
       </div>
 
       <div className="mb-6">

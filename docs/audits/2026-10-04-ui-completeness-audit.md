@@ -79,3 +79,32 @@ Treat the numbers as a ranking of where to look, not a defect count.
 - Manually triage the outreach and trading unwired keys.
 - Scope: completing screens for the five backend-only capabilities is finishing existing work, not a
   new capability, but `CLAUDE.md` does not say so explicitly. Needs a product-owner confirmation.
+
+## Status, 2026-10-05
+
+Every follow-up above is done except one product decision.
+
+- **Nav 404s closed.** `/inventory`, `/accounting` (with account ledgers) and `/billing` now exist.
+  Every registered navigation link resolves to a page.
+- **Backend-only capabilities wired.** hr (2026-10-04), inventory, accounting, billing and
+  scheduling (Book, Mark unavailable, Add resource, Group resources) all act from screens. Also
+  wired: dine-in void line, line notes, edit menu item, portions, order channels; asset register and
+  move; location place, geofence and person assignment; manufacturing route archive/restore;
+  outreach domain taxonomy, daily check-in, weekly report, targets, territory assignments, weekly
+  team assessment, check-in review, escalation in-review.
+- **Automated check.** `src/test/ui-reachability.test.ts` (in `test:pure` and the CI suite) fails when
+  a navigation link has no page, or when a command or query is not used by a screen or server action
+  and is not on the reviewed list `src/test/ui-reachability.baseline.json`. The list is a ratchet: a
+  listed key that becomes reachable also fails until it is removed.
+- **Triage of outreach and trading.** Measured accurately (registered commands and queries, excluding
+  notification keys and event names), 36 keys are not referenced by a screen. Each has a reason in the
+  reviewed list: read queries that serve the API and agent channel, scheduled sweeps, the assistant's
+  insight writer, and an internal find-or-create.
+- **Still open:** `verity.approval.request` has no caller until approval thresholds for wastage,
+  purchase orders and expenses are decided (Colonel Kebabz reference-parity documents). Product
+  decision.
+- **Scope:** completing screens for already-built capabilities treated as finishing existing work,
+  confirmed by the product owner on 2026-10-05.
+
+Screens built here have passed type check, lint and the design checker; they have not yet been walked
+with live data.

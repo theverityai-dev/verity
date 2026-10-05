@@ -55,7 +55,7 @@ async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) 
       : [];
     const byId = new Map(states.map((s) => [s.id, s]));
 
-    const [canEdit, canCaptureEvidence, history, evidence, bookings] = await Promise.all([
+    const [canEdit, canCaptureEvidence, history, evidence, bookings, locations] = await Promise.all([
       hasTenantPermission(tx, actor.roleId, "Edit", ENTITY_ASSET),
       hasTenantPermission(tx, actor.roleId, "Create", ENTITY_EVIDENCE),
       entityHistory(tx, ENTITY_ASSET, asset.id),
@@ -65,6 +65,7 @@ async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) 
         orderBy: { startsAt: "asc" },
         include: { resource: true },
       }),
+      tx.location.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
     ]);
 
     return {
@@ -77,6 +78,7 @@ async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) 
       history,
       evidence,
       bookings,
+      locations,
     };
   });
 
@@ -104,6 +106,8 @@ async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) 
             transitions={data.transitions.map((s) => ({ key: s.key, category: s.category }))}
             canEdit={data.canEdit}
             isTerminal={data.isTerminal}
+            locations={data.locations}
+            currentLocationId={data.asset.locationId}
           />
         }
       />

@@ -1,13 +1,11 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/DataTable";
-import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
-import { Button, ErrorState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
-import { runCommand } from "@/server/actions/platform";
-import type { ActionFailure } from "@/server/platform/action-error";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 
 export type StockRow = {
   id: string;
@@ -36,94 +34,10 @@ export type CategoryRow = { id: string; name: string; items: number };
 type Outlet = { id: string; name: string };
 type StockAction = "receive" | "use" | "count" | "waste";
 
-/** One command at a time, refreshing the server data on success. */
-function useCommand() {
-  const router = useRouter();
-  const [failure, setFailure] = useState<ActionFailure | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function run(key: string, input: unknown, onDone?: () => void) {
-    setFailure(null);
-    startTransition(async () => {
-      const result = await runCommand(key, input, "/inventory");
-      if (result.ok) {
-        onDone?.();
-        router.refresh();
-      } else {
-        setFailure(result);
-      }
-    });
-  }
-
-  return { run, pending, failure, clear: () => setFailure(null) };
-}
-
-function Failure({ failure, title }: { failure: ActionFailure | null; title: string }) {
-  if (!failure) return null;
-  return <ErrorState title={title} message={failure.message} issues={failure.issues} retryable={failure.retryable} />;
-}
-
-/** A form inside a Modal; the submit button lives in the footer, tied to the form by id. */
-function FormModal({
-  title,
-  description,
-  open,
-  onClose,
-  submitLabel,
-  pending,
-  failure,
-  failureTitle,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  description: string;
-  open: boolean;
-  onClose: () => void;
-  submitLabel: string;
-  pending: boolean;
-  failure: ActionFailure | null;
-  failureTitle: string;
-  onSubmit: (form: FormData) => void;
-  children: React.ReactNode;
-}) {
-  const formId = useId();
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      description={description}
-      footer={
-        <>
-          <ModalCancel onClose={onClose} disabled={pending} />
-          <Button type="submit" form={formId} variant="primary" disabled={pending}>
-            {pending ? "Saving…" : submitLabel}
-          </Button>
-        </>
-      }
-    >
-      <form
-        id={formId}
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit(new FormData(e.currentTarget));
-        }}
-      >
-        {children}
-        <Failure failure={failure} title={failureTitle} />
-      </form>
-    </Modal>
-  );
-}
-
-const text = (form: FormData, name: string) => String(form.get(name) ?? "").trim();
-const optional = (form: FormData, name: string) => text(form, name) || undefined;
-const whole = (form: FormData, name: string) => Number.parseInt(text(form, name), 10);
+const whole = (form: FormData, name: string) => Number.parseInt(formText(form, name), 10);
 /** Rupees as typed (₹220.50) to paise; blank stays unknown rather than zero. */
 const paiseFrom = (form: FormData, name: string) => {
-  const raw = text(form, name);
+  const raw = formText(form, name);
   return raw === "" ? undefined : Math.round(Number(raw) * 100);
 };
 
@@ -151,7 +65,7 @@ function StockActionModal({
   wastageReasons: string[];
   onClose: () => void;
 }) {
-  const command = useCommand();
+  const command = useCommand("/inventory");
   const [unchanged, setUnchanged] = useState(false);
   if (!action || !item) return null;
   const copy = ACTION_COPY[action];
@@ -172,14 +86,14 @@ function StockActionModal({
           kind: "Receipt",
           qty: whole(form, "qty"),
           unitCostPaise: paiseFrom(form, "unitCost"),
-          reference: optional(form, "reference"),
+          reference: formOptional(form, "reference"),
         },
         close,
       );
     } else if (action === "use") {
       command.run(
         "verity.inventory.record_stock_movement",
-        { ...base, kind: "Issue", qty: -whole(form, "qty"), reference: optional(form, "reference") },
+        { ...base, kind: "Issue", qty: -whole(form, "qty"), reference: formOptional(form, "reference") },
         close,
       );
     } else if (action === "count") {
@@ -190,13 +104,13 @@ function StockActionModal({
       }
       command.run(
         "verity.inventory.record_stock_movement",
-        { ...base, kind: "Adjustment", qty: difference, reference: optional(form, "reference") ?? "Stock count" },
+        { ...base, kind: "Adjustment", qty: difference, reference: formOptional(form, "reference") ?? "Stock count" },
         close,
       );
     } else {
       command.run(
         "verity.inventory.record_wastage",
-        { ...base, qty: whole(form, "qty"), reason: text(form, "reason"), notes: optional(form, "notes") },
+        { ...base, qty: whole(form, "qty"), reason: formText(form, "reason"), notes: formOptional(form, "notes") },
         close,
       );
     }
@@ -280,8 +194,8 @@ function StockTab({
   const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [action, setAction] = useState<{ kind: StockAction; item: StockRow } | null>(null);
-  const add = useCommand();
-  const toggle = useCommand();
+  const add = useCommand("/inventory");
+  const toggle = useCommand("/inventory");
   const outletName = outlets.find((o) => o.id === outletId)?.name ?? "";
 
   return (
@@ -340,7 +254,7 @@ function StockTab({
           );
         }}
       />
-      <Failure failure={toggle.failure} title="Could not reactivate the item" />
+      <CommandFailure failure={toggle.failure} title="Could not reactivate the item" />
 
       <StockActionModal
         action={action?.kind ?? null}
@@ -364,14 +278,14 @@ function StockTab({
         failure={add.failure}
         failureTitle="Could not add the item"
         onSubmit={(form) => {
-          const reorder = text(form, "reorderLevel");
+          const reorder = formText(form, "reorderLevel");
           add.run(
             "verity.inventory.create_item",
             {
-              name: text(form, "name"),
-              sku: text(form, "sku"),
-              itemGroupId: optional(form, "itemGroupId"),
-              unitLabel: optional(form, "unitLabel"),
+              name: formText(form, "name"),
+              sku: formText(form, "sku"),
+              itemGroupId: formOptional(form, "itemGroupId"),
+              unitLabel: formOptional(form, "unitLabel"),
               reorderLevel: reorder === "" ? undefined : Number.parseInt(reorder, 10),
             },
             () => setAdding(false),
@@ -432,7 +346,7 @@ function WastageTab({ wastage }: { wastage: WastageRow[] }) {
 
 function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
   const [open, setOpen] = useState(false);
-  const add = useCommand();
+  const add = useCommand("/inventory");
 
   return (
     <>
@@ -460,7 +374,7 @@ function CategoriesTab({ categories }: { categories: CategoryRow[] }) {
         pending={add.pending}
         failure={add.failure}
         failureTitle="Could not add the category"
-        onSubmit={(form) => add.run("verity.inventory.create_item_group", { name: text(form, "name") }, () => setOpen(false))}
+        onSubmit={(form) => add.run("verity.inventory.create_item_group", { name: formText(form, "name") }, () => setOpen(false))}
       >
         <Field label="Name" htmlFor="inv-cat-name" required>
           <Input id="inv-cat-name" name="name" required maxLength={120} autoFocus placeholder="Poultry" />
