@@ -73,7 +73,7 @@ describeDb("capability: Finance", () => {
   let manager: ActorContext;
   let zoneId: string;
   let kebabItemId: string;
-  const today = "2026-09-10";
+  const today = new Date().toISOString().slice(0, 10);
 
   beforeAll(async () => {
     await assertRlsEnforceable();

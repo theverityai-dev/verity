@@ -87,6 +87,8 @@ describeDb("Kent's Restaurant: one service, end to end", () => {
   const tenantId = randomUUID();
 
   let organizationId: string;
+  // A floor belongs to an outlet (multi-outlet change); one outlet is enough here.
+  let locationId: string;
   let owner: ActorContext;
   let waiter: ActorContext;
   let cook: ActorContext;
@@ -116,6 +118,9 @@ describeDb("Kent's Restaurant: one service, end to end", () => {
 
       organizationId = (
         await tx.organization.create({ data: { tenantId, name: "Defence Colony" } })
+      ).id;
+      locationId = (
+        await tx.location.create({ data: { tenantId, organizationId, name: "Defence Colony" } })
       ).id;
 
       await setConfig(tx, tenantId, CONFIG_CGST_RATE, 2.5, "Tenant");
@@ -292,7 +297,7 @@ describeDb("Kent's Restaurant: one service, end to end", () => {
       })
     ).id;
 
-    const ground = await executeCommand(owner, defineZone, { name: "Ground Floor" });
+    const ground = await executeCommand(owner, defineZone, { locationId, name: "Ground Floor" });
     tables.four = (
       await executeCommand(owner, defineTable, {
         zoneId: ground.id,
