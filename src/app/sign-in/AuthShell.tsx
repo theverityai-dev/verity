@@ -19,7 +19,7 @@ export function AuthShell({ title, lead, children }: { title: string; lead: stri
           </div>
           <div className="flex flex-1 flex-col justify-center">
             <div className="mx-auto w-full max-w-[400px]">
-              <h1 className="m-0 text-[32px] font-normal leading-tight tracking-[-0.02em] text-text">{title}</h1>
+              <h1 className="m-0 text-[34px] font-bold leading-[41px] tracking-[-0.02em] text-text">{title}</h1>
               <p className="m-0 mt-2 text-[15px] text-text-secondary">{lead}</p>
               <div className="mt-9">{children}</div>
             </div>

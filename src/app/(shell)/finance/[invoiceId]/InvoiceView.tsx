@@ -107,7 +107,7 @@ export function InvoiceView({
             <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
               {sale ? "Tax invoice" : "Purchase invoice"}
             </p>
-            <h1 className="mb-0 mt-2 text-[22px] font-normal leading-tight text-text">
+            <h1 className="mb-0 mt-2 text-[22px] font-semibold leading-tight text-text">
               {seller.name}
             </h1>
             {seller.stateCode && (
