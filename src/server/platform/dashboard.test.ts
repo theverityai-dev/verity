@@ -29,12 +29,21 @@ describeDb("Dashboard composition (WP-11B)", () => {
   const organizationId = randomUUID();
   let roleId = "";
   let instanceId = "";
+  const releaseId = randomUUID();
   let actor: ActorContext;
 
   beforeAll(async () => {
     const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
     try {
       await admin.capabilityDefinition.create({ data: { id: CAPABILITY, name: "Test Dashboard Capability", version: "1.0.0" } });
+      // An Active pack instance must point at an applied release (database
+      // trigger), and releases are writable only by the migration role.
+      await admin.packRelease.create({
+        data: {
+          id: releaseId, key: "verity.pack.test_dash", version: "1.0.0", digest: `sha256:${randomUUID()}`,
+          manifest: {}, publisher: "test", keyId: "test", platformRange: ">=0.1.0",
+        },
+      });
     } finally {
       await admin.$disconnect();
     }
@@ -48,7 +57,7 @@ describeDb("Dashboard composition (WP-11B)", () => {
       tx.tenantActivation.create({ data: { tenantId, capabilityId: CAPABILITY, status: "Active", pinnedVersion: "1.0.0" } }),
     );
     const instance = await withTenant(tenantId, (tx) =>
-      tx.packInstance.create({ data: { tenantId, packKey: "verity.pack.test_dash", state: "Active" } }),
+      tx.packInstance.create({ data: { tenantId, packKey: "verity.pack.test_dash", state: "Active", appliedReleaseId: releaseId, desiredReleaseId: releaseId } }),
     );
     instanceId = instance.id;
     actor = { tenantId, userId, membershipId, organizationId, roleId };
@@ -58,6 +67,7 @@ describeDb("Dashboard composition (WP-11B)", () => {
     const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
     try {
       await admin.$executeRaw`DELETE FROM tenant WHERE id = ${tenantId}::uuid`;
+      await admin.$executeRaw`DELETE FROM pack_release WHERE id = ${releaseId}::uuid`;
       await admin.$executeRaw`DELETE FROM capability_definition WHERE id = ${CAPABILITY}`;
     } finally {
       await admin.$disconnect();
