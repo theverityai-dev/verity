@@ -57,7 +57,7 @@ function deltaLabel(curr: number, prev: number | null | undefined): string | und
 /** Task 114 P1's three-layer dashboard hierarchy — a label, not a Panel, so
  *  it groups existing sections without adding another nested card. */
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <h2 className="mb-3 text-[12px] font-medium uppercase tracking-[0.08em] text-text-tertiary">{children}</h2>;
+  return <h2 className="mb-3 text-[13px] uppercase tracking-[0.02em] text-text-secondary">{children}</h2>;
 }
 
 function initials(name: string): string {
@@ -298,7 +298,7 @@ async function OutreachPage({
             <>
               <Link
                 href={`/outreach/intelligence?range=${range}`}
-                className="rounded-md border border-line px-3 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
+                className="rounded-[10px] bg-control px-3 py-1 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
               >
                 Intelligence
               </Link>
@@ -321,8 +321,8 @@ async function OutreachPage({
         <div
           className={
             data.currentDirection
-              ? "mb-6 rounded-xl border border-line border-l-[3px] border-l-accent bg-surface px-6 py-5"
-              : "mb-6 rounded-xl border border-line bg-surface px-6 py-5"
+              ? "mb-6 rounded-[12px] bg-surface px-6 py-5"
+              : "mb-6 rounded-[12px] bg-surface px-6 py-5"
           }
         >
           {data.currentDirection ? (

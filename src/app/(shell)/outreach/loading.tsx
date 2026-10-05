@@ -14,7 +14,7 @@ export default function OutreachLoading() {
       <SkeletonBlock className="mb-3 h-8 w-56" />
       <SkeletonBlock className="mb-6 h-4 w-[32rem] max-w-full" />
 
-      <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-xl sm:grid-cols-4 bg-control">
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonBlock key={i} className="h-[86px] rounded-none" />
         ))}

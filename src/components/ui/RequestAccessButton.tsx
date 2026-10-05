@@ -36,7 +36,7 @@ export function RequestAccessButton({ what }: { what: string }) {
           setSent(result.data.notified > 0 ? "sent" : "none");
         })
       }
-      className="inline-flex items-center rounded-md border border-line px-3 py-1.5 text-[13px] text-text transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex items-center rounded-[10px] bg-control px-3 py-1.5 text-[13px] font-semibold text-accent-ink transition-colors hover:bg-control-strong disabled:cursor-not-allowed disabled:opacity-60"
     >
       {pending ? "Sending…" : sent === "error" ? "Couldn't send — retry" : "Request access"}
     </button>

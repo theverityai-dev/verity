@@ -213,7 +213,7 @@ export function AccentPicker({
         className="flex h-16 items-center justify-between rounded-xl px-4 transition-colors duration-150"
         style={{ background: hex, color: ink }}
       >
-        <span className="text-[13px] font-medium tracking-wide">Accent</span>
+        <span className="text-[13px] font-semibold">Accent</span>
         <span className="font-mono text-[13px] tabular-nums">{hex}</span>
       </div>
 
@@ -306,7 +306,7 @@ export function AccentPicker({
               onBlur={() => commitHexDraft(hexDraft)}
               onKeyDown={(e) => e.key === "Enter" && commitHexDraft(hexDraft)}
               spellCheck={false}
-              className="verity-solid h-10 flex-1 rounded-lg border border-line px-3 font-mono text-[13px] text-text"
+              className="verity-solid h-10 flex-1 rounded-[10px] px-3 font-mono text-[13px] text-text"
             />
             {supportsEyedropper && (
               <button
@@ -315,7 +315,7 @@ export function AccentPicker({
                 disabled={pickingScreen}
                 title="Sample a color from your screen"
                 aria-label="Sample a color from your screen"
-                className="verity-solid inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line text-text-secondary transition-colors hover:text-text disabled:cursor-wait disabled:opacity-60"
+                className="verity-solid inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-[10px] text-text-secondary transition-colors hover:text-text disabled:cursor-wait disabled:opacity-60"
               >
                 <Icon name="eyedropper" size={17} />
               </button>

@@ -170,7 +170,7 @@ export function CommandPalette() {
             placeholder="Search leads, domains, teams…"
             className="h-8 w-full border-0 bg-transparent text-[14px] text-text placeholder:text-text-tertiary focus:outline-none"
           />
-          <kbd className="hidden shrink-0 rounded border border-line px-1.5 py-0.5 text-[12px] text-text-tertiary sm:inline">Esc</kbd>
+          <kbd className="hidden shrink-0 rounded px-1.5 py-0.5 text-[12px] text-text-tertiary sm:inline bg-control">Esc</kbd>
         </div>
         <div className="max-h-[360px] overflow-y-auto p-2">
           {q.trim().length < 2 ? (
@@ -211,7 +211,7 @@ export function CommandPalette() {
                         <button
                           key={action}
                           onClick={() => go(`${r.href}?action=${action}`)}
-                          className="rounded-md border border-line px-2 py-1 text-[12px] text-text-secondary hover:bg-accent-subtle hover:text-text"
+                          className="rounded-[10px] px-2 py-1 text-[12px] text-text-secondary hover:bg-accent-subtle hover:text-text bg-control"
                         >
                           {label}
                         </button>

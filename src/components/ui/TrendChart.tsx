@@ -224,7 +224,7 @@ export function TrendChart({
           over a chart, not chrome, so it stays solid, not glass. */}
       {hoverIndex !== null && (
         <div
-          className="verity-solid pointer-events-none absolute top-1 -translate-x-1/2 whitespace-nowrap rounded-lg border border-line px-3 py-1.5 text-[12.5px] text-text shadow-sm"
+          className="verity-solid pointer-events-none absolute top-1 -translate-x-1/2 whitespace-nowrap rounded-[10px] px-3 py-1.5 text-[12.5px] text-text shadow-sm"
           style={{ left: `${tooltipLeftPct}%` }}
         >
           <span className="text-text-tertiary">{labels[hoverIndex]}</span>

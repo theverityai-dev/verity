@@ -92,7 +92,7 @@ export function EvidencePanel({
 
       {canCapture && open && (
         <form
-          className="mt-3 flex max-w-md flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+          className="mt-3 flex max-w-md flex-col gap-4 rounded-[12px] bg-surface p-5"
           action={(formData) => {
             setFailure(null);
             startTransition(async () => {

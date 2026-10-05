@@ -170,7 +170,7 @@ export function LeadActions({
       </div>
 
       {pendingTerminal && (
-        <div className="flex items-end gap-2 rounded-lg border border-line bg-surface p-3">
+        <div className="flex items-end gap-2 rounded-[12px] bg-surface p-3">
           <Field label="Reason" htmlFor="rejectionReason">
             <Select
               id="rejectionReason"
@@ -271,7 +271,7 @@ function LogActivityForm({ leadId, onDone }: { leadId: string; onDone: () => voi
 
   return (
     <form
-      className="flex w-full flex-col gap-3 rounded-lg border border-line bg-surface p-4 sm:w-[420px]"
+      className="flex w-full flex-col gap-3 rounded-[12px] bg-surface p-4 sm:w-[420px]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -366,7 +366,7 @@ function LogActivityForm({ leadId, onDone }: { leadId: string; onDone: () => voi
               setDateTouched(true);
               setNextActionAt(dateInNDays(preset.days));
             }}
-            className="rounded-pill border border-line px-2.5 py-1 text-[11.5px] font-medium text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
+            className="rounded-pill px-2.5 py-1 text-[11.5px] font-medium text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
           >
             {preset.label}
           </button>
@@ -403,7 +403,7 @@ function ReassignOwnerForm({
 
   return (
     <form
-      className="flex w-full flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4 sm:w-auto"
+      className="flex w-full flex-wrap items-end gap-3 rounded-[12px] bg-surface p-4 sm:w-auto"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -455,7 +455,7 @@ function RecordPaymentForm({ leadId, onDone }: { leadId: string; onDone: () => v
 
   return (
     <form
-      className="flex w-full flex-wrap items-end gap-3 rounded-lg border border-line bg-surface p-4 sm:w-auto"
+      className="flex w-full flex-wrap items-end gap-3 rounded-[12px] bg-surface p-4 sm:w-auto"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -522,7 +522,7 @@ function ReactivateForm({
 
   return (
     <form
-      className="flex w-full flex-col gap-3 rounded-lg border border-line bg-surface p-4 sm:w-[420px]"
+      className="flex w-full flex-col gap-3 rounded-[12px] bg-surface p-4 sm:w-[420px]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -593,7 +593,7 @@ function EscalateForm({ leadId, onDone }: { leadId: string; onDone: () => void }
 
   return (
     <form
-      className="flex w-full flex-col gap-3 rounded-lg border border-line bg-surface p-4 sm:w-[420px]"
+      className="flex w-full flex-col gap-3 rounded-[12px] bg-surface p-4 sm:w-[420px]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);

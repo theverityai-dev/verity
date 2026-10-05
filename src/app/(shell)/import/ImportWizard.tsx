@@ -42,7 +42,7 @@ const KIND_TEMPLATE: Record<ImportKind, string> = {
  * shadow language as `Input`/`Select`.
  */
 const textareaClass =
-  "verity-solid border border-line w-full min-h-40 resize-y rounded-lg px-4 py-3 text-[13px] font-mono text-text " +
+  "bg-control w-full min-h-40 resize-y rounded-[10px] px-4 py-3 text-[13px] font-mono text-text " +
   "placeholder:text-text-tertiary placeholder:font-sans transition-[border-color,box-shadow] duration-200 " +
   "hover:border-line-strong focus:outline-none focus:border-accent " +
   "focus:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)]";

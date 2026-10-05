@@ -72,7 +72,7 @@ export function BillView({ bill }: { bill: BillDetail }) {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
         {/* ------------------------------ the bill ------------------------------ */}
-        <section className="rounded-lg border border-line bg-surface p-6 print:border-0 print:p-0">
+        <section className="rounded-[12px] bg-surface p-6 print:border-0 print:p-0">
           <header className="mb-4 border-b border-line pb-4">
             <h2 className="m-0 text-[18px]">{bill.label}</h2>
             <p className="mb-0 mt-1 text-[12px] text-text-tertiary">

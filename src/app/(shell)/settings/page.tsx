@@ -46,7 +46,7 @@ export default function SettingsPage() {
           <Link
             key={l.href}
             href={l.href}
-            className="glass-card flex items-start gap-3 rounded-xl border border-line p-4 no-underline shadow-[var(--shadow-sm)] transition-[box-shadow,transform] duration-150 hover:-translate-y-px hover:shadow-[var(--shadow-md)]"
+            className="glass-card flex items-start gap-3 rounded-[12px] p-4 no-underline shadow-[var(--)] transition-[box-shadow,transform] duration-150 hover:-translate-y-px"
           >
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-subtle text-accent-ink">
               <Icon name={l.icon} size={18} />

@@ -71,7 +71,7 @@ export function SplitButton({
           " cursor-pointer rounded-r-lg border-l border-l-[color-mix(in_srgb,black_12%,transparent)] px-2.5 transition-transform duration-150 active:scale-[0.97] " +
           (variant === "primary"
             ? "bg-accent text-accent-on hover:bg-accent-hover"
-            : "verity-solid border border-line text-text hover:border-line-strong")
+            : "bg-control text-text hover:border-line-strong")
         }
       >
         <Icon name="chevronDown" size={15} />

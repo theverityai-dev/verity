@@ -55,7 +55,7 @@ export function SignInThemeToggle() {
     (active ? "bg-accent text-accent-on" : "text-text-tertiary hover:text-text-secondary");
 
   return (
-    <div className="verity-solid flex items-center gap-1 rounded-full border border-line p-1" role="radiogroup" aria-label="Theme">
+    <div className="bg-control flex items-center gap-1 rounded-full p-1" role="radiogroup" aria-label="Theme">
       <button
         type="button"
         role="radio"

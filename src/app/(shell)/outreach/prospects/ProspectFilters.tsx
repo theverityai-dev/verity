@@ -95,7 +95,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
   );
 
   return (
-    <div className="glass-card border border-line mb-6 rounded-xl px-4 py-4" aria-busy={pending}>
+    <div className="glass-card mb-6 rounded-[12px] px-4 py-4" aria-busy={pending}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {(
@@ -124,7 +124,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
             );
           })}
         </div>
-        <div role="radiogroup" aria-label="View" className="glass-control flex items-center gap-1 rounded-full border border-line p-1">
+        <div role="radiogroup" aria-label="View" className="glass-control flex items-center gap-1 rounded-full p-1">
           {(["cards", "table"] as const).map((v) => (
             <button
               key={v}

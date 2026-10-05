@@ -152,7 +152,7 @@ export function AgentChatDock() {
                       key={prompt}
                       type="button"
                       onClick={() => setInput(prompt)}
-                      className="verity-solid w-full cursor-pointer rounded-lg border border-line px-3 py-2.5 text-left text-[13px] text-text-secondary transition-colors hover:border-line-strong hover:text-text"
+                      className="verity-solid w-full cursor-pointer rounded-[10px] px-3 py-2.5 text-left text-[13px] text-text-secondary transition-colors hover:text-text"
                     >
                       {prompt}
                     </button>
@@ -174,7 +174,7 @@ export function AgentChatDock() {
               </div>
             ))}
             {preview && (
-              <div className="verity-solid max-w-[92%] rounded-xl border border-line px-3.5 py-3 text-[13.5px] text-text">
+              <div className="bg-control max-w-[92%] rounded-[12px] px-3.5 py-3 text-[13.5px] text-text">
                 <p className="mb-2.5">{preview.description}</p>
                 <div className="flex gap-2">
                   <button
@@ -189,7 +189,7 @@ export function AgentChatDock() {
                     type="button"
                     onClick={cancelPreview}
                     disabled={pending}
-                    className="verity-solid rounded-lg border border-line px-3 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-45"
+                    className="verity-solid rounded-[10px] px-3 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Cancel
                   </button>
@@ -221,7 +221,7 @@ export function AgentChatDock() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask the assistant…"
               disabled={pending}
-              className="verity-solid h-11 flex-1 rounded-lg border border-line px-3.5 text-[13.5px] text-text placeholder:text-text-tertiary focus:border-accent focus:outline-none"
+              className="verity-solid h-11 flex-1 rounded-[10px] px-3.5 text-[13.5px] text-text placeholder:text-text-tertiary focus:outline-none"
             />
             <button
               type="submit"

@@ -143,7 +143,7 @@ async function MyWorkspacePage() {
       })()}
 
       {data.direction && (
-        <div className="mb-8 rounded-lg border border-line bg-surface-sunken px-4 py-3">
+        <div className="mb-8 rounded-[12px] bg-surface-sunken px-4 py-3">
           <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             This week's direction · {data.direction.weekLabel}
           </p>

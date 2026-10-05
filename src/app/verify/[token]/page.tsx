@@ -35,7 +35,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
   return (
     <main className="mx-auto flex max-w-xl flex-col gap-8 px-4 py-16">
       <header className="flex flex-col gap-2">
-        <p className="m-0 text-[12px] uppercase tracking-[0.12em] text-text-tertiary">Verified product</p>
+        <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">Verified product</p>
         <h1 className="m-0 text-[32px] font-bold leading-[40px] tracking-[-0.02em] text-text">{passport.product}</h1>
         <p className="m-0 text-[15px] text-text-secondary">
           Made by {passport.tenant}
@@ -44,7 +44,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
         <p className="m-0 text-[13px] text-text-tertiary">Completed {passport.completedAt.slice(0, 10)}</p>
       </header>
 
-      <section aria-labelledby="inspection" className="glass-card rounded-xl border border-line p-6">
+      <section aria-labelledby="inspection" className="glass-card rounded-[12px] p-6">
         <h2 id="inspection" className="m-0 mb-1 text-[17px] font-medium text-text">Passed inspection</h2>
         <p className="m-0 mb-5 text-[13px] text-text-secondary">
           Every check below was recorded as passing before this product was completed.

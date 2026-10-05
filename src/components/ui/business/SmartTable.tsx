@@ -124,7 +124,7 @@ export function SmartTable({
               setQuery(e.target.value);
               table.setPageIndex(0);
             }}
-            className="h-11 w-full rounded-lg border border-line bg-control pl-12 pr-4 text-[14px] text-text placeholder:text-text-tertiary transition-colors hover:border-line-strong focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
+            className="h-11 w-full rounded-[10px] bg-control pl-12 pr-4 text-[14px] text-text placeholder:text-text-tertiary transition-colors focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
           />
         </div>
       )}
@@ -294,7 +294,7 @@ export function SmartTable({
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                   aria-label="Previous page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-lg border border-line bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="collapse" size={16} />
                 </button>
@@ -317,7 +317,7 @@ export function SmartTable({
                         "tabular grid h-9 min-w-9 cursor-pointer place-items-center rounded-lg px-2 text-[13px] transition-colors " +
                         (n === current
                           ? "border border-accent text-accent-ink"
-                          : "border border-line bg-surface text-text-secondary hover:bg-surface-sunken")
+                          : " bg-surface text-text-secondary hover:bg-surface-sunken")
                       }
                     >
                       {n + 1}
@@ -330,7 +330,7 @@ export function SmartTable({
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                   aria-label="Next page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-lg border border-line bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="expand" size={16} />
                 </button>

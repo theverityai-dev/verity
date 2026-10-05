@@ -137,7 +137,7 @@ async function MemberPage({ params }: { params: Promise<{ teamId: string; partyI
         {data.reports.length === 0 ? (
           <EmptyState title="No reports yet" description="No daily check-ins submitted in this window." />
         ) : (
-          <div className="verity-solid overflow-hidden rounded-xl border border-line shadow-sm">
+          <div className="bg-control overflow-hidden rounded-[12px]">
             {data.reports.map((r) => (
               <div key={r.id} className="flex items-start gap-4 border-b border-line px-5 py-4 last:border-none">
                 <span className="w-24 shrink-0 text-[12px] text-text-tertiary">{r.date}</span>
@@ -160,10 +160,10 @@ async function MemberPage({ params }: { params: Promise<{ teamId: string; partyI
           groups.map((group) =>
             group.leads.length === 0 ? null : (
               <div key={group.label} className="mb-4">
-                <p className={`m-0 mb-2 text-[12px] font-medium uppercase tracking-wide ${group.tone === "danger" ? "text-danger" : "text-text-tertiary"}`}>
+                <p className={`m-0 mb-2 text-[13px] uppercase tracking-[0.02em] ${group.tone === "danger" ? "text-danger" : "text-text-secondary"}`}>
                   {group.label} ({group.leads.length})
                 </p>
-                <div className="verity-solid overflow-hidden rounded-xl border border-line shadow-sm">
+                <div className="bg-control overflow-hidden rounded-[12px]">
                   {group.leads.map((lead) => (
                     <Link key={lead.id} href={`/outreach/${lead.id}`} className="flex items-center gap-4 border-b border-line px-5 py-4 text-text no-underline transition last:border-none hover:bg-surface-sunken">
                       <span className="min-w-0 flex-1">

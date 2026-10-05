@@ -14,7 +14,7 @@ export function ResetRequestForm() {
   if (sent) {
     return (
       <div className="flex flex-col gap-5">
-        <p role="status" className="m-0 rounded-md border border-line bg-surface px-4 py-3 text-[14px] leading-relaxed text-text">
+        <p role="status" className="m-0 rounded-[12px] bg-surface px-4 py-3 text-[14px] leading-relaxed text-text">
           If that email has a Verity login, a reset link is on its way. It expires in an hour — open it on this device.
         </p>
         <Link href="/sign-in" className="self-start text-[13px] text-accent-ink no-underline hover:underline">

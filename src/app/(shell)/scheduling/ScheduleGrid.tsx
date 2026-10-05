@@ -40,7 +40,7 @@ export function ScheduleGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-[12px] bg-surface">
         <div className="min-w-[720px]">
           {/* Day scale */}
           <div className="flex border-b border-line pl-[180px]" aria-hidden="true">
@@ -111,7 +111,7 @@ export function ScheduleGrid({
         widths, so the list is a peer view rather than a fallback — but it stays
         collapsed, because the grid is the answer most of the time.
       */}
-      <details className="group rounded-lg border border-line bg-surface">
+      <details className="group rounded-[12px] bg-surface">
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[12px] text-text-secondary transition-colors hover:text-text [&::-webkit-details-marker]:hidden">
           <span
             aria-hidden="true"

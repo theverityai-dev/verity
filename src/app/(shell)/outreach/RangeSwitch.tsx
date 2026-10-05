@@ -21,7 +21,7 @@ export function RangeSwitch({
     .map(([k, v]) => `&${k}=${encodeURIComponent(v)}`)
     .join("");
   return (
-    <nav aria-label="Time range" className="flex items-center gap-1 rounded-lg border border-line bg-surface p-0.5">
+    <nav aria-label="Time range" className="flex items-center gap-1 rounded-[12px] bg-surface p-0.5">
       {RANGES.map((key) => {
         const on = key === active;
         return (

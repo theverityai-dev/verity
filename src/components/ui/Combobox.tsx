@@ -240,7 +240,7 @@ export function Combobox({
   }
 
   const controlClass =
-    "verity-solid flex h-11 w-full items-center gap-2 rounded-lg border border-line px-4 text-[14px] " +
+    "bg-control flex h-11 w-full items-center gap-2 rounded-[10px] px-4 text-[14px] " +
     "transition-[border-color,box-shadow] duration-200 hover:border-line-strong " +
     "focus-within:border-accent " +
     "focus-within:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)] " +

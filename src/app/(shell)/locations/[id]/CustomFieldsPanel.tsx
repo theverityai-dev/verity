@@ -83,7 +83,7 @@ export function CustomFieldsPanel({
         </Panel>
       ) : (
         <form
-          className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-5"
+          className="flex flex-col gap-4 rounded-[12px] bg-surface p-5"
           action={(formData) => {
             setFailure(null);
             const payload: Record<string, unknown> = {};

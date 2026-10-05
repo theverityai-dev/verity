@@ -465,7 +465,7 @@ export function DataTable({
                   onClick={() => setPage(current - 1)}
                   disabled={current === 0}
                   aria-label="Previous page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-lg border border-line bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="collapse" size={16} />
                 </button>
@@ -485,7 +485,7 @@ export function DataTable({
                         "tabular grid h-9 min-w-9 cursor-pointer place-items-center rounded-lg px-2 text-[13px] transition-colors " +
                         (n === current
                           ? "border border-accent text-accent-ink"
-                          : "border border-line bg-surface text-text-secondary hover:bg-surface-sunken")
+                          : " bg-surface text-text-secondary hover:bg-surface-sunken")
                       }
                     >
                       {n + 1}
@@ -498,7 +498,7 @@ export function DataTable({
                   onClick={() => setPage(current + 1)}
                   disabled={current >= pageCount - 1}
                   aria-label="Next page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-lg border border-line bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="expand" size={16} />
                 </button>

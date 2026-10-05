@@ -95,7 +95,7 @@ export function PolishedSelect({ children, className, containerClassName, id, na
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`verity-solid flex h-11 min-w-0 w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-line px-4 text-left text-[14px] text-text transition-[border-color,box-shadow] duration-200 hover:border-line-strong focus:border-accent focus:outline-none focus:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)] disabled:cursor-not-allowed disabled:opacity-55 ${className ?? ""}`}
+        className={`bg-control flex h-11 min-w-0 w-full cursor-pointer items-center justify-between gap-3 rounded-[10px] px-4 text-left text-[14px] text-text transition-[border-color,box-shadow] duration-200 focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] disabled:cursor-not-allowed disabled:opacity-55 ${className ?? ""}`}
         onClick={() => setOpen((current) => !current)}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown" || event.key === "ArrowRight") {

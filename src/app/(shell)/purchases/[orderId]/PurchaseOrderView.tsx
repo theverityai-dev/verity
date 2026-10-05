@@ -122,7 +122,7 @@ export function PurchaseOrderView({
           form, internal three-way match, activity log), not a document-only
           view, so those stay print:hidden below and this block is the only
           thing that prints: what a supplier actually needs to see. */}
-      <section className="hidden rounded-lg border border-line bg-surface p-8 print:block print:border-0 print:p-0">
+      <section className="hidden rounded-[12px] bg-surface p-8 print:block print:border-0 print:p-0">
         <header className="mb-6 border-b border-line pb-4">
           <h1 className="m-0 text-[20px] font-medium">Purchase Order — {title}</h1>
           <p className="m-0 mt-1 text-[13px] text-text-secondary">

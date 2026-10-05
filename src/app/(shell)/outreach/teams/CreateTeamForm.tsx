@@ -31,7 +31,7 @@ export function CreateTeamForm({ candidates }: { candidates: Array<{ id: string;
 
   return (
     <form
-      className="glass-card mb-4 grid gap-3 rounded-xl border border-line p-4 sm:grid-cols-[1fr_1fr_auto_auto]"
+      className="glass-card mb-4 grid gap-3 rounded-[12px] p-4 sm:grid-cols-[1fr_1fr_auto_auto]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);

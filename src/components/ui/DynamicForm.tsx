@@ -67,7 +67,7 @@ export function DynamicForm({ descriptor }: { descriptor: FormDescriptor }) {
         {/* PRN-002: secondary metadata sits behind disclosure rather than
             competing with the fields most users came for. */}
         {secondary.length > 0 && (
-          <details className="rounded-lg border border-line bg-surface px-4 py-3 text-[13px] text-text">
+          <details className="rounded-[12px] bg-surface px-4 py-3 text-[13px] text-text">
             <summary className="cursor-pointer font-medium marker:text-text-tertiary">Additional fields</summary>
             <div className="mt-4 flex flex-col gap-4">
               {secondary.map((field) => (

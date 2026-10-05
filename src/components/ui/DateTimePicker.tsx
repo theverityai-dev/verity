@@ -189,7 +189,7 @@ function MonthGrid({
 
 function fieldShellClass(disabled?: boolean) {
   return (
-    "verity-solid flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border border-line px-4 text-[14px] " +
+    "bg-control flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-[10px] px-4 text-[14px] " +
     "transition-[border-color,box-shadow] duration-200 hover:border-line-strong " +
     "focus-within:border-accent focus-within:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)] " +
     (disabled ? "cursor-not-allowed opacity-55 " : "")

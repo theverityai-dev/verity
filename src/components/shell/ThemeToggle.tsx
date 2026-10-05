@@ -74,7 +74,7 @@ export function ThemeToggle() {
       type="button"
       onClick={() => choose(next)}
       title={`Theme: ${LABEL[preference]}. Switch to ${LABEL[next]}.`}
-      className="grid size-11 cursor-pointer place-items-center rounded-md border border-line bg-surface text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text lg:size-9"
+      className="grid size-11 cursor-pointer place-items-center rounded-md bg-surface text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text lg:size-9"
     >
       <Icon name={ICON[preference]} size={17} />
       {/* The state is carried as text as well as an icon, for assistive

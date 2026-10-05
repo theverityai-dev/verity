@@ -257,7 +257,7 @@ export function RolesAdmin({
                               <p className="m-0 mb-1.5 text-[12px] font-medium text-text-tertiary">
                                 {group.group}
                               </p>
-                              <div className="overflow-hidden rounded-lg border border-line">
+                              <div className="overflow-hidden rounded-[12px] bg-surface-sunken">
                                 <table className="w-full border-collapse text-[13px]">
                                   <thead>
                                     <tr className="bg-surface-sunken text-left text-[13px] uppercase tracking-[0.02em] text-text-secondary">

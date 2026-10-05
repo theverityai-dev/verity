@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 function VelocityStat({ label, stat }: { label: string; stat: { average: number | null; median: number | null; sampleSize: number } }) {
   return (
-    <div className="rounded-lg border border-line px-4 py-3">
+    <div className="rounded-[12px] bg-surface-sunken px-4 py-3">
       <p className="text-[13px] uppercase tracking-[0.02em] text-text-secondary">{label}</p>
       {stat.sampleSize === 0 ? (
         <p className="mt-1 text-[13px] text-text-tertiary">No pairs yet</p>
@@ -97,7 +97,7 @@ async function DomainDetailPage({
           <>
             <Link
               href="/outreach/domains"
-              className="rounded-md border border-line px-3 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
+              className="rounded-[10px] bg-control px-3 py-1 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
             >
               Back to Domains
             </Link>
@@ -172,11 +172,11 @@ async function DomainDetailPage({
       <div className="mb-6">
         <Panel title="Aging — open leads by staleness" flush>
           <div className="grid grid-cols-3 gap-3 px-6 pt-4 pb-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-line px-4 py-3 text-center">
+            <div className="rounded-[12px] bg-surface-sunken px-4 py-3 text-center">
               <p className="text-[20px] font-medium tabular text-text">{data.aging!.over7d}</p>
               <p className="text-[12px] text-text-tertiary">7-14 days idle</p>
             </div>
-            <div className="rounded-lg border border-line px-4 py-3 text-center">
+            <div className="rounded-[12px] bg-surface-sunken px-4 py-3 text-center">
               <p className="text-[20px] font-medium tabular text-text">{data.aging!.over14d}</p>
               <p className="text-[12px] text-text-tertiary">14-30 days idle</p>
             </div>

@@ -185,7 +185,7 @@ async function TeamCommandPage() {
           window — a manager's console reads as "right now, my team," not a
           generic page title (contrast Company Core's "Outreach" masthead). */}
       <header className="mb-6">
-        <p className="m-0 text-[12px] uppercase tracking-wide text-text-tertiary">Week of {weekOf}</p>
+        <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">Week of {weekOf}</p>
         <h1 className="mt-1">{data.teamName}</h1>
         <p className="mb-0 mt-2 max-w-[62ch] text-[14px] text-text-secondary">
           Is my team executing the company direction effectively?
@@ -340,7 +340,7 @@ async function TeamCommandPage() {
         className={
           data.overdue.length > 0
             ? "rounded-xl border border-danger/25 bg-danger-subtle"
-            : "rounded-xl border border-line bg-surface"
+            : "rounded-[12px] bg-surface"
         }
       >
         <Panel title="Overdue follow-ups" flush className="border-none bg-transparent">

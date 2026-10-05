@@ -12,23 +12,6 @@ import { VerityLockup } from "@/components/brand/VerityMark";
 export function BrandPanel() {
   return (
     <div className="relative hidden overflow-hidden bg-canvas lg:block">
-      {/* A self-contained wash, confined to this column — NOT `.verity-
-          atmosphere`, which is `position: fixed; inset: 0` (a single,
-          whole-viewport layer meant for one use per page) and would ignore
-          this element's own box entirely, painting full-screen at z-index
-          -1 instead of staying inside the grid column. `globals.css`'s own
-          comment already says sign-in's `main` "deliberately wants no
-          atmosphere" for exactly this reason. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(1100px 800px at 30% -10%, color-mix(in srgb, transparent 88%, var(--accent-seed)) 0%, transparent 70%)," +
-            "radial-gradient(900px 700px at 0% 110%, color-mix(in srgb, transparent 92%, var(--accent-seed)) 0%, transparent 75%)",
-        }}
-      />
-
       <div className="relative z-10 flex h-full flex-col px-14 pt-14">
         <div>
           <VerityLockup size={30} className="text-text" />
@@ -38,7 +21,7 @@ export function BrandPanel() {
         </div>
 
         <div className="mt-16 max-w-[460px]">
-          <h1 className="m-0 text-[44px] font-normal leading-[1.08] tracking-[-0.02em] text-text">
+          <h1 className="m-0 text-[44px] font-bold leading-[1.08] tracking-[-0.02em] text-text">
             A more intelligent way to operate.
           </h1>
           <p className="m-0 mt-5 text-[15px] leading-relaxed text-text-secondary">

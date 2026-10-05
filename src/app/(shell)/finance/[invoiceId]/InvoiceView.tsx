@@ -101,7 +101,7 @@ export function InvoiceView({
         </div>
       </div>
 
-      <section className="rounded-lg border border-line bg-surface p-8 print:border-0 print:p-0">
+      <section className="rounded-[12px] bg-surface p-8 print:border-0 print:p-0">
         <header className="flex flex-wrap items-start justify-between gap-6 border-b border-line pb-6">
           <div>
             <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">

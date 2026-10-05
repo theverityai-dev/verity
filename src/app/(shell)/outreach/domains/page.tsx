@@ -39,7 +39,7 @@ async function DomainsPage() {
           <DomainTaxonomyActions groups={groups.map((g) => ({ id: g.id, name: g.name }))} />
           <Link
             href="/outreach/intelligence"
-            className="rounded-md border border-line px-3 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
+            className="rounded-[10px] bg-control px-3 py-1 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
           >
             Company intelligence
           </Link>

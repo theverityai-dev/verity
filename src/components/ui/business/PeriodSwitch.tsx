@@ -47,14 +47,14 @@ export function PeriodSwitch({
     <div className="flex flex-wrap items-center gap-2">
       <Link
         href={`${basePath}?period=${shift(-1)}`}
-        className="rounded-md border border-line px-2.5 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
+        className="rounded-[10px] bg-control px-2.5 py-1 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
       >
         ← {label(shift(-1))}
       </Link>
       <span className="text-[13px] font-medium text-text">{label(periodKey)}</span>
       <Link
         href={`${basePath}?period=${shift(1)}`}
-        className="rounded-md border border-line px-2.5 py-1 text-[13px] text-text no-underline transition-colors hover:bg-surface-sunken"
+        className="rounded-[10px] bg-control px-2.5 py-1 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
       >
         {label(shift(1))} →
       </Link>

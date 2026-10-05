@@ -136,7 +136,7 @@ async function TeamPage({ params }: { params: Promise<{ teamId: string }> }) {
       {data.members.length === 0 ? (
         <EmptyState title="No members" description="Add people to this team before assigning prospect work." />
       ) : (
-        <div className="verity-solid overflow-hidden rounded-xl border border-line shadow-sm">
+        <div className="bg-control overflow-hidden rounded-[12px]">
           <div className="grid grid-cols-[minmax(0,1fr)_80px_80px_80px_40px] gap-3 border-b border-line px-5 py-3 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
             <span>Member</span>
             <span className="text-right">Active</span>

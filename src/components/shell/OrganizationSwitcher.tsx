@@ -58,7 +58,7 @@ export function OrganizationSwitcher({
     return (
       <div
         title={`${active.organizationName} — ${active.tenantName}`}
-        className="grid size-11 place-items-center rounded-lg border border-line bg-surface text-text-tertiary"
+        className="grid size-11 place-items-center rounded-[12px] bg-surface text-text-tertiary"
       >
         <Icon name="building" size={17} />
         <span className="sr-only">
@@ -77,7 +77,7 @@ export function OrganizationSwitcher({
         className={
           "flex items-center gap-2.5 px-3 " +
           (stacked
-            ? "h-12 w-full rounded-lg border border-line bg-surface"
+            ? "h-12 w-full rounded-[10px] bg-surface bg-control"
             : "h-[38px] max-w-[16rem] rounded-lg glass-control shadow-[var(--shadow-sm)] transition-[box-shadow,transform] duration-200 hover:-translate-y-px hover:shadow-[var(--shadow-md)]")
         }
       >

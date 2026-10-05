@@ -201,7 +201,7 @@ export function CatalogueAdmin({
           <div
             role="group"
             aria-label="Filter by product family"
-            className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface-sunken p-1"
+            className="flex flex-wrap items-center gap-1 rounded-[12px] bg-surface-sunken p-1"
           >
             {(["ALL", ...present] as const).map((key) => {
               const active = family === key;
@@ -1030,13 +1030,13 @@ function ProductModal({
         )}
 
         {physical && fixedSize && (
-          <p className="m-0 rounded-lg border border-line bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
+          <p className="m-0 rounded-[12px] bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
             Laminates are 8 × 4 ft. That size is set for you, so it cannot be
             entered wrongly.
           </p>
         )}
         {!physical && (
-          <p className="m-0 rounded-lg border border-line bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
+          <p className="m-0 rounded-[12px] bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
             A service is never received into a godown, so it has no size and no
             reorder level.
           </p>
@@ -1214,7 +1214,7 @@ function EditProductModal({
             </Field>
           </FormRow>
 
-          <p className="m-0 rounded-lg border border-line bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
+          <p className="m-0 rounded-[12px] bg-surface-sunken px-3 py-2 text-[13px] text-text-secondary">
             {product.type === "SERVICE"
               ? "A service — no size to change."
               : product.type === "TEMPLATE"

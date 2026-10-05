@@ -38,7 +38,7 @@ export function CoachingNotePanel({ teamId, aboutPartyId, aboutName }: { teamId:
         Coaching notes
       </Button>
       {open && (
-        <div className="mt-2 flex flex-col gap-3 rounded-lg border border-line p-3">
+        <div className="mt-2 flex flex-col gap-3 rounded-[12px] bg-surface-sunken p-3">
           {pending && <p className="m-0 text-[12px] text-text-tertiary">Loading…</p>}
           {!pending && notes.length === 0 && <p className="m-0 text-[12px] text-text-tertiary">No notes yet about {aboutName}.</p>}
           {notes.map((n) => (

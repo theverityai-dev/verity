@@ -62,7 +62,7 @@ export function AppearanceControls() {
                 "inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-4 text-[13.5px] transition-colors " +
                 (theme === t.value
                   ? "bg-accent-subtle font-medium text-text ring-1 ring-[var(--color-accent-line)]"
-                  : "verity-solid border border-line text-text-secondary hover:text-text")
+                  : "bg-control text-text-secondary hover:text-text")
               }
             >
               <Icon name={t.icon} size={17} />

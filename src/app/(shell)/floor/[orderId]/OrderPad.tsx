@@ -148,7 +148,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                   {category.items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5"
+                      className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-sunken px-3 py-2.5"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-[14px] text-text">{item.name}</span>

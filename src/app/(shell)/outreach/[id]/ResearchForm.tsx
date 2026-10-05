@@ -184,7 +184,7 @@ export function ResearchForm({ leadId }: { leadId: string }) {
               ref={fileInputRef}
               id="researchFile"
               type="file"
-              className="verity-solid border border-line w-full rounded-lg px-4 py-2.5 text-[14px] text-text"
+              className="bg-control w-full rounded-[10px] px-4 py-2.5 text-[14px] text-text"
             />
           </Field>
           <Field label="Title" htmlFor="title" required>

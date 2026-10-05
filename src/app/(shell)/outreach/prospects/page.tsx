@@ -338,7 +338,7 @@ async function ProspectsPage({ searchParams }: { searchParams: Promise<Search> }
                 {/* Solid, not glass: each card is dense text a reader scans to
                     decide without opening the record — ADR-011 keeps that off
                     the glass. */}
-                <article className="glass-card flex h-full flex-col gap-4 rounded-xl border border-line p-5 shadow-sm">
+                <article className="glass-card flex h-full flex-col gap-4 rounded-[12px] p-5">
                   <header className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h2 className="m-0 truncate text-[16px] font-medium">

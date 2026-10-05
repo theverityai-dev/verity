@@ -18,7 +18,7 @@ export function FileShelf({ entries }: { entries: ResearchEntry[] }) {
   return (
     <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {files.map((f) => (
-        <div key={f.id} className="flex flex-col gap-2 rounded-lg border border-line bg-surface-sunken p-3">
+        <div key={f.id} className="flex flex-col gap-2 rounded-[12px] bg-surface-sunken p-3">
           <div className="flex size-10 items-center justify-center rounded-md bg-accent-subtle text-accent">
             <Icon name="evidence" size={20} />
           </div>

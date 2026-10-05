@@ -282,7 +282,7 @@ export function ReserveStockModal({
                                   )
                                 }
                                 className={
-                                  "rounded-lg border border-line px-2.5 py-1.5 text-[13px] " +
+                                  "rounded-[10px] px-2.5 py-1.5 text-[13px] bg-control " +
                                   "text-text-secondary transition-colors duration-150 " +
                                   "hover:border-line-strong hover:text-text " +
                                   "focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--color-accent-subtle)] " +
