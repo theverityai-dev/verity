@@ -148,4 +148,54 @@ describeDb("operator authority (ADR-013)", () => {
       await withTenant(id, (tx) => tx.tenant.delete({ where: { id } }));
     }
   });
+
+  it("refuses a client status change that does not come through the operator action (ADR-034)", async () => {
+    const tenantId = randomUUID();
+    await withTenant(tenantId, async (tx) => {
+      await tx.tenant.create({ data: { id: tenantId, name: `lifecycle-${tenantId.slice(0, 8)}` } });
+    });
+
+    // A tenant-scoped write to its own row is allowed by tenant_isolation, so the
+    // trigger is the only thing standing between a client and un-suspending itself.
+    await expect(
+      withTenant(tenantId, (tx) => tx.tenant.update({ where: { id: tenantId }, data: { status: "suspended" } })),
+    ).rejects.toThrow(/operator action/);
+
+    await withTenant(tenantId, async (tx) => {
+      await tx.$executeRaw`SELECT set_config('verity.client_status_change', 'on', true)`;
+      await tx.tenant.update({ where: { id: tenantId }, data: { status: "suspended" } });
+    });
+    const [row] = await withTenant(tenantId, (tx) =>
+      tx.$queryRaw<{ status: string }[]>`SELECT status FROM tenant WHERE id = ${tenantId}::uuid`,
+    );
+    expect(row?.status).toBe("suspended");
+
+    // The flag is transaction-local: the next transaction is guarded again.
+    await expect(
+      withTenant(tenantId, (tx) => tx.tenant.update({ where: { id: tenantId }, data: { status: "active" } })),
+    ).rejects.toThrow(/operator action/);
+
+    // Other columns on the tenant row stay writable without the flag.
+    await withTenant(tenantId, (tx) => tx.tenant.update({ where: { id: tenantId }, data: { timeZone: "Asia/Kolkata" } }));
+  });
+
+  it("rejects an unknown lifecycle value at the database (ADR-034)", async () => {
+    const tenantId = randomUUID();
+    await expect(
+      withTenant(tenantId, (tx) => tx.tenant.create({ data: { id: tenantId, name: "bad-status", status: "deleted" } })),
+    ).rejects.toThrow();
+  });
+
+  it("exposes the health counts as fixed columns, still empty for a non-operator (ADR-034)", async () => {
+    const columns = await prisma.$queryRaw<{ column_name: string }[]>`
+      SELECT unnest(proargnames) AS column_name FROM pg_proc
+      WHERE proname = 'operator_platform_activity' AND pronamespace = 'verity'::regnamespace`;
+    const names = columns.map((c) => c.column_name);
+    for (const expected of ["undelivered_events", "sync_exceptions", "sla_breached", "people_invited"]) {
+      expect(names).toContain(expected);
+    }
+    const rows = await prisma.$queryRaw<unknown[]>`
+      SELECT * FROM verity.operator_platform_activity(${randomUUID()}::uuid)`;
+    expect(rows).toHaveLength(0);
+  });
 });

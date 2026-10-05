@@ -256,6 +256,7 @@ export type MembershipOption = {
   organizationName: string;
   roleId: string | null;
   roleName: string | null;
+  tenantStatus: string;
 };
 
 /**
@@ -278,11 +279,18 @@ export async function listMemberships(): Promise<MembershipOption[]> {
     Array<{
       membership_id: string; user_id: string; tenant_id: string; tenant_name: string;
       is_platform: boolean; organization_id: string; organization_name: string;
-      role_id: string | null; role_name: string | null;
+      role_id: string | null; role_name: string | null; tenant_status: string;
     }>
   >`SELECT * FROM verity.memberships_for_auth_user(${authUser.id}::uuid)`;
 
-  return rows.map((r) => ({
+  // ADR-034: a suspended client's own users resolve to no membership there, so
+  // every path that turns a session into an actor (pages, server actions, the
+  // organization switcher) fails closed at once. A platform operator keeps
+  // access, because inspecting a suspended client is what suspension is for.
+  const isOperator = rows.some((r) => r.is_platform);
+  const usable = isOperator ? rows : rows.filter((r) => r.tenant_status !== "suspended");
+
+  return usable.map((r) => ({
     membershipId: r.membership_id,
     userId: r.user_id,
     tenantId: r.tenant_id,
@@ -292,7 +300,22 @@ export async function listMemberships(): Promise<MembershipOption[]> {
     organizationName: r.organization_name,
     roleId: r.role_id,
     roleName: r.role_name,
+    tenantStatus: r.tenant_status,
   }));
+}
+
+/**
+ * Names of workspaces the signed-in person belongs to that are suspended
+ * (ADR-034), so sign-in can say why there is nothing to enter instead of
+ * showing a login form to someone who is already logged in.
+ */
+export async function suspendedWorkspaceNames(): Promise<string[]> {
+  const authUser = await getAuthUser();
+  if (!authUser) return [];
+  const rows = await prisma.$queryRaw<Array<{ tenant_name: string; tenant_status: string; is_platform: boolean }>>`
+    SELECT tenant_name, tenant_status, is_platform FROM verity.memberships_for_auth_user(${authUser.id}::uuid)`;
+  if (rows.some((r) => r.is_platform)) return [];
+  return [...new Set(rows.filter((r) => r.tenant_status === "suspended").map((r) => r.tenant_name))];
 }
 
 /**

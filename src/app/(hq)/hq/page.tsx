@@ -35,6 +35,22 @@ export default async function HqOverviewPage() {
   const totalActivity = activity.reduce((sum, a) => sum + a.activity30d, 0);
   const totalSecurity = activity.reduce((sum, a) => sum + a.securityEvents30d, 0);
 
+  // ADR-034: which clients need someone to look, and why. Counts only.
+  const statusById = new Map(clients.map((c) => [c.tenantId, c.status]));
+  const attention = activity
+    .map((a) => {
+      const reasons: string[] = [];
+      const status = statusById.get(a.tenantId);
+      if (status === "suspended") reasons.push("Suspended");
+      if (status === "onboarding") reasons.push("Still onboarding");
+      if (a.undeliveredEvents > 0) reasons.push(`${a.undeliveredEvents} undelivered events`);
+      if (a.syncExceptions > 0) reasons.push(`${a.syncExceptions} sync problems`);
+      if (a.slaBreached > 0) reasons.push(`${a.slaBreached} late against SLA`);
+      if (a.peopleInvited > 0) reasons.push(`${a.peopleInvited} people never signed in`);
+      return { id: a.tenantId, tenantId: a.tenantId, name: a.name, why: reasons.join(" · "), count: reasons.length };
+    })
+    .filter((row) => row.count > 0);
+
   return (
     <>
       <PageHeader
@@ -48,6 +64,22 @@ export default async function HqOverviewPage() {
         <Stat label="Changes · 30 days" value={totalActivity} />
         <Stat label="Security events · 30 days" value={totalSecurity} href="/hq/audit" />
       </StatRow>
+
+      <Panel title={attention.length === 0 ? "Nothing needs attention" : `Needs attention · ${attention.length}`} flush>
+        <DataTable
+          columns={[
+            { key: "name", header: "Client", sortable: true, variant: "link", href: "/hq/clients/{tenantId}" },
+            { key: "why", header: "Why" },
+          ]}
+          rows={attention}
+          caption="Clients with something to look at"
+          emptyTitle="Every client looks healthy"
+          emptyDescription="No undelivered events, sync problems, late work, unused invitations or suspended clients."
+          filterable={false}
+        />
+      </Panel>
+
+      <div className="mt-6" />
 
       <Panel title="Activity by client" flush>
         <DataTable

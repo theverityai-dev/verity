@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { enterClientAction } from "@/server/actions/hq";
+import { EnterClientButton, STATUS_LABEL } from "./ClientLifecycle";
 
 const columns: Column[] = [
   { key: "name", header: "Client", sortable: true, variant: "link", href: "/hq/clients/{tenantId}" },
+  { key: "statusLabel", header: "Status", variant: "state", categoryKey: "statusCategory", sortable: true },
   { key: "memberCount", header: "People", numeric: true, sortable: true },
   { key: "organizationCount", header: "Organizations", numeric: true, sortable: true },
   { key: "created", header: "Created", sortable: true },
@@ -18,6 +18,7 @@ type ClientRow = {
   memberCount: number;
   organizationCount: number;
   createdAt: Date;
+  status: string;
 };
 
 /**
@@ -37,6 +38,9 @@ export function ClientsTable({ clients }: { clients: ClientRow[] }) {
         id: client.tenantId,
         tenantId: client.tenantId,
         name: client.name,
+        statusLabel: STATUS_LABEL[client.status] ?? client.status,
+        // ADR-009 behavioural categories for the badge.
+        statusCategory: client.status === "suspended" ? "Blocked" : client.status === "onboarding" ? "Pending" : "Active",
         memberCount: client.memberCount,
         organizationCount: client.organizationCount,
         created: client.createdAt.toISOString().slice(0, 10),
@@ -45,14 +49,7 @@ export function ClientsTable({ clients }: { clients: ClientRow[] }) {
       caption="Clients on this installation"
       emptyTitle="No clients yet"
       emptyDescription="Create one above. Nothing is provisioned automatically, and no demo client is created for you."
-      rowActions={(row) => (
-        <form action={enterClientAction}>
-          <input type="hidden" name="tenantId" value={String(row.tenantId)} />
-          <Button type="submit" size="sm">
-            Enter client
-          </Button>
-        </form>
-      )}
+      rowActions={(row) => <EnterClientButton tenantId={String(row.tenantId)} name={String(row.name)} />}
     />
   );
 }

@@ -44,6 +44,11 @@ export async function authenticateApiKey(presented: string, now = new Date()): P
   const secretOk = verifySecret(parsed.secret, row?.secret_hash ?? DUMMY_HASH);
   if (!row || !secretOk) return null;
   if (row.revoked_at || row.expires_at.getTime() <= now.getTime()) return null;
+  // ADR-034: a suspended client's keys stop working with its users.
+  const tenant = await withTenant(row.tenant_id, (tx) =>
+    tx.tenant.findUnique({ where: { id: row.tenant_id }, select: { status: true } }),
+  );
+  if (!tenant || tenant.status === "suspended") return null;
 
   const actor: ActorContext = {
     tenantId: row.tenant_id,

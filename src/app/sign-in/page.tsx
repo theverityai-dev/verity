@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { activeAuthProviderName, resolveActor } from "@/server/platform/auth";
+import { activeAuthProviderName, suspendedWorkspaceNames, resolveActor } from "@/server/platform/auth";
 import { SignInForm } from "./SignInForm";
 import { AuthShell } from "./AuthShell";
 
@@ -36,9 +36,16 @@ export default async function SignInPage({
 
   const provider = activeAuthProviderName();
   const { error } = await searchParams;
+  // ADR-034: signed in, but every workspace they belong to is suspended.
+  const suspended = await suspendedWorkspaceNames();
 
   return (
     <AuthShell title="Welcome back." lead="Sign in to your Verity workspace.">
+      {suspended.length > 0 && (
+        <p role="alert" className="mb-4 mt-0 rounded-[12px] bg-danger-subtle px-3 py-2.5 text-[13px] text-danger">
+          {suspended.join(", ")} {suspended.length === 1 ? "is" : "are"} suspended, so there is nothing to open right now. Contact Verity support.
+        </p>
+      )}
       {provider === "oidc" ? (
         <div className="flex flex-col gap-4">
           {error && (

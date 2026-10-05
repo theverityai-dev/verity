@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient, enterClient, operatorActorFor } from "@/server/platform/operator";
+import { createClient, enterClient, operatorActorFor, setClientStatus, type ClientStatus } from "@/server/platform/operator";
 import { executeCommand, getCommand } from "@/server/platform/command";
 import { executeQuery, getQuery } from "@/server/platform/query";
 import { installAdministration } from "@/server/platform/administration";
@@ -65,11 +65,35 @@ export async function createClientAction(
  * operator on an HQ page afterwards would leave them unsure which tenant their
  * next click applies to.
  */
-export async function enterClientAction(form: FormData): Promise<void> {
+export async function enterClientAction(
+  _prev: HqActionResult | null,
+  form: FormData,
+): Promise<HqActionResult> {
   const tenantId = String(form.get("tenantId") ?? "");
-  if (!tenantId) return;
-  await enterClient(tenantId);
+  if (!tenantId) return { ok: false, message: "Choose a client." };
+  try {
+    await enterClient(tenantId, String(form.get("reason") ?? ""));
+  } catch (error) {
+    return { ok: false, message: message(error) };
+  }
   redirect("/");
+}
+
+/** ADR-034: onboarding, active or suspended, always with a reason. */
+export async function setClientStatusAction(
+  _prev: HqActionResult | null,
+  form: FormData,
+): Promise<HqActionResult> {
+  const tenantId = String(form.get("tenantId") ?? "");
+  try {
+    await setClientStatus(tenantId, String(form.get("status") ?? "") as ClientStatus, String(form.get("reason") ?? ""));
+  } catch (error) {
+    return { ok: false, message: message(error) };
+  }
+  revalidatePath("/hq");
+  revalidatePath("/hq/clients");
+  revalidatePath(`/hq/clients/${tenantId}`);
+  return { ok: true };
 }
 
 /* -------------------------- administration bridge ------------------------- */

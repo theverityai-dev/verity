@@ -251,6 +251,10 @@ export default async function ShellLayout({
       .join("") || "V"
   ).toUpperCase();
 
+  // ADR-034 item 4: an operator acting inside a client sees, on every page,
+  // that this is a support session and that it is recorded.
+  const supportSession = !active.isPlatform && memberships.some((m) => m.isPlatform);
+
   return (
     <ShellChrome
       areas={areas}
@@ -259,6 +263,14 @@ export default async function ShellLayout({
       canAudit={canAudit}
       unreadCount={unreadCount}
     >
+      {supportSession && (
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-[12px] bg-accent-subtle px-4 py-3 text-[13px] text-text">
+          <span>
+            Support session in <strong>{active.tenantName}</strong>. Everything you do here is recorded in this client&apos;s audit trail.
+          </span>
+          <a href="/hq" className="font-semibold text-accent-ink no-underline hover:underline">Back to HQ</a>
+        </div>
+      )}
       <CommandAccessProvider commandKeys={commandKeys}>{children}</CommandAccessProvider>
     </ShellChrome>
   );

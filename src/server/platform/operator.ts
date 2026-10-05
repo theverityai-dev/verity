@@ -127,7 +127,12 @@ export type ClientSummary = {
   createdAt: Date;
   memberCount: number;
   organizationCount: number;
+  status: ClientStatus;
+  statusReason: string | null;
 };
+
+export const CLIENT_STATUSES = ["onboarding", "active", "suspended"] as const;
+export type ClientStatus = (typeof CLIENT_STATUSES)[number];
 
 /** Projection 1 — client metadata and counts. Never client business rows. */
 export async function clientDirectory(operator: OperatorContext): Promise<ClientSummary[]> {
@@ -135,6 +140,7 @@ export async function clientDirectory(operator: OperatorContext): Promise<Client
     {
       tenant_id: string; name: string; time_zone: string | null;
       created_at: Date; member_count: bigint; org_count: bigint;
+      status: string; status_reason: string | null;
     }[]
   >`SELECT * FROM verity.operator_client_directory(${operator.authUserId}::uuid)`;
 
@@ -145,6 +151,8 @@ export async function clientDirectory(operator: OperatorContext): Promise<Client
     createdAt: r.created_at,
     memberCount: Number(r.member_count),
     organizationCount: Number(r.org_count),
+    status: r.status as ClientStatus,
+    statusReason: r.status_reason,
   }));
 }
 
@@ -154,6 +162,11 @@ export type ClientActivity = {
   activity30d: number;
   securityEvents30d: number;
   lastActivityAt: Date | null;
+  /** ADR-034 health counts. */
+  undeliveredEvents: number;
+  syncExceptions: number;
+  slaBreached: number;
+  peopleInvited: number;
 };
 
 /** Projection 2 — per-client counts for the operational view. */
@@ -162,6 +175,7 @@ export async function platformActivity(operator: OperatorContext): Promise<Clien
     {
       tenant_id: string; name: string; activity_30d: bigint;
       security_events_30d: bigint; last_activity_at: Date | null;
+      undelivered_events: bigint; sync_exceptions: bigint; sla_breached: bigint; people_invited: bigint;
     }[]
   >`SELECT * FROM verity.operator_platform_activity(${operator.authUserId}::uuid)`;
 
@@ -171,6 +185,10 @@ export async function platformActivity(operator: OperatorContext): Promise<Clien
     activity30d: Number(r.activity_30d),
     securityEvents30d: Number(r.security_events_30d),
     lastActivityAt: r.last_activity_at,
+    undeliveredEvents: Number(r.undelivered_events),
+    syncExceptions: Number(r.sync_exceptions),
+    slaBreached: Number(r.sla_breached),
+    peopleInvited: Number(r.people_invited),
   }));
 }
 
@@ -304,7 +322,7 @@ export async function createClient(input: {
 
   const organizationId = await withTenant(tenantId, async (tx) => {
     await tx.tenant.create({
-      data: { id: tenantId, name, timeZone: input.timeZone ?? null, isPlatform: false },
+      data: { id: tenantId, name, timeZone: input.timeZone ?? null, isPlatform: false, status: "onboarding" },
     });
     const organization = await tx.organization.create({
       data: { tenantId, name, parentId: null },
@@ -341,8 +359,13 @@ export async function createClient(input: {
  * Idempotent. An operator who has entered a client before re-enters through the
  * same membership rather than accumulating one per visit.
  */
-export async function enterClient(tenantId: string): Promise<string> {
+export async function enterClient(tenantId: string, reason: string): Promise<string> {
   const operator = await requireOperator();
+  // ADR-034 item 4: a support session states why. The reason goes into the
+  // client's own security trail, which the client can read.
+  const why = reason.trim();
+  if (why.length < 5) throw new Error("E_VALIDATION: say why you are entering this client (at least 5 characters)");
+  if (why.length > 300) throw new Error("E_VALIDATION: keep the reason under 300 characters");
 
   const membershipId = await withTenant(tenantId, async (tx) => {
     const [tenant] = await tx.$queryRaw<{ id: string; is_platform: boolean }[]>`
@@ -356,7 +379,16 @@ export async function enterClient(tenantId: string): Promise<string> {
       where: { tenantId, userId: operator.userId },
       select: { id: true },
     });
-    if (existing) return existing.id;
+    if (existing) {
+      // Every entry is recorded, not only the first.
+      await recordSecurityEvent(tx, {
+        tenantId,
+        eventType: "PermissionEscalated",
+        actorUserId: operator.userId,
+        payload: { reason: "operator_entered_client", operator: true, statedReason: why },
+      });
+      return existing.id;
+    }
 
     const organization = await tx.organization.findFirst({
       where: { tenantId, parentId: null },
@@ -378,7 +410,7 @@ export async function enterClient(tenantId: string): Promise<string> {
       tenantId,
       eventType: "PermissionEscalated",
       actorUserId: operator.userId,
-      payload: { reason: "operator_entered_client", operator: true },
+      payload: { reason: "operator_entered_client", operator: true, statedReason: why },
     });
 
     return created.id;
@@ -386,6 +418,42 @@ export async function enterClient(tenantId: string): Promise<string> {
 
   await setActiveMembership(membershipId);
   return membershipId;
+}
+
+/**
+ * Moves a client through its lifecycle (ADR-034 item 2): onboarding, active,
+ * suspended. Operator-only by construction: this is a platform action, not a
+ * registered command, so nothing a client's own administrator can grant
+ * reaches it. The database trigger on `tenant.status` refuses the write unless
+ * this function's transaction-local flag is set. Suspension changes no client
+ * data; it stops the client's users resolving to a membership.
+ */
+export async function setClientStatus(tenantId: string, status: ClientStatus, reason: string): Promise<void> {
+  const operator = await requireOperator();
+  if (!CLIENT_STATUSES.includes(status)) throw new Error("E_VALIDATION: unknown client status");
+  const why = reason.trim();
+  if (why.length < 5) throw new Error("E_VALIDATION: give a reason (at least 5 characters)");
+  if (why.length > 300) throw new Error("E_VALIDATION: keep the reason under 300 characters");
+
+  await withTenant(tenantId, async (tx) => {
+    const [tenant] = await tx.$queryRaw<{ id: string; is_platform: boolean; status: string }[]>`
+      SELECT id, is_platform, status FROM tenant WHERE id = ${tenantId}::uuid`;
+    if (!tenant) throw new ForbiddenError("E_FORBIDDEN: no such client");
+    if (tenant.is_platform) throw new ForbiddenError("E_FORBIDDEN: the platform tenant has no lifecycle");
+    if (tenant.status === status) throw new Error(`E_VALIDATION: the client is already ${status}`);
+
+    await tx.$executeRaw`SELECT set_config('verity.client_status_change', 'on', true)`;
+    await tx.tenant.update({
+      where: { id: tenantId },
+      data: { status, statusReason: why, statusChangedAt: new Date() },
+    });
+    await recordSecurityEvent(tx, {
+      tenantId,
+      eventType: "ConfigurationChanged",
+      actorUserId: operator.userId,
+      payload: { reason: "client_status_changed", operator: true, from: tenant.status, to: status, statedReason: why },
+    });
+  });
 }
 
 /**

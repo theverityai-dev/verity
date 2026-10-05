@@ -42,6 +42,12 @@ model Tenant {
   /// distinguishable in code, in the UI and in audit, and a naming convention
   /// cannot answer an authority question (ADR-013).
   isPlatform   Boolean  @default(false) @map("is_platform")
+  /// ADR-034 lifecycle: onboarding | active | suspended. Changed only by the HQ
+  /// operator action (a database trigger refuses any other write). Suspended
+  /// clients resolve to no membership for their own users; data is untouched.
+  status          String    @default("active")
+  statusReason    String?   @map("status_reason")
+  statusChangedAt DateTime? @map("status_changed_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   version      Int      @default(1)

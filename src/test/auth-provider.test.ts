@@ -203,6 +203,30 @@ describeDb("resolveActor()/listMemberships(): identity mapping", () => {
     expect(actor).toMatchObject({ userId, membershipId, tenantId, organizationId: orgId });
   });
 
+  it("resolves no membership in a suspended client, says why, and recovers on reactivation (ADR-034)", async () => {
+    const { withTenant } = await import("@/server/platform/tenancy");
+    const setStatus = (status: string) =>
+      withTenant(tenantId, async (tx) => {
+        await tx.$executeRaw`SELECT set_config('verity.client_status_change', 'on', true)`;
+        await tx.tenant.update({ where: { id: tenantId }, data: { status } });
+      });
+
+    await setStatus("suspended");
+    try {
+      mockAuth({ data: { user: { id: knownAuthUserId, email: null } }, error: null });
+      const { resolveActor, listMemberships, suspendedWorkspaceNames } = await import("@/server/platform/auth");
+      expect(await listMemberships()).toEqual([]);
+      expect(await resolveActor()).toBeNull();
+      expect(await suspendedWorkspaceNames()).toEqual(["Auth Provider Test"]);
+    } finally {
+      await setStatus("active");
+    }
+
+    mockAuth({ data: { user: { id: knownAuthUserId, email: null } }, error: null });
+    const { listMemberships } = await import("@/server/platform/auth");
+    expect(await listMemberships()).toHaveLength(1);
+  });
+
   it("resolves no memberships and no actor for an unknown external identity", async () => {
     mockAuth({ data: { user: { id: randomUUID(), email: null } }, error: null });
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { clientDirectory, requireOperator } from "@/server/platform/operator";
 import { ClientTabs } from "./ClientTabs";
+import { ClientLifecycle, EnterClientButton, STATUS_LABEL } from "../ClientLifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,14 @@ export default async function ClientAdminLayout({
           {client.createdAt.toISOString().slice(0, 10)}
           {client.timeZone ? ` · ${client.timeZone}` : " · UTC"}
         </p>
+        <p className="mb-0 mt-2 text-[13px] text-text-secondary">
+          Status: <span className={client.status === "suspended" ? "font-semibold text-danger" : "font-semibold text-text"}>{STATUS_LABEL[client.status] ?? client.status}</span>
+          {client.statusReason ? ` · ${client.statusReason}` : ""}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <EnterClientButton tenantId={tenantId} name={client.name} />
+          <ClientLifecycle tenantId={tenantId} status={client.status} />
+        </div>
       </header>
 
       <ClientTabs tenantId={tenantId} />
