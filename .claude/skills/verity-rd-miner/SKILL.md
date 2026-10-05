@@ -1,6 +1,6 @@
 ---
 name: verity-rd-miner
-description: Use when auditing a reference system under `D:\Code\R&D\` (or any external open-source repo) for lessons applicable to Verity — "audit n8n for Verity", "mine frappe for reusable patterns", "what can we learn from odoo/Zam/calcom". Encodes the method the twelve `taskplans/02-13_*_audit.md` files already used, not their specific findings, so the next repo's mining session takes hours instead of a full multi-turn session.
+description: Use when auditing a reference system under `D:\Code\R&D\` (or any external open-source repo) for lessons applicable to Verity — "audit n8n for Verity", "mine frappe for reusable patterns", "what can we learn from odoo/Zam/calcom". Also the client UX parity audit: "how do Odoo and ERPNext serve this client", "audit Odoo pages/buttons for <client>'s modules", "prepare the client reference document". Encodes the method the twelve `taskplans/02-13_*_audit.md` files already used, not their specific findings, so the next repo's mining session takes hours instead of a full multi-turn session.
 license: Apache 2.0
 ---
 
@@ -12,9 +12,24 @@ the *method*, so a session mining a new repo (`n8n`, `frappe`, `odoo-19.0`,
 `Zam`, a second `calcom` clone, `liquid-glass-react`, or anything not yet
 audited) reuses the discipline instead of re-deriving it.
 
-## The template — read `03_payload_audit.md` first, then follow its shape
+## Two modes — pick one before starting
 
-Every completed audit under `taskplans/02-13` uses the same nine-section
+- **Architecture audit** (the original mode, below): what Verity can learn from how a reference
+  system is *built*. Nine sections, ADOPT/ADAPT/INSPIRE/REJECT/DEFER.
+- **Client UX parity audit** (added 2026-10-05): how Odoo and ERPNext *serve a specific client's
+  requirements* — every menu, page, section, field group, button and workflow of the modules that
+  client needs — so Verity's modules for that client can be specified to the same completeness.
+  Product-owner rule: done for every client, existing and new. Use
+  `docs/reference/client-reference-parity-template.md`; output goes to
+  `clients/<client-slug>/reference-parity/`. Read the source, not memory: Odoo `addons/<module>/views/*.xml`
+  (menus, actions, view types, `<button>` elements, statusbar states) and `models/*.py` (`state`
+  selections, `action_*` methods); ERPNext `erpnext/<module>/doctype/<doctype>/<doctype>.json` (fields,
+  sections) and `<doctype>.js` (`add_custom_button`). Every claim carries a source path. Every
+  reference item ends with an Include / Defer / Not applicable decision.
+
+## Architecture mode: read `taskplans/archive/03_payload_audit.md` first, then follow its shape
+
+Every completed audit under `taskplans/archive/02-13` uses the same nine-section
 shape. Read the most recently written one before starting a new audit —
 don't invent a new structure:
 
@@ -67,9 +82,11 @@ already does this for the twelve existing audits.
 
 ## Non-goals
 
-- Not a mandate to re-audit anything already covered by `taskplans/02-13`
-  — check `00_research_program_ledger.md` and `01_rd_clone_and_freeze.md`
-  first for what's already frozen and audited.
+- Not a mandate to re-audit anything already covered by `taskplans/archive/02-13`
+  — check `taskplans/archive/00_research_program_ledger.md` and
+  `taskplans/archive/01_rd_clone_and_freeze.md` first for what's already frozen and audited.
+  (An architecture audit of Odoo does not replace a client UX parity audit; they answer different
+  questions.)
 - Not a license to copy code verbatim from a reference repo regardless of
   its license — note the license in the audit's header (as
   `03_payload_audit.md` does) and treat findings as "lessons," never as

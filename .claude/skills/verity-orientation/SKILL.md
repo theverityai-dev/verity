@@ -21,6 +21,11 @@ drifts the way `CLAUDE.md`'s own ADR-count note already drifted once
    exists as of 2026-09-08) before trusting the list's face value — a
    build-priority item can be substantially built without the list saying
    so yet.
+1a. **`taskplans/handoffs/README.md`** — the live work order; read it before the index below. Closed
+   plans are in `taskplans/archive/` (moved 2026-10-04). Recent audits that frame current priorities
+   live in `docs/audits/` — as of 2026-10-05: the UI completeness audit (five backend-only
+   capabilities) and the HQ audit. Per-client Odoo/ERPNext parity documents live under
+   `clients/<slug>/reference-parity/` (template `docs/reference/client-reference-parity-template.md`).
 2. **`taskplans/00_STATUS_INDEX.md`** — the Done table (what's actually
    shipped, with commit evidence) and the Pending table (what's blocked
    and why: real trigger unfired vs. needs an ADR vs. needs an explicit

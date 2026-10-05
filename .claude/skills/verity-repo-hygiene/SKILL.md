@@ -48,8 +48,11 @@ canned version of that same audit for next time.
 
 ## Non-goals
 
-- Not a `taskplans/` reorganizer — that directory is flat by explicit
-  project design (`CLAUDE.md`: "Do not assume a directory-based corpus
-  exists"). Never propose subdirectories there.
+- Not a general `taskplans/` reorganizer. The only sanctioned subdirectories are `handoffs/` (live
+  work) and `archive/` (closed plans, added 2026-10-04 at the product owner's request — see
+  `taskplans/archive/README.md`). Archiving a closed plan is in scope: `git mv` it to `archive/` and
+  rewrite live citations (src, skills, deploy, spec) in the same commit; never edit applied
+  migrations' comments. Do not invent other subfolders. (`CLAUDE.md`'s "Do not assume a
+  directory-based corpus exists" is about the V2 authority documents, which stay at the top level.)
 - Not a decision-maker on `verity-bible/`/`verity-spec/`/`implementation/`
   placement — those are fixed authority tiers, not hygiene targets.

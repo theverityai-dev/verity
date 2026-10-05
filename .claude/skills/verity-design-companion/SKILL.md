@@ -141,6 +141,16 @@ dark-mode counterpart considered in the same pass, not as a follow-up.
    `[DECIDED]`) for the three categories now spec-drafted from that
    checklist; the rest of the checklist's categories are process-enforced
    here, not yet spec REQ items.
+5. **No internal identifiers on screen, and no dead navigation** (2026-10-05, from the HQ live pass
+   in `docs/audits/2026-10-05-hq-audit.md`). Never render `verity.<capability>.<entity>`, command
+   keys, raw config keys, snake_case field names, or `Verb entity @ Scope` permission strings to a
+   user — map them to business labels (`src/components/ui/business/vocabulary.ts`). Never ship
+   developer commentary as UI copy ("a provider chosen without a requirement is a guess…"). Every
+   sidebar `href` must resolve to a page. These are the most common reasons a Verity screen reads as
+   unfinished.
+6. **Judge completeness against the client's reference-parity document**, not against what the code
+   already has: `clients/<slug>/reference-parity/` (from
+   `docs/reference/client-reference-parity-template.md`) and `docs/reference/module-completeness-bar.md`.
 
 ## Non-goals
 

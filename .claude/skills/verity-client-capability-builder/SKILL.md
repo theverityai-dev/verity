@@ -25,7 +25,8 @@ Read these, in this order, before writing a line of capability code:
 5. The existing shipped capability closest to this task. In order of
    maturity: `src/server/capabilities/plywood/` (deepest — catalogue,
    stock, trading, finance, tax, reports), `src/server/capabilities/
-   accounting/`, `inventory/`, `hr/`, `billing/` (each a real MVP slice),
+   accounting/`, `inventory/`, `hr/`, `billing/` (backend MVP slices; as of
+   2026-10-04 only `hr` has a screen — do not copy their missing UI as a norm),
    `src/server/capabilities/asset/` or `location/` (smallest, cleanest
    skeleton to copy the shape of a brand-new capability from).
 6. Relevant client design docs (`docs/reference/verticals/plywood.md`,
@@ -34,6 +35,25 @@ Read these, in this order, before writing a line of capability code:
    `docs/reference/verticals/coaching.md`) and `docs/reference/erpclaw-prd/`,
    if the capability traces to one of them. (Moved from repo root
    2026-09-17 — Task 110's cleanup.)
+
+## First, for every client: the reference-parity document (2026-10-05 rule)
+
+**The trigger.** 2026-10-05: clients other than Shree Ganesh Timber said their Verity instance is not
+comparable to Odoo or other ERPs — modules incomplete, workflows missing, "not even usable". The
+2026-10-04 UI completeness audit (`docs/audits/2026-10-04-ui-completeness-audit.md`) confirmed it:
+five capabilities (hr, inventory, accounting, billing, scheduling) had a backend and no screens, and
+four sidebar links led to a 404.
+
+**The rule.** For every client, existing or new, before building or extending their modules, write
+the per-client reference-parity document using `docs/reference/client-reference-parity-template.md`,
+under `clients/<client-slug>/reference-parity/`. It records how Odoo (`D:\Code\R&D\odoo-19.0`) and
+ERPNext (`D:\Code\R&D\erpnext`) serve that client's requirements: every module, menu, page, section,
+field group, button and workflow, read from their source with evidence paths. Every reference item
+ends in a decision row (Include / Defer with owner / Not applicable). The capability's design and
+scope come from that document, not from what Verity's code already happens to have.
+
+This sits *before* the V1 completeness gate below, not instead of it: the gate checks a finished v1;
+this document defines what v1 must be.
 
 ## Before writing code: state the lifecycle, not the commands
 
@@ -224,13 +244,29 @@ specific, checkable symptom — same class of rule as this skill's existing
 "integer autoincrement primary key" and "unprefixed table name" checkable
 anti-patterns above.
 
+## Two checkable UI rules from the 2026-10-04/05 audits
+
+- **Every navigation entry resolves to a page.** A `registerContribution` `href` with no
+  `src/app/(shell)<href>/page.tsx` is a 404 in the sidebar. `/hr`, `/accounting`, `/billing` and
+  `/inventory` all shipped that way. Never register navigation for a page that does not exist; check
+  with a grep of every `href` against the route tree before reporting done.
+- **No internal identifiers on screen.** Users must never see `verity.capability.x`, `verity.<cap>.<entity>`,
+  command keys, raw config keys or snake_case field names. Show the business label (see
+  `src/components/ui/business/vocabulary.ts`). The HQ live pass (`docs/audits/2026-10-05-hq-audit.md`)
+  found raw keys on Modules, Roles, Settings, Operations and Audit — the single most common reason
+  screens read as "built by a developer for a developer".
+
+A capability is "UI complete" only against `docs/reference/module-completeness-bar.md`; a backend
+with commands and no screen is reported as **BUILT (backend)**, never complete.
+
 ## Skill output checklist, per new capability
 
 Capability status statement; requirement-to-platform-primitive map; scope
 boundaries and non-goals; domain model; state machines; commands; queries;
 permissions; dashboard contributions; UI routes and page sections; migration
 plan; seed/demo plan; test plan; acceptance checklist; open decisions;
-implementation summary with exact files changed; **V1 completeness
+implementation summary with exact files changed; **the client's
+reference-parity document** (see "First, for every client" above); **V1 completeness
 checklist against the closest Odoo/erpnext module** (see the gate above).
 
 Three more, required per the 2026-09-03 synthesis:
