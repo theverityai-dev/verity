@@ -42,6 +42,7 @@ import {
   defineZone,
   generateBill,
   getBillDetail,
+  getOrderDetail,
   kitchenQueue,
   listFloor,
   listMenu,
@@ -342,6 +343,71 @@ describeDb("capability: Dine-in", () => {
     expect(seated?.orderId).toBeNull();
 
     await executeCommand(manager, moveTable, { tableId, to: "available" });
+  });
+
+  /* ----------------------------- order channels ----------------------------- */
+
+  it("runs a Zomato order with no table: kitchen, bill, platform payment, settle", async () => {
+    const order = await executeCommand(waiter, createOrder, {
+      channel: "delivery_platform",
+      locationId,
+      platform: "Zomato",
+      platformOrderRef: "4821",
+      customerName: "Asha",
+    });
+    await executeCommand(waiter, addOrderLines, {
+      orderId: order.id,
+      lines: [{ itemId: paneerId, qty: 1, lineNote: "no onion" }],
+    });
+    await executeCommand(waiter, placeOrder, { orderId: order.id });
+
+    const detail = await executeQuery(manager, getOrderDetail, { orderId: order.id });
+    expect(detail?.channel).toBe("delivery_platform");
+    expect(detail?.tableId).toBeNull();
+    expect(detail?.label).toBe("Zomato #4821");
+
+    const ticket = (await executeQuery(manager, kitchenQueue, {})).find((t) => t.orderId === order.id)!;
+    expect(ticket.label).toBe("Zomato #4821");
+    expect(ticket.lineNote).toBe("no onion");
+    await executeCommand(manager, advanceOrderLine, { lineId: ticket.lineId, to: "preparing" });
+    await executeCommand(manager, advanceOrderLine, { lineId: ticket.lineId, to: "ready" });
+    await executeCommand(waiter, advanceOrderLine, { lineId: ticket.lineId, to: "served" });
+
+    const bill = await executeCommand(manager, generateBill, { orderId: order.id });
+    const billed = await executeQuery(manager, getBillDetail, { billId: bill.id });
+    await executeCommand(manager, recordPayment, {
+      billId: bill.id,
+      method: "delivery_platform",
+      amountMinor: billed!.totalMinor,
+    });
+    // No table to turn over.
+    const settled = await executeCommand(manager, settleBill, { billId: bill.id });
+    expect(settled.tableState).toBeNull();
+  });
+
+  it("labels a takeaway order by channel and guest", async () => {
+    const order = await executeCommand(waiter, createOrder, { channel: "takeaway", locationId, customerName: "Ravi" });
+    const detail = await executeQuery(manager, getOrderDetail, { orderId: order.id });
+    expect(detail?.label).toBe("Takeaway · Ravi");
+    await executeCommand(waiter, cancelOrder, { orderId: order.id });
+  });
+
+  it("refuses inconsistent channel input: dine-in without a table, takeaway at a table, platform without a name", async () => {
+    // Input validation refuses all three before any table state is read, so
+    // no table needs seating (and none is left occupied for later tests).
+    await expect(executeCommand(waiter, createOrder, { channel: "dine_in", locationId })).rejects.toThrow(/input rejected/);
+    await expect(executeCommand(waiter, createOrder, { channel: "takeaway", tableId, locationId })).rejects.toThrow(/input rejected/);
+    await expect(executeCommand(waiter, createOrder, { channel: "delivery_platform", locationId })).rejects.toThrow(/input rejected/);
+  });
+
+  it("refuses a dine-in row without a table at the database, whatever the caller", async () => {
+    await expect(
+      withTenant(tenantId, (tx) =>
+        tx.diningOrder.create({
+          data: { tenantId, locationId, takenByUserId: waiter.userId, channel: "dine_in", tableId: null },
+        }),
+      ),
+    ).rejects.toThrow(/dining_order_dine_in_has_table/);
   });
 
   /* -------------------------------- refusals ------------------------------- */

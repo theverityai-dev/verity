@@ -10,6 +10,21 @@ import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { BillDetail } from "@/server/capabilities/dinein";
 
+/**
+ * Display names for `BILL_PAYMENT_METHODS` in the dinein capability. Kept here
+ * rather than imported because this is a client component and the capability
+ * module is server code; the server rejects any key not in its list.
+ */
+const PAYMENT_METHOD_LABEL: Record<string, string> = {
+  cash: "Cash",
+  card: "Card",
+  upi: "UPI",
+  wallet: "Wallet",
+  bank_transfer: "Bank transfer",
+  delivery_platform: "Paid to delivery platform",
+  other: "Other",
+};
+
 function rupees(minor: number): string {
   return `₹${(minor / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -59,7 +74,7 @@ export function BillView({ bill }: { bill: BillDetail }) {
         {/* ------------------------------ the bill ------------------------------ */}
         <section className="rounded-lg border border-line bg-surface p-6 print:border-0 print:p-0">
           <header className="mb-4 border-b border-line pb-4">
-            <h2 className="m-0 text-[18px]">Table {bill.tableLabel}</h2>
+            <h2 className="m-0 text-[18px]">{bill.label}</h2>
             <p className="mb-0 mt-1 text-[12px] text-text-tertiary">
               Bill {bill.id.slice(0, 8).toUpperCase()}
             </p>
@@ -140,8 +155,8 @@ export function BillView({ bill }: { bill: BillDetail }) {
               <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
                 {bill.payments.map((payment, index) => (
                   <li key={index} className="flex justify-between">
-                    <span className="capitalize text-text-secondary">
-                      {payment.method}
+                    <span className="text-text-secondary">
+                      {PAYMENT_METHOD_LABEL[payment.method] ?? payment.method}
                       {payment.reference && (
                         <span className="ml-2 text-text-tertiary">{payment.reference}</span>
                       )}
@@ -175,9 +190,9 @@ export function BillView({ bill }: { bill: BillDetail }) {
               >
                 <Field label="Method" htmlFor="method">
                   <Select id="method" name="method" defaultValue="cash">
-                    <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="upi">UPI</option>
+                    {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                   </Select>
                 </Field>
 

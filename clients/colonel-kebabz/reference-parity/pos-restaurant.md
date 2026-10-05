@@ -130,9 +130,9 @@ Evidence: `verity:src/server/capabilities/dinein/index.ts`, pages under `verity:
 | Cancel order | `cancel_order` | Built |
 | Generate bill, discount with reason, print | `generate_bill`, `apply_bill_discount` (reason required), `/counter/[billId]` `BillView.tsx` prints | Built |
 | Split bill | none | Missing |
-| Payment methods, partial payments | `record_payment` cash / card / UPI, several per bill; `settle_bill` | Built (fixed list; no tips by design, comment in `record_payment`) |
+| Payment methods, partial payments | `record_payment` cash, card, UPI, wallet, bank transfer, delivery platform, other; several per bill; `settle_bill` | Built (no tips by design) |
 | Refund / return after settlement | none | Missing |
-| Order types: takeaway, phone, delivery, QR, aggregator platform | orders require an occupied table | **Missing — PRD §9 core requirement** |
+| Order types: takeaway, phone, delivery, QR, aggregator platform | `channel` on every order (9 types), platform and platform order number; New order on `/counter`; open orders without a table listed there (migration `20261005000000_dinein_order_channel`, 2026-10-05) | Built (tested locally; not yet deployed) |
 | Register session open/close with cash count | `/cash-reconciliation` (finance capability), not tied to orders | Partial |
 | Order history screen (search past orders, reprint) | `get_order_detail`, `list_open_bills` queries; no history page | Partial |
 | Edit menu item, variants | `edit_menu_item`, `create_menu_variant`; Edit and Add portion on `/menu` (2026-10-05) | Built |

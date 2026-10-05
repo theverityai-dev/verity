@@ -82,6 +82,60 @@ export const CONFIG_SGST_RATE = "verity.dinein.tax.sgst_rate";
 export const CONFIG_PREP_TARGET_MINUTES = "verity.dinein.kitchen.prep_target_minutes";
 
 /**
+ * Where an order came from (Colonel Kebabz PRD §9: "order source must be
+ * stored"). Only `dine_in` sits at a table; a database CHECK enforces that a
+ * dine-in order always has one. Closed set, same reasoning as MOVEMENT_KINDS.
+ */
+export const ORDER_CHANNELS = [
+  "dine_in",
+  "takeaway",
+  "phone",
+  "delivery",
+  "delivery_platform",
+  "website",
+  "qr",
+  "corporate",
+  "catering",
+] as const;
+export type OrderChannel = (typeof ORDER_CHANNELS)[number];
+
+export const ORDER_CHANNEL_LABEL: Record<OrderChannel, string> = {
+  dine_in: "Dine-in",
+  takeaway: "Takeaway",
+  phone: "Phone order",
+  delivery: "Own delivery",
+  delivery_platform: "Delivery platform",
+  website: "Website",
+  qr: "QR order",
+  corporate: "Corporate",
+  catering: "Catering",
+};
+
+/** How a bill can be paid (PRD §46). Stored as these keys on `Payment.method`. */
+export const BILL_PAYMENT_METHODS = ["cash", "card", "upi", "wallet", "bank_transfer", "delivery_platform", "other"] as const;
+
+/**
+ * How an order is named on every screen: its table for dine-in, otherwise the
+ * channel and whatever identifies the guest ("Takeaway · Ravi",
+ * "Zomato #4821"). One function so the kitchen, counter and bill agree.
+ */
+export function orderLabel(order: {
+  channel: string;
+  table: { label: string } | null;
+  platform: string | null;
+  platformOrderRef: string | null;
+  customerName: string | null;
+}): string {
+  if (order.table) return `Table ${order.table.label}`;
+  if (order.channel === "delivery_platform") {
+    const ref = order.platformOrderRef ? ` #${order.platformOrderRef}` : "";
+    return `${order.platform ?? "Delivery platform"}${ref}`;
+  }
+  const channel = ORDER_CHANNEL_LABEL[order.channel as OrderChannel] ?? order.channel;
+  return order.customerName ? `${channel} · ${order.customerName}` : channel;
+}
+
+/**
  * Mirrors `outreach`'s `outreachLandingRouteFor` / `trading`'s
  * `landingRouteFor` for the same reason those exist: `/` (the platform's
  * generic Overview) requires `Read` on `verity.platform.overview`, which no
@@ -447,19 +501,58 @@ export const moveTable: CommandDefinition<
 /* ================================ service ================================= */
 
 export const createOrder: CommandDefinition<
-  { tableId: string; covers: number; customerName?: string; customerPhone?: string },
+  {
+    channel?: OrderChannel;
+    tableId?: string;
+    locationId?: string;
+    covers?: number;
+    customerName?: string;
+    customerPhone?: string;
+    platform?: string;
+    platformOrderRef?: string;
+  },
   { id: string }
 > = {
   key: "verity.dinein.create_order",
   entity: ENTITY_ORDER,
   verb: "Create",
-  input: z.object({
-    tableId: z.string().uuid(),
-    covers: z.number().int().min(1).max(50),
-    customerName: z.string().max(120).optional(),
-    customerPhone: z.string().max(20).optional(),
-  }),
+  input: z
+    .object({
+      // Defaults to dine-in so every existing caller (the floor plan) is unchanged.
+      channel: z.enum(ORDER_CHANNELS).default("dine_in"),
+      tableId: z.string().uuid().optional(),
+      // Only for orders with no table: the table already says which outlet.
+      locationId: z.string().uuid().optional(),
+      covers: z.number().int().min(1).max(50).default(1),
+      customerName: z.string().trim().max(120).optional(),
+      customerPhone: z.string().trim().max(20).optional(),
+      platform: z.string().trim().min(1).max(60).optional(),
+      platformOrderRef: z.string().trim().min(1).max(60).optional(),
+    })
+    .superRefine((input, issue) => {
+      if (input.channel === "dine_in") {
+        if (!input.tableId) issue.addIssue({ code: "custom", path: ["tableId"], message: "a dine-in order needs a table" });
+        if (input.locationId) issue.addIssue({ code: "custom", path: ["locationId"], message: "a dine-in order takes its outlet from the table" });
+      } else {
+        if (input.tableId) issue.addIssue({ code: "custom", path: ["tableId"], message: "only a dine-in order sits at a table" });
+        if (!input.locationId) issue.addIssue({ code: "custom", path: ["locationId"], message: "choose the outlet taking this order" });
+      }
+      if (input.channel === "delivery_platform" && !input.platform) {
+        issue.addIssue({ code: "custom", path: ["platform"], message: "name the delivery platform" });
+      }
+      if (input.channel !== "delivery_platform" && (input.platform || input.platformOrderRef)) {
+        issue.addIssue({ code: "custom", path: ["platform"], message: "a platform applies only to delivery-platform orders" });
+      }
+    }),
   preconditions: async (ctx, input) => {
+    if (!input.tableId) {
+      // No table: the outlet is chosen directly, and must be one the actor may
+      // take orders for.
+      const location = await ctx.tx.location.findUnique({ where: { id: input.locationId! } });
+      if (!location || !location.active) throw new ValidationError("E_VALIDATION: outlet not found");
+      await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Create", location.id);
+      return;
+    }
     const table = await ctx.tx.diningTable.findUnique({ where: { id: input.tableId } });
     if (!table) throw new ValidationError("E_VALIDATION: table not found");
     await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Create", table.locationId);
@@ -475,18 +568,23 @@ export const createOrder: CommandDefinition<
     if (open) throw new ValidationError("E_VALIDATION: that table already has an open order");
   },
   handler: async (ctx, input) => {
-    const table = await ctx.tx.diningTable.findUniqueOrThrow({ where: { id: input.tableId } });
+    const locationId = input.tableId
+      ? (await ctx.tx.diningTable.findUniqueOrThrow({ where: { id: input.tableId } })).locationId
+      : input.locationId!;
     const order = await ctx.tx.diningOrder.create({
       data: {
         tenantId: ctx.actor.tenantId,
-        tableId: input.tableId,
-        locationId: table.locationId,
+        tableId: input.tableId ?? null,
+        channel: input.channel ?? "dine_in",
+        platform: input.platform ?? null,
+        platformOrderRef: input.platformOrderRef ?? null,
+        locationId,
         // From the session. A waiter cannot record an order as someone else by
         // putting their id in the payload (PLA-TEN-006).
         takenByUserId: ctx.actor.userId,
-        covers: input.covers,
-        customerName: input.customerName ?? null,
-        customerPhone: input.customerPhone ?? null,
+        covers: input.covers ?? 1,
+        customerName: input.customerName || null,
+        customerPhone: input.customerPhone || null,
       },
     });
     return {
@@ -1060,7 +1158,9 @@ export const recordPayment: CommandDefinition<
   verb: "Create",
   input: z.object({
     billId: z.string().uuid(),
-    method: z.enum(["cash", "card", "upi"]),
+    // PRD §46. `delivery_platform` is money the platform collected and will
+    // settle later; only `cash` counts toward the drawer (finance cashSalesForDay).
+    method: z.enum(BILL_PAYMENT_METHODS),
     amountMinor: z.number().int().min(1),
     reference: z.string().max(120).optional(),
   }),
@@ -1120,7 +1220,8 @@ export const recordPayment: CommandDefinition<
  */
 export const settleBill: CommandDefinition<
   { billId: string },
-  { billId: string; tableState: string }
+  /** `tableState` is null when the order had no table (takeaway, delivery…). */
+  { billId: string; tableState: string | null }
 > = {
   key: "verity.dinein.settle_bill",
   entity: ENTITY_BILL,
@@ -1175,17 +1276,21 @@ export const settleBill: CommandDefinition<
     // Loyalty points earned on final (post-discount) spend — same posture.
     await awardPointsForOrder(ctx, order.id, bill.id);
 
-    const table = await ctx.tx.diningTable.findUniqueOrThrow({ where: { id: order.tableId } });
-    const tableMove = await transition(ctx, {
-      entityKey: ENTITY_TABLE,
-      entityId: table.id,
-      fromKey: table.state,
-      toKey: "cleaning",
-    });
-    await ctx.tx.diningTable.update({
-      where: { id: table.id },
-      data: { state: "cleaning", version: { increment: 1 } },
-    });
+    // A takeaway or delivery order has no table to turn over.
+    let tableMove: Awaited<ReturnType<typeof transition>> | null = null;
+    if (order.tableId) {
+      const table = await ctx.tx.diningTable.findUniqueOrThrow({ where: { id: order.tableId } });
+      tableMove = await transition(ctx, {
+        entityKey: ENTITY_TABLE,
+        entityId: table.id,
+        fromKey: table.state,
+        toKey: "cleaning",
+      });
+      await ctx.tx.diningTable.update({
+        where: { id: table.id },
+        data: { state: "cleaning", version: { increment: 1 } },
+      });
+    }
 
     await recordActivity(ctx, {
       entityKey: ENTITY_BILL,
@@ -1195,8 +1300,8 @@ export const settleBill: CommandDefinition<
     });
 
     return {
-      result: { billId: bill.id, tableState: "cleaning" },
-      events: [billMove.event, orderMove.event, tableMove.event],
+      result: { billId: bill.id, tableState: tableMove ? "cleaning" : null },
+      events: tableMove ? [billMove.event, orderMove.event, tableMove.event] : [billMove.event, orderMove.event],
     };
   },
 };
@@ -1315,8 +1420,11 @@ export type OrderDetail = {
   id: string;
   state: string;
   covers: number;
-  tableLabel: string;
-  tableId: string;
+  /** "Table 4", "Takeaway · Ravi", "Zomato #4821" — see `orderLabel`. */
+  label: string;
+  channel: string;
+  /** Null for orders with no table. */
+  tableId: string | null;
   subtotalMinor: number;
   lines: Array<{
     id: string;
@@ -1357,8 +1465,9 @@ export const getOrderDetail: QueryDefinition<{ orderId: string }, OrderDetail | 
       id: order.id,
       state: order.state,
       covers: order.covers,
-      tableId: order.table.id,
-      tableLabel: order.table.label,
+      tableId: order.table?.id ?? null,
+      label: orderLabel(order),
+      channel: order.channel,
       // Voided lines are shown but not charged, which is what a waiter reading
       // the screen back to a guest needs.
       subtotalMinor: order.lines
@@ -1376,7 +1485,9 @@ export type KitchenTicket = {
   qty: number;
   lineNote: string | null;
   state: string;
-  tableLabel: string;
+  /** Table or channel, see `orderLabel`. */
+  label: string;
+  channel: string;
   orderId: string;
   placedAt: Date | null;
   remainingMinutes: number | null;
@@ -1433,7 +1544,8 @@ export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicke
         qty: line.qty,
         lineNote: line.lineNote,
         state: line.state,
-        tableLabel: line.order.table.label,
+        label: orderLabel(line.order),
+        channel: line.order.channel,
         orderId: line.orderId,
         placedAt: line.order.placedAt,
         remainingMinutes: remaining,
@@ -1448,7 +1560,8 @@ export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicke
 export type BillDetail = {
   id: string;
   state: string;
-  tableLabel: string;
+  /** Table or channel, see `orderLabel`. */
+  label: string;
   subtotalMinor: number;
   discountMinor: number;
   cgstMinor: number;
@@ -1488,7 +1601,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
     return {
       id: bill.id,
       state: bill.state,
-      tableLabel: bill.order.table.label,
+      label: orderLabel(bill.order),
       subtotalMinor: bill.subtotalMinor,
       discountMinor: bill.discountMinor,
       cgstMinor: bill.cgstMinor,
@@ -1518,7 +1631,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
 
 export const listOpenBills: QueryDefinition<
   { locationId?: string },
-  Array<{ id: string; tableLabel: string; totalMinor: number; paidMinor: number }>
+  Array<{ id: string; label: string; totalMinor: number; paidMinor: number }>
 > = {
   key: "verity.dinein.list_open_bills",
   entity: ENTITY_BILL,
@@ -1536,7 +1649,7 @@ export const listOpenBills: QueryDefinition<
 
     return bills.map((bill) => ({
       id: bill.id,
-      tableLabel: bill.order.table.label,
+      label: orderLabel(bill.order),
       totalMinor: bill.totalMinor,
       paidMinor: bill.payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
     }));

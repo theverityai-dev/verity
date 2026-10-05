@@ -2379,8 +2379,17 @@ model DiningTable {
 model DiningOrder {
   id            String    @id @default(uuid()) @db.Uuid
   tenantId      String    @map("tenant_id") @db.Uuid
-  tableId       String    @map("table_id") @db.Uuid
-  /// Denormalized from the table at creation. An order never moves outlets.
+  /// Null only for orders with no table (takeaway, delivery, phone…). A
+  /// database CHECK (`dining_order_dine_in_has_table`) requires it for dine_in.
+  tableId       String?   @map("table_id") @db.Uuid
+  /// Where the order came from — closed set `ORDER_CHANNELS` owned by the
+  /// dinein capability (PRD §9: "order source must be stored").
+  channel       String    @default("dine_in")
+  /// Delivery platform name (Zomato, Swiggy…) and its own order number, for
+  /// settlement reconciliation (PRD §47). Set only on `delivery_platform`.
+  platform         String? @map("platform")
+  platformOrderRef String? @map("platform_order_ref")
+  /// Denormalized from the table (or chosen outlet) at creation. An order never moves outlets.
   locationId    String    @map("location_id") @db.Uuid
   /// Resolved from the session, never from a payload (PLA-TEN-006).
   takenByUserId String    @map("taken_by_user_id") @db.Uuid
@@ -2399,7 +2408,7 @@ model DiningOrder {
   customFields  Json      @default("{}") @map("custom_fields")
 
   tenant   Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  table    DiningTable @relation(fields: [tenantId, tableId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
+  table    DiningTable? @relation(fields: [tenantId, tableId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   location Location    @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "dining_order_location_fkey")
   lines    OrderLine[]
   bill     Bill?

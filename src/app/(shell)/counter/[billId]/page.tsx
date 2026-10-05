@@ -36,7 +36,7 @@ async function BillPage({ params }: { params: Promise<{ billId: string }> }) {
     <>
       <div className="print:hidden">
         <PageHeader
-          title={`Bill · Table ${bill.tableLabel}`}
+          title={`Bill · ${bill.label}`}
           description={bill.state === "settled" ? "Settled" : "Open — awaiting payment"}
         />
       </div>

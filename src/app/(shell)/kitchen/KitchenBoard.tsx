@@ -133,7 +133,7 @@ export function KitchenBoard({ tickets }: { tickets: KitchenTicket[] }) {
                           )}
                         </span>
                         <span className="shrink-0 text-[14px] font-medium text-text-secondary">
-                          {ticket.tableLabel}
+                          {ticket.label}
                         </span>
                       </div>
 

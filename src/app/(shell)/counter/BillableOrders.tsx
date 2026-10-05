@@ -10,7 +10,7 @@ import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
 const columns: Column[] = [
-  { key: "tableLabel", header: "Table", sortable: true },
+  { key: "label", header: "Order", sortable: true },
   { key: "covers", header: "Covers", numeric: true, sortable: true },
   { key: "subtotal", header: "Subtotal", numeric: true, sortable: true },
 ];
@@ -20,7 +20,7 @@ function rupees(minor: number): string {
 }
 
 /**
- * Tables that have eaten and need a bill.
+ * Orders that are served (or collected) and need a bill.
  *
  * The amount shown is the pre-tax subtotal, labelled as such. Showing a total
  * here would mean computing tax on the client, and the two figures would
@@ -29,7 +29,7 @@ function rupees(minor: number): string {
 export function BillableOrders({
   orders,
 }: {
-  orders: Array<{ id: string; tableLabel: string; covers: number; subtotalMinor: number }>;
+  orders: Array<{ id: string; label: string; covers: number; subtotalMinor: number }>;
 }) {
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
@@ -65,7 +65,7 @@ export function BillableOrders({
         columns={columns}
         rows={orders.map((order) => ({
           id: order.id,
-          tableLabel: order.tableLabel,
+          label: order.label,
           covers: order.covers,
           subtotal: rupees(order.subtotalMinor),
         }))}

@@ -46,8 +46,12 @@ async function OrderPage({
   return (
     <>
       <PageHeader
-        title={`Table ${order.tableLabel}`}
-        description={`${order.covers} ${order.covers === 1 ? "cover" : "covers"} · order is ${order.state.replace("_", " ")}`}
+        title={order.label}
+        description={
+          order.tableId
+            ? `${order.covers} ${order.covers === 1 ? "cover" : "covers"} · order is ${order.state.replace("_", " ")}`
+            : `Order is ${order.state.replace("_", " ")}`
+        }
       />
       <OrderPad order={order} menu={menu} />
     </>
