@@ -4,7 +4,7 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ErrorState, Input, Panel } from "@/components/ui/primitives";
+import { Button, ErrorState, Input, Panel } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { OrderDetail } from "@/server/capabilities/dinein";
@@ -34,6 +34,9 @@ const LINE_STATE: Record<string, { label: string; tone: string }> = {
   voided: { label: "Voided", tone: "text-text-tertiary line-through" },
 };
 
+/** Lines that can still be taken off: not yet served and not already voided. */
+const VOIDABLE = new Set(["queued", "preparing", "ready"]);
+
 /**
  * The order pad.
  *
@@ -49,6 +52,11 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [search, setSearch] = useState("");
+  // A note rides on the next item added ("no onion"), then clears, so it can
+  // never silently attach to a second dish.
+  const [note, setNote] = useState("");
+  const [voiding, setVoiding] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState("");
   const [pending, startTransition] = useTransition();
 
   const categories = useMemo(() => {
@@ -76,6 +84,12 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   }
 
   const canAdd = ["draft", "placed", "partially_served"].includes(order.state);
+  const addLine = (line: { itemId: string; variantId?: string }) =>
+    run(
+      "verity.dinein.add_order_lines",
+      { orderId: order.id, lines: [{ ...line, qty: 1, lineNote: note.trim() || undefined }] },
+      () => setNote(""),
+    );
   const canPlace = order.state === "draft" && order.lines.length > 0;
   const servedCount = order.lines.filter((line) => line.state === "served").length;
   const liveCount = order.lines.filter((line) => line.state !== "voided").length;
@@ -106,6 +120,18 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+            <label htmlFor="line-note" className="sr-only">
+              Note for the next item
+            </label>
+            <Input
+              id="line-note"
+              className="mt-2"
+              placeholder="Note for the next item, e.g. no onion, extra spicy"
+              maxLength={200}
+              value={note}
+              disabled={!canAdd}
+              onChange={(event) => setNote(event.target.value)}
+            />
           </div>
 
           {!canAdd && (
@@ -134,12 +160,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                         <CommandButton commands={"verity.dinein.add_order_lines"}
                           size="sm"
                           disabled={!canAdd || pending}
-                          onClick={() =>
-                            run("verity.dinein.add_order_lines", {
-                              orderId: order.id,
-                              lines: [{ itemId: item.id, qty: 1 }],
-                            })
-                          }
+                          onClick={() => addLine({ itemId: item.id })}
                         >
                           Add
                         </CommandButton>
@@ -148,12 +169,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                             key={variant.id}
                             size="sm"
                             disabled={!canAdd || pending}
-                            onClick={() =>
-                              run("verity.dinein.add_order_lines", {
-                                orderId: order.id,
-                                lines: [{ itemId: item.id, variantId: variant.id, qty: 1 }],
-                              })
-                            }
+                            onClick={() => addLine({ itemId: item.id, variantId: variant.id })}
                           >
                             {variant.name}
                           </CommandButton>
@@ -192,6 +208,20 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                       </div>
                       <div className="mt-1 flex items-center justify-between gap-3">
                         <span className={`text-[12px] ${state.tone}`}>{state.label}</span>
+                        <span className="flex shrink-0 gap-1.5">
+                        {VOIDABLE.has(line.state) && voiding !== line.id && (
+                          <CommandButton commands={"verity.dinein.void_order_line"}
+                            size="sm"
+                            variant="secondary"
+                            disabled={pending}
+                            onClick={() => {
+                              setVoiding(line.id);
+                              setVoidReason("");
+                            }}
+                          >
+                            Void
+                          </CommandButton>
+                        )}
                         {line.state === "ready" && (
                           <CommandButton commands={"verity.dinein.advance_order_line"}
                             size="sm"
@@ -206,7 +236,46 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                             Mark served
                           </CommandButton>
                         )}
+                        </span>
                       </div>
+                      {voiding === line.id && (
+                        <form
+                          className="mt-2 flex flex-wrap items-center gap-2"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            run(
+                              "verity.dinein.void_order_line",
+                              { lineId: line.id, reason: voidReason.trim() },
+                              () => setVoiding(null),
+                            );
+                          }}
+                        >
+                          <label htmlFor={`void-${line.id}`} className="sr-only">
+                            Reason for voiding {line.itemName}
+                          </label>
+                          <Input
+                            id={`void-${line.id}`}
+                            className="min-w-0 flex-1"
+                            placeholder="Reason, e.g. guest changed their mind"
+                            maxLength={200}
+                            required
+                            autoFocus
+                            value={voidReason}
+                            onChange={(event) => setVoidReason(event.target.value)}
+                          />
+                          <Button type="submit" size="sm" variant="danger" disabled={pending}>
+                            Void line
+                          </Button>
+                          <Button type="button" size="sm" variant="secondary" onClick={() => setVoiding(null)}>
+                            Keep
+                          </Button>
+                          {line.state === "ready" && (
+                            <p className="m-0 w-full text-[12px] text-text-tertiary">
+                              This dish is already cooked, so only a manager can void it.
+                            </p>
+                          )}
+                        </form>
+                      )}
                       {line.lineNote && (
                         <p className="mb-0 mt-1 text-[12px] text-text-tertiary">{line.lineNote}</p>
                       )}

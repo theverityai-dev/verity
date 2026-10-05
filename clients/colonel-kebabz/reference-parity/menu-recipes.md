@@ -96,9 +96,9 @@ Evidence: `verity:src/server/capabilities/dinein/index.ts` (menu), `verity:src/s
 |---|---|---|
 | Menu categories | `create_menu_category`; on `/menu` | Built |
 | Create item: name, category, price, description, cost | `create_menu_item`; on `/menu` | Built |
-| Edit item (price, name, description) | `edit_menu_item` | Backend only — **no button** |
+| Edit item (price, name, description) | `edit_menu_item`; Edit on `/menu` (name, price) since 2026-10-05 | Built (description not on screen) |
 | Activate / deactivate item | `set_menu_item_active`; on `/menu` | Built |
-| Variants / modifiers with price delta | `create_menu_variant` (`priceDeltaMinor`) | Backend only — **no button** |
+| Variants / modifiers with price delta | `create_menu_variant`; Add portion on `/menu` since 2026-10-05 | Built |
 | SKU, image, tax per item, preparation time | not on menu item | Missing |
 | Outlet availability (item on/off per outlet) | menu is tenant-wide | Missing |
 | Channel availability / channel prices | no channel concept (see POS document) | Missing |

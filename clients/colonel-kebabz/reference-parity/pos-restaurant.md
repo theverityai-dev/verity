@@ -123,10 +123,10 @@ Evidence: `verity:src/server/capabilities/dinein/index.ts`, pages under `verity:
 | Move order to another table | none (`move_table` changes table state, not the order's table) | Missing |
 | Seat guests (covers), open order | `create_order` (covers required, table must be occupied) | Built |
 | Add items, send to kitchen | `add_order_lines`, `place_order` | Built |
-| Line notes / modifiers | none on order lines | Missing |
+| Line notes / modifiers | `lineNote` on `add_order_lines`; note field on the order pad (2026-10-05). Modifiers as portions (variants) only | Built (notes); Partial (modifiers) |
 | Courses / fire course | none | Missing |
 | Kitchen display | `/kitchen` (`KitchenBoard.tsx`), line states preparing → ready → served; `sweep_prep_breaches` flags late lines | Built; no "accepted" step, no order type shown (all orders are dine-in) |
-| Void a line (manager rule for cooked dishes) | `void_order_line` + guard in `registerDineinCapability` | Backend only — **no button** |
+| Void a line (manager rule for cooked dishes) | `void_order_line` + guard; Void with reason on the order pad (2026-10-05) | Built |
 | Cancel order | `cancel_order` | Built |
 | Generate bill, discount with reason, print | `generate_bill`, `apply_bill_discount` (reason required), `/counter/[billId]` `BillView.tsx` prints | Built |
 | Split bill | none | Missing |
@@ -135,7 +135,7 @@ Evidence: `verity:src/server/capabilities/dinein/index.ts`, pages under `verity:
 | Order types: takeaway, phone, delivery, QR, aggregator platform | orders require an occupied table | **Missing — PRD §9 core requirement** |
 | Register session open/close with cash count | `/cash-reconciliation` (finance capability), not tied to orders | Partial |
 | Order history screen (search past orders, reprint) | `get_order_detail`, `list_open_bills` queries; no history page | Partial |
-| Edit menu item, variants | `edit_menu_item`, `create_menu_variant` — no button (`/menu` creates and toggles only) | Backend only (menu depth document) |
+| Edit menu item, variants | `edit_menu_item`, `create_menu_variant`; Edit and Add portion on `/menu` (2026-10-05) | Built |
 | Sales reports | `sales_summary` query (by payment method); `/reports` | Partial — no product / hour / staff breakdown |
 | Turnaround time, revenue per table | not computed | Missing |
 | Cashier login / manager-only actions | role grants via `enforcePolicy()`; cooked-line void needs manager | Built at permission level; no PIN switch |

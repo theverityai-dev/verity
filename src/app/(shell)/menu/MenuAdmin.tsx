@@ -47,6 +47,8 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCategory, setNewCategory] = useState(false);
+  // One open inline form per screen: editing an item or adding a portion to it.
+  const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function run(key: string, input: unknown, after?: () => void) {
@@ -171,6 +173,98 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                 </form>
               )}
 
+              {(() => {
+                const item = editing && category.items.find((i) => i.id === editing.itemId);
+                if (!editing || !item) return null;
+                if (editing.mode === "edit") {
+                  return (
+                    <form
+                      key={`edit-${item.id}`}
+                      className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-surface-sunken p-3"
+                      action={(formData) =>
+                        run(
+                          "verity.dinein.edit_menu_item",
+                          {
+                            itemId: item.id,
+                            name: String(formData.get("name") ?? "").trim(),
+                            // Rupees in, paise out. The server never sees a decimal.
+                            priceMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
+                          },
+                          () => setEditing(null),
+                        )
+                      }
+                    >
+                      <div className="min-w-[220px] flex-1">
+                        <Field label="Item" htmlFor={`edit-name-${item.id}`} required>
+                          <Input id={`edit-name-${item.id}`} name="name" required autoFocus defaultValue={item.name} maxLength={200} />
+                        </Field>
+                      </div>
+                      <div className="w-[140px]">
+                        <Field label="Price (₹)" htmlFor={`edit-price-${item.id}`} required>
+                          <Input
+                            id={`edit-price-${item.id}`}
+                            name="price"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            required
+                            defaultValue={(item.priceMinor / 100).toFixed(2)}
+                          />
+                        </Field>
+                      </div>
+                      <CommandButton commands={"verity.dinein.edit_menu_item"} type="submit" variant="primary" disabled={pending}>
+                        Save
+                      </CommandButton>
+                      <CommandButton commands={"verity.dinein.edit_menu_item"} type="button" onClick={() => setEditing(null)}>
+                        Cancel
+                      </CommandButton>
+                      <p className="m-0 w-full text-[12px] text-text-tertiary">
+                        A new price applies to orders from now on; bills already raised keep their price.
+                      </p>
+                    </form>
+                  );
+                }
+                return (
+                  <form
+                    key={`portion-${item.id}`}
+                    className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-surface-sunken p-3"
+                    action={(formData) =>
+                      run(
+                        "verity.dinein.create_menu_variant",
+                        {
+                          itemId: item.id,
+                          name: String(formData.get("name") ?? "").trim(),
+                          priceDeltaMinor: Math.round(Number(formData.get("delta") ?? 0) * 100),
+                        },
+                        () => setEditing(null),
+                      )
+                    }
+                  >
+                    <div className="min-w-[200px] flex-1">
+                      <Field label={`Portion of ${item.name}`} htmlFor={`portion-name-${item.id}`} required>
+                        <Input id={`portion-name-${item.id}`} name="name" required autoFocus maxLength={60} placeholder="Half" />
+                      </Field>
+                    </div>
+                    <div className="w-[200px]">
+                      <Field
+                        label="Price difference (₹)"
+                        htmlFor={`portion-delta-${item.id}`}
+                        hint={`Negative if cheaper than ${rupees(item.priceMinor)}.`}
+                        required
+                      >
+                        <Input id={`portion-delta-${item.id}`} name="delta" type="number" step="0.01" required placeholder="-120" />
+                      </Field>
+                    </div>
+                    <CommandButton commands={"verity.dinein.create_menu_variant"} type="submit" variant="primary" disabled={pending}>
+                      Add portion
+                    </CommandButton>
+                    <CommandButton commands={"verity.dinein.create_menu_variant"} type="button" onClick={() => setEditing(null)}>
+                      Cancel
+                    </CommandButton>
+                  </form>
+                );
+              })()}
+
               {category.items.length === 0 ? (
                 <p className="m-0 text-[13px] text-text-secondary">Nothing in this section yet.</p>
               ) : (
@@ -197,19 +291,37 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                   }))}
                   caption={`${category.categoryName} items`}
                   rowActions={(row) => (
-                    <CommandButton
-                      commands={"verity.dinein.set_menu_item_active"}
-                      size="sm"
-                      disabled={pending}
-                      onClick={() =>
-                        run("verity.dinein.set_menu_item_active", {
-                          itemId: row.itemId,
-                          active: !row.active,
-                        })
-                      }
-                    >
-                      {row.active ? "Retire" : "Bring back"}
-                    </CommandButton>
+                    <div className="flex flex-wrap gap-2">
+                      <CommandButton
+                        commands={"verity.dinein.edit_menu_item"}
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setEditing({ itemId: String(row.itemId), mode: "edit" })}
+                      >
+                        Edit
+                      </CommandButton>
+                      <CommandButton
+                        commands={"verity.dinein.create_menu_variant"}
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setEditing({ itemId: String(row.itemId), mode: "portion" })}
+                      >
+                        Add portion
+                      </CommandButton>
+                      <CommandButton
+                        commands={"verity.dinein.set_menu_item_active"}
+                        size="sm"
+                        disabled={pending}
+                        onClick={() =>
+                          run("verity.dinein.set_menu_item_active", {
+                            itemId: row.itemId,
+                            active: !row.active,
+                          })
+                        }
+                      >
+                        {row.active ? "Retire" : "Bring back"}
+                      </CommandButton>
+                    </div>
                   )}
                 />
               )}
