@@ -137,12 +137,24 @@ export async function previewPack(
   const existingContributionIds = new Set(appliedManifest?.contributions.map((c) => c.id) ?? []);
   const desiredContributionIds = new Set(manifest.contributions.map((c) => c.id));
 
+  // "New" means not already active for this tenant, so reapplying the same
+  // release reports no capability changes instead of re-listing everything.
+  const wantedCapabilities = [...manifest.requiredCapabilities, ...manifest.optionalCapabilities]
+    .map((c) => c.id)
+    .filter((id, index, arr) => arr.indexOf(id) === index);
+  const alreadyActive = new Set(
+    (
+      await tx.tenantActivation.findMany({
+        where: { tenantId, status: "Active", capabilityId: { in: wantedCapabilities } },
+        select: { capabilityId: true },
+      })
+    ).map((a) => a.capabilityId),
+  );
+
   const diff: PackPreviewDiff = {
     fromVersion: appliedManifest?.version ?? null,
     toVersion: manifest.version,
-    newCapabilities: [...manifest.requiredCapabilities, ...manifest.optionalCapabilities]
-      .map((c) => c.id)
-      .filter((id, index, arr) => arr.indexOf(id) === index),
+    newCapabilities: wantedCapabilities.filter((id) => !alreadyActive.has(id)),
     newRoles: manifest.roles.map((r) => r.key).filter((key) => !existingRoleKeys.has(key)),
     newPermissions: manifest.roles.map((r) => ({
       role: r.key,

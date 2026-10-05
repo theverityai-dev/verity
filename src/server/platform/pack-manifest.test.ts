@@ -39,6 +39,27 @@ function envelope(value: PackManifest = manifest): SignedPackEnvelope {
   };
 }
 
+describe("pack key format", () => {
+  const withKey = (key: string) => packManifestSchema.safeParse({ ...manifest, key }).success;
+
+  it("accepts namespaced keys, including words joined by a single underscore", () => {
+    expect(withKey("verity.pack.sample")).toBe(true);
+    expect(withKey("verity.pack.test_sample")).toBe(true);
+    expect(withKey("verity.pack.franchise-ops_v2")).toBe(true);
+  });
+
+  it("rejects keys with a leading, trailing or doubled underscore, or unsafe characters", () => {
+    for (const key of ["verity.pack._sample", "verity.pack.sample_", "verity.pack.sa__mple", "verity", "Verity.pack.x", "verity.pack/x", "verity.pack. x", "../etc.passwd"]) {
+      expect(withKey(key), key).toBe(false);
+    }
+  });
+
+  it("accepts a real platform capability id as a requirement", () => {
+    const requires = [{ id: "verity.capability.decision_egress", version: "^1.0.0" }];
+    expect(packManifestSchema.safeParse({ ...manifest, requiredCapabilities: requires }).success).toBe(true);
+  });
+});
+
 describe("Industry Pack manifest trust boundary", () => {
   it("accepts a canonical, trusted, compatible signed manifest", () => {
     expect(validateSignedPack(envelope(), trusted, "0.1.0")).toMatchObject({

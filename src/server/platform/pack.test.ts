@@ -2,7 +2,7 @@ import { generateKeyPairSync, randomUUID, sign } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "./db";
-import { withTenant } from "./tenancy";
+import { withTenant, type TenantScopedClient } from "./tenancy";
 import type { ActorContext } from "./command";
 import { packManifestBytes, packManifestDigest, packManifestSchema, type PackManifest, type SignedPackEnvelope } from "./pack-manifest";
 import {
@@ -50,7 +50,7 @@ function manifestV(version: string, overrides: Partial<PackManifest> = {}): Pack
     platform: ">=0.1.0 <1.0.0",
     configSchemaVersion: "1.0.0",
     requiredCapabilities: [{ id: CAPABILITY, version: "^1.0.0" }],
-    roles: [{ key: "PackTestRole", permissions: [{ entity: "verity.test.pack_widget", verbs: ["Read", "Create"] }] }],
+    roles: [{ key: "verity.pack.test_sample.operator", permissions: [{ entity: "verity.test.pack_widget", verbs: ["Read", "Create"] }] }],
     contributions: [{ id: `verity.pack.test_sample.dashboard.${version}`, kind: "dashboard" }],
     rollback: "reversible",
     ...overrides,
@@ -68,6 +68,24 @@ function envelope(manifest: PackManifest): SignedPackEnvelope {
       value: sign(null, packManifestBytes(manifest), keys.privateKey).toString("base64"),
     },
   };
+}
+
+/**
+ * Releases are global platform metadata: readable inside any tenant context but
+ * writable only by the privileged import tool (the `pack_release` policy in the
+ * control-plane migration has a SELECT policy and no write policy). A
+ * tenant-scoped runtime connection is therefore refused by RLS, correctly, so
+ * the test imports the way the import tool does: as the migration role.
+ */
+async function importRelease(manifest: PackManifest) {
+  const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
+  try {
+    return await admin.$transaction((tx) =>
+      importPackRelease(tx as unknown as TenantScopedClient, envelope(manifest), trusted, "0.1.0"),
+    );
+  } finally {
+    await admin.$disconnect();
+  }
 }
 
 describeDb("Industry Pack control plane (WP-10)", () => {
@@ -121,15 +139,13 @@ describeDb("Industry Pack control plane (WP-10)", () => {
   });
 
   it("completes empty tenant → import → preview → approve/apply → verify → reapply (WP-10 acceptance scenario)", async () => {
-    const release = await withTenant(tenantId, (tx) =>
-      importPackRelease(tx, envelope(manifestV("1.0.0")), trusted, "0.1.0"),
-    );
+    const release = await importRelease(manifestV("1.0.0"));
 
     const { diff } = await withTenant(tenantId, (tx) => previewPack(tx, tenantId, release.id));
     expect(diff.fromVersion).toBeNull();
     expect(diff.toVersion).toBe("1.0.0");
     expect(diff.newCapabilities).toContain(CAPABILITY);
-    expect(diff.newRoles).toContain("PackTestRole");
+    expect(diff.newRoles).toContain("verity.pack.test_sample.operator");
 
     const planned = await withTenant(tenantId, (tx) => planPackOperation(tx, actor, release.id, "Apply"));
     expect(planned.operation.state).toBe("Planned");
@@ -147,7 +163,7 @@ describeDb("Industry Pack control plane (WP-10)", () => {
     expect(activation.status).toBe("Active");
 
     const role = await withTenant(tenantId, (tx) =>
-      tx.role.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "PackTestRole" } } }),
+      tx.role.findUniqueOrThrow({ where: { tenantId_name: { tenantId, name: "verity.pack.test_sample.operator" } } }),
     );
     const permissions = await withTenant(tenantId, (tx) => tx.permission.findMany({ where: { roleId: role.id } }));
     expect(permissions.map((p) => p.verb).sort()).toEqual(["Create", "Read"]);
@@ -171,9 +187,7 @@ describeDb("Industry Pack control plane (WP-10)", () => {
   });
 
   it("upgrades to a new version and rolls back within the supported boundary", async () => {
-    const releaseV2 = await withTenant(tenantId, (tx) =>
-      importPackRelease(tx, envelope(manifestV("1.1.0")), trusted, "0.1.0"),
-    );
+    const releaseV2 = await importRelease(manifestV("1.1.0"));
     const planned = await withTenant(tenantId, (tx) => planPackOperation(tx, actor, releaseV2.id, "Upgrade"));
     expect(planned.diff.fromVersion).toBe("1.0.0");
 
@@ -201,9 +215,7 @@ describeDb("Industry Pack control plane (WP-10)", () => {
       create: { tenantId, capabilityId: CONFLICTING_CAPABILITY, status: "Active", pinnedVersion: "1.0.0" },
       update: { status: "Active" },
     }));
-    const conflicting = await withTenant(tenantId, (tx) =>
-      importPackRelease(tx, envelope(manifestV("9.9.9", { conflicts: [CONFLICTING_CAPABILITY] })), trusted, "0.1.0"),
-    );
+    const conflicting = await importRelease(manifestV("9.9.9", { conflicts: [CONFLICTING_CAPABILITY] }));
     await expect(
       withTenant(tenantId, (tx) => planPackOperation(tx, actor, conflicting.id, "Apply")),
     ).rejects.toThrow(/E_PACK_CAPABILITY_INCOMPATIBLE/);

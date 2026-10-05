@@ -2,7 +2,15 @@ import { createHash, verify } from "node:crypto";
 import { z } from "zod";
 
 const semver = z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, "must be semantic version");
-const stableKey = z.string().regex(/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)+$/, "must be a stable namespaced key");
+// Dot- or dash-separated segments of lowercase letters and digits, where a
+// segment may join words with single underscores. The platform's own keys use
+// them (`verity.capability.decision_egress`, `verity.dinein.order_line`), so a
+// pack naming a real capability or entity must be accepted. No leading,
+// trailing or doubled underscore, no whitespace and no path characters.
+const SEGMENT = "[a-z0-9]+(?:_[a-z0-9]+)*";
+const stableKey = z
+  .string()
+  .regex(new RegExp(`^[a-z][a-z0-9]*(?:_[a-z0-9]+)*(?:[.-]${SEGMENT})+$`), "must be a stable namespaced key");
 const versionRange = z.string().min(1).max(100);
 
 const capabilityRequirement = z.object({
