@@ -212,6 +212,7 @@ describe("conformance: capability contracts (Phase E)", () => {
     finance: ["dinein", "location"],
     loyalty: ["crm", "dinein"],
     outreach: [],
+    manufacturing: [],
     recipe: ["dinein", "inventory"],
   };
 
@@ -332,6 +333,10 @@ describe("conformance: over-genericity (Phase G)", () => {
       "customFields", "payload", "value", "config", "condition", "input", "output", "result",
       // Platform control-plane and operational evidence documents.
       "diff", "manifest", "schema", "data", "details",
+      // Manufacturing: a route stage's QC checklist template, copied onto each
+      // operation; a public passport's minimal projection (ADR-030). Outreach/
+      // external idempotency: the stored response replayed on a repeated key.
+      "checkpoints", "snapshot", "response",
     ]);
     const unexpected = jsonFields.filter((name) => !permitted.has(name));
     expect(unexpected).toEqual([]);
@@ -415,7 +420,7 @@ describe("conformance: over-genericity (Phase G)", () => {
     // csp, execution-failure, request-limits and shared-rate-limit controls.
     // Current reviewed additions through Outreach and the pack/control-plane
     // work remain platform contracts, not capability implementations.
-    expect(platformModules.length).toBeLessThanOrEqual(50);
+    expect(platformModules.length).toBeLessThanOrEqual(54);
   });
 });
 
@@ -435,7 +440,16 @@ describeDb("conformance: database enforcement", () => {
         ORDER BY relname`;
 
       expect(rows.length).toBeGreaterThan(0);
+      // Operational tables that carry no tenant data at all (no tenant_id):
+      // OIDC login state, scheduler lease/run history and the restore-quarantine
+      // flag. Isolation here is by grant (REVOKE ALL FROM PUBLIC; the runtime
+      // role gets only what it needs), not RLS, so they are named explicitly
+      // rather than exempted by pattern. A new tenant-scoped table never fits.
+      const NO_TENANT_DATA = new Set([
+        "deployment_state", "oidc_login_transaction", "scheduler_lease", "scheduler_run",
+      ]);
       const unprotected = rows
+        .filter((r) => !NO_TENANT_DATA.has(r.relname))
         .filter((r) => !r.relrowsecurity || !r.relforcerowsecurity)
         .map((r) => r.relname);
       // FORCE matters as much as ENABLE: without it the owning role bypasses
@@ -483,8 +497,25 @@ describeDb("conformance: database enforcement", () => {
         "evidence",
         "hr_leave_decision",
         "inventory_stock_movement",
+        "inventory_wastage_record",
         "journal_entry",
         "journal_line",
+        "loyalty_point_entry",
+        "manufacturing_checkpoint_result",
+        "manufacturing_dispatch",
+        "outreach_activity",
+        "outreach_ai_insight",
+        "outreach_attribution_record",
+        "outreach_check_in",
+        "outreach_check_in_review",
+        "outreach_closed_client",
+        "outreach_coaching_note",
+        "outreach_direction",
+        "outreach_opportunity",
+        "outreach_proposal",
+        "outreach_research_entry",
+        "outreach_team_weekly_assessment",
+        "outreach_weekly_report",
         "security_audit_event",
         "stock_ledger_entry",
         "trading_invoice",
