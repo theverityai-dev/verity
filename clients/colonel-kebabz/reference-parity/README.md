@@ -1,7 +1,7 @@
 # Colonel Kebabz — reference-parity document
 
 Template: `docs/reference/client-reference-parity-template.md`. Started 2026-10-05.
-Status: **module map done; depth documents: 4 of 7 written** (POS/tables/kitchen; menu/recipes; inventory; procurement; see §3).
+Status: **module map done; depth documents: 5 of 7 written** (POS/tables/kitchen; menu/recipes; inventory; procurement; staff; see §3).
 
 ## 1. Client and requirement sources
 
@@ -49,7 +49,7 @@ walk-through of this tenant. Depth document column links the per-module file onc
 | 31–32 | Loyalty, offers, coupons | `loyalty`, `pos_loyalty` | Loyalty Program, Coupon Code, Pricing Rule | `loyalty`, `coupon` `/coupons` | — |
 | 33–35 | Campaigns, marketing calendar, reviews | `mass_mailing`, `marketing_card`, `survey` | — | Not built | — |
 | 36–37 | Complaints, service recovery | Helpdesk (Enterprise) | Issue (`support`) | `complaint` `/complaints` | — |
-| 38–43 | Staff, attendance, shifts, leave, payroll inputs, performance | `hr`, `hr_attendance`, `hr_holidays`, `pos_hr`; planning/payroll Enterprise | Employee, Attendance, Shift, Leave | `attendance` `/attendance`; `hr` `/hr` built 2026-10-04 (unverified) | — |
+| 38–43 | Staff, attendance, shifts, leave, payroll inputs, performance | `hr`, `hr_attendance`, `hr_holidays`, `pos_hr`; planning/payroll Enterprise | Employee, Attendance, Shift, Leave | `attendance` `/attendance`; `hr` `/hr` built 2026-10-04 (unverified) | [staff.md](staff.md) |
 | 44–49 | Expenses, cash, payments, aggregator reconciliation, finance dashboard, outlet P&L | `hr_expense`, `account`, `point_of_sale` session closing | POS Closing Entry, Journal / Payment Entry | `finance` `/expenses`, `/cash-reconciliation`, `/outlet-pnl` | — |
 | 50–52 | Franchise, royalty, compliance | — (custom in both) | — | Not built | — |
 | 53, 56–57 | Outlet audits, opening and closing checklists | `survey`; quality Enterprise | Quality Inspection | Not built | — |
