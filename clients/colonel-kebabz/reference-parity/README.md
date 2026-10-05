@@ -1,7 +1,8 @@
 # Colonel Kebabz — reference-parity document
 
 Template: `docs/reference/client-reference-parity-template.md`. Started 2026-10-05.
-Status: **module map done; depth documents: 6 of 7 written** (POS/tables/kitchen; menu/recipes; inventory; procurement; staff; finance; see §3).
+Status: **module map done; the 7 core depth documents written 2026-10-05** (see §3). Remaining module groups
+(campaigns, franchise, audits/checklists, tasks/SOPs, documents, analytics) have no depth document yet.
 
 ## 1. Client and requirement sources
 
@@ -45,8 +46,8 @@ walk-through of this tenant. Depth document column links the per-module file onc
 | 14–16 | Recipe, recipe BOM, food cost | `mrp` BOM, product cost | BOM | `recipe` `/recipes` (menu engineering analytics) | [menu-recipes.md](menu-recipes.md) |
 | 17–20, 27 | Inventory, stock ledger, stock count, wastage, transfers | `stock` (locations, moves, inventory adjustments, scrap, internal transfers) | Stock Entry, Stock Reconciliation, Stock Ledger report | `inventory` capability: **nav link `/inventory` has no page (404)**; 0 of 8 actions on a screen | [inventory.md](inventory.md) |
 | 21–26 | Procurement: purchase requests, POs, GRN, vendors, price history | `purchase`, `stock` receipts, vendor pricelists | Material Request, Purchase Order, Purchase Receipt, Supplier | Not built for this client (trading capability exists for Shree Ganesh) | [procurement.md](procurement.md) |
-| 28–30 | Customer CRM, 360, segmentation | `crm`, `contacts`, POS customer | Customer, CRM | `crm` `/guests` | — |
-| 31–32 | Loyalty, offers, coupons | `loyalty`, `pos_loyalty` | Loyalty Program, Coupon Code, Pricing Rule | `loyalty`, `coupon` `/coupons` | — |
+| 28–30 | Customer CRM, 360, segmentation | `crm`, `contacts`, POS customer | Customer, CRM | `crm` `/guests` | [crm-loyalty.md](crm-loyalty.md) |
+| 31–32 | Loyalty, offers, coupons | `loyalty`, `pos_loyalty` | Loyalty Program, Coupon Code, Pricing Rule | `loyalty`, `coupon` `/coupons` | [crm-loyalty.md](crm-loyalty.md) |
 | 33–35 | Campaigns, marketing calendar, reviews | `mass_mailing`, `marketing_card`, `survey` | — | Not built | — |
 | 36–37 | Complaints, service recovery | Helpdesk (Enterprise) | Issue (`support`) | `complaint` `/complaints` | — |
 | 38–43 | Staff, attendance, shifts, leave, payroll inputs, performance | `hr`, `hr_attendance`, `hr_holidays`, `pos_hr`; planning/payroll Enterprise | Employee, Attendance, Shift, Leave | `attendance` `/attendance`; `hr` `/hr` built 2026-10-04 (unverified) | [staff.md](staff.md) |
@@ -70,3 +71,31 @@ Proposed, by daily use at an outlet: (1) POS, order channels, tables and kitchen
 (3) inventory, wastage and transfers; (4) procurement; (5) staff, attendance and leave; (6) cash,
 expenses and outlet P&L; (7) CRM, loyalty and coupons; then the rest. Each depth file follows
 template sections 4–8 and is linked in §3 when written.
+
+## 5. Cross-module summary (from the 7 depth documents)
+
+**Build order, by dependency and daily use:**
+1. `/inventory` page (nav link is a 404; all 8 inventory actions unreachable) — `inventory.md`.
+2. Order channel on every order (takeaway, delivery, Zomato/Swiggy) plus line notes and modifiers —
+   `pos-restaurant.md`. Menu, finance and reconciliation depend on it.
+3. Buttons for actions whose backend already exists: void line, edit menu item, menu variants —
+   `pos-restaurant.md`, `menu-recipes.md`.
+4. Stock count and transfers (prerequisite for the §16 food cost variance report) — `inventory.md`.
+5. Procurement on inventory items, after the implementation decision below — `procurement.md`.
+6. Finance: payment methods aligned, cash in/out, platform settlement upload, HQ finance dashboard —
+   `finance.md`.
+7. Staff: verify `/hr`, employee detail, roster on `scheduling`, lateness and overtime — `staff.md`.
+8. Guests and offers: edit/merge, saved segments, one-tap redeem, offer conditions — `crm-loyalty.md`.
+
+**Decisions needed from the product owner before the affected build starts:**
+- Procurement: generalise trading's purchase lines to inventory items (ADR-018 direction, recommended) or
+  add purchasing to `inventory` (`procurement.md` §7). This is an implementation decision required.
+- Attendance kiosk PIN on a shared tablet touches identity (ADR-020) — design review first (`staff.md`).
+- Salary storage and its permission (labour cost in P&L depends on it) — `staff.md`, `finance.md`.
+- Thresholds: wastage approval, PO approval, expense approval; refund approval vs manager permission.
+- Whether HQ price changes need approval; whether offers stack with points.
+- Every Include / Defer row in the depth documents is proposed by engineering and awaits confirmation.
+
+**Not covered by the reference systems' source:** ERPNext has no restaurant module and its HR moved to
+the separate HRMS app; Odoo shift planning, payroll, helpdesk, approvals and documents are Enterprise.
+Those rows are designed from the PRD.
