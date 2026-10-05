@@ -1,7 +1,7 @@
 # Colonel Kebabz — reference-parity document
 
 Template: `docs/reference/client-reference-parity-template.md`. Started 2026-10-05.
-Status: **module map done; per-module depth documents in progress** (see §3 for which exist).
+Status: **module map done; depth documents: 1 of 7 written** (POS, channels, tables, kitchen; see §3).
 
 ## 1. Client and requirement sources
 
@@ -38,9 +38,9 @@ walk-through of this tenant. Depth document column links the per-module file onc
 |---|---|---|---|---|---|
 | 5, 6, 86–90 | HQ and outlet dashboards, daily summary, owner dashboard, health score, red flags | `point_of_sale` dashboards, `spreadsheet_dashboard` | Workspace, `report_center` | `/overview` platform dashboard; restaurant-specific KPIs partial | — |
 | 7 | Outlet management | `pos.config` per shop, `stock.warehouse` | POS Profile, Warehouse | `location` capability, `/locations` | — |
-| 8–9 | POS and order channels (dine-in, takeaway, delivery, aggregators) | `point_of_sale`, `pos_restaurant`, `pos_self_order`, `pos_online_payment` | POS Invoice, POS Profile | `dinein` `/counter`, `/floor`; 14 of 30 dine-in actions not reachable from a screen | — |
-| 10 | Table management | `pos_restaurant` floors and tables | — | `/floor`, `/floor/setup` | — |
-| 11 | Kitchen display | `pos_restaurant` kitchen printers / order preparation display | — | `/kitchen` | — |
+| 8–9 | POS and order channels (dine-in, takeaway, delivery, aggregators) | `point_of_sale`, `pos_restaurant`, `pos_self_order`, `pos_online_payment` | POS Invoice, POS Profile | `dinein` `/counter`, `/floor`; 14 of 30 dine-in actions not reachable from a screen | [pos-restaurant.md](pos-restaurant.md) |
+| 10 | Table management | `pos_restaurant` floors and tables | — | `/floor`, `/floor/setup` | [pos-restaurant.md](pos-restaurant.md) |
+| 11 | Kitchen display | `pos_restaurant` kitchen printers / order preparation display | — | `/kitchen` | [pos-restaurant.md](pos-restaurant.md) |
 | 12–13 | Menu and menu versioning | `product` + `pos` categories, combos, attributes | Item, Item Variant | `/menu`; edit item and variants not reachable | — |
 | 14–16 | Recipe, recipe BOM, food cost | `mrp` BOM, product cost | BOM | `recipe` `/recipes` (menu engineering analytics) | — |
 | 17–20, 27 | Inventory, stock ledger, stock count, wastage, transfers | `stock` (locations, moves, inventory adjustments, scrap, internal transfers) | Stock Entry, Stock Reconciliation, Stock Ledger report | `inventory` capability: **nav link `/inventory` has no page (404)**; 0 of 8 actions on a screen | — |
