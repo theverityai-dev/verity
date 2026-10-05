@@ -31,11 +31,14 @@ import type { PersonRow } from "@/server/platform/administration";
 export function PeopleAdmin({
   tenantId,
   people,
+  operatorAccounts = 0,
   organizations,
   roles,
 }: {
   tenantId: string;
   people: PersonRow[];
+  /** Verity operator accounts with access to this client; not listed as staff. */
+  operatorAccounts?: number;
   organizations: Array<{ id: string; name: string }>;
   roles: Array<{ id: string; name: string }>;
 }) {
@@ -165,6 +168,13 @@ export function PeopleAdmin({
             </form>
           </Panel>
         </div>
+      )}
+
+      {operatorAccounts > 0 && (
+        <p className="mb-4 mt-0 text-[13px] text-text-secondary">
+          {operatorAccounts} Verity operator {operatorAccounts === 1 ? "account has" : "accounts have"}{" "}
+          support access to this client. They are not listed here, so they cannot be suspended by accident.
+        </p>
       )}
 
       <Panel title={`${visible.length} of ${people.length}`} flush>

@@ -17,6 +17,22 @@ import { runClientCommand } from "@/server/actions/hq";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { GrantableGroup, RoleRow } from "@/server/platform/administration";
 import { actionExecuteLabel } from "@/server/platform/label";
+import { entityLabelOf } from "@/components/ui/business/vocabulary";
+
+/** Permission verbs and scopes in the words an operator would use. */
+const VERB_LABEL: Record<string, string> = {
+  Read: "View",
+  Create: "Create",
+  Edit: "Change",
+  Delete: "Remove",
+  ActionExecute: "Run",
+  Approve: "Approve",
+};
+const SCOPE_LABEL: Record<string, string> = {
+  Tenant: "whole client",
+  Organization: "own organization",
+  Location: "own location",
+};
 
 const VERBS = ["Read", "Create", "Edit", "Delete", "ActionExecute"] as const;
 const SCOPES = ["Tenant", "Organization", "Location"] as const;
@@ -219,8 +235,8 @@ export function RolesAdmin({
                         <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px] text-text-secondary">
                           {inheritedOnly.map((grant) => (
                             <li key={`${grant.verb}:${grant.entity}`}>
-                              {grant.verb} {grant.entity}{" "}
-                              <span className="text-text-tertiary">@ {grant.scope}</span>
+                              {VERB_LABEL[grant.verb] ?? grant.verb} {entityLabelOf(grant.entity)}{" "}
+                              <span className="text-text-tertiary">· {SCOPE_LABEL[grant.scope] ?? grant.scope}</span>
                             </li>
                           ))}
                         </ul>

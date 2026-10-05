@@ -9,7 +9,7 @@ import type { ActionFailure } from "@/server/platform/action-error";
 import type { ModuleRow } from "@/server/platform/administration";
 
 const columns: Column[] = [
-  { key: "name", header: "Module", sortable: true, subKey: "capabilityId" },
+  { key: "name", header: "Module", sortable: true },
   { key: "version", header: "Version", sortable: true },
   { key: "dependsOn", header: "Depends on", sortable: false },
   { key: "status", header: "Status", sortable: true },
@@ -70,7 +70,12 @@ export function ModulesAdmin({ tenantId, modules }: { tenantId: string; modules:
               (module.pinnedVersion && module.pinnedVersion !== module.version
                 ? ` (pinned ${module.pinnedVersion})`
                 : ""),
-            dependsOn: module.dependencies.length === 0 ? "—" : module.dependencies.join(", "),
+            // Names, not capability ids: "Scheduling still needs this" is what an
+            // operator can act on.
+            dependsOn:
+              module.dependencies.length === 0
+                ? "—"
+                : module.dependencies.map((id) => modules.find((m) => m.capabilityId === id)?.name ?? id).join(", "),
             status: module.status,
             active: module.status === "Active",
           }))}

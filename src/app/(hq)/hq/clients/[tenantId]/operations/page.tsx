@@ -1,8 +1,35 @@
 import { ErrorState, Panel, Stat, StatRow, EmptyState } from "@/components/ui/primitives";
 import { runClientQuery } from "@/server/actions/hq";
 import type { OperationsSnapshot } from "@/server/platform/administration";
+import { probeScheduler, probeStorage } from "@/server/platform/readiness";
+import { entityLabelOf, fieldLabelOf } from "@/components/ui/business/vocabulary";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Whether a platform service is working right now. These are installation-wide
+ * (one storage bucket, one scheduler for every client), so each is the same on
+ * every client's tab; it is shown here because "why is nothing arriving for this
+ * client" starts with "is the service up". The probes are the ones `/api/ready`
+ * already runs, so this page and the health endpoint cannot disagree.
+ */
+async function serviceStatuses(): Promise<Array<[name: string, purpose: string, status: string, ok: boolean]>> {
+  type Result = { text: string; ok: boolean };
+  const storage: Result = await probeStorage().then(
+    (result): Result => (result.status === "ok" ? { text: "Connected", ok: true } : { text: "Not set up", ok: false }),
+    (): Result => ({ text: "Not reachable", ok: false }),
+  );
+  const jobs: Result = await probeScheduler().then(
+    (): Result => ({ text: "Running", ok: true }),
+    (): Result => ({ text: "Not running recently", ok: false }),
+  );
+  return [
+    ["File storage", "Photos and documents attached to records", storage.text, storage.ok],
+    ["Scheduled jobs", "Late-order alerts, reminders and daily sweeps", jobs.text, jobs.ok],
+    // No email, push or webhook transport is connected: notifications are in-app only.
+    ["Email, push and webhook alerts", "Sending alerts outside the app", "Not connected. Alerts appear in the app only.", true],
+  ];
+}
 
 /**
  * What is happening and what is failing inside one client.
@@ -39,6 +66,7 @@ export default async function ClientOperationsPage({
   }
 
   const data = snapshot.data;
+  const services = await serviceStatuses();
 
   return (
     <>
@@ -50,26 +78,20 @@ export default async function ClientOperationsPage({
       </StatRow>
 
       <div className="mb-6">
-        <Panel title="Provider bindings">
-          <ul className="m-0 flex list-none flex-col gap-2 p-0 text-[13px]">
-            {[
-              ["Storage driver", "Evidence, file upload", "Not bound"],
-              ["Job runner", "SLA sweeps, notification dispatch", "Not bound"],
-              ["Notification transport", "Reminders and alerts", "Not bound"],
-            ].map(([name, purpose, status]) => (
-              <li key={name} className="flex flex-wrap items-baseline justify-between gap-2">
+        <Panel title="Platform services">
+          <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px]">
+            {services.map(([name, purpose, status, ok]) => (
+              <li key={name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <span className="text-text">
                   {name}
-                  <span className="ml-2 text-text-tertiary">{purpose}</span>
+                  <span className="block text-[13px] text-text-secondary">{purpose}</span>
                 </span>
-                <span className="text-text-secondary">{status}</span>
+                <span className={ok ? "text-success" : "text-danger"}>{status}</span>
               </li>
             ))}
           </ul>
-          <p className="mb-0 mt-3 text-[12px] text-text-tertiary">
-            Each contract is complete and tested; none is wired to a vendor. A provider chosen
-            without a requirement is a guess encoded into the foundation, so binding waits for the
-            first requirement that names one.
+          <p className="mb-0 mt-4 text-[13px] text-text-secondary">
+            These services are shared by every client. If one is down, it is down for all of them.
           </p>
         </Panel>
       </div>
@@ -86,8 +108,8 @@ export default async function ClientOperationsPage({
                   className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-2.5 text-[13px] last:border-b-0"
                 >
                   <span className="min-w-0 truncate text-text">
-                    {row.entityKey}
-                    <span className="ml-2 text-text-tertiary">{row.fieldChanged}</span>
+                    {entityLabelOf(row.entityKey)}
+                    <span className="ml-2 text-text-tertiary">{fieldLabelOf(row.fieldChanged)}</span>
                   </span>
                   <span className="tabular shrink-0 text-text-tertiary">
                     {new Date(row.occurredAt).toISOString().slice(0, 16).replace("T", " ")}

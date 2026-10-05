@@ -1,6 +1,7 @@
 import { ErrorState } from "@/components/ui/primitives";
 import { runClientQuery } from "@/server/actions/hq";
 import type { PersonRow } from "@/server/platform/administration";
+import { OPERATOR_ROLE_NAME } from "@/server/platform/operator";
 import { PeopleAdmin } from "./PeopleAdmin";
 
 export const dynamic = "force-dynamic";

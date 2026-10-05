@@ -8,7 +8,12 @@ import { probeS3Storage } from "@/server/storage/s3";
 export type ReadinessCheck = { status: "ok" | "skipped" | "error"; code?: string };
 
 const PROBE_TIMEOUT_MS = 3_000;
-const SCHEDULER_FRESH_MS = 3 * 60_000;
+// The frequent cadence runs from a GitHub Actions schedule on the Hobby plan
+// (`.github/workflows/scheduled-work.yml`): nominally every 5 minutes, but
+// GitHub delays scheduled runs under load. A 3-minute window flapped to
+// "stale" between healthy ticks; 15 minutes tolerates two missed ticks and
+// still catches a scheduler that has genuinely stopped.
+const SCHEDULER_FRESH_MS = 15 * 60_000;
 
 async function bounded<T>(label: string, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const controller = new AbortController();
