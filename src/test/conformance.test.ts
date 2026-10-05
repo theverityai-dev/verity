@@ -491,6 +491,7 @@ describeDb("conformance: database enforcement", () => {
       // match `guarded`'s own `.sort()`.
       expect(guarded).toEqual([
         "activity",
+        "bill_refund",
         "billing_invoice",
         "billing_meter_reading",
         "domain_event",

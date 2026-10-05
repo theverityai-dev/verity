@@ -167,15 +167,79 @@ export function BillView({ bill }: { bill: BillDetail }) {
               </ul>
             </div>
           )}
+
+          {bill.refunds.length > 0 && (
+            <div className="mt-4 border-t border-line pt-3">
+              <h3 className="mb-2">Refunded</h3>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[13px]">
+                {bill.refunds.map((refund, index) => (
+                  <li key={index} className="flex justify-between">
+                    <span className="text-text-secondary">
+                      {PAYMENT_METHOD_LABEL[refund.method] ?? refund.method}
+                      <span className="ml-2 text-text-tertiary">{refund.reason}</span>
+                    </span>
+                    <span className="tabular">− {rupees(refund.amountMinor)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         {/* ------------------------------- the till ----------------------------- */}
         <div className="flex flex-col gap-4 print:hidden">
           <Panel title={settled ? "Settled" : `Outstanding ${rupees(bill.outstandingMinor)}`}>
             {settled ? (
-              <p className="m-0 text-[13px] text-text-secondary">
-                Paid in full. The table has been sent for cleaning.
-              </p>
+              <div className="flex flex-col gap-4">
+                <p className="m-0 text-[13px] text-text-secondary">
+                  Paid in full. The table has been sent for cleaning.
+                </p>
+                {bill.refundableMinor > 0 && (
+                  <form
+                    className="flex flex-col gap-3 border-t border-line pt-3"
+                    action={(formData) =>
+                      run("verity.dinein.refund_bill", {
+                        billId: bill.id,
+                        method: String(formData.get("refundMethod") ?? "cash"),
+                        amountMinor: Math.round(Number(formData.get("refundAmount") ?? 0) * 100),
+                        reason: String(formData.get("refundReason") ?? ""),
+                      })
+                    }
+                  >
+                    <h3 className="m-0">Refund</h3>
+                    <p className="m-0 text-[13px] text-text-secondary">
+                      Up to {rupees(bill.refundableMinor)} can still be returned. The bill stays as it was; the refund is recorded beside it.
+                    </p>
+                    <Field label="Amount (₹)" htmlFor="refundAmount" required>
+                      <Input
+                        id="refundAmount"
+                        name="refundAmount"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={(bill.refundableMinor / 100).toFixed(2)}
+                        defaultValue={(bill.refundableMinor / 100).toFixed(2)}
+                        required
+                      />
+                    </Field>
+                    <Field label="Returned by" htmlFor="refundMethod">
+                      <Select id="refundMethod" name="refundMethod" defaultValue="cash">
+                        {Object.entries(PAYMENT_METHOD_LABEL)
+                          .filter(([value]) => value !== "delivery_platform")
+                          .map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                      </Select>
+                    </Field>
+                    <Field label="Reason" htmlFor="refundReason" required hint="Recorded with your name. Say what went wrong.">
+                      <Input id="refundReason" name="refundReason" required minLength={3} maxLength={300} placeholder="Cold food, guest complaint" />
+                    </Field>
+                    <CommandButton commands={"verity.dinein.refund_bill"} type="submit" variant="secondary" disabled={pending}>
+                      {pending ? "Refunding…" : "Refund"}
+                    </CommandButton>
+                  </form>
+                )}
+              </div>
             ) : (
               <form
                 className="flex flex-col gap-3"

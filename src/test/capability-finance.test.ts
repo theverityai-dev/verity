@@ -34,6 +34,7 @@ import {
   moveTable,
   placeOrder,
   recordPayment,
+  refundBill,
   registerDineinCapability,
   settleBill,
 } from "@/server/capabilities/dinein";
@@ -194,6 +195,22 @@ describeDb("capability: Finance", () => {
     await executeCommand(manager, recordPayment, { billId: bill.id, method: "cash", amountMinor: bill.totalMinor });
     await executeCommand(manager, settleBill, { billId: bill.id });
 
+    // A settled bill is closed; a refund sits beside it. It cannot exceed what
+    // the bill took in, needs a reason, and never edits the bill.
+    await expect(
+      executeCommand(manager, refundBill, { billId: bill.id, amountMinor: bill.totalMinor + 1, method: "cash", reason: "Cold food" }),
+    ).rejects.toThrow(/still refundable/);
+    await expect(
+      executeCommand(manager, refundBill, { billId: bill.id, amountMinor: 1_000, method: "cash", reason: " " }),
+    ).rejects.toThrow();
+    const refund = await executeCommand(manager, refundBill, {
+      billId: bill.id, amountMinor: 1_000, method: "cash", reason: "Cold food, guest complaint",
+    });
+    expect(refund.refundableMinor).toBe(bill.totalMinor - 1_000);
+    await expect(
+      executeCommand(manager, refundBill, { billId: bill.id, amountMinor: bill.totalMinor, method: "cash", reason: "Again" }),
+    ).rejects.toThrow(/still refundable/);
+
     // One approved cash expense.
     const expense = await executeCommand(manager, recordExpense, {
       locationId,
@@ -209,7 +226,8 @@ describeDb("capability: Finance", () => {
 
     // Cash reconciliation: opening 10000, +cashSales(bill.totalMinor), -5000 expense,
     // no withdrawals. Actual is short by 100 paise -- must carry a note.
-    const expected = 10_000 + bill.totalMinor - 5_000;
+    // The Rs 10 cash refund left the drawer, so it is not there to count.
+    const expected = 10_000 + bill.totalMinor - 1_000 - 5_000;
     await expect(
       executeCommand(manager, recordCashReconciliation, {
         locationId,
@@ -230,7 +248,8 @@ describeDb("capability: Finance", () => {
     expect(reconciled.varianceMinor).toBe(-100);
 
     const pnl = await executeQuery(manager, getOutletPnL, { locationId, fromDate: today, toDate: today });
-    expect(pnl.revenueMinor).toBe(bill.totalMinor);
+    expect(pnl.revenueMinor).toBe(bill.totalMinor - 1_000);
+    expect(pnl.refundsMinor).toBe(1_000);
     expect(pnl.totalExpensesMinor).toBe(5_000);
     expect(pnl.cogsIsApproximate).toBe(true);
     expect(pnl.operatingContributionMinor).toBe(pnl.grossProfitMinor - 5_000);

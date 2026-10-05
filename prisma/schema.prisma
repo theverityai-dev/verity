@@ -154,6 +154,7 @@ model Tenant {
   inventoryStockMovements InventoryStockMovement[]
   inventoryWastageRecords InventoryWastageRecord[]
   inventoryVendors             InventoryVendor[]
+  billRefunds                  BillRefund[]
   inventoryPurchaseOrders      InventoryPurchaseOrder[]
   inventoryPurchaseOrderLines  InventoryPurchaseOrderLine[]
   inventoryGoodsReceipts       InventoryGoodsReceipt[]
@@ -2504,6 +2505,7 @@ model Bill {
   order    DiningOrder @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   location Location    @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "bill_location_fkey")
   payments Payment[]
+  refunds  BillRefund[]
 
   // One bill per order in v1. The pair is unique as well as the id, because the
   // relation is defined on the tenant-scoped composite key and Prisma needs the
@@ -2537,6 +2539,29 @@ model Payment {
   @@unique([tenantId, id], name: "payment_tenant_scoped_id")
   @@index([tenantId, billId])
   @@map("payment")
+}
+
+/// Money returned to a guest after a bill was settled. A refund is a fact, so it
+/// is append-only: a settled bill and its payments are never edited, and the
+/// refund sits beside them (INV-002). Reports and the cash drawer subtract it.
+model BillRefund {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  billId           String   @map("bill_id") @db.Uuid
+  amountMinor      Int      @map("amount_minor")
+  /// How the money went back. Never `delivery_platform`: the platform refunds
+  /// its own customers, and recording one here would invent drawer movement.
+  method           String
+  reason           String
+  refundedByUserId String   @map("refunded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bill   Bill   @relation(fields: [tenantId, billId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, billId])
+  @@index([tenantId, createdAt])
+  @@map("bill_refund")
 }
 
 // ===========================================================================

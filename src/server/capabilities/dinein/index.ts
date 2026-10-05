@@ -1574,7 +1574,84 @@ export type BillDetail = {
   outstandingMinor: number;
   lines: Array<{ itemName: string; variantName: string | null; qty: number; lineTotalMinor: number }>;
   payments: Array<{ method: string; amountMinor: number; reference: string | null }>;
+  refunds: Array<{ method: string; amountMinor: number; reason: string; at: Date }>;
+  refundableMinor: number;
 };
+
+/**
+ * Money methods a refund can go back by. No `delivery_platform`: the platform
+ * refunds its own customer, and a row here would invent drawer movement.
+ */
+export const REFUND_METHODS = ["cash", "card", "upi", "wallet", "bank_transfer", "other"] as const;
+
+/**
+ * Returns money for a settled bill (PRD §36–37, pos-restaurant.md §6).
+ *
+ * The bill and its payments stay exactly as they were (INV-002); the refund is
+ * a new append-only row beside them. The cap is what the bill actually took in
+ * less what was already refunded, so it cannot be refunded twice over. It needs
+ * the manager-grade verb (`ActionExecute` on payment) and a reason, decided
+ * 2026-10-06: a manager permission, not an approval workflow.
+ */
+export const refundBill: CommandDefinition<
+  { billId: string; amountMinor: number; method: (typeof REFUND_METHODS)[number]; reason: string },
+  { refundId: string; refundableMinor: number }
+> = {
+  key: "verity.dinein.refund_bill",
+  entity: ENTITY_PAYMENT,
+  verb: "ActionExecute",
+  input: z.object({
+    billId: z.string().uuid(),
+    amountMinor: z.number().int().min(1),
+    method: z.enum(REFUND_METHODS),
+    reason: z.string().trim().min(3).max(300),
+  }),
+  preconditions: async (ctx, input) => {
+    const bill = await ctx.tx.bill.findUnique({ where: { id: input.billId } });
+    if (!bill) throw new ValidationError("E_VALIDATION: bill not found");
+    await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_PAYMENT, "ActionExecute", bill.locationId);
+    if (bill.state !== "settled") {
+      throw new ValidationError("E_VALIDATION: only a settled bill can be refunded; an open bill can still be edited or cancelled");
+    }
+    const refundable = await refundableMinor(ctx.tx, input.billId);
+    if (input.amountMinor > refundable) {
+      throw new ValidationError(
+        `E_VALIDATION: that is more than the ${refundable} paise still refundable on this bill`,
+      );
+    }
+  },
+  handler: async (ctx, input) => {
+    const refund = await ctx.tx.billRefund.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        billId: input.billId,
+        amountMinor: input.amountMinor,
+        method: input.method,
+        reason: input.reason,
+        refundedByUserId: ctx.actor.userId,
+      },
+    });
+    return {
+      result: { refundId: refund.id, refundableMinor: await refundableMinor(ctx.tx, input.billId) },
+      events: [
+        {
+          name: "verity.dinein.bill_refunded",
+          entityId: input.billId,
+          payload: { amountMinor: input.amountMinor, method: input.method },
+        },
+      ],
+    };
+  },
+};
+
+/** What a bill took in, less what has already gone back. */
+async function refundableMinor(tx: import("@/server/platform/tenancy").TenantScopedClient, billId: string): Promise<number> {
+  const [paid, refunded] = await Promise.all([
+    tx.payment.aggregate({ where: { billId }, _sum: { amountMinor: true } }),
+    tx.billRefund.aggregate({ where: { billId }, _sum: { amountMinor: true } }),
+  ]);
+  return (paid._sum.amountMinor ?? 0) - (refunded._sum.amountMinor ?? 0);
+}
 
 export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | null> = {
   key: "verity.dinein.get_bill_detail",
@@ -1585,6 +1662,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
       where: { id: input.billId },
       include: {
         payments: { orderBy: { createdAt: "asc" } },
+        refunds: { orderBy: { createdAt: "asc" } },
         order: {
           include: {
             table: { select: { label: true } },
@@ -1625,6 +1703,8 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
         amountMinor: payment.amountMinor,
         reference: payment.reference,
       })),
+      refunds: bill.refunds.map((r) => ({ method: r.method, amountMinor: r.amountMinor, reason: r.reason, at: r.createdAt })),
+      refundableMinor: paidMinor - bill.refunds.reduce((sum, r) => sum + r.amountMinor, 0),
     };
   },
 };
@@ -1912,6 +1992,7 @@ export function registerDineinCapability(): void {
   registerCommand(applyBillDiscount);
   registerCommand(recordPayment);
   registerCommand(settleBill);
+  registerCommand(refundBill);
 
   registerQuery(listMenu);
   registerQuery(listFloor);

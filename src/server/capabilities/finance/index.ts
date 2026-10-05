@@ -188,11 +188,12 @@ export const recordCashReconciliation: CommandDefinition<
   }),
   handler: async (ctx, input) => {
     const cashWithdrawnMinor = input.cashWithdrawnMinor ?? 0;
-    const [cashSales, cashExpenses] = await Promise.all([
+    const [cashSales, cashRefunds, cashExpenses] = await Promise.all([
       cashSalesForDay(ctx, input.locationId, input.date),
+      cashRefundsForDay(ctx, input.locationId, input.date),
       cashExpensesForDay(ctx, input.locationId, input.date),
     ]);
-    const expectedCashMinor = input.openingCashMinor + cashSales - cashExpenses - cashWithdrawnMinor;
+    const expectedCashMinor = input.openingCashMinor + cashSales - cashRefunds - cashExpenses - cashWithdrawnMinor;
     const varianceMinor = input.actualCashMinor - expectedCashMinor;
     if (varianceMinor !== 0 && !input.varianceNote) {
       throw new ValidationError("E_VALIDATION: a variance requires an explanation (varianceNote)");
@@ -245,6 +246,23 @@ async function cashSalesForDay(
   return payments.reduce((sum, p) => sum + p.amountMinor, 0);
 }
 
+/** Cash handed back to guests that day: it left the drawer, so it is not there to count. */
+async function cashRefundsForDay(
+  ctx: { tx: import("@/server/platform/tenancy").TenantScopedClient },
+  locationId: string,
+  date: string,
+): Promise<number> {
+  const rows = await ctx.tx.billRefund.findMany({
+    where: {
+      method: "cash",
+      createdAt: { gte: new Date(`${date}T00:00:00.000Z`), lte: new Date(`${date}T23:59:59.999Z`) },
+      bill: { locationId },
+    },
+    select: { amountMinor: true },
+  });
+  return rows.reduce((sum, r) => sum + r.amountMinor, 0);
+}
+
 async function cashExpensesForDay(
   ctx: { tx: import("@/server/platform/tenancy").TenantScopedClient },
   locationId: string,
@@ -261,6 +279,7 @@ export const getOutletPnL: QueryDefinition<
   { locationId: string; fromDate: string; toDate: string },
   {
     revenueMinor: number;
+    refundsMinor: number;
     cogsMinor: number;
     cogsIsApproximate: true;
     grossProfitMinor: number;
@@ -282,7 +301,16 @@ export const getOutletPnL: QueryDefinition<
       },
       select: { totalMinor: true },
     });
-    const revenueMinor = bills.reduce((sum, b) => sum + b.totalMinor, 0);
+    const refunds = await ctx.tx.billRefund.findMany({
+      where: {
+        bill: { locationId: input.locationId },
+        createdAt: { gte: new Date(input.fromDate), lte: new Date(`${input.toDate}T23:59:59.999Z`) },
+      },
+      select: { amountMinor: true },
+    });
+    const refundsMinor = refunds.reduce((sum, r) => sum + r.amountMinor, 0);
+    // Net of refunds issued in the window, whichever day the bill was settled.
+    const revenueMinor = bills.reduce((sum, b) => sum + b.totalMinor, 0) - refundsMinor;
 
     const consumption = await ctx.tx.inventoryStockMovement.findMany({
       where: {
@@ -318,6 +346,7 @@ export const getOutletPnL: QueryDefinition<
 
     return {
       revenueMinor,
+      refundsMinor,
       cogsMinor,
       cogsIsApproximate: true,
       grossProfitMinor,

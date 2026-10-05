@@ -131,7 +131,7 @@ Evidence: `verity:src/server/capabilities/dinein/index.ts`, pages under `verity:
 | Generate bill, discount with reason, print | `generate_bill`, `apply_bill_discount` (reason required), `/counter/[billId]` `BillView.tsx` prints | Built |
 | Split bill | none | Missing |
 | Payment methods, partial payments | `record_payment` cash, card, UPI, wallet, bank transfer, delivery platform, other; several per bill; `settle_bill` | Built (no tips by design) |
-| Refund / return after settlement | none | Missing |
+| Refund / return after settlement | `refund_bill` (manager-grade `ActionExecute` on payment, reason required, append-only `bill_refund`); form on `/counter/[billId]`; drawer and outlet P&L subtract it | Built 2026-10-06 (unverified in browser); refund of a single line, loyalty and coupon reversal not built |
 | Order types: takeaway, phone, delivery, QR, aggregator platform | `channel` on every order (9 types), platform and platform order number; New order on `/counter`; open orders without a table listed there (migration `20261005000000_dinein_order_channel`, 2026-10-05) | Built (tested locally; not yet deployed) |
 | Register session open/close with cash count | `/cash-reconciliation` (finance capability), not tied to orders | Partial |
 | Order history screen (search past orders, reprint) | `get_order_detail`, `list_open_bills` queries; no history page | Partial |
