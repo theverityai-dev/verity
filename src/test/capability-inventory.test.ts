@@ -20,6 +20,7 @@ import {
   registerInventoryCapability,
   stockLedger,
   stockOnHand,
+  transferStock,
 } from "@/server/capabilities/inventory";
 import { LOCATION_CAPABILITY, registerLocationCapability } from "@/server/capabilities/location";
 
@@ -203,4 +204,31 @@ describeDb("capability: Inventory stock count", () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
     expect(await onHand(oil, outletA)).toBe(28);
   });
+
+  it("sends stock between outlets: both ledgers move, the total does not", async () => {
+    const before = { a: await onHand(chicken, outletA), b: await onHand(chicken, outletB) };
+    const result = await executeCommand(manager, transferStock, {
+      itemId: chicken, fromLocationId: outletA, toLocationId: outletB, qty: 7, note: "Weekend rush",
+    });
+    expect(result).toEqual({ fromQty: before.a - 7, toQty: before.b + 7 });
+    expect(await onHand(chicken, outletA)).toBe(before.a - 7);
+    expect(await onHand(chicken, outletB)).toBe(before.b + 7);
+    const ledger = await executeQuery(manager, stockLedger, { itemId: chicken });
+    const transfers = ledger.filter((m) => m.kind === "Transfer");
+    expect(transfers.map((m) => m.qty).sort((x, y) => x - y)).toEqual([-7, 7]);
+    expect(transfers.some((m) => m.reference === "Sent to Saket (Weekend rush)")).toBe(true);
+  });
+
+  it("refuses a transfer to the same outlet, beyond what is there, or by a reader", async () => {
+    await expect(
+      executeCommand(manager, transferStock, { itemId: chicken, fromLocationId: outletA, toLocationId: outletA, qty: 1 }),
+    ).rejects.toThrow(/different outlet/);
+    await expect(
+      executeCommand(manager, transferStock, { itemId: chicken, fromLocationId: outletB, toLocationId: outletA, qty: 10_000 }),
+    ).rejects.toThrow(/only/);
+    await expect(
+      executeCommand(reader, transferStock, { itemId: chicken, fromLocationId: outletA, toLocationId: outletB, qty: 1 }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
 });

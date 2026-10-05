@@ -226,6 +226,81 @@ export const recordStockMovement: CommandDefinition<
   },
 };
 
+/* ================================== transfer ================================== */
+
+/**
+ * Moves stock from one outlet to another in one transaction (PRD §19,
+ * inventory.md). Two Transfer movements, out of the source and into the
+ * destination, so each outlet's ledger shows it and the total across outlets is
+ * unchanged. The moving-average cost is shared by all outlets, so it does not
+ * move. Refused if the source does not hold that much.
+ */
+export const transferStock: CommandDefinition<
+  { itemId: string; fromLocationId: string; toLocationId: string; qty: number; note?: string },
+  { fromQty: number; toQty: number }
+> = {
+  key: "verity.inventory.transfer_stock",
+  entity: ENTITY_INVENTORY_STOCK,
+  verb: "Create",
+  input: z.object({
+    itemId: z.string().uuid(),
+    fromLocationId: z.string().uuid(),
+    toLocationId: z.string().uuid(),
+    qty: z.number().int().min(1),
+    note: z.string().trim().max(200).optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    if (input.fromLocationId === input.toLocationId) {
+      throw new ValidationError("E_VALIDATION: choose a different outlet to send the stock to");
+    }
+    const item = await ctx.tx.inventoryItem.findUnique({ where: { id: input.itemId } });
+    if (!item) throw new ValidationError("E_VALIDATION: item not found in this tenant");
+    if (!item.active) throw new ValidationError("E_VALIDATION: item is deactivated");
+    const outlets = await ctx.tx.location.findMany({
+      where: { id: { in: [input.fromLocationId, input.toLocationId] } },
+      select: { id: true },
+    });
+    if (outlets.length !== 2) throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+    const balance = await ctx.tx.inventoryStockBalance.findUnique({
+      where: { tenantId_itemId_locationId: { tenantId: ctx.actor.tenantId, itemId: input.itemId, locationId: input.fromLocationId } },
+    });
+    if ((balance?.qty ?? 0) < input.qty) {
+      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} ${item.unitLabel} is at the sending outlet`);
+    }
+  },
+  handler: async (ctx, input) => {
+    const [from, to] = await Promise.all([
+      ctx.tx.location.findUniqueOrThrow({ where: { id: input.fromLocationId }, select: { name: true } }),
+      ctx.tx.location.findUniqueOrThrow({ where: { id: input.toLocationId }, select: { name: true } }),
+    ]);
+    const suffix = input.note ? ` (${input.note})` : "";
+    const out = await applyMovement(ctx.tx, ctx.actor, {
+      itemId: input.itemId,
+      locationId: input.fromLocationId,
+      kind: "Transfer",
+      qty: -input.qty,
+      reference: `Sent to ${to.name}${suffix}`,
+    });
+    const into = await applyMovement(ctx.tx, ctx.actor, {
+      itemId: input.itemId,
+      locationId: input.toLocationId,
+      kind: "Transfer",
+      qty: input.qty,
+      reference: `Received from ${from.name}${suffix}`,
+    });
+    return {
+      result: { fromQty: out.qty, toQty: into.qty },
+      events: [
+        {
+          name: "verity.inventory.stock_transferred",
+          entityId: input.itemId,
+          payload: { qty: input.qty, fromLocationId: input.fromLocationId, toLocationId: input.toLocationId },
+        },
+      ],
+    };
+  },
+};
+
 /* ================================ stock count ================================ */
 
 export type StockCountVariance = {
@@ -486,6 +561,7 @@ export function registerInventoryCapability(): void {
   registerCommand(setItemActive);
   registerCommand(recordStockMovement);
   registerCommand(applyStockCount);
+  registerCommand(transferStock);
   registerCommand(recordWastage);
   registerProcurement();
   registerQuery(listItems);

@@ -159,32 +159,104 @@ export const createPurchaseOrder: CommandDefinition<CreateOrderInput, { id: stri
     if (items.some((i) => !i.active)) throw new ValidationError("E_VALIDATION: a deactivated item cannot be ordered");
   },
   handler: async (ctx, input) => {
-    const last = await ctx.tx.inventoryPurchaseOrder.findFirst({ orderBy: { seq: "desc" }, select: { seq: true } });
-    const seq = (last?.seq ?? 0) + 1;
-    const totalPaise = input.lines.reduce((sum, l) => sum + l.qty * l.unitPricePaise, 0);
-    const order = await ctx.tx.inventoryPurchaseOrder.create({
-      data: {
-        tenantId: ctx.actor.tenantId,
-        seq,
-        vendorId: input.vendorId,
-        locationId: input.locationId,
-        expectedDate: input.expectedDate ? new Date(`${input.expectedDate}T00:00:00.000Z`) : null,
-        notes: input.notes ?? null,
-        totalPaise,
-        createdById: ctx.actor.userId,
-        lines: {
-          create: input.lines.map((l) => ({
-            tenantId: ctx.actor.tenantId,
-            itemId: l.itemId,
-            qty: l.qty,
-            unitPricePaise: l.unitPricePaise,
-          })),
-        },
+    const order = await insertOrder(ctx, input);
+    return {
+      result: order,
+      events: [{ name: "verity.inventory.purchase_order_created", entityId: order.id }],
+    };
+  },
+};
+
+/** Writes a draft order and its lines; numbering is per tenant. */
+async function insertOrder(
+  ctx: { tx: import("@/server/platform/tenancy").TenantScopedClient; actor: { tenantId: string; userId: string } },
+  input: CreateOrderInput,
+): Promise<{ id: string; number: string; totalPaise: number }> {
+  const last = await ctx.tx.inventoryPurchaseOrder.findFirst({ orderBy: { seq: "desc" }, select: { seq: true } });
+  const seq = (last?.seq ?? 0) + 1;
+  const totalPaise = input.lines.reduce((sum, l) => sum + l.qty * l.unitPricePaise, 0);
+  const order = await ctx.tx.inventoryPurchaseOrder.create({
+    data: {
+      tenantId: ctx.actor.tenantId,
+      seq,
+      vendorId: input.vendorId,
+      locationId: input.locationId,
+      expectedDate: input.expectedDate ? new Date(`${input.expectedDate}T00:00:00.000Z`) : null,
+      notes: input.notes ?? null,
+      totalPaise,
+      createdById: ctx.actor.userId,
+      lines: {
+        create: input.lines.map((l) => ({
+          tenantId: ctx.actor.tenantId,
+          itemId: l.itemId,
+          qty: l.qty,
+          unitPricePaise: l.unitPricePaise,
+        })),
       },
+    },
+  });
+  return { id: order.id, number: poNumber(seq), totalPaise };
+}
+
+/**
+ * Items at an outlet that are at or below their reorder level, with the
+ * quantity that brings each back to twice the reorder level (one cover of
+ * buffer, decided 2026-10-06) and its last known cost.
+ */
+async function lowStockLines(tx: import("@/server/platform/tenancy").TenantScopedClient, locationId: string) {
+  const items = await tx.inventoryItem.findMany({
+    where: { active: true, reorderLevel: { gt: 0 } },
+    select: { id: true, reorderLevel: true, avgUnitCostPaise: true },
+  });
+  const balances = await tx.inventoryStockBalance.findMany({
+    where: { locationId, itemId: { in: items.map((i) => i.id) } },
+    select: { itemId: true, qty: true },
+  });
+  const onHand = new Map(balances.map((b) => [b.itemId, b.qty]));
+  return items
+    .filter((i) => (onHand.get(i.id) ?? 0) <= i.reorderLevel)
+    .map((i) => ({
+      itemId: i.id,
+      qty: Math.max(i.reorderLevel * 2 - (onHand.get(i.id) ?? 0), 1),
+      unitPricePaise: i.avgUnitCostPaise ?? 0,
+    }));
+}
+
+/**
+ * PRD §21's first step: low stock becomes a draft order. The buyer reviews the
+ * quantities and prices on the draft before submitting, so nothing is bought
+ * without a person looking at it.
+ */
+export const draftOrderFromLowStock: CommandDefinition<
+  { vendorId: string; locationId: string },
+  { id: string; number: string; totalPaise: number; lines: number }
+> = {
+  key: "verity.inventory.draft_order_from_low_stock",
+  entity: ENTITY_INVENTORY_PURCHASE_ORDER,
+  verb: "Create",
+  input: z.object({ vendorId: z.string().uuid(), locationId: z.string().uuid() }),
+  preconditions: async (ctx, input) => {
+    const vendor = await ctx.tx.inventoryVendor.findUnique({ where: { id: input.vendorId } });
+    if (!vendor) throw new ValidationError("E_VALIDATION: vendor not found in this tenant");
+    if (!vendor.active) throw new ValidationError("E_VALIDATION: vendor is deactivated");
+    if (!(await ctx.tx.location.findUnique({ where: { id: input.locationId }, select: { id: true } }))) {
+      throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+    }
+    if ((await lowStockLines(ctx.tx, input.locationId)).length === 0) {
+      throw new ValidationError("E_VALIDATION: nothing at this outlet is at or below its reorder level");
+    }
+  },
+  handler: async (ctx, input) => {
+    const lines = await lowStockLines(ctx.tx, input.locationId);
+    const order = await insertOrder(ctx, {
+      vendorId: input.vendorId,
+      locationId: input.locationId,
+      notes: "Drafted from low stock. Check quantities and prices before submitting.",
+      lines,
     });
     return {
-      result: { id: order.id, number: poNumber(seq), totalPaise },
-      events: [{ name: "verity.inventory.purchase_order_created", entityId: order.id }],
+      result: { ...order, lines: lines.length },
+      events: [{ name: "verity.inventory.purchase_order_created", entityId: order.id, payload: { source: "low_stock" } }],
     };
   },
 };
@@ -500,10 +572,49 @@ export const getPurchaseOrder: QueryDefinition<{ orderId: string }, PurchaseOrde
   },
 };
 
+export type VendorPriceRow = {
+  vendorId: string;
+  itemName: string;
+  unit: string;
+  unitPricePaise: number;
+  receivedAt: Date;
+  orderNumber: string;
+};
+
+/**
+ * What each vendor actually charged, delivery by delivery (PRD §26). Read from
+ * goods receipts, so it is the invoice price, not the price that was ordered.
+ */
+export const vendorPriceHistory: QueryDefinition<{ vendorId?: string }, VendorPriceRow[]> = {
+  key: "verity.inventory.vendor_price_history",
+  entity: ENTITY_INVENTORY_VENDOR,
+  input: z.object({ vendorId: z.string().uuid().optional() }),
+  handler: async (ctx, input) => {
+    const rows = await ctx.tx.inventoryGoodsReceiptLine.findMany({
+      where: { acceptedQty: { gt: 0 }, ...(input.vendorId ? { receipt: { order: { vendorId: input.vendorId } } } : {}) },
+      include: {
+        receipt: { select: { receivedAt: true, order: { select: { vendorId: true, seq: true } } } },
+        orderLine: { select: { item: { select: { name: true, unitLabel: true } } } },
+      },
+      orderBy: { receipt: { receivedAt: "desc" } },
+      take: 500,
+    });
+    return rows.map((r) => ({
+      vendorId: r.receipt.order.vendorId,
+      itemName: r.orderLine.item.name,
+      unit: r.orderLine.item.unitLabel,
+      unitPricePaise: r.unitPricePaise,
+      receivedAt: r.receipt.receivedAt,
+      orderNumber: poNumber(r.receipt.order.seq),
+    }));
+  },
+};
+
 export function registerProcurement(): void {
   registerCommand(createVendor);
   registerCommand(setVendorActive);
   registerCommand(createPurchaseOrder);
+  registerCommand(draftOrderFromLowStock);
   registerCommand(submitPurchaseOrder);
   registerCommand(approvePurchaseOrder);
   registerCommand(cancelPurchaseOrder);
@@ -511,4 +622,5 @@ export function registerProcurement(): void {
   registerQuery(listVendors);
   registerQuery(listPurchaseOrders);
   registerQuery(getPurchaseOrder);
+  registerQuery(vendorPriceHistory);
 }

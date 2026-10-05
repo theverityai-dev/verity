@@ -1,13 +1,14 @@
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { INVENTORY_CAPABILITY, ENTITY_INVENTORY_PURCHASE_ORDER, ENTITY_INVENTORY_VENDOR } from "@/server/capabilities/inventory";
-import type { PurchaseOrderRow } from "@/server/capabilities/inventory";
+import type { PurchaseOrderRow, VendorPriceRow } from "@/server/capabilities/inventory";
 import { requireActor } from "@/server/platform/auth";
 import { hasPermission } from "@/server/platform/authorization";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
 import { ErrorState, PageHeader, Stat, StatRow } from "@/components/ui/primitives";
 import { paiseToRupeesText } from "./format";
-import { PurchaseOrdersDesk, type OrderListRow, type VendorRow } from "./PurchaseOrdersDesk";
+import { day } from "@/components/ui/business/format";
+import { PurchaseOrdersDesk, type OrderListRow, type PriceRow, type VendorRow } from "./PurchaseOrdersDesk";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,17 @@ async function PurchaseOrdersPage() {
     return <ErrorState title="Could not load purchase orders" message={orders.message} issues={orders.issues} retryable={orders.retryable} />;
   }
   const vendors = await runQuery<VendorQueryRow[]>("verity.inventory.list_vendors", {});
+  const priceHistory = await runQuery<VendorPriceRow[]>("verity.inventory.vendor_price_history", {});
+  const prices: PriceRow[] = priceHistory.ok
+    ? priceHistory.data.map((p) => ({
+        vendorId: p.vendorId,
+        itemName: p.itemName,
+        unit: p.unit,
+        price: paiseToRupeesText(p.unitPricePaise),
+        date: day(p.receivedAt),
+        orderNumber: p.orderNumber,
+      }))
+    : [];
 
   const [outlets, items, canCreate, canAddVendor] = await Promise.all([
     withTenant(actor.tenantId, (tx) => tx.location.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } })),
@@ -68,6 +80,7 @@ async function PurchaseOrdersPage() {
         items={items.map((i) => ({ id: i.id, name: i.name, unit: i.unitLabel, lastPricePaise: i.avgUnitCostPaise }))}
         canCreate={canCreate}
         canAddVendor={canAddVendor}
+        prices={prices}
       />
     </>
   );

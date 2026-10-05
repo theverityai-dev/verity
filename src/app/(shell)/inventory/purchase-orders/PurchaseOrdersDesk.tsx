@@ -31,6 +31,7 @@ export type VendorRow = {
 };
 type Outlet = { id: string; name: string };
 type Item = { id: string; name: string; unit: string; lastPricePaise: number | null };
+export type PriceRow = { vendorId: string; itemName: string; unit: string; price: string; date: string; orderNumber: string };
 
 const ROUTE = "/inventory/purchase-orders";
 
@@ -201,8 +202,19 @@ function OrdersTab({
   canCreate: boolean;
 }) {
   const [creating, setCreating] = useState(false);
+  const [drafting, setDrafting] = useState(false);
+  const router = useRouter();
+  const draft = useCommand(ROUTE);
+  const activeVendors = vendors.filter((v) => v.active);
   const rows = orders.map((o) => ({ ...o, label: STATUS_LABEL[o.status] ?? o.status, category: STATUS_CATEGORY[o.status] ?? "Draft" }));
-  const newButton = canCreate ? <Button variant="primary" onClick={() => setCreating(true)}>New purchase order</Button> : null;
+  const newButton = canCreate ? (
+    <>
+      {activeVendors.length > 0 && (
+        <Button variant="secondary" onClick={() => setDrafting(true)}>Draft from low stock</Button>
+      )}
+      <Button variant="primary" onClick={() => setCreating(true)}>New purchase order</Button>
+    </>
+  ) : null;
   return (
     <>
       <DataTable
@@ -222,14 +234,54 @@ function OrdersTab({
         toolbar={newButton}
       />
       {creating && <NewOrder vendors={vendors} outlets={outlets} items={items} onClose={() => setCreating(false)} />}
+      <FormModal
+        title="Draft from low stock"
+        description="Adds every item at or below its reorder level, enough to bring it back to twice that level, at its last cost. You review it before submitting."
+        open={drafting}
+        onClose={() => {
+          setDrafting(false);
+          draft.clear();
+        }}
+        submitLabel="Create draft"
+        pending={draft.pending}
+        failure={draft.failure}
+        failureTitle="Could not draft the order"
+        onSubmit={(form) =>
+          draft.run<{ id: string }>(
+            "verity.inventory.draft_order_from_low_stock",
+            { vendorId: formText(form, "vendorId"), locationId: formText(form, "locationId") },
+            (data) => {
+              setDrafting(false);
+              router.push(`${ROUTE}/${data.id}`);
+            },
+          )
+        }
+      >
+        <Field label="Vendor" htmlFor="low-vendor" required>
+          <Select id="low-vendor" name="vendorId" required>
+            {activeVendors.map((v) => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Outlet" htmlFor="low-outlet" required>
+          <Select id="low-outlet" name="locationId" required>
+            {outlets.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </Select>
+        </Field>
+      </FormModal>
     </>
   );
 }
 
 /* ---------------------------------- vendors --------------------------------- */
 
-function VendorsTab({ vendors, canAdd }: { vendors: VendorRow[]; canAdd: boolean }) {
+function VendorsTab({ vendors, canAdd, prices }: { vendors: VendorRow[]; canAdd: boolean; prices: PriceRow[] }) {
   const [open, setOpen] = useState(false);
+  const [pricesFor, setPricesFor] = useState<VendorRow | null>(null);
+  const shownPrices = pricesFor ? prices.filter((p) => p.vendorId === pricesFor.id) : [];
   const add = useCommand(ROUTE);
   const toggle = useCommand(ROUTE);
   const addButton = canAdd ? <Button variant="primary" onClick={() => setOpen(true)}>Add vendor</Button> : null;
@@ -255,22 +307,47 @@ function VendorsTab({ vendors, canAdd }: { vendors: VendorRow[]; canAdd: boolean
         ]}
         rows={vendors.map((v) => ({ ...v, state: v.active ? "Active" : "Inactive" }))}
         toolbar={addButton}
-        rowActions={
-          canAdd
-            ? (row) => (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={toggle.pending}
-                  onClick={() => toggle.run("verity.inventory.set_vendor_active", { vendorId: String(row.id), active: !row.active })}
-                >
-                  {row.active ? "Deactivate" : "Activate"}
-                </Button>
-              )
-            : undefined
-        }
+        rowActions={(row) => (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setPricesFor(row as unknown as VendorRow)}>Prices</Button>
+            {canAdd && (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={toggle.pending}
+                onClick={() => toggle.run("verity.inventory.set_vendor_active", { vendorId: String(row.id), active: !row.active })}
+              >
+                {row.active ? "Deactivate" : "Activate"}
+              </Button>
+            )}
+          </div>
+        )}
       />
       <CommandFailure failure={toggle.failure} title="Could not change the vendor" />
+      <Modal
+        open={pricesFor !== null}
+        onClose={() => setPricesFor(null)}
+        width="lg"
+        title={pricesFor ? `Prices from ${pricesFor.name}` : "Prices"}
+        description="What was actually charged on each delivery, newest first."
+        footer={<Button variant="primary" onClick={() => setPricesFor(null)}>Done</Button>}
+      >
+        {shownPrices.length === 0 ? (
+          <p className="m-0 text-[15px]">No deliveries received from this vendor yet.</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col p-0">
+            {shownPrices.map((p, index) => (
+              <li key={index} className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-b-0">
+                <div className="min-w-0">
+                  <div className="truncate text-[15px] font-medium">{p.itemName}</div>
+                  <div className="text-[13px] text-text-secondary">{p.date} · {p.orderNumber}</div>
+                </div>
+                <span className="tabular-nums text-[15px]">{p.price} per {p.unit}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
       <FormModal
         title="Add vendor"
         description="Names are unique. GSTIN is optional but needed for input tax credit."
@@ -320,7 +397,9 @@ export function PurchaseOrdersDesk({
   items,
   canCreate,
   canAddVendor,
+  prices,
 }: {
+  prices: PriceRow[];
   orders: OrderListRow[];
   vendors: VendorRow[];
   outlets: Outlet[];
@@ -338,7 +417,7 @@ export function PurchaseOrdersDesk({
           count: waiting,
           content: <OrdersTab orders={orders} vendors={vendors} outlets={outlets} items={items} canCreate={canCreate} />,
         },
-        { id: "vendors", label: "Vendors", count: vendors.length, content: <VendorsTab vendors={vendors} canAdd={canAddVendor} /> },
+        { id: "vendors", label: "Vendors", count: vendors.length, content: <VendorsTab vendors={vendors} canAdd={canAddVendor} prices={prices} /> },
       ]}
     />
   );

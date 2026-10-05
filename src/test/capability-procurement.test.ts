@@ -22,12 +22,14 @@ import {
   createItem,
   createPurchaseOrder,
   createVendor,
+  draftOrderFromLowStock,
   getPurchaseOrder,
   listPurchaseOrders,
   receiveGoods,
   registerInventoryCapability,
   stockOnHand,
   submitPurchaseOrder,
+  vendorPriceHistory,
 } from "@/server/capabilities/inventory";
 import { LOCATION_CAPABILITY, registerLocationCapability } from "@/server/capabilities/location";
 
@@ -275,4 +277,36 @@ describeDb("capability: Inventory procurement", () => {
     expect(complete.receivedQty).toBe(complete.orderedQty);
     expect((await executeQuery(manager, listPurchaseOrders, { status: "Cancelled" })).every((r) => r.status === "Cancelled")).toBe(true);
   });
+
+  it("drafts an order from low stock, topping each item up to twice its reorder level", async () => {
+    const paneer = (await executeCommand(manager, createItem, { sku: "PNR", name: "Paneer", unitLabel: "kg", reorderLevel: 10 })).id;
+    // Nothing on hand: needs 20. A well-stocked item with a reorder level stays off the draft.
+    const flour = (await executeCommand(manager, createItem, { sku: "ATTA", name: "Atta", unitLabel: "kg", reorderLevel: 5 })).id;
+    const vendor = await executeCommand(manager, createVendor, { name: "Mother Dairy Supplies" });
+    const po = await executeCommand(manager, createPurchaseOrder, {
+      vendorId: vendor.id, locationId: outlet, lines: [{ itemId: flour, qty: 50, unitPricePaise: 4_000 }],
+    });
+    await executeCommand(manager, submitPurchaseOrder, { orderId: po.id });
+    const line = (await detail(po.id)).lines[0]!;
+    await executeCommand(manager, receiveGoods, { orderId: po.id, lines: [{ orderLineId: line.id, acceptedQty: 50 }] });
+
+    const draft = await executeCommand(manager, draftOrderFromLowStock, { vendorId: vendor.id, locationId: outlet });
+    const d = await detail(draft.id);
+    expect(d.status).toBe("Draft");
+    const paneerLine = d.lines.find((l) => l.itemId === paneer)!;
+    expect(paneerLine.qty).toBe(20);
+    expect(d.lines.some((l) => l.itemId === flour)).toBe(false);
+  });
+
+  it("price history shows what each vendor actually charged, newest first", async () => {
+    const rows = await executeQuery(manager, vendorPriceHistory, { vendorId });
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((r) => r.vendorId === vendorId)).toBe(true);
+    // The partial receipt was charged Rs 258, not the Rs 255 that was ordered.
+    expect(rows.some((r) => r.itemName === "Chicken" && r.unitPricePaise === 25_800)).toBe(true);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i - 1]!.receivedAt.getTime()).toBeGreaterThanOrEqual(rows[i]!.receivedAt.getTime());
+    }
+  });
+
 });

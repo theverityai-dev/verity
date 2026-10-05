@@ -33,7 +33,7 @@ export type WastageRow = {
 };
 export type CategoryRow = { id: string; name: string; items: number };
 type Outlet = { id: string; name: string };
-type StockAction = "receive" | "use" | "count" | "waste";
+type StockAction = "receive" | "use" | "count" | "waste" | "transfer";
 
 const whole = (form: FormData, name: string) => Number.parseInt(formText(form, name), 10);
 /** Rupees as typed (₹220.50) to paise; blank stays unknown rather than zero. */
@@ -49,6 +49,7 @@ const ACTION_COPY: Record<StockAction, { title: string; submit: string; failure:
   use: { title: "Record usage", submit: "Record usage", failure: "Could not record usage" },
   count: { title: "Correct the count", submit: "Save count", failure: "Could not save the count" },
   waste: { title: "Record wastage", submit: "Record wastage", failure: "Could not record wastage" },
+  transfer: { title: "Send to another outlet", submit: "Send stock", failure: "Could not send the stock" },
 };
 
 function StockActionModal({
@@ -56,9 +57,11 @@ function StockActionModal({
   item,
   outletId,
   outletName,
+  outlets,
   wastageReasons,
   onClose,
 }: {
+  outlets: Outlet[];
   action: StockAction | null;
   item: StockRow | null;
   outletId: string;
@@ -108,6 +111,18 @@ function StockActionModal({
         { ...base, kind: "Adjustment", qty: difference, reference: formOptional(form, "reference") ?? "Stock count" },
         close,
       );
+    } else if (action === "transfer") {
+      command.run(
+        "verity.inventory.transfer_stock",
+        {
+          itemId: item.id,
+          fromLocationId: outletId,
+          toLocationId: formText(form, "toOutlet"),
+          qty: whole(form, "qty"),
+          note: formOptional(form, "reference"),
+        },
+        close,
+      );
     } else {
       command.run(
         "verity.inventory.record_wastage",
@@ -139,6 +154,19 @@ function StockActionModal({
         </Field>
       )}
 
+      {action === "transfer" && (
+        <Field label="Send to" htmlFor="inv-to" required>
+          <Select id="inv-to" name="toOutlet" required defaultValue="">
+            <option value="" disabled>Choose an outlet</option>
+            {outlets
+              .filter((o) => o.id !== outletId)
+              .map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+          </Select>
+        </Field>
+      )}
+
       {action === "receive" && (
         <Field label={`Cost per ${item.unit} (₹)`} htmlFor="inv-cost" hint="Updates the item's average cost, which recipes use.">
           <Input id="inv-cost" name="unitCost" type="number" min={0} step="0.01" inputMode="decimal" placeholder="Leave blank if not known" />
@@ -161,7 +189,7 @@ function StockActionModal({
         </>
       ) : (
         <Field
-          label={action === "receive" ? "Invoice or delivery note" : action === "count" ? "Note" : "What it was used for"}
+          label={action === "receive" ? "Invoice or delivery note" : action === "count" || action === "transfer" ? "Note" : "What it was used for"}
           htmlFor="inv-reference"
         >
           <Input id="inv-reference" name="reference" maxLength={200} />
@@ -252,6 +280,9 @@ function StockTab({
               <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "use", item })}>Use</Button>
               <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "count", item })}>Count</Button>
               <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "waste", item })}>Waste</Button>
+              {outlets.length > 1 && item.onHandQty > 0 && (
+                <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "transfer", item })}>Send</Button>
+              )}
             </div>
           );
         }}
@@ -263,6 +294,7 @@ function StockTab({
         item={action?.item ?? null}
         outletId={outletId}
         outletName={outletName}
+        outlets={outlets}
         wastageReasons={wastageReasons}
         onClose={() => setAction(null)}
       />
