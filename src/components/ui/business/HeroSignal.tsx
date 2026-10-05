@@ -60,7 +60,7 @@ export function HeroSignal({
 
       <div className="mt-7 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
         <div>
-          <p className="tabular m-0 text-[clamp(2rem,4vw,3.25rem)] font-light leading-none tracking-[-0.035em] text-text">
+          <p className="tabular m-0 text-[clamp(2rem,4vw,3.25rem)] font-bold leading-none tracking-[-0.035em] text-text">
             {value}
           </p>
           {context ? <p className="m-0 mt-2 text-[13px] text-text-tertiary">{context}</p> : null}
@@ -138,7 +138,7 @@ export function SignalRail({
                   </span>
                 ) : null}
               </span>
-              <span className={`tabular text-[22px] font-light leading-none ${toneClass[item.tone ?? "neutral"]}`}>
+              <span className={`tabular text-[22px] font-bold leading-none ${toneClass[item.tone ?? "neutral"]}`}>
                 {item.value}
               </span>
               {item.href ? <Icon name="chevronRight" size={14} className="text-text-tertiary" /> : null}

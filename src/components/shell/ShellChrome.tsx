@@ -178,7 +178,7 @@ export function ShellChrome({
             {area.items.length > 1 && !rail ? (
               <li
                 aria-hidden="true"
-                className="px-3.5 pt-4 pb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-text-tertiary"
+                className="px-3 pt-5 pb-1 text-[13px] font-semibold text-text-secondary"
               >
                 {area.group}
               </li>
@@ -209,21 +209,22 @@ export function ShellChrome({
                       // reload does not help because the pointer has not moved.
                       // 42px and a tighter icon gap fit the whole menu without
                       // dropping below the 40px comfortable-target floor.
-                      "flex h-10 items-center rounded-lg text-[14px] no-underline " +
+                      // iPadOS sidebar row: the selected row is a tint fill
+                      // with white label and glyph; the rest are plain label
+                      // text with tinted glyphs (ADR-033).
+                      "flex h-10 items-center rounded-[10px] text-[15px] no-underline " +
                       "transition-[background-color,color] duration-200 " +
                       (rail ? "justify-center px-0 " : "gap-3 px-3 ") +
                       (current
-                        ? rail
-                          ? "bg-accent-subtle font-medium text-text"
-                          : "border-l-2 border-accent bg-accent-subtle pl-[10px] font-medium text-text"
-                        : "text-text-secondary hover:bg-surface-sunken hover:text-text")
+                        ? "bg-accent font-semibold text-accent-on"
+                        : "text-text hover:bg-[var(--color-control)]")
                     }
                   >
                     {item.icon && (
                       <Icon
                         name={item.icon}
-                        size={19}
-                        className={current ? "text-accent" : "text-text-tertiary"}
+                        size={20}
+                        className={current ? "text-accent-on" : "text-accent-ink"}
                       />
                     )}
                     <span className={rail ? "sr-only" : "truncate"}>{item.label}</span>
@@ -253,7 +254,7 @@ export function ShellChrome({
       <form action={signOut} className="mt-auto pt-4">
         <button
           type="submit"
-          className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-[14px] text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
+          className="flex w-full cursor-pointer items-center gap-3 rounded-[10px] border-0 bg-transparent px-3 py-2.5 text-left text-[15px] text-danger transition-colors hover:bg-[var(--color-control)]"
         >
           <Icon name="signOut" size={19} className="shrink-0" />
           <span className="min-w-0 flex-1 truncate">Sign out</span>
@@ -366,15 +367,15 @@ export function ShellChrome({
           <button
             type="button"
             onClick={() => window.dispatchEvent(new Event("verity:open-command-palette"))}
-            className="glass-control relative flex h-10 w-full max-w-[750px] cursor-pointer items-center rounded-lg pl-12 pr-16 text-left text-[14px] text-text-tertiary transition-[border-color,box-shadow] duration-200 hover:border-line-strong hover:text-text focus-visible:border-accent focus-visible:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus-visible:outline-none"
+            className="glass-control relative flex h-9 w-full max-w-[560px] cursor-pointer items-center rounded-[10px] pl-9 pr-14 text-left text-[15px] text-text-tertiary transition-[box-shadow] duration-200 focus-visible:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus-visible:outline-none"
           >
             <Icon
               name="search"
-              size={18}
-              className="pointer-events-none absolute left-4 text-text-tertiary"
+              size={16}
+              className="pointer-events-none absolute left-3 text-text-tertiary"
             />
-            <span className="truncate">Search this page</span>
-            <kbd className="pointer-events-none absolute right-4 rounded border border-line px-1.5 py-0.5 text-[11px] text-text-tertiary">
+            <span className="truncate">Search</span>
+            <kbd className="pointer-events-none absolute right-3 rounded px-1.5 py-0.5 text-[12px] text-text-tertiary">
               ⌘K
             </kbd>
           </button>
@@ -385,7 +386,7 @@ export function ShellChrome({
               <Link
                 href="/audit"
                 title="Recent activity"
-                className="glass-control relative grid size-11 place-items-center rounded-full text-text-secondary no-underline shadow-[var(--shadow-sm)] transition-[color,box-shadow,transform] duration-200 hover:-translate-y-px hover:text-text hover:shadow-[var(--shadow-md)]"
+                className="glass-control relative grid size-11 place-items-center rounded-full text-accent-ink no-underline transition-opacity duration-200 active:opacity-70"
               >
                 <Icon name="bell" size={19} />
                 {unreadCount > 0 && (
@@ -449,12 +450,14 @@ export function ShellChrome({
                 }}
                 aria-current={current ? "page" : undefined}
                 className={
-                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] no-underline " +
+                  // iOS tab bar item: 10pt medium label under a 24pt glyph,
+                  // tint when selected, gray otherwise.
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium no-underline " +
                   "transition-colors duration-200 " +
-                  (current ? "text-accent" : "text-text-tertiary hover:text-text")
+                  (current ? "text-accent-ink" : "text-text-tertiary")
                 }
               >
-                {item.icon && <Icon name={item.icon} size={21} />}
+                {item.icon && <Icon name={item.icon} size={24} />}
                 <span className="max-w-full truncate px-1">{item.label}</span>
               </Link>
             );
@@ -465,12 +468,12 @@ export function ShellChrome({
             aria-controls="mobile-nav"
             onClick={() => setNavOpen((v) => !v)}
             className={
-              "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg text-[11px] " +
+              "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium " +
               "transition-colors duration-200 " +
-              (navOpen ? "text-accent" : "text-text-tertiary hover:text-text")
+              (navOpen ? "text-accent-ink" : "text-text-tertiary")
             }
           >
-            <Icon name="moreHorizontal" size={21} />
+            <Icon name="moreHorizontal" size={24} />
             <span>{navOpen ? "Close" : "More"}</span>
           </button>
         </nav>

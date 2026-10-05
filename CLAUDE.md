@@ -112,50 +112,45 @@ Conflict resolution: **Safety > Truth > Coherence > Usefulness > Simplicity > Fl
 Every concrete technology choice must cite its authority using one of:
 `Authority: V2-ADR-[N]` | `Authority: Bible V2 [section]` | `Authority: Spec V2 [REQ-ID]` | `Authority: EXISTING INFRASTRUCTURE` | `Authority: IMPLEMENTATION DECISION REQUIRED`.
 
-## Experience System — approved visual direction (ADR-026, partially supersedes ADR-024/ADR-023/ADR-012)
+## Experience System — iOS (ADR-033, 2026-10-05; supersedes the visual parts of ADR-011/012/023/024/025/026)
 
-**Layered material system (ADR-026, 2026-09-19).** Structural chrome and ordinary cards/panels
-use the glass classes — `.glass-shell` / `.glass-card` / `.glass-control` / `.glass-overlay` —
-with atmospheric color, translucent gradients, blur, edge light and controlled elevation. Dense
-tables, forms, long-form text and destructive confirmation may use `.verity-solid` when opacity
-improves reading or decision safety. **Do not glass individual rows, badges or status dots.**
-Depth comes from a small number of deliberate material layers, never decorative gradients on
-every child.
+**Every surface — all client workspaces and HQ — follows Apple's iOS Human Interface Guidelines.**
+Full text: `verity-spec/17_decisions/adr/adr-033.md`. Tokens live in `src/app/globals.css`; the
+shared shapes live in `src/components/ui/primitives.tsx`, `Modal.tsx`, `DataTable.tsx` and the shells
+(`ShellChrome.tsx`, `HqChrome.tsx`). Change those, not individual pages.
 
-- **Default accent is Gold `#D4A017`** (ADR-024, reverting ADR-012's Verity Mint default) — one
-  of the ten existing presets (Verity Mint, Warm Sand Gold, Champagne, Ocean Blue, Slate Blue,
-  Indigo, Violet, Emerald, Rose, Graphite) plus custom hex, unchanged otherwise. **The current
-  palette authority is `design/verity-aesthetics-v2-gold.png`** (gold-primary, copied into the
-  repo 2026-09-18) — `design/verity asthetics.png` (mint-primary) is superseded, kept only for
-  history.
-- **Accent governs small/interactive surfaces only — never a large filled background** (new
-  ADR-024 constraint ADR-012 lacked). Buttons, links, focus rings, active nav state, badges as a
-  tint/outline: yes. A card or banner filled edge-to-edge with accent color: no — rebuild it as a
-  bordered surface with a small accent touch (icon, label, edge) instead. The Outreach "Current
-  Direction" banner's old full-fill treatment is the concrete defect this constraint targets.
-- **Brand and accent are separate systems, unchanged.** The Verity mark is a fixed asset,
-  monochrome, never recoloured by the interface — including in the favicon and app icon. Semantic
-  colours stay independent of accent: accent is theme, semantic is meaning — success stays a leaf
-  green regardless of accent hue.
-- **The brand sheet is the palette authority for neutrals/type**, unaffected by the accent-default
-  change. Neutrals are `#F7F8FA` · `#0F1115` · `#1C1F24` · `#2A2E33` · `#E6E8EB`; type is Inter
-  (Thin / Light / Regular / Medium) — no font swap, size-specific tracking/leading discipline
-  applies per ADR-024's typography clause; icons are thin outline.
-- **Never hard-code an accent.** Everything derives from `--accent-seed` through `color-mix` in
-  `globals.css`. Contrast is computed in `src/server/platform/accent.ts`, never assumed.
-- **Motion is spring-based on interactive/transient surfaces** (new, ADR-024): critically damped
-  (`damping 1.0`, `response ~0.35`) by default, slight bounce (`damping ~0.8`) only for genuinely
-  gesture-driven interactions. `framer-motion` is the library (already a dependency). Respect
-  `prefers-reduced-motion` (cross-fade, no spring/scale) the same way `prefers-reduced-
-  transparency` already flattens glass to solid.
-- **Never trade accessibility for appearance.** WCAG AA on both materials, both themes — carried
-  forward unchanged through ADR-011 → ADR-023 → ADR-024.
-- **Light and dark are two material interpretations of one system**, not two designs.
+- **Colour = iOS system colours.** Canvas `systemGroupedBackground` (`#F2F2F7` / `#000000`); cells
+  `secondarySystemGroupedBackground` (`#FFFFFF` / `#1C1C1E`); system fills for fields and gray buttons;
+  iOS separators. Labels use Apple's increased-contrast secondary/tertiary values so text keeps AA.
+- **Tint (accent) defaults to iOS systemBlue `#0A84FF`**, still configurable through the existing
+  presets. Never hard-code a tint; everything derives from `--accent-seed`. Fill/ink contrast is
+  computed in `src/server/platform/accent.ts`. `text-accent-ink` is tint-coloured text (AA-checked).
+- **Semantic colours are iOS system green/orange/red/blue (accessible variants)** and stay independent
+  of the tint.
+- **Materials only where iOS uses them**: bars (sidebar, navigation bar, tab bar) and overlays (menus,
+  popovers, sheets). Content is opaque inset-grouped cells — 12px corners, no border, no shadow, no
+  gradient. The atmospheric field and grain are gone. Class names are kept with iOS meanings:
+  `.glass-shell` bar, `.glass-card`/`.verity-solid` cell, `.glass-control` system fill, `.glass-overlay`
+  thick material.
+- **Typography: keep the current system font stack** (renders SF Pro on Apple devices; SF Pro is not
+  embedded — its licence forbids web use). iOS text styles: page title Large Title 34/41 bold; card
+  title Headline 17 semibold; body 15 on wide screens, 17 on phones; footnote 13 for secondary text and
+  uppercase section headers. Inputs are at least 16px on phones (no iOS Safari zoom). Big numbers are
+  bold, never light.
+- **Controls**: buttons are iOS filled (primary), gray (secondary, tint label), plain (ghost) and
+  destructive-tinted (danger), 10px corners, semibold, press dims; rounded system-fill text fields;
+  capsule filter chips; selection circles; 44pt touch targets.
+- **Navigation**: Large title at the top of each page; iPadOS sidebar on wide screens (selected row =
+  tint fill, white label; tinted glyphs); iOS tab bar on phones (client shell and HQ); dialogs are
+  bottom sheets on phones and centred form sheets on wider screens, with a gray circular close button.
+- **Motion**: iOS spring and sheet curves; `prefers-reduced-motion` cross-fades;
+  `prefers-reduced-transparency` makes every material opaque.
+- **Never trade accessibility for appearance** (ADR-011 constraint 1, kept). WCAG AA in both themes.
+- **The Verity mark stays monochrome** and is never tinted (ADR-012, kept). Light and dark are one system.
 
-Anti-regression: do not glass a content surface or solid a chrome surface without checking
-ADR-024's table first, do not hard-code any accent value into a component, do not recolour the
-mark with the accent, do not collapse semantic success into the accent hue, do not fill a large
-surface with flat accent color, do not reintroduce scarlet.
+Anti-regression: no translucency on content cells, rows, badges or status dots; no gradients or glows on
+surfaces; no light-weight display numerals; no hard-coded tint; no semantic colour equal to the tint;
+no new per-page colours outside the tokens.
 
 ## Constitutional invariants (non-negotiable)
 
@@ -223,10 +218,8 @@ workflows, routes, or terminology, and never add a compatibility layer for them.
 5. `SpecRefTarget` enum: `VEHICLE_BRAND`, `VEHICLE_MODEL`, `VEHICLE_GENERATION`, `DESIGN`, `COLOR`
 6. `SystemRole` enum: `OWNER`, `CO_OWNER`, `MANAGER`, `SUPERVISOR`, `WORKER`, `STORE_MANAGER` — use dynamic Verb+Entity+Scope permissions
 7. Entities `ProductionBatch`, `BomMode`, `QCTemplate`
-8. `backdrop-filter`/blur on individual rows, badges or status dots; use the bounded material
-  classes (`.glass-shell`/`.glass-card`/`.glass-control`/`.glass-overlay`) and follow ADR-026.
-  Dense tables, forms, long-form text and destructive confirmation may remain `.verity-solid`.
-  (`.verity-glass` as a bare class name remains forbidden.)
+8. `backdrop-filter`/blur on content cells, rows, badges or status dots; translucency is only for
+  bars and overlays (ADR-033). (`.verity-glass` as a bare class name remains forbidden.)
 9. Routes `/owner`, `/worker`, `/inspector`, `/supervisor`, `/verity` (legacy role-based routing)
 10. `@@map` to VEDA schema naming
 
@@ -279,6 +272,8 @@ any requirement written because it is "common in ERP/SaaS" rather than traced to
   the Experience System typography clause below. `design/verity asthetics.png` (mint-primary)
   is now superseded by this file on every question, not just accent default.
 
+- **ADR-033** (2026-10-05) supersedes the visual parts of ADR-011/012/023/024/025/026 — see the
+  Experience System section above. The ADR-011/012/023/024/026 entries here are history for those parts.
 - **ADR-026** (2026-09-19) extends the glass material from structural chrome to ordinary
   cards and panels. `Surface` defaults to `.glass-card`; dense tables, forms, long-form text
   and destructive confirmation may explicitly use `.verity-solid` when opacity improves
@@ -288,7 +283,7 @@ any requirement written because it is "common in ERP/SaaS" rather than traced to
 
   **This list is a curated highlight reel, not the complete register, and is stale beyond what
   it explicitly names.** The canonical ADR register is `verity-spec/17_decisions/adr/`
-  (`adr-001.md`…`adr-032.md` as of 2026-10-02; ADR-032 the public origin is configured as `VERITY_PUBLIC_URL`, never derived from the request or forwarded headers, ACCEPTED; ADR-027 Jev/external decision model, ADR-028 liquid-glass refraction over ADR-026's materials, ADR-029 external tool-invocation surface, PROPOSED; ADR-030 public verification passport, ACCEPTED; ADR-031 supported deployment modes — Mode A first, B/C not promised, PROPOSED) — ADR-013 (Global HQ Operator Security Model),
+  (`adr-001.md`…`adr-033.md` as of 2026-10-05; ADR-033 iOS Human Interface Guidelines on every surface, ACCEPTED; ADR-032 the public origin is configured as `VERITY_PUBLIC_URL`, never derived from the request or forwarded headers, ACCEPTED; ADR-027 Jev/external decision model, ADR-028 liquid-glass refraction over ADR-026's materials, ADR-029 external tool-invocation surface, PROPOSED; ADR-030 public verification passport, ACCEPTED; ADR-031 supported deployment modes — Mode A first, B/C not promised, PROPOSED) — ADR-013 (Global HQ Operator Security Model),
   ADR-014 (DEC-001 scope), ADR-015 (scheduled work trigger), ADR-016 (the scheduler may enumerate
   tenants), ADR-017 (below), ADR-018 (extract a generic Trading capability out of plywood),
   ADR-019 (below), ADR-020 (OIDC browser identity), ADR-021 (capability pins), and ADR-022
@@ -446,7 +441,7 @@ before touching framework-sensitive code.
 ## Always Do First
 - **Invoke the `impeccable` skill** (`~/.claude/skills/impeccable/SKILL.md`) before writing any frontend
   code, every session, no exceptions. It is the standing craft authority; the Experience System section
-  above (ADR-011, ADR-012) still decides Verity's specifics — accent tokens, material hierarchy, the
+  above (ADR-033, iOS) still decides Verity's specifics — accent tokens, material hierarchy, the
   monochrome mark — and impeccable never overrides an accepted ADR.
 
 ## Reference Images

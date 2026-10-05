@@ -261,8 +261,8 @@ export function DataTable({
             <div className="relative flex min-w-0 flex-1 items-center sm:max-w-[24rem]">
               <Icon
                 name="search"
-                size={17}
-                className="pointer-events-none absolute left-4 text-text-tertiary"
+                size={16}
+                className="pointer-events-none absolute left-3 text-text-tertiary"
               />
               <label htmlFor={`filter-${rowKey}`} className="sr-only">
                 Filter {caption}
@@ -278,7 +278,8 @@ export function DataTable({
                 placeholder="Filter…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-11 w-full rounded-lg border border-line bg-control pl-12 pr-4 text-[14px] text-text placeholder:text-text-tertiary transition-colors hover:border-line-strong focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
+                // iOS search field: system fill, 10px corners, glyph inside.
+                className="h-9 w-full rounded-[10px] border-0 bg-[var(--color-control)] pl-9 pr-3 text-[15px] text-text placeholder:text-text-tertiary transition-shadow focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
               />
             </div>
           )}
@@ -369,7 +370,7 @@ export function DataTable({
                   <tr
                     key={key}
                     data-selected={selected.has(key) || undefined}
-                    className="border-b border-line transition-colors last:border-b-0 hover:bg-surface-sunken data-selected:bg-accent-subtle data-selected:shadow-[inset_3px_0_0_0_var(--color-accent)]"
+                    className="border-b border-line transition-colors last:border-b-0 hover:bg-[var(--color-control)] data-selected:bg-accent-subtle"
                   >
                     <td className="w-11 py-1 pl-0 pr-1 align-middle">
                       <span className="grid size-11 cursor-pointer place-items-center">

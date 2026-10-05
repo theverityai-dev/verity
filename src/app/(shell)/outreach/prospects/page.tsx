@@ -355,7 +355,7 @@ async function ProspectsPage({ searchParams }: { searchParams: Promise<Search> }
                     </div>
                     {c.qualityScore != null && (
                       <span className="shrink-0 text-right" title="Fit score">
-                        <span className="tabular text-[20px] font-light leading-none text-text">{c.qualityScore}</span>
+                        <span className="tabular text-[20px] font-bold leading-none text-text">{c.qualityScore}</span>
                         <span className="text-[11px] text-text-tertiary">/10</span>
                       </span>
                     )}

@@ -57,23 +57,11 @@ export function Surface({
   solid?: boolean;
   className?: string;
 }) {
-  if (solid) {
-    return (
-      // Opaque, because ADR-011 keeps dense content off the glass — but still
-      // a MATERIAL: a tinted vertical gradient rather than a flat white box, so
-      // a solid surface belongs to the same system as the translucent ones
-      // instead of looking like a hole cut in them.
-      <div
-        className={cx(
-          "verity-solid rounded-xl shadow-sm",
-          bordered && "border border-line",
-          className,
-        )}
-      >
-        {children}
-      </div>
-    );
-  }
+  // ADR-033: every card is an iOS inset-grouped cell — opaque, 12px corners, no
+  // border and no shadow. `solid` and `bordered` are kept for callers but no
+  // longer change the material; content is always opaque on iOS.
+  void solid;
+  void bordered;
   return <div className={cx("glass-card", className)}>{children}</div>;
 }
 
@@ -103,15 +91,16 @@ export function Panel({
       {title && (
         <div
           className={cx(
-            "flex items-center justify-between gap-4 px-6 pt-5",
-            flush ? "pb-4" : "pb-1",
+            "flex items-center justify-between gap-4 px-5 pt-4",
+            flush ? "pb-3" : "pb-1",
           )}
         >
-          <h2 className="m-0">{title}</h2>
+          {/* iOS Headline: 17 semibold. */}
+          <h2 className="m-0 text-[17px] leading-[22px] tracking-[-0.02em]">{title}</h2>
           {action}
         </div>
       )}
-      <div className={flush ? "" : cx("px-6 pb-6", title ? "pt-4" : "pt-6")}>{children}</div>
+      <div className={flush ? "" : cx("px-5 pb-5", title ? "pt-3" : "pt-5")}>{children}</div>
     </Surface>
   );
 }
@@ -139,7 +128,7 @@ export function PageHeader({
       <div className="min-w-0">
         <h1 className="truncate">{title}</h1>
         {description && (
-          <p className="mb-0 mt-2 max-w-[62ch] text-[14px] leading-relaxed text-text-secondary">
+          <p className="mb-0 mt-1.5 max-w-[62ch] text-[15px] leading-[20px] text-text-secondary">
             {description}
           </p>
         )}
@@ -159,10 +148,11 @@ export function PageHeader({
 export function SectionHeading({ children, note }: { children: ReactNode; note?: string }) {
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 className="m-0 text-[13px] font-medium leading-5 tracking-normal text-text">
+      {/* iOS grouped-list section header: footnote, uppercase, secondary. */}
+      <h2 className="m-0 px-4 text-[13px] font-normal uppercase leading-[18px] tracking-[0.02em] text-text-secondary">
         {children}
       </h2>
-      {note && <span className="text-[12px] text-text-tertiary">{note}</span>}
+      {note && <span className="text-[13px] text-text-tertiary">{note}</span>}
     </div>
   );
 }
@@ -196,13 +186,13 @@ export function Stat({
     <>
       <span
         className={
-          "tabular text-[24px] font-normal leading-none tracking-[-0.02em] " +
+          "tabular text-[28px] font-bold leading-[34px] tracking-[0.01em] " +
           "text-text transition-colors group-hover:text-accent-ink"
         }
       >
         {value}
       </span>
-      <span className="mt-2 text-[13px] leading-[1.3] text-text-tertiary">{label}</span>
+      <span className="mt-1 text-[13px] leading-[18px] text-text-secondary">{label}</span>
       {hint && <span className="mt-auto pt-3 text-[12px] text-text-tertiary">{hint}</span>}
     </>
   );
@@ -299,8 +289,8 @@ export function StatTile({
         {menu}
       </div>
       <div>
-        <p className="m-0 text-[13px] text-text-tertiary">{label}</p>
-        <p className="tabular m-0 mt-1 text-[26px] font-light leading-none text-text">{value}</p>
+        <p className="m-0 text-[13px] text-text-secondary">{label}</p>
+        <p className="tabular m-0 mt-1 text-[28px] font-bold leading-[34px] text-text">{value}</p>
       </div>
       {delta && (
         <p
@@ -342,30 +332,26 @@ export function Button({ variant = "secondary", size = "md", className, ...rest 
   // apple-design skill §1. A 3% scale is small enough that reduced-motion
   // doesn't need a guard (it's not the vestibular kind of motion §14 warns
   // about), and it's the exact value the skill's own CSS example ships.
+  // ADR-033: iOS button styles. Pressed state dims, as UIKit buttons do.
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.97] " +
-    "disabled:cursor-not-allowed disabled:opacity-45 disabled:active:scale-100 whitespace-nowrap cursor-pointer";
+    "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-[color,background-color,opacity,transform] duration-150 active:opacity-70 " +
+    "disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer";
 
-  // 44px minimum on touch; Bible V4 §2.3 requires large tap targets for
-  // deskless users and WCAG asks for the same. On a pointer device they tighten
-  // to the board's 36–38px controls.
+  // 44pt minimum touch target (HIG and WCAG) for md; sm is the compact
+  // in-row size used inside tables.
   const sizes = {
-    sm: "h-10 px-3.5 text-[13px]",
-    md: "h-11 px-5 text-[14px]",
+    sm: "h-9 px-3 text-[14px]",
+    md: "h-11 px-5 text-[15px]",
   };
 
-  // Primary fills with the accent and takes dark ink by default: #00D1B2 is a
-  // LIGHT accent, where white measures 2.40:1 and #191A1C measures 7.00:1.
-  // `text-accent-on` is stamped by the server after a contrast comparison, so a
-  // light accent gets dark ink and a dark accent gets white — automatically, for
-  // any preset or custom hex. Nothing here assumes which.
+  // primary = iOS filled (tint background; ink chosen by accent.ts for AA),
+  // secondary = iOS gray (system fill, tint label), ghost = iOS plain (tint
+  // label only), danger = iOS destructive tinted.
   const variants = {
-    primary:
-      "bg-accent text-accent-on font-medium hover:bg-accent-hover " +
-      "shadow-[var(--shadow-highlight),0_8px_22px_-8px_var(--color-accent-line)]",
-    secondary: "verity-solid border border-line text-text font-medium hover:border-line-strong",
-    ghost: "bg-transparent text-text-secondary font-medium hover:bg-surface-sunken hover:text-text",
-    danger: "border border-danger/40 bg-danger-subtle text-danger font-medium hover:border-danger/60",
+    primary: "bg-accent text-accent-on hover:bg-accent-hover",
+    secondary: "bg-[var(--color-control)] text-accent-ink hover:bg-[var(--color-control-strong)]",
+    ghost: "bg-transparent text-accent-ink hover:bg-[var(--color-control)]",
+    danger: "bg-danger-subtle text-danger hover:bg-[var(--color-control-strong)]",
   };
 
   return <button className={cx(base, sizes[size], variants[variant], className)} {...rest} />;
@@ -397,10 +383,10 @@ export function FilterChipRow({
           onClick={chip.onClick}
           aria-pressed={chip.active}
           className={cx(
-            "rounded-pill border px-3 py-1 text-[12.5px] font-medium transition-colors",
+            "rounded-pill px-3.5 py-1.5 text-[14px] font-medium transition-colors",
             chip.active
-              ? "border-transparent bg-accent-subtle text-accent-ink"
-              : "border-line text-text-secondary hover:bg-surface-sunken hover:text-text",
+              ? "bg-accent text-accent-on"
+              : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]",
           )}
         >
           {chip.label}
@@ -433,16 +419,17 @@ export function IconButton({
   tone?: "default" | "accent" | "bare";
 }) {
   const tones = {
-    default: "verity-solid border border-line text-text-secondary hover:text-text",
-    accent: "border border-transparent bg-accent text-accent-on hover:bg-accent-hover",
-    bare: "border border-transparent bg-transparent text-text-secondary hover:text-text hover:bg-surface-sunken",
+    // iOS bar buttons: a tint glyph, with a gray circle when it needs a frame.
+    default: "bg-[var(--color-control)] text-accent-ink hover:bg-[var(--color-control-strong)]",
+    accent: "bg-accent text-accent-on hover:bg-accent-hover",
+    bare: "bg-transparent text-accent-ink hover:bg-[var(--color-control)]",
   };
   return (
     <button
       type="button"
       title={label}
       className={cx(
-        "grid size-11 shrink-0 place-items-center rounded-xl transition-colors cursor-pointer",
+        "grid size-11 shrink-0 place-items-center rounded-full transition-[background-color,opacity] active:opacity-70 cursor-pointer",
         tones[tone],
         className,
       )}
@@ -475,8 +462,8 @@ export function CardAction({
 }) {
   const className =
     variant === "pill"
-      ? "inline-flex h-8 items-center gap-1.5 rounded-lg bg-surface-sunken px-2.5 text-[12.5px] text-text-secondary no-underline transition-colors hover:text-text"
-      : "inline-flex h-8 items-center text-[13px] text-accent-ink underline underline-offset-4 transition-colors hover:text-accent";
+      ? "inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--color-control)] px-3 text-[13px] font-medium text-text no-underline transition-colors hover:bg-[var(--color-control-strong)]"
+      : "inline-flex h-8 items-center text-[15px] text-accent-ink no-underline transition-opacity hover:opacity-70";
 
   if (href) {
     return (
@@ -571,7 +558,7 @@ export function Field({
   // weight where the winner depends on stylesheet order.
   return (
     <div className="verity-field">
-      <label htmlFor={htmlFor} className="text-[13px] font-medium text-text">
+      <label htmlFor={htmlFor} className="px-1 text-[13px] text-text-secondary">
         {label}
         {required && (
           <span className="ml-1 text-text-tertiary" aria-hidden="true">
@@ -605,13 +592,12 @@ export function Field({
  * the border radius exactly; a square outline around a 10px-rounded input reads
  * as unfinished without anyone being able to say why.
  */
+// ADR-033: iOS rounded text field — system fill, no border, 10px corners.
 const controlClass =
-  "verity-solid min-w-0 border border-line w-full h-11 px-4 rounded-lg text-text text-[14px] " +
-  "placeholder:text-text-tertiary transition-[border-color,box-shadow] duration-200 " +
-  "hover:border-line-strong " +
-  "focus:outline-none focus:border-accent " +
-  "focus:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)] " +
-  "disabled:cursor-not-allowed disabled:opacity-55";
+  "min-w-0 w-full h-11 px-3.5 rounded-[10px] border-0 bg-[var(--color-control)] text-text text-[15px] " +
+  "placeholder:text-text-tertiary transition-[box-shadow,background-color] duration-200 " +
+  "focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] " +
+  "disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(controlClass, props.className)} />;
@@ -625,10 +611,10 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
     <textarea
       {...props}
       className={cx(
-        "verity-solid min-w-0 w-full min-h-24 resize-y rounded-lg border border-line px-4 py-2.5 text-[14px] text-text " +
-          "placeholder:text-text-tertiary transition-[border-color,box-shadow] duration-200 hover:border-line-strong " +
-          "focus:border-accent focus:outline-none focus:shadow-[var(--shadow-highlight),0_0_0_3px_var(--color-accent-subtle)] " +
-          "disabled:cursor-not-allowed disabled:opacity-55",
+        "min-w-0 w-full min-h-24 resize-y rounded-[10px] border-0 bg-[var(--color-control)] px-3.5 py-2.5 text-[15px] text-text " +
+          "placeholder:text-text-tertiary transition-[box-shadow] duration-200 " +
+          "focus:outline-none focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] " +
+          "disabled:cursor-not-allowed disabled:opacity-50",
         props.className,
       )}
     />
@@ -661,7 +647,8 @@ export function Checkbox({
           ...rest.style,
         }}
         className={cx(
-          "size-[18px] shrink-0 cursor-pointer appearance-none rounded-[5px] border border-line-strong",
+          // iOS selection circle.
+          "size-[22px] shrink-0 cursor-pointer appearance-none rounded-full border-[1.5px] border-line-strong",
           "bg-surface bg-center bg-no-repeat transition-[background-color,border-color,box-shadow] duration-150",
           "checked:border-accent checked:bg-accent",
           "hover:border-line-strong focus-visible:outline-none",
@@ -780,10 +767,10 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
   return (
     <span
       className={cx(
-        "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[12px] font-semibold",
         tone === "accent"
           ? "bg-accent-subtle text-accent-ink"
-          : "bg-surface-sunken text-text-tertiary",
+          : "bg-[var(--color-control)] text-text-secondary",
       )}
     >
       {children}
@@ -868,7 +855,7 @@ export function ErrorState({
   retryable?: boolean;
 }) {
   return (
-    <div role="alert" className="rounded-lg border border-danger/25 bg-danger-subtle px-4 py-3.5">
+    <div role="alert" className="rounded-[12px] bg-danger-subtle px-4 py-3.5">
       <p className="m-0 flex items-center gap-2 text-[13px] font-medium text-danger">
         <span aria-hidden="true" className="size-[7px] shrink-0 rounded-full bg-danger" />
         {title}

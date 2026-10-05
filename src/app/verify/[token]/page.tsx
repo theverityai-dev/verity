@@ -36,7 +36,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
     <main className="mx-auto flex max-w-xl flex-col gap-8 px-4 py-16">
       <header className="flex flex-col gap-2">
         <p className="m-0 text-[12px] uppercase tracking-[0.12em] text-text-tertiary">Verified product</p>
-        <h1 className="m-0 text-[32px] font-light leading-[40px] tracking-[-0.02em] text-text">{passport.product}</h1>
+        <h1 className="m-0 text-[32px] font-bold leading-[40px] tracking-[-0.02em] text-text">{passport.product}</h1>
         <p className="m-0 text-[15px] text-text-secondary">
           Made by {passport.tenant}
           {passport.reference ? ` · ${passport.reference}` : ""}

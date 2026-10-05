@@ -1,106 +1,68 @@
 @import "tailwindcss";
 
 /**
- * Verity Experience System — material and accent tokens.
+ * Verity Experience System — iOS (ADR-033, 2026-10-05).
  *
  * AUTHORITY
  *   1. Security and tenancy invariants (nothing here touches them).
- *   2. ADR-011 — glass is a controlled material system, not decoration.
- *   3. ADR-012 — brand-sheet neutrals, accent, semantic separation.
- *   4. The approved reference boards, `design/newlighttheme.jpeg` and
- *      `design/newdarktheme.jpeg`.
+ *   2. ADR-033 — the interface follows Apple's iOS Human Interface Guidelines,
+ *      on every shell (client workspaces and HQ).
+ *   3. ADR-011 constraint 1 — WCAG AA on both themes is never traded for a look.
  *
- * Every value below was measured from that source rather than chosen. Where the
- * source computes something in JavaScript, it is computed here in CSS instead —
- * see the accent scale — because a value the stylesheet can derive should not
- * need a script to exist.
+ * Values are iOS system colours. Where Apple's default secondary/tertiary label
+ * would fall below AA on the web, Apple's own increased-contrast variant is used
+ * instead, so the interface reads as iOS and still passes.
  *
  * TWO SYSTEMS, DELIBERATELY SEPARATE
- *   BRAND    the Verity mark and wordmark. Fixed. Never recoloured by the UI.
- *   ACCENT   an Experience System property. Configurable, default #0A84FF.
- * Conflating them is how a product ends up with a logo that changes colour when
- * a user picks a theme.
+ *   BRAND    the Verity mark and wordmark. Fixed, monochrome. Never tinted.
+ *   TINT     iOS's tint colour (`--accent-seed`). Configurable, default systemBlue.
  */
 
 @theme {
   /* ---------------------------------------------------------------------
-   * NEUTRAL FOUNDATION — design/verity asthetics.png, the brand sheet (ADR-012).
-   * #F7F8FA Background · #0F1115 Text · #1C1F24 · #2A2E33 · #E6E8EB.
+   * BACKGROUNDS — iOS grouped backgrounds.
+   *   canvas   systemGroupedBackground
+   *   surface  secondarySystemGroupedBackground (the cell)
+   *   sunken   tertiarySystemGroupedBackground (a cell inside a cell)
    * ------------------------------------------------------------------- */
-  --color-canvas: light-dark(#f7f7f8, #0b0d10);
-  --color-text: light-dark(#17171b, #f5f5f7);
-  --color-text-secondary: light-dark(#6e6e73, #a1a1aa);
-  /* The source sets --tx3 to #7A7A7F, which measures 3.9:1 on the light canvas
-     and fails AA for body text. Darkened to the nearest value that clears it;
-     ADR-011 constraint 1 makes accessibility non-negotiable over exact match. */
-  --color-text-tertiary: light-dark(#86868b, #8e8e93);
+  --color-canvas: light-dark(#f2f2f7, #000000);
+  --color-surface: light-dark(#ffffff, #1c1c1e);
+  --color-surface-elevated: light-dark(#ffffff, #2c2c2e);
+  --color-surface-sunken: light-dark(#f2f2f7, #2c2c2e);
+  /* systemFill family: the grey fill iOS uses for text fields, gray buttons
+     and segmented controls. */
+  --color-control: light-dark(rgb(118 118 128 / 0.12), rgb(118 118 128 / 0.24));
+  --color-control-strong: light-dark(rgb(118 118 128 / 0.20), rgb(118 118 128 / 0.36));
+  /* Bar material base (navigation bar, tab bar, sidebar). */
+  --color-chrome: light-dark(rgb(249 249 249 / 0.94), rgb(22 22 24 / 0.92));
 
   /* ---------------------------------------------------------------------
-   * GLASS LADDER — `--g1`..`--g4` in the design source.
-   *
-   * Four levels, each a different translucency over the atmospheric ground.
-   * These are the material; the blur that completes them lives on the utility
-   * classes at the end of this file, because a colour token cannot carry a
-   * filter and pretending otherwise scatters `backdrop-filter` everywhere.
+   * LABELS — label / secondaryLabel / tertiaryLabel, increased-contrast
+   * variants for secondary and tertiary so small text clears 4.5:1.
    * ------------------------------------------------------------------- */
-  /**
-   * The material is NEUTRAL and thin. All the colour in the interface comes
-   * from the ground behind it, read THROUGH the glass — that is what makes it
-   * glass rather than tinted plastic. Mixing the accent into the surface as
-   * well doubled the colour and flattened the depth, because a card then
-   * carried its own hue instead of borrowing the room's.
-   *
-   * Alpha still rises with the level: the shell is thinnest because nothing is
-   * read on it, and dialogs are thickest because they must stay legible over
-   * arbitrary content.
-   */
-  --color-glass-1: light-dark(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.025));
-  --color-glass-2: light-dark(rgb(255 255 255 / 0.20), rgb(255 255 255 / 0.040));
-  --color-glass-3: light-dark(rgb(255 255 255 / 0.38), rgb(255 255 255 / 0.060));
-  --color-glass-4: light-dark(rgb(255 255 255 / 0.72), rgb(22 26 31 / 0.78));
+  --color-text: light-dark(#000000, #ffffff);
+  --color-text-secondary: light-dark(#3c3c43cc, #ebebf5c7);
+  --color-text-tertiary: light-dark(#6c6c70, #aeaeb2);
 
-  /* Solid surfaces — level 5. Dense tables, long-form text, forms and
-     destructive confirmation live here, per ADR-011.
-     Dark values are MIXED FROM THE CANVAS, not a bare neutral grey hex —
-     `#1c1c1e` is iOS's own token, but iOS's canvas is neutral black. Ours
-     is `#090f14` (blue-shifted per the brand sheet), so dropping iOS's
-     literal hex on top produced two different color temperatures in the
-     same room — a card reading as a foreign grey box rather than an
-     elevated version of the surface it sits on. Every elevation step now
-     shares the canvas hue, which is the actual Apple rule (materials in
-     one theme keep one temperature; only lightness changes). */
-  --color-surface: light-dark(#ffffff, color-mix(in oklab, white 10%, var(--color-canvas)));
-  --color-surface-elevated: light-dark(#ffffff, color-mix(in oklab, white 18%, var(--color-canvas)));
-  --color-surface-sunken: light-dark(#f2f2f7, color-mix(in oklab, black 10%, var(--color-canvas)));
-  --color-control: light-dark(#ffffff, #1c252e);
-  --color-chrome: light-dark(#ffffff, #0e1115);
+  /* Kept as tokens because components reference them; on iOS every one of
+     these is a material over the canvas, approximated by the matching fill. */
+  --color-glass-1: var(--color-chrome);
+  --color-glass-2: var(--color-surface);
+  --color-glass-3: var(--color-control);
+  --color-glass-4: light-dark(rgb(255 255 255 / 0.92), rgb(37 37 39 / 0.92));
 
   /* ---------------------------------------------------------------------
-   * BORDERS — alpha, never solid hex.
-   *
-   * This is why the boards' surfaces read as material rather than as boxes: a
-   * border that is 5.5% ink over whatever sits behind it belongs to the glass,
-   * while a solid #E4E4E6 hairline is a drawn rectangle. Replacing these with
-   * opaque values is the single change that would most flatten the system.
+   * SEPARATORS — iOS separator / opaqueSeparator.
    * ------------------------------------------------------------------- */
-  --color-line: light-dark(rgb(60 60 67 / 0.12), rgb(255 255 255 / 0.10));
-  --color-line-strong: light-dark(rgb(60 60 67 / 0.22), rgb(255 255 255 / 0.18));
-  --color-separator: light-dark(rgb(60 60 67 / 0.12), rgb(255 255 255 / 0.10));
-  --color-track: light-dark(rgb(60 60 67 / 0.14), rgb(255 255 255 / 0.12));
+  --color-line: light-dark(rgb(60 60 67 / 0.18), rgb(84 84 88 / 0.48));
+  --color-line-strong: light-dark(rgb(60 60 67 / 0.29), rgb(84 84 88 / 0.65));
+  --color-separator: light-dark(rgb(60 60 67 / 0.29), rgb(84 84 88 / 0.65));
+  --color-track: light-dark(rgb(120 120 128 / 0.16), rgb(120 120 128 / 0.32));
 
   /* ---------------------------------------------------------------------
-   * ACCENT — derived in CSS from one seed.
-   *
-   * `--accent-seed` is stamped on <html> by the server from the user's stored
-   * preference; it defaults to the brand sheet Primary below, so the stylesheet is
-   * correct with no cookie, no script and no flash.
-   *
-   * The 50→900 ladder is the design source's `tonal()` function expressed as
-   * `color-mix`, at the same ratios: toward white above 500, toward #0D0D0F
-   * below it. Deriving it here rather than in JavaScript means an accent change
-   * is a single custom property, and no component has to know it happened.
+   * TINT — derived in CSS from one seed (`--accent-seed`, stamped on <html>
+   * by the server from the user's preference; default iOS systemBlue).
    * ------------------------------------------------------------------- */
-  /* Current product default: Apple system blue. */
   --accent-seed: #0a84ff;
 
   --accent-50: color-mix(in srgb, #ffffff 94%, var(--accent-seed));
@@ -109,18 +71,15 @@
   --accent-300: color-mix(in srgb, #ffffff 42%, var(--accent-seed));
   --accent-400: color-mix(in srgb, #ffffff 18%, var(--accent-seed));
   --accent-500: var(--accent-seed);
-  --accent-600: color-mix(in srgb, #0d0d0f 12%, var(--accent-seed));
-  --accent-700: color-mix(in srgb, #0d0d0f 26%, var(--accent-seed));
-  --accent-800: color-mix(in srgb, #0d0d0f 42%, var(--accent-seed));
-  --accent-900: color-mix(in srgb, #0d0d0f 58%, var(--accent-seed));
+  --accent-600: color-mix(in srgb, #000000 12%, var(--accent-seed));
+  --accent-700: color-mix(in srgb, #000000 26%, var(--accent-seed));
+  --accent-800: color-mix(in srgb, #000000 42%, var(--accent-seed));
+  --accent-900: color-mix(in srgb, #000000 58%, var(--accent-seed));
 
-  /* The FILL is stamped per theme by the server, not taken from the ladder
-     directly: it is chosen together with its ink so the pair clears WCAG AA,
-     stepping darker (light) or lighter (dark) when the first step does not.
-     Three of the ten presets need that step; Emerald needs two. Defaults below
-     match the global fallback, so the stylesheet is correct with no cookie. */
-  /* Computed by accent.ts's pairFor(): the light fill steps to a darker blue
-     so white type clears AA; the dark fill stays bright enough for dark ink. */
+  /* Fill and ink are computed together by accent.ts's pairFor() so the pair
+     clears AA, and stamped per theme by the server. Defaults match systemBlue:
+     iOS's own light fill (#007AFF) with white measures 4.0:1, so the
+     accessible step is used. */
   --accent-fill-light: #0b65b3;
   --accent-fill-dark: #71b8ff;
   --accent-ink-light: #ffffff;
@@ -131,104 +90,74 @@
   --color-accent-active: light-dark(var(--accent-800), var(--accent-100));
   --color-accent-edge: var(--accent-700);
 
-  /* Accent-tinted materials. Alpha over the seed, so they tint whatever is
-     behind them instead of painting a flat chip. */
+  /* Tinted fills — iOS "tinted" button and selected-row backgrounds. */
   --color-accent-subtle: light-dark(
-    color-mix(in srgb, transparent 90%, var(--accent-seed)),
-    color-mix(in srgb, transparent 85%, var(--accent-seed))
+    color-mix(in srgb, transparent 85%, var(--accent-seed)),
+    color-mix(in srgb, transparent 78%, var(--accent-seed))
   );
   --color-accent-muted: light-dark(
-    color-mix(in srgb, transparent 94%, var(--accent-seed)),
-    color-mix(in srgb, transparent 91%, var(--accent-seed))
+    color-mix(in srgb, transparent 92%, var(--accent-seed)),
+    color-mix(in srgb, transparent 88%, var(--accent-seed))
   );
   --color-accent-line: light-dark(
-    color-mix(in srgb, transparent 72%, var(--accent-seed)),
-    color-mix(in srgb, transparent 66%, var(--accent-seed))
+    color-mix(in srgb, transparent 65%, var(--accent-seed)),
+    color-mix(in srgb, transparent 55%, var(--accent-seed))
   );
 
   --color-accent-on: light-dark(var(--accent-ink-light), var(--accent-ink-dark));
-
-  /* Accent-coloured TEXT on the page — not on the accent. Must clear AA against
-     the canvas, which the 500 step does not: #00D1B2 as type measures 1.9:1.
-     The 800 step measures 4.63:1 on #F7F8FA, the 300 step 12.29:1 on #0F1115. */
-
-  /* ---------------------------------------------------------------------
-   * SEMANTIC — an independent system. Accent carries brand, these carry
-   * meaning, and neither is forced into the other (ADR-011).
-   * ------------------------------------------------------------------- */
-  --color-success: light-dark(#2f7a3e, #7cc98a);
-  --color-success-subtle: light-dark(rgb(47 122 62 / 0.10), rgb(124 201 138 / 0.13));
-  --color-warning: light-dark(#8a6212, #dfae4e);
-  --color-warning-subtle: light-dark(rgb(138 98 18 / 0.11), rgb(223 174 78 / 0.13));
-  --color-danger: light-dark(#a63d34, #e0796d);
-  --color-danger-subtle: light-dark(rgb(166 61 52 / 0.10), rgb(224 121 109 / 0.13));
-  --color-info: light-dark(#3a6b96, #7ea8cc);
-  --color-info-subtle: light-dark(rgb(58 107 150 / 0.10), rgb(126 168 204 / 0.13));
-
-  --color-state-draft: light-dark(#67676f, #85858b);
-  --color-state-pending: light-dark(#8a6212, #dfae4e);
-  --color-state-active: light-dark(#3a6b96, #7ea8cc);
-  --color-state-blocked: light-dark(#a63d34, #e0796d);
-  --color-state-completed: light-dark(#2f7a3e, #7cc98a);
-  --color-state-cancelled: light-dark(#67676f, #85858b);
+  /* Tint used as TEXT on the canvas or a cell (links, plain buttons, bar
+     buttons). The AA-checked fill doubles as text colour: it clears 4.5:1 on
+     white and on #1C1C1E. `text-accent-ink` was used before this existed and
+     silently rendered as plain text. */
+  --color-accent-ink: light-dark(var(--accent-fill-light), var(--accent-fill-dark));
 
   /* ---------------------------------------------------------------------
-   * GEOMETRY, ELEVATION, MOTION — the source's own values.
+   * SEMANTIC — iOS system colours, accessible variants. Independent of tint.
    * ------------------------------------------------------------------- */
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 14px;
-  --radius-xl: 16px;
+  --color-success: light-dark(#248a3d, #30db5b);
+  --color-success-subtle: light-dark(rgb(52 199 89 / 0.14), rgb(48 209 88 / 0.18));
+  --color-warning: light-dark(#c93400, #ffb340);
+  --color-warning-subtle: light-dark(rgb(255 149 0 / 0.14), rgb(255 159 10 / 0.18));
+  --color-danger: light-dark(#d70015, #ff6961);
+  --color-danger-subtle: light-dark(rgb(255 59 48 / 0.12), rgb(255 69 58 / 0.18));
+  --color-info: light-dark(#0040dd, #409cff);
+  --color-info-subtle: light-dark(rgb(0 122 255 / 0.12), rgb(10 132 255 / 0.18));
+
+  --color-state-draft: light-dark(#6c6c70, #aeaeb2);
+  --color-state-pending: light-dark(#c93400, #ffb340);
+  --color-state-active: light-dark(#0040dd, #409cff);
+  --color-state-blocked: light-dark(#d70015, #ff6961);
+  --color-state-completed: light-dark(#248a3d, #30db5b);
+  --color-state-cancelled: light-dark(#6c6c70, #aeaeb2);
+
+  /* ---------------------------------------------------------------------
+   * GEOMETRY, ELEVATION, MOTION — iOS.
+   * ------------------------------------------------------------------- */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
   --radius-pill: 999px;
 
-  /* `--hl` in the source: the inner highlight that gives glass a lit top edge.
-     Strong in light, almost absent in dark — the same trick a real material
-     uses, and the reason these surfaces look lit rather than filled. */
-  --shadow-highlight: inset 0 1px 0 light-dark(rgb(255 255 255 / 0.75), rgb(255 255 255 / 0.045));
+  /* Grouped cells carry no shadow on iOS. Shadows exist only on floating
+     things: menus, popovers, sheets. */
+  --shadow-highlight: 0 0 0 transparent;
+  --shadow-sm: 0 0 0 transparent;
+  --shadow-md: 0 4px 16px light-dark(rgb(0 0 0 / 0.10), rgb(0 0 0 / 0.45));
+  --shadow-lg: 0 10px 40px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.6));
 
-  --shadow-sm: 0 1px 2px light-dark(rgb(18 18 21 / 0.025), rgb(0 0 0 / 0.24)),
-               0 6px 18px -12px light-dark(rgb(18 18 21 / 0.10), rgb(0 0 0 / 0.55));
-  --shadow-md: 0 1px 2px light-dark(rgb(18 18 21 / 0.03), rgb(0 0 0 / 0.35)),
-               0 22px 52px -20px light-dark(rgb(18 18 21 / 0.19), rgb(0 0 0 / 0.8));
-  --shadow-lg: 0 2px 6px light-dark(rgb(18 18 21 / 0.05), rgb(0 0 0 / 0.45)),
-               0 44px 90px -28px light-dark(rgb(18 18 21 / 0.32), rgb(0 0 0 / 0.9));
+  /* iOS materials: strong blur and saturation, nearly opaque base. */
+  --blur-glass: 20px;
+  --blur-glass-strong: 30px;
+  --glass-optics: saturate(1.8);
+  --glass-optics-strong: saturate(1.8);
 
-  --blur-glass: 24px;
-  --blur-glass-strong: 34px;
-  /**
-   * LIQUID GLASS OPTICS.
-   *
-   * The material reads grey when it lays a neutral veil over the colour behind
-   * it — the veil desaturates whatever it covers, and a desaturated tint IS
-   * grey. Apple's glass does the opposite: it barely tints, and instead
-   * AMPLIFIES the ground, pushing saturation well past 1 and lifting brightness
-   * so the surface reads as lit rather than filmed. These are the amounts that
-   * do it; the fill alphas above are deliberately tiny so these can work.
-   */
-  --glass-optics: saturate(1.08) brightness(1.02);
-  --glass-optics-strong: saturate(1.12) brightness(1.03);
+  /* iOS default curve and its sheet presentation curve. */
+  --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-slide: cubic-bezier(0.32, 0.72, 0, 1);
 
-  /**
-   * Dark drops the brightness lift entirely and pushes saturation instead.
-   *
-   * A lift over a near-black ground raises every pixel behind the pane toward
-   * grey, which is precisely the "white in the glass" that stops a dark surface
-   * settling into its background. Light needs the lift because the ground is
-   * already bright and the material would otherwise read as a dull patch; dark
-   * does not.
-   */
-
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  /* Container Slide, Out-Expo (Verity_Motion_Architecture.md §2) — context
-     panels, dialog overlays, bottom sheets, 500ms entrance. Distinct from
-     --ease-out's micro-interaction curve because a large panel's momentum
-     reads differently than a button. Kept in sync by hand with the
-     duplicated bezier array in ContextPanel.tsx (framer-motion's `ease`
-     doesn't accept a CSS var() reference). */
-  --ease-slide: cubic-bezier(0.19, 1, 0.22, 1);
-
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter), "Segoe UI", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter), "Segoe UI", sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
@@ -250,515 +179,141 @@
 @layer base {
   * { box-sizing: border-box; }
 
-  html {
-    /* The base colour. body layers the accent wash on top of it. */
-    background: var(--color-canvas);
-  }
+  html { background: var(--color-canvas); }
 
   html, body {
     margin: 0;
     padding: 0;
     height: 100dvh;
     overflow: hidden;
-    /**
-     * NO ELASTIC OVERSCROLL, AND NO CHAINING.
-     *
-     * Reported: "the whole website gets overscrolled and stuck, not even solved
-     * by a reload."
-     *
-     * `overflow: hidden` hides a scrollbar; it does not stop the document being
-     * scrolled. On macOS a wheel or trackpad gesture that runs past the end of
-     * an inner scroller CHAINS to its ancestors and rubber-bands the document —
-     * which here has no scrollbar to drag back with, so the whole interface sits
-     * displaced with no way to return it.
-     *
-     * `none` stops both the chaining and the elastic bounce at the root, which
-     * is the only place either can strand the user.
-     */
+    /* The app is a fixed shell with its own scrollers. Without this a gesture
+       past the end of an inner list rubber-bands the whole document on macOS
+       and strands it displaced, with no scrollbar to drag it back. */
     overscroll-behavior: none;
   }
 
-  /* Inner panes keep their own bounce but never hand a gesture upward: a list
-     that has reached its end should stop, not start moving the page behind it. */
+  /* Inner panes keep their own bounce but never hand a gesture upward. */
   [data-shell-scroll],
   aside [class*="overflow-y-auto"] {
     overscroll-behavior: contain;
   }
 
-  /**
-   * THE ATMOSPHERE — carried entirely by `.verity-atmosphere` (Level 0,
-   * below), not by body's own background.
-   *
-   * The two used to duplicate each other: body painted its own three-blob
-   * wash AND `.verity-atmosphere` painted a second, different one on top,
-   * and the two falloffs disagreed at the edges — visible as a faint seam
-   * where one gradient's transparent tail crossed the other's. One accent
-   * ground, defined once, reads as a room; two disagreeing ones read as a
-   * rendering bug. Flat canvas here, all the colour on the dedicated layer.
-   *
-   * `isolation: isolate` makes body its OWN stacking context, which flips
-   * the painting order that would otherwise sink `.verity-atmosphere`
-   * (below, `z-index: -1`): as the element THAT stacking context is formed
-   * on, body's flat background becomes step 1 (paints first), and its
-   * negative-z-index child becomes step 2 (paints next, on top of step 1)
-   * — instead of body's background escaping to the document root and
-   * painting in root's step 3, after every negative-z-index descendant
-   * anywhere on the page. Without this, a page that deliberately wants no
-   * atmosphere (sign-in's own opaque `bg-canvas` main) would find the
-   * atmosphere painted in front of it instead of behind it.
-   */
   body {
     background: var(--color-canvas);
     isolation: isolate;
   }
 
+  /* iOS text styles. Body is 15 (Subheadline) on wide, dense operate screens
+     and 17 (Body) on phones; inputs are 16+ on phones so iOS Safari does not
+     zoom the page when a field is focused. */
   html, body {
     color: var(--color-text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", var(--font-inter),
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter),
       "Segoe UI", sans-serif;
-    font-size: 14px;
-    line-height: 1.55;
+    font-size: 15px;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (max-width: 639px) {
+    html, body { font-size: 17px; }
+    input, select, textarea { font-size: 16px !important; }
   }
 
-  /* Size-specific tracking (apple-design skill §15): negative on the one
-     large display size, near-zero as text shrinks toward body's own 14px —
-     a single -0.02em for every heading size reads too tight at 15-17px,
-     where letters need the room, not less of it. h1 is fixed at the brand
-     board's own printed spec (32/40, Light) -- previously 30/38, which its
-     own PageHeader comment already claimed without the CSS matching it.
-     h2/h3 stay smaller than the board's marketing-context sizes: they're
-     Panel/section titles used densely across this operate surface (impeccable
-     Operate mode -- scanability over expression), not a page masthead. */
   h1, h2, h3 { margin: 0; }
-  h1 { font-size: 32px; line-height: 40px; font-weight: 300; letter-spacing: -0.02em; }
-  h2 { font-size: 17px; line-height: 24px; font-weight: 400; letter-spacing: -0.006em; }
-  h3 { font-size: 15px; line-height: 22px; font-weight: 500; letter-spacing: 0; }
+  /* Large Title, Title 3, Headline. */
+  h1 { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: 0.01em; }
+  h2 { font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: 0.02em; }
+  h3 { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  @media (max-width: 639px) {
+    h1 { font-size: 30px; line-height: 36px; }
+  }
 
   ::selection { background: var(--color-accent-subtle); color: var(--color-text); }
   :root { accent-color: var(--color-accent); caret-color: var(--color-accent); }
 
-  /**
-   * Scrollbars hidden everywhere. The scroll itself is untouched — wheel,
-   * trackpad, touch, and keyboard scrolling all still work; only the
-   * track/thumb no longer paints. `scrollbar-width: none` covers Firefox,
-   * `::-webkit-scrollbar { display: none }` covers Chromium/Safari, and
-   * `-ms-overflow-style: none` covers legacy Edge — the three mechanisms
-   * a hidden-but-functional scrollbar needs, none of them optional.
-   */
+  /* Scrollbars hidden everywhere, as on iOS; scrolling itself is untouched. */
   * { scrollbar-width: none; -ms-overflow-style: none; }
   ::-webkit-scrollbar { display: none; }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 3px solid color-mix(in srgb, var(--accent-seed) 55%, transparent);
     outline-offset: 2px;
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-sm);
   }
 }
 
 /**
- * LEVEL 0 — the atmosphere.
- *
- * One light source, not a spray of blobs: a single soft field entering from
- * top-centre, the way a studio backdrop is lit — brightest at the top edge,
- * falling clean and continuous to the canvas colour, with no second or
- * third bloom competing for the eye. Reference: a softbox product shot, one
- * light, one smooth falloff.
- *
- * Seven stops, not two. A "bright to transparent" gradient with few stops
- * has a near-linear alpha ramp, and a linear ramp is exactly what 8-bit
- * colour bands on — visible as faint concentric rings once the area gets
- * large. An eased curve (steep near the light, flat by the tail) needs more
- * stops to describe, but never asks the display to represent a slow, wide,
- * almost-linear alpha change, which is the specific case that bands.
- *
- * `rgb(from var(--accent-seed) r g b / a)`, not `color-mix(…, transparent)`.
- * Mixing toward the transparent keyword mixes toward its (0, 0, 0) colour
- * channels too, not just its alpha — a visible dark ring across a field
- * this size, where the fade has room to pass through a muddier version of
- * the accent before it reaches zero. The relative-colour form holds r/g/b
- * fixed and only varies alpha, so the accent hue never bends as it fades.
- *
- * `filter: blur()` is what makes it frosty rather than a printed gradient —
- * a radial-gradient's own falloff is a mathematically exact curve, and an
- * exact curve is precisely what a wash of light through frosted glass never
- * has. `.verity-grain` (below) is what makes it a photograph rather than a
- * screen: even a seven-stop blurred gradient still bands faintly on a large
- * enough panel, the same way an unlit studio photo would if it had no film
- * grain — a few percent of noise dithers the transition below the eye's
- * threshold, which is the actual, complete fix, not a workaround for it.
- *
- * Fixed rather than scrolling, so it reads as the room the interface sits in
- * rather than as a decorated page. Pointer-events none: it is a backdrop,
- * never a surface. `prefers-reduced-transparency` turns the whole layer off
- * below, which is why body carries no accent colour of its own.
- *
- * `z-index: -1` relies on body's `isolation: isolate` above — see that
- * comment. Without it this layer either paints behind body's own flat
- * background (invisible) or in front of every static-positioned page
- * container (sign-in's deliberately gradient-free canvas included).
+ * The atmospheric field and grain are retired by ADR-033: iOS backgrounds are
+ * flat grouped colours. The classes stay defined (and hidden) so the shells
+ * that still mount them render nothing.
  */
-.verity-atmosphere {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  filter: blur(64px);
-  /**
-   * Two stops per shape, not seven. Every extra hand-placed stop is a point
-   * where the RATE of change changes — continuous in colour, but not in
-   * slope — and that kink survives blur as its own faint ring. A seven-stop
-   * attempt at "smoother" produced seven concentric rings, one per stop; a
-   * single peak-to-transparent slope has no interior kink to ring at all.
-   * Size, position and blur radius do the shaping instead — that is what
-   * "smooth" actually means for a gradient, not more control points.
-   *
-   * Same reasoning kept the vignette a third, correctly-nested
-   * radial-gradient sharing the primary shape's own centre rather than a
-   * `box-shadow` (which falls off from the box's straight edges, not
-   * radially, and printed its own soft rectangle here) or an independently
-   * placed radial (which beat against this one as two different circular
-   * maths overlapping).
-   *
-   * DUOTONE, not one hue repeated. `hsl(from var(--accent-seed) …)` rotates
-   * the seed's own hue by 42° for the second source rather than reusing it —
-   * a single colour glowing from two corners still reads as one flat mood;
-   * a second, related hue is what stops the screen feeling monotone. It
-   * stays a relative of the seed (same lightness, hue offset) so a custom
-   * accent still produces a coherent pair instead of an arbitrary second
-   * colour fighting it — except saturation, damped to 60% of the seed's own:
-   * at full saturation a warm accent (Gold, Champagne) rotated 42° lands in
-   * olive/khaki, which reads muddy at this size in a way the same rotation
-   * on a cool accent does not. Toning the SECOND source down is enough —
-   * the primary source keeps the seed's true colour untouched.
-   *
-   * Both sources stay quiet (8%/4% peak in dark, 12%/7% in light) and
-   * blurred harder than before — "glow" is not the goal here, "the glass in
-   * front of the screen is tinted and frosted" is. Consistent over bright:
-   * the vignette is correspondingly deeper in dark mode so the whole frame
-   * settles to one dark, quiet field rather than a hot spot fading to a
-   * lighter one.
-   */
-  background:
-    radial-gradient(
-      1300px 1000px at 50% -12%,
-      light-dark(
-        rgb(from var(--accent-seed) r g b / 12%),
-        rgb(from var(--accent-seed) r g b / 3%)
-      ) 0%,
-      rgb(from var(--accent-seed) r g b / 0%) 85%
-    ),
-    radial-gradient(
-      1100px 900px at 8% 108%,
-      light-dark(
-        hsl(from var(--accent-seed) calc(h + 42) calc(s * 0.6) l / 7%),
-        hsl(from var(--accent-seed) calc(h + 42) calc(s * 0.6) l / 1.5%)
-      ) 0%,
-      hsl(from var(--accent-seed) calc(h + 42) calc(s * 0.6) l / 0%) 80%
-    ),
-    radial-gradient(
-      1300px 1000px at 50% -12%,
-      transparent 0%,
-      light-dark(rgba(15, 17, 21, 0.02), rgba(0, 0, 0, 0.24)) 100%
-    );
-}
-
-/**
- * The grain. Deliberately NOT inside `.verity-atmosphere` — that layer has
- * `filter: blur()`, and blur is exactly what a dither texture cannot survive;
- * a blurred noise field just becomes a slightly different smooth gradient; it
- * stops being noise. This is its own unblurred sibling instead, an SVG
- * fractal-noise tile repeated over the viewport.
- *
- * `soft-light`, not `overlay`, and the opacity stays deliberately low (0.08+), not a
- * near-zero dusting. `overlay` barely moves a pixel that already sits near
- * white or near black — exactly the tonal range this gradient spends most
- * of its area in — so at any opacity it left every ring the gradient
- * itself draws untouched; measured, not assumed, after the first two
- * numbers did nothing. `soft-light` perturbs evenly across the tonal range,
- * and at this opacity actually breaks up the 8-bit steps a smooth radial
- * gradient bands into over an area this large — which is the one thing
- * this layer exists to do. The tile itself stays invisible as a pattern;
- * only its dithering effect on the gradient shows.
- */
+.verity-atmosphere,
 .verity-grain {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: light-dark(0.04, 0.04);
-  mix-blend-mode: soft-light;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
+  display: none;
 }
 
 /**
- * LEVELS 1–4 — the glass materials. DEPRECATED by ADR-023 (2026-09-17).
+ * MATERIALS (ADR-033). The class names are kept from ADR-024/026 so every
+ * screen moves at once; their meaning is now iOS's:
  *
- * ADR-023 retired glass as the default Experience System material in favor of
- * structured minimalism (`.verity-solid` below). These four classes stay
- * defined only until every remaining consumer is confirmed migrated — do not
- * reach for them in new work, and do not delete them yet (Task 112 non-goal).
+ *   .glass-shell    bar material — navigation bar, tab bar, sidebar
+ *   .glass-card     an inset-grouped cell: opaque, 12px corners, no border/shadow
+ *   .glass-control  a system fill — text fields, gray buttons, segmented controls
+ *   .glass-overlay  thick material — menus, popovers, sheets, dialogs
+ *   .verity-solid   an opaque cell, identical to .glass-card in this system
  *
- * Each pairs one ladder step with blur and the inner highlight. They are
- * classes rather than utilities because the three properties must travel
- * together: a translucent background without its blur is a washed-out panel,
- * and that is what "glass added superficially" looks like.
- *
- * Blur is applied on FOUR surface kinds at most — shell, card, control,
- * overlay — never per row or per badge. ADR-011 constraint 2.
+ * Translucency lives only on bars and overlays, where iOS uses it.
  */
-.glass-shell,
-.glass-card,
-.glass-control,
-.glass-overlay {
-  /* No `-webkit-backdrop-filter` fallback, deliberately. Lightning CSS
-     (Turbopack, Next.js 16) drops the STANDARD `backdrop-filter` whenever a
-     `-webkit-backdrop-filter` is authored alongside it — confirmed on the
-     compiled prod-build CSS (only the prefixed form survived), and it
-     reproduces even split into a separate adjacent rule with the same
-     selector (Lightning CSS's minifier re-merges same-selector rules before
-     the same collapse hits). Tailwind's own generated `.backdrop-filter`
-     utility was unaffected — different code path, not this bug. The
-     vendor prefix is no longer needed to cover a supported target anyway:
-     Safari has shipped unprefixed `backdrop-filter` since 16.4 (Mar 2023),
-     well inside this repo's `browserslist` ("last 2 versions" per engine).
-     Do not re-add `-webkit-backdrop-filter` here — it silently kills the
-     property this rule exists for. */
-  backdrop-filter: blur(var(--blur-glass)) var(--glass-optics);
-  box-shadow: var(--shadow-highlight);
-}
-
-/**
- * THE MATERIALS — gradient-filled glass, not flat washes.
- *
- * Apple's rule (WWDC "Materials"): a translucent surface is lit. Real glass is
- * brighter where light strikes it and settles darker below, so each surface is
- * a vertical gradient between two tints of the same material rather than one
- * flat colour, with a bright top edge where the light catches. A single flat
- * alpha reads as a sheet of tinted plastic; the gradient plus the edge is what
- * makes it read as a material.
- *
- * Weight encodes hierarchy, also from that talk: the shell is the heaviest and
- * most tinted because it is structure and nothing is read on it, and the levels
- * above it get progressively lighter and less coloured because they carry text.
- * A light translucent surface is never stacked on another — controls sit on
- * cards, cards on the shell, and each step is denser than the one beneath.
- */
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --glass-optics: saturate(1.10);
-    --glass-optics-strong: saturate(1.14);
-  }
-}
-:root[data-theme="dark"] {
-  --glass-optics: saturate(1.10);
-  --glass-optics-strong: saturate(1.14);
-}
-
-/* Level 1 — the shell. Quietest material; it must recede.
- *
- * The top edge carries a two-channel dispersion instead of one flat
- * highlight: real refraction bends short and long wavelengths by different
- * amounts, so a lit edge on real glass is never perfectly white — it fringes
- * warm above cool by a hairline. This is the static, zero-JS approximation
- * of that (liquid-glass-react's technique is a live per-pixel RGB
- * displacement map; this is two 1px inset lines standing in for it). One
- * shell per page, so the two extra layers cost nothing ADR-011 constraint 2
- * cares about — this is deliberately NOT repeated on .glass-card, which
- * renders per table row. */
 .glass-shell {
-  background:
-    linear-gradient(
-      180deg,
-      light-dark(rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.03)) 0%,
-      light-dark(rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.006)) 22%,
-      transparent 62%
-    ),
-    var(--color-glass-1);
-  backdrop-filter: blur(var(--blur-glass-strong)) var(--glass-optics);
-  box-shadow:
-    inset 0 1px 0 light-dark(rgb(255 255 255 / 0.20), rgb(255 255 255 / 0.035)),
-    inset 0 -1px 0 light-dark(rgb(210 220 235 / 0.12), rgb(180 195 220 / 0.02)),
-    var(--shadow-highlight);
+  background: var(--color-chrome);
+  backdrop-filter: blur(var(--blur-glass)) var(--glass-optics);
 }
 
-/* Level 2 — primary surfaces. Cards and panels. */
 .glass-card {
-  background:
-    linear-gradient(
-      180deg,
-      light-dark(rgb(255 255 255 / 0.13), rgb(255 255 255 / 0.039)) 0%,
-      light-dark(rgb(255 255 255 / 0.025), rgb(255 255 255 / 0.007)) 22%,
-      transparent 62%
-    ),
-    var(--color-glass-2);
-  border: 1px solid var(--color-line);
+  background: var(--color-surface);
   border-radius: var(--radius-xl);
-  /* Two lit edges, both drawn as insets so they follow the radius exactly.
-     The top is neutral light catching the lip of the material; the LEADING
-     edge takes the accent, which is where the light in this room comes from
-     — the bloom sits top-left, so the left side of every surface is the side
-     facing it. It is a material highlight, not a status marker: low alpha,
-     never saturated, and identical on every card so it can never be mistaken
-     for meaning. */
-  /* Three edges give the pane thickness: a specular lip along the top, the
-     accent down the leading edge where the room's light comes from, and a
-     faint shade along the bottom where a real sheet would fall into shadow.
-     Without the bottom edge the surface reads as a flat cut-out. */
-  box-shadow:
-    inset 0 1px 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.045)),
-    inset 1px 0 0 color-mix(in oklab, var(--accent-seed) 6%, transparent),
-    inset 0 -1px 0 light-dark(rgb(16 18 22 / 0.05), rgb(0 0 0 / 0.22)),
-    var(--shadow-sm);
 }
 
-/* Level 3/4 — controls. Denser material so text on them stays legible. */
 .glass-control {
-  background:
-    linear-gradient(
-      180deg,
-      light-dark(rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.03)) 0%,
-      light-dark(rgb(255 255 255 / 0.02), rgb(255 255 255 / 0.006)) 22%,
-      transparent 62%
-    ),
-    var(--color-glass-3);
-  border: 1px solid var(--color-line);
+  background: var(--color-control);
 }
 
-/* Temporary layers — sheets, dropdowns, dialogs. Densest, because they must
-   read against arbitrary content beneath them, and because a dialog is the one
-   surface where losing a word to the background is unacceptable. A bigger
-   surface reads as thicker: more blur and a deeper shadow than a chip. */
 .glass-overlay {
-  background:
-    linear-gradient(
-      180deg,
-      light-dark(rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.036)) 0%,
-      light-dark(rgb(255 255 255 / 0.03), rgb(255 255 255 / 0.009)) 22%,
-      transparent 62%
-    ),
-    var(--color-glass-4);
+  background: var(--color-glass-4);
   backdrop-filter: blur(var(--blur-glass-strong)) var(--glass-optics-strong);
-  /* Dispersion fringe on the top edge — see .glass-shell for why. Overlays
-     are dialogs/dropdowns, never a per-row surface, so the same reasoning
-     that keeps this off .glass-card applies here too: cheap because rare. */
-  box-shadow:
-    inset 0 1px 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.05)),
-    inset 0 1.5px 0 light-dark(rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.035)),
-    inset 0 -1px 0 light-dark(rgb(200 215 235 / 0.12), rgb(175 195 220 / 0.02)),
-    var(--shadow-lg);
+  box-shadow: 0 0 0 0.5px var(--color-line), var(--shadow-lg);
 }
 
-/* Level 5 — opaque, and still part of the material system. Dense tables and
-   long-form text sit here because translucency costs contrast exactly where
-   legibility matters most (ADR-011); the tint keeps them from reading as plain
-   white boxes punched through the glass. */
 .verity-solid {
   background: var(--color-surface);
-  box-shadow: inset 0 1px 0 light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.05));
 }
 
-/* ADR-026 material rollout (2026-09-19).
- *
- * The earlier reference-board pass flattened content cards after validating
- * the shell. The product direction has now changed: content cards and panels
- * use the same layered material language as the shell, while dense tables,
- * long-form text, forms and confirmations may opt into `verity-solid`.
- * Keep glass capped at shell/card/control/overlay; never apply it to rows or
- * badges. The atmospheric field and grain are intentional visual structure,
- * not decoration attached to individual components.
- */
-.verity-solid {
-  background:
-    linear-gradient(
-      180deg,
-      light-dark(rgb(255 255 255 / 0.78), rgb(255 255 255 / 0.065)) 0%,
-      light-dark(rgb(255 255 255 / 0.38), rgb(255 255 255 / 0.025)) 100%
-    ),
-    var(--color-surface);
-  box-shadow:
-    inset 0 1px 0 light-dark(rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.06)),
-    var(--shadow-sm);
+/* A popover nested inside a card cannot blur what lies outside the card, so it
+   goes nearly opaque: legibility outranks translucency. */
+:is(.glass-card, .glass-control, .glass-shell) .glass-overlay {
+  --color-glass-4: light-dark(rgb(255 255 255 / 0.98), rgb(44 44 46 / 0.98));
 }
-
-/**
- * Liquid-glass refraction (enabled per element by `LiquidGlass.tsx`, Chromium
- * only). `.lg-on` is added only while a surface holds a live refraction filter,
- * so every rule here is dormant on Safari/Firefox and under reduced
- * transparency. It thins the tint (refraction is invisible under a dense
- * wash) and adds a pointer-tracked specular rim. Text-bearing surfaces keep
- * their contrast floor: only shell and card lose tint, never overlay/control,
- * which carry the densest copy and dialogs' decision text.
- */
-.lg-on::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  z-index: 1;
-  background: linear-gradient(
-    115deg,
-    light-dark(rgb(255 255 255 / 0.5), rgb(255 255 255 / 0.10)) 0%,
-    light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.34))
-      calc(var(--lg-x, 30%) - 12%),
-    light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.34))
-      calc(var(--lg-x, 30%) + 4%),
-    light-dark(rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.05)) 100%
-  );
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-/* A glass surface is its own stacking context (its backdrop-filter), so a
-   popover inside it, however high its z-index, is trapped and painted UNDER
-   any later glass sibling. Lift whichever panel currently holds an open
-   popover trigger above its siblings so the list is not cut off by the cards
-   below it. Independent of refraction: the defect predates it. */
+/* Lift a card holding an open popover above its siblings so the list is not
+   painted under the next card. */
 .glass-card:has([aria-expanded="true"]):not(.absolute, .fixed, .sticky),
 .glass-control:has([aria-expanded="true"]):not(.absolute, .fixed, .sticky) {
   position: relative;
   z-index: 30;
 }
-/* A popover nested in a glass panel cannot blur what lies outside that panel
-   (the panel's own backdrop-filter is its backdrop root), so anything the
-   popover overlaps beyond the panel would read straight through the tint.
-   Nested overlays therefore go near-opaque: legibility outranks translucency
-   (ADR-011 constraint 1). Root-level overlays keep the full glass tint. */
-:is(.glass-card, .glass-control, .glass-shell) .glass-overlay {
-  --color-glass-4: light-dark(rgb(255 255 255 / 0.95), rgb(22 26 31 / 0.96));
-}
-.glass-shell.lg-on { --color-glass-1: light-dark(rgb(255 255 255 / 0.10), rgb(255 255 255 / 0.015)); }
-.glass-card.lg-on { --color-glass-2: light-dark(rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.03)); }
-@media (prefers-reduced-transparency: reduce) {
-  .lg-on::before { display: none; }
-}
 
-.verity-scrim { background: light-dark(rgb(24 24 27 / 0.16), rgb(6 6 8 / 0.5)); }
+/* Liquid-glass refraction (`LiquidGlass.tsx`) is not part of iOS's flat
+   materials; its specular rim is switched off. */
+.lg-on::before { display: none; }
+
+/* iOS dimming view behind sheets and alerts. */
+.verity-scrim { background: rgb(0 0 0 / 0.4); }
 
 /**
- * Form field layout — Task 71 item 2.
- *
- * A field is label / control / hint stacked. Inside a `FormRow` it becomes a
- * three-row subgrid instead, so every field in the row shares the same label
- * baseline, the same control baseline and the same hint baseline — whether or
- * not it has a hint.
- *
- * The desks previously used `flex items-end` for these rows, which aligns
- * BOTTOMS: a field carrying a hint was taller, so its label and control were
- * pushed up relative to its neighbours. That is the staircase the product owner
- * reported on the New supplier row, where Supplier, GSTIN, State code and Phone
- * each sat at a different height.
- *
- * These live here rather than as utility classes because `FormRow` has to
- * override the display of its own children, and `.form-row > .verity-field`
- * wins that on specificity. Two Tailwind utilities of equal specificity would
- * resolve by stylesheet order, which is not something a component should depend
- * on.
+ * Form field layout — label / control / hint stacked; inside a `FormRow` a
+ * three-row subgrid so every field in the row shares the same baselines.
  */
 .verity-field {
   display: flex;
@@ -771,16 +326,10 @@
   display: grid;
   grid-row: span 3;
   grid-template-rows: subgrid;
-  /* Overrides the row's own 16px vertical gutter for the three tracks this
-     field spans; the 16px is the space BETWEEN wrapped field rows, not between
-     a label and its input. */
   row-gap: 6px;
   align-content: start;
 }
 
-/* Without subgrid a field would occupy one row and the alignment guarantee is
-   gone, so fall back to the stacked layout and let the row space them evenly
-   rather than rendering a broken grid. */
 @supports not (grid-template-rows: subgrid) {
   .form-row > .verity-field {
     display: flex;
@@ -791,31 +340,13 @@
   }
 }
 
-/**
- * ADR-011 constraint 5 — user preference outranks the material.
- *
- * Reduced transparency is honoured by making every surface opaque and dropping
- * every blur. Hierarchy survives because the borders and shadows remain, which
- * is why they were never doing nothing.
- */
+/* Reduce Transparency, as on iOS: every material becomes opaque. */
 @media (prefers-reduced-transparency: reduce) {
-  .glass-shell, .glass-card, .glass-control, .glass-overlay {
+  .glass-shell, .glass-overlay {
     backdrop-filter: none;
   }
-  .glass-shell { background: var(--color-chrome); }
-  /* Reduced transparency: the blur goes, the TINT stays. Honouring the
-     preference should not also strip the accent out of the interface. */
-  .glass-card, .glass-control {
-    background: color-mix(in oklab, var(--accent-seed) 3%, var(--color-surface));
-  }
-  .glass-overlay {
-    background: color-mix(
-      in oklab,
-      var(--accent-seed) 2%,
-      var(--color-surface-elevated)
-    );
-  }
-  .verity-atmosphere, .verity-grain { display: none; }
+  .glass-shell { background: light-dark(#f9f9f9, #161618); }
+  .glass-overlay { background: var(--color-surface-elevated); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -827,23 +358,20 @@
 }
 
 /**
- * ADR-024 motion, native-dialog case — `Modal.tsx`'s own comment explains
- * why this is CSS rather than framer-motion. `@starting-style` plus
- * `transition-behavior: allow-discrete` is the platform mechanism for
- * animating a `display: none` <-> rendered transition in both directions on
- * a native element, which is exactly what showModal()/close() do. Damping
- * ~1.0 critically-damped feel approximated with a standard ease-out curve —
- * a true spring needs a JS-driven timeline, which is what this rule is
- * deliberately avoiding for a native <dialog>.
+ * Native <dialog> motion (`Modal.tsx`). On phones a dialog is a bottom sheet
+ * that slides up; on wider screens it is a centred form sheet that fades and
+ * scales in. `@starting-style` animates both directions without JavaScript.
  */
 .verity-modal-motion {
   transition:
-    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    scale 0.22s cubic-bezier(0.16, 1, 0.3, 1),
-    display 0.22s allow-discrete,
-    overlay 0.22s allow-discrete;
+    opacity 0.3s var(--ease-slide),
+    scale 0.3s var(--ease-slide),
+    translate 0.35s var(--ease-slide),
+    display 0.35s allow-discrete,
+    overlay 0.35s allow-discrete;
   opacity: 1;
   scale: 1;
+  translate: 0 0;
 }
 .verity-modal-motion:not([open]) {
   opacity: 0;
@@ -855,35 +383,22 @@
     scale: 0.97;
   }
 }
+@media (max-width: 639px) {
+  .verity-modal-motion:not([open]) { opacity: 1; scale: 1; translate: 0 100%; }
+  @starting-style {
+    .verity-modal-motion[open] { opacity: 1; scale: 1; translate: 0 100%; }
+  }
+}
 
 /**
- * PRINT — only the printable content, never the app around it.
- *
- * `ShellChrome`'s own `print:hidden` on the sidebar and both top bars
- * handles what's VISIBLE — this handles what's not obviously visible but
- * still wrong: `html`/`body` are `height: 100dvh; overflow: hidden` (the
- * app is a fixed-height single-scroller shell, never a scrolling document —
- * see the overscroll comment above), and the shell root repeats the same
- * `h-dvh overflow-hidden` so its own content scrolls instead of the page.
- * A browser paginating for print measures exactly that chain of
- * fixed-height, clipped ancestors and prints one screen-height page — the
- * invoice's own lines past the fold silently vanish, not just the chrome
- * around them. Every element in the chain up to the printable content
- * needs `height: auto` and `overflow: visible`, or hiding the sidebar
- * alone still ships a clipped invoice.
- *
- * The atmosphere and grain are already display:none under
- * `prefers-reduced-transparency`, above — print gets the same treatment
- * for the same reason: it's a screen material, and ink has no backdrop to
- * filter.
+ * PRINT — only the printable content. The shell is a fixed-height, clipped
+ * single scroller; every element in that chain needs `height: auto` and
+ * `overflow: visible` or the printout stops at one screen.
  */
 @media print {
   html, body, [data-shell-root], [data-shell-scroll] {
     height: auto !important;
     overflow: visible !important;
-  }
-  .verity-atmosphere, .verity-grain {
-    display: none !important;
   }
 }
 

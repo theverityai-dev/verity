@@ -70,17 +70,18 @@ export function HqChrome({
                   href={item.href}
                   aria-current={current ? "page" : undefined}
                   className={
-                    "flex h-[52px] items-center gap-3.5 rounded-lg px-3.5 text-[15px] no-underline " +
+                    // iPadOS sidebar row, same as the client shell (ADR-033).
+                    "flex h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] no-underline " +
                     "transition-[background-color,color] duration-200 " +
                     (current
-                      ? "bg-accent-subtle font-medium text-text shadow-[inset_0_1px_0_var(--color-accent-line)]"
-                      : "text-text-secondary hover:bg-surface-sunken hover:text-text")
+                      ? "bg-accent font-semibold text-accent-on"
+                      : "text-text hover:bg-[var(--color-control)]")
                   }
                 >
                   <Icon
                     name={item.icon}
-                    size={21}
-                    className={current ? "text-accent" : "text-text-tertiary"}
+                    size={20}
+                    className={current ? "text-accent-on" : "text-accent-ink"}
                   />
                   <span className="truncate">{item.label}</span>
                 </Link>
@@ -92,7 +93,7 @@ export function HqChrome({
         <form action={signOut} className="shrink-0 pt-4">
           <button
             type="submit"
-            className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-surface-sunken"
+            className="flex w-full cursor-pointer items-center gap-3 rounded-[10px] border-0 bg-transparent px-2 py-2 text-left transition-colors hover:bg-[var(--color-control)]"
           >
             <span
               className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-subtle text-[13px] font-medium text-accent-ink"
@@ -135,9 +136,38 @@ export function HqChrome({
           </div>
         </div>
 
-        <main id="main" className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-10 pt-6 sm:px-8">
+        <main
+          id="main"
+          data-shell-scroll=""
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-8 lg:pb-10"
+        >
           {children}
         </main>
+
+        {/* iOS tab bar on phones. The sidebar is desktop-only, so without this
+            an operator on a phone had no way to move between HQ sections. */}
+        <nav
+          aria-label="HQ"
+          className="glass-shell fixed inset-x-0 bottom-0 z-40 flex h-16 items-stretch justify-around border-t border-line px-1 pb-[env(safe-area-inset-bottom)] lg:hidden"
+        >
+          {NAV.map((item) => {
+            const current = isCurrent(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={current ? "page" : undefined}
+                className={
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium no-underline transition-colors duration-200 " +
+                  (current ? "text-accent-ink" : "text-text-tertiary")
+                }
+              >
+                <Icon name={item.icon} size={24} />
+                <span className="max-w-full truncate px-1">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

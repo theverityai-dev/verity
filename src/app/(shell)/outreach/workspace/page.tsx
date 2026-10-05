@@ -98,15 +98,15 @@ async function MyWorkspacePage() {
 
       <div className="mb-6 flex gap-8">
         <div>
-          <div className="text-[28px] font-light leading-none text-text">{data.leadsToday}</div>
+          <div className="text-[28px] font-bold leading-none text-text">{data.leadsToday}</div>
           <div className="mt-1 text-[12px] text-text-tertiary">Leads today</div>
         </div>
         <div>
-          <div className="text-[28px] font-light leading-none text-text">{data.followUpsToday}</div>
+          <div className="text-[28px] font-bold leading-none text-text">{data.followUpsToday}</div>
           <div className="mt-1 text-[12px] text-text-tertiary">Follow-ups today</div>
         </div>
         <div>
-          <div className={`text-[28px] font-light leading-none ${data.overdue.length > 0 ? "text-danger" : "text-text"}`}>
+          <div className={`text-[28px] font-bold leading-none ${data.overdue.length > 0 ? "text-danger" : "text-text"}`}>
             {data.overdue.length}
           </div>
           <div className="mt-1 text-[12px] text-text-tertiary">Overdue</div>

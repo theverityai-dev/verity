@@ -151,8 +151,12 @@ export function Modal({
         // has a blanket `@media (prefers-reduced-motion: reduce)` block that
         // collapses every transition/animation duration to ~0, this one
         // included -- no separate guard needed here.
-        "glass-overlay verity-modal-motion m-auto w-[calc(100vw-2rem)] rounded-2xl p-0 " +
-        "text-text backdrop:bg-[rgba(15,17,21,0.32)] backdrop:backdrop-blur-[3px] " +
+        // ADR-033: an iOS sheet. Phones: bottom sheet, full width, rounded top
+        // corners, slides up (motion in globals.css). Wider: centred form sheet.
+        // Dimming view is iOS's plain 40% black, no blur.
+        "glass-overlay verity-modal-motion m-auto w-[calc(100vw-2rem)] rounded-[14px] p-0 " +
+        "max-sm:mb-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-b-none max-sm:rounded-t-[12px] " +
+        "text-text backdrop:bg-[rgba(0,0,0,0.4)] " +
         (width === "sm"
           ? "max-w-[420px] "
           : width === "lg"
@@ -160,15 +164,16 @@ export function Modal({
             : "max-w-[640px] ")
       }
     >
-      <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+      <div className="relative border-b border-line px-14 pb-3 pt-4 text-center">
+        {/* iOS sheet navigation bar: centred Headline title. */}
         <div className="min-w-0">
-          <h2 id={titleId} className="m-0 text-[16px] font-medium text-text">
+          <h2 id={titleId} className="m-0 text-[17px] font-semibold leading-[22px] tracking-[-0.02em] text-text">
             {title}
           </h2>
           {description && (
             <p
               id={descriptionId}
-              className="m-0 mt-1 text-[13px] text-text-secondary"
+              className="m-0 mt-1 text-[13px] leading-[18px] text-text-secondary"
             >
               {description}
             </p>
@@ -179,18 +184,19 @@ export function Modal({
           onClick={onClose}
           aria-label="Close"
           className={
-            "-mr-1 -mt-1 grid size-8 shrink-0 place-items-center rounded-lg text-text-tertiary " +
-            "transition-colors duration-150 hover:bg-surface-sunken hover:text-text " +
+            // iOS close button: a small gray circle with a glyph.
+            "absolute right-4 top-3.5 grid size-[30px] shrink-0 place-items-center rounded-full " +
+            "bg-[var(--color-control)] text-text-secondary transition-opacity duration-150 active:opacity-70 " +
             "focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--color-accent-subtle)]"
           }
         >
           <svg
-            width="16"
-            height="16"
+            width="12"
+            height="12"
             viewBox="0 0 16 16"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.5"
+            strokeWidth="2.2"
             strokeLinecap="round"
             aria-hidden="true"
           >
@@ -206,7 +212,7 @@ export function Modal({
       </div>
 
       {footer && (
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3 max-sm:pb-[calc(0.75rem+env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1">
           {footer}
         </div>
       )}

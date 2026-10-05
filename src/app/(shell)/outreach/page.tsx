@@ -332,7 +332,7 @@ async function OutreachPage({
                   <p className="m-0 text-[11px] uppercase tracking-wide text-text-tertiary">
                     Current direction · {data.currentDirection.weekLabel}
                   </p>
-                  <p className="m-0 mt-1 text-[18px] font-light text-text">
+                  <p className="m-0 mt-1 text-[18px] font-bold text-text">
                     {data.currentDirection.priorityVertical ?? "No priority vertical set"}
                   </p>
                 </div>
@@ -506,7 +506,7 @@ async function OutreachPage({
                   ["Proposals", data.pulse.proposals],
                 ].map(([label, value]) => (
                   <div key={String(label)} className="min-w-0">
-                    <p className="tabular m-0 text-[20px] font-light leading-none text-text">{value}</p>
+                    <p className="tabular m-0 text-[20px] font-bold leading-none text-text">{value}</p>
                     <p className="m-0 mt-1.5 truncate text-[11.5px] text-text-tertiary">{label}</p>
                   </div>
                 ))}
@@ -586,7 +586,7 @@ async function OutreachPage({
                           </p>
                         </div>
                       </div>
-                      <span className="tabular text-[24px] font-light text-text">{team.pipeline}</span>
+                      <span className="tabular text-[24px] font-bold text-text">{team.pipeline}</span>
                     </div>
 
                     {progress != null ? (
@@ -609,7 +609,7 @@ async function OutreachPage({
                         ["Closed", team.closed],
                       ].map(([label, value]) => (
                         <div key={String(label)} className="min-w-0">
-                          <p className="tabular m-0 text-[17px] font-light text-text">{value}</p>
+                          <p className="tabular m-0 text-[17px] font-bold text-text">{value}</p>
                           <p className="m-0 mt-1 truncate text-[10.5px] text-text-tertiary">{label}</p>
                         </div>
                       ))}

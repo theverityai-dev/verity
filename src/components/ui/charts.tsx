@@ -100,7 +100,7 @@ export function Donut({
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="tabular text-[30px] font-light leading-none tracking-[-0.02em] text-text">
+          <span className="tabular text-[30px] font-bold leading-none tracking-[-0.02em] text-text">
             {centreValue}
           </span>
           <span className="mt-1.5 text-[13px] text-text-tertiary">{centreLabel}</span>
