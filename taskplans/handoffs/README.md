@@ -11,7 +11,7 @@ line below matching recent commits), regenerate it from `git log` and the
 taskplans it points to before trusting it, same rule `00_STATUS_INDEX.md`
 already states for itself.
 
-**Last updated: 2026-10-04 (repo cleanup, deployment hardening 10-01/02; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
+**Last updated: 2026-10-06 (`taskplans/125_pending_work_register_2026_10_06.md` added; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
 
 ## How to use this folder
 
@@ -51,6 +51,17 @@ already states for itself.
   design-system.md` §2, REQ-004..009). `verity-design-companion` skill
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
+
+## Since 2026-10-04 (added 2026-10-06)
+
+- **Task 125 is the live work order.** Everything still open — verification of built screens, menu,
+  money, guests, staff leftovers, HQ and platform items, coverage, client parity docs, housekeeping —
+  is one list in `taskplans/125_pending_work_register_2026_10_06.md`, in the order to do it.
+- Shipped since the last update: HQ client lifecycle, health and support sessions (ADR-034); Verity
+  operator holds full authority inside an entered client (ADR-035); Colonel Kebabz procurement, stock
+  count and transfer, stock requests, food-cost variance, vendor payments; dine-in move/merge table,
+  history, split and item refunds; staff profile, salary permission, lateness and payroll summary;
+  order-pad line quantities and the shared `QuantityStepper`.
 
 ## Since 2026-09-30 (added 2026-10-04)
 
