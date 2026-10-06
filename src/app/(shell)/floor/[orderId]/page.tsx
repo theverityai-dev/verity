@@ -4,9 +4,10 @@ import { requireActor } from "@/server/platform/auth";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
 import { ForbiddenError } from "@/server/platform/authorization";
-import { getOrderDetail, listMenu, type OrderDetail } from "@/server/capabilities/dinein";
+import { getOrderDetail, listMenu, listTableChangeTargets, type OrderDetail } from "@/server/capabilities/dinein";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { OrderPad } from "./OrderPad";
+import { TableActions } from "./TableActions";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,10 @@ async function OrderPage({
   }
 
   if (!order) notFound();
+  const canChangeTable = ["draft", "placed", "partially_served"].includes(order.state);
+  const targets = canChangeTable
+    ? await executeQuery(actor, listTableChangeTargets, { orderId }).catch(() => ({ freeTables: [], openOrders: [] }))
+    : null;
 
   return (
     <>
@@ -51,6 +56,15 @@ async function OrderPage({
           order.tableId
             ? `${order.covers} ${order.covers === 1 ? "cover" : "covers"} · order is ${order.state.replace("_", " ")}`
             : `Order is ${order.state.replace("_", " ")}`
+        }
+        actions={
+          targets ? (
+            <TableActions
+              orderId={order.id}
+              freeTables={order.tableId ? targets.freeTables : []}
+              openOrders={targets.openOrders}
+            />
+          ) : undefined
         }
       />
       <OrderPad order={order} menu={menu} />

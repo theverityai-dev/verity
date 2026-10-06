@@ -949,6 +949,212 @@ export const cancelOrder: CommandDefinition<
   },
 };
 
+/* ============================ table changes ============================= */
+
+const OPEN_FOR_CHANGE = ["draft", "placed", "partially_served"];
+
+/**
+ * Moves a dine-in order to another table at the same outlet (pos-restaurant.md
+ * §6). The new table must be free; it becomes occupied and the old one goes to
+ * cleaning, both through the declared table transitions. Not allowed once a
+ * bill exists, because the bill is printed against the table.
+ */
+export const moveOrderToTable: CommandDefinition<{ orderId: string; toTableId: string }, { orderId: string; tableId: string }> = {
+  key: "verity.dinein.move_order_to_table",
+  entity: ENTITY_ORDER,
+  verb: "Edit",
+  input: z.object({ orderId: z.string().uuid(), toTableId: z.string().uuid() }),
+  preconditions: async (ctx, input) => {
+    const order = await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } });
+    if (!order) throw new ValidationError("E_VALIDATION: order not found");
+    await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Edit", order.locationId);
+    if (!order.tableId) throw new ValidationError("E_VALIDATION: only a dine-in order has a table to move");
+    if (!OPEN_FOR_CHANGE.includes(order.state)) throw new ValidationError("E_VALIDATION: a billed or closed order cannot change table");
+    if (order.tableId === input.toTableId) throw new ValidationError("E_VALIDATION: the order is already at that table");
+    const target = await ctx.tx.diningTable.findUnique({ where: { id: input.toTableId } });
+    if (!target || target.locationId !== order.locationId) throw new ValidationError("E_VALIDATION: choose a table at the same outlet");
+    if (target.state !== "available") throw new ValidationError("E_VALIDATION: that table is not free");
+  },
+  handler: async (ctx, input) => {
+    const order = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.orderId } });
+    const [from, to] = await Promise.all([
+      ctx.tx.diningTable.findUniqueOrThrow({ where: { id: order.tableId! } }),
+      ctx.tx.diningTable.findUniqueOrThrow({ where: { id: input.toTableId } }),
+    ]);
+    const seat = await transition(ctx, { entityKey: ENTITY_TABLE, entityId: to.id, fromKey: to.state, toKey: "occupied" });
+    await ctx.tx.diningTable.update({ where: { id: to.id }, data: { state: "occupied", version: { increment: 1 } } });
+    const leave = from.state === "occupied"
+      ? await transition(ctx, { entityKey: ENTITY_TABLE, entityId: from.id, fromKey: "occupied", toKey: "cleaning" })
+      : null;
+    if (leave) await ctx.tx.diningTable.update({ where: { id: from.id }, data: { state: "cleaning", version: { increment: 1 } } });
+    await ctx.tx.diningOrder.update({ where: { id: order.id }, data: { tableId: to.id, version: { increment: 1 } } });
+    await recordActivity(ctx, {
+      entityKey: ENTITY_ORDER,
+      entityId: order.id,
+      commandKey: "verity.dinein.move_order_to_table",
+      changes: diffFields({ table: from.label }, { table: to.label }),
+    });
+    return {
+      result: { orderId: order.id, tableId: to.id },
+      events: [seat.event, ...(leave ? [leave.event] : [])],
+    };
+  },
+};
+
+/**
+ * Joins one open order into another at the same outlet (guests pulling tables
+ * together). Every line moves with its kitchen state, the emptied order is
+ * cancelled through its declared transition, and its table goes to cleaning.
+ * Neither order may have a bill yet.
+ */
+export const mergeOrders: CommandDefinition<{ fromOrderId: string; intoOrderId: string }, { intoOrderId: string; movedLines: number }> = {
+  key: "verity.dinein.merge_orders",
+  entity: ENTITY_ORDER,
+  verb: "Edit",
+  input: z.object({ fromOrderId: z.string().uuid(), intoOrderId: z.string().uuid() }),
+  preconditions: async (ctx, input) => {
+    if (input.fromOrderId === input.intoOrderId) throw new ValidationError("E_VALIDATION: choose a different order to merge into");
+    const [from, into] = await Promise.all([
+      ctx.tx.diningOrder.findUnique({ where: { id: input.fromOrderId } }),
+      ctx.tx.diningOrder.findUnique({ where: { id: input.intoOrderId } }),
+    ]);
+    if (!from || !into) throw new ValidationError("E_VALIDATION: order not found");
+    await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Edit", from.locationId);
+    if (from.locationId !== into.locationId) throw new ValidationError("E_VALIDATION: both orders must be at the same outlet");
+    if (!OPEN_FOR_CHANGE.includes(from.state) || !OPEN_FOR_CHANGE.includes(into.state)) {
+      throw new ValidationError("E_VALIDATION: only open, unbilled orders can be merged");
+    }
+    const bills = await ctx.tx.bill.count({ where: { orderId: { in: [from.id, into.id] } } });
+    if (bills > 0) throw new ValidationError("E_VALIDATION: a bill already exists for one of these orders");
+  },
+  handler: async (ctx, input) => {
+    const [from, into] = await Promise.all([
+      ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.fromOrderId } }),
+      ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.intoOrderId } }),
+    ]);
+    const moved = await ctx.tx.orderLine.updateMany({ where: { orderId: from.id }, data: { orderId: into.id } });
+    const events = [];
+
+    // Food already sent to the kitchen means the merged order is placed too.
+    if (into.state === "draft" && from.state !== "draft") {
+      const placed = await transition(ctx, { entityKey: ENTITY_ORDER, entityId: into.id, fromKey: "draft", toKey: "placed" });
+      await ctx.tx.diningOrder.update({ where: { id: into.id }, data: { state: "placed", version: { increment: 1 } } });
+      events.push(placed.event);
+    }
+    await ctx.tx.diningOrder.update({
+      where: { id: into.id },
+      data: { covers: into.covers + from.covers, version: { increment: 1 } },
+    });
+
+    const closed = await transition(ctx, { entityKey: ENTITY_ORDER, entityId: from.id, fromKey: from.state, toKey: "cancelled" });
+    await ctx.tx.diningOrder.update({ where: { id: from.id }, data: { state: "cancelled", version: { increment: 1 } } });
+    events.push(closed.event);
+
+    if (from.tableId && from.tableId !== into.tableId) {
+      const table = await ctx.tx.diningTable.findUniqueOrThrow({ where: { id: from.tableId } });
+      if (table.state === "occupied") {
+        const cleaned = await transition(ctx, { entityKey: ENTITY_TABLE, entityId: table.id, fromKey: "occupied", toKey: "cleaning" });
+        await ctx.tx.diningTable.update({ where: { id: table.id }, data: { state: "cleaning", version: { increment: 1 } } });
+        events.push(cleaned.event);
+      }
+    }
+    await recordActivity(ctx, {
+      entityKey: ENTITY_ORDER,
+      entityId: into.id,
+      commandKey: "verity.dinein.merge_orders",
+      changes: diffFields({ mergedFrom: null }, { mergedFrom: from.id, lines: moved.count }),
+    });
+    return { result: { intoOrderId: into.id, movedLines: moved.count }, events };
+  },
+};
+
+/** Where an open order could move or merge to, for the order screen. */
+export const listTableChangeTargets: QueryDefinition<
+  { orderId: string },
+  { freeTables: Array<{ id: string; label: string }>; openOrders: Array<{ id: string; label: string }> }
+> = {
+  key: "verity.dinein.list_table_change_targets",
+  entity: ENTITY_ORDER,
+  input: z.object({ orderId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const order = await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } });
+    if (!order) return { freeTables: [], openOrders: [] };
+    await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Read", order.locationId);
+    const [tables, orders] = await Promise.all([
+      ctx.tx.diningTable.findMany({ where: { locationId: order.locationId, state: "available" }, orderBy: { label: "asc" } }),
+      ctx.tx.diningOrder.findMany({
+        where: { locationId: order.locationId, state: { in: OPEN_FOR_CHANGE }, id: { not: order.id }, bill: null },
+        include: { table: { select: { label: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+    ]);
+    return {
+      freeTables: tables.map((t) => ({ id: t.id, label: t.label })),
+      openOrders: orders.map((o) => ({ id: o.id, label: orderLabel(o) })),
+    };
+  },
+};
+
+/**
+ * Closed orders, newest first (pos-restaurant.md: order history). Settled and
+ * cancelled orders with what was billed and refunded, for one outlet or every
+ * outlet the actor may read, within a date range.
+ */
+export const listOrderHistory: QueryDefinition<
+  { locationId?: string; from?: string; to?: string },
+  Array<{
+    orderId: string;
+    billId: string | null;
+    label: string;
+    state: string;
+    channel: string;
+    closedAt: Date;
+    totalMinor: number;
+    refundedMinor: number;
+    lines: number;
+  }>
+> = {
+  key: "verity.dinein.list_order_history",
+  entity: ENTITY_BILL,
+  input: z.object({
+    locationId: z.string().uuid().optional(),
+    from: z.string().date().optional(),
+    to: z.string().date().optional(),
+  }),
+  handler: async (ctx, input) => {
+    const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_BILL, input.locationId);
+    const range = {
+      ...(input.from ? { gte: new Date(`${input.from}T00:00:00.000Z`) } : {}),
+      ...(input.to ? { lte: new Date(`${input.to}T23:59:59.999Z`) } : {}),
+    };
+    const orders = await ctx.tx.diningOrder.findMany({
+      where: {
+        locationId: { in: locationIds },
+        state: { in: ["settled", "cancelled"] },
+        ...(input.from || input.to ? { updatedAt: range } : {}),
+      },
+      include: {
+        table: { select: { label: true } },
+        bill: { select: { id: true, totalMinor: true, settledAt: true, refunds: { select: { amountMinor: true } } } },
+        _count: { select: { lines: true } },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 300,
+    });
+    return orders.map((o) => ({
+      orderId: o.id,
+      billId: o.bill?.id ?? null,
+      label: orderLabel(o),
+      state: o.state,
+      channel: o.channel,
+      closedAt: o.bill?.settledAt ?? o.updatedAt,
+      totalMinor: o.bill?.totalMinor ?? 0,
+      refundedMinor: o.bill?.refunds.reduce((sum, r) => sum + r.amountMinor, 0) ?? 0,
+      lines: o._count.lines,
+    }));
+  },
+};
+
 /* ================================ billing ================================= */
 
 /**
@@ -1996,6 +2202,10 @@ export function registerDineinCapability(): void {
   registerCommand(recordPayment);
   registerCommand(settleBill);
   registerCommand(refundBill);
+  registerCommand(moveOrderToTable);
+  registerCommand(mergeOrders);
+  registerQuery(listTableChangeTargets);
+  registerQuery(listOrderHistory);
 
   registerQuery(listMenu);
   registerQuery(listFloor);

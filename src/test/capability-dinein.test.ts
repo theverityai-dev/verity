@@ -46,6 +46,10 @@ import {
   kitchenQueue,
   listFloor,
   listMenu,
+  listOrderHistory,
+  listTableChangeTargets,
+  mergeOrders,
+  moveOrderToTable,
   moveTable,
   placeOrder,
   recordPayment,
@@ -747,6 +751,46 @@ describeDb("capability: Dine-in", () => {
 
 
   /** Brings the table back to  from wherever it is. */
+  it("moves an open order to a free table and merges two open orders (pos-restaurant.md §6)", async () => {
+    const t1 = await executeCommand(manager, defineTable, { zoneId, label: "M-1", seats: 4 });
+    const t2 = await executeCommand(manager, defineTable, { zoneId, label: "M-2", seats: 4 });
+    const t3 = await executeCommand(manager, defineTable, { zoneId, label: "M-3", seats: 2 });
+    await executeCommand(manager, moveTable, { tableId: t1.id, to: "occupied" });
+    await executeCommand(manager, moveTable, { tableId: t3.id, to: "occupied" });
+
+    const a = await executeCommand(manager, createOrder, { tableId: t1.id, covers: 2 });
+    await executeCommand(manager, addOrderLines, { orderId: a.id, lines: [{ itemId: paneerId, qty: 1 }] });
+    await executeCommand(manager, placeOrder, { orderId: a.id });
+    const b = await executeCommand(manager, createOrder, { tableId: t3.id, covers: 2 });
+    await executeCommand(manager, addOrderLines, { orderId: b.id, lines: [{ itemId: paneerId, qty: 2 }] });
+
+    // Move A from M-1 to the free M-2: M-2 occupied, M-1 to cleaning.
+    const targets = await executeQuery(manager, listTableChangeTargets, { orderId: a.id });
+    expect(targets.freeTables.some((t) => t.id === t2.id)).toBe(true);
+    await expect(executeCommand(manager, moveOrderToTable, { orderId: a.id, toTableId: t3.id })).rejects.toThrow(/not free/);
+    await executeCommand(manager, moveOrderToTable, { orderId: a.id, toTableId: t2.id });
+    const floor = await withTenant(tenantId, (tx) => tx.diningTable.findMany({ where: { id: { in: [t1.id, t2.id] } } }));
+    expect(floor.find((t) => t.id === t2.id)!.state).toBe("occupied");
+    expect(floor.find((t) => t.id === t1.id)!.state).toBe("cleaning");
+    expect((await executeQuery(manager, getOrderDetail, { orderId: a.id }))!.tableId).toBe(t2.id);
+
+    // Merge B (draft) into A (placed): lines move, covers add up, B closes, M-3 to cleaning.
+    const merged = await executeCommand(manager, mergeOrders, { fromOrderId: b.id, intoOrderId: a.id });
+    expect(merged.movedLines).toBe(1);
+    const after = (await executeQuery(manager, getOrderDetail, { orderId: a.id }))!;
+    expect(after.covers).toBe(4);
+    expect(after.lines.length).toBe(2);
+    const closed = await withTenant(tenantId, (tx) => tx.diningOrder.findUniqueOrThrow({ where: { id: b.id } }));
+    expect(closed.state).toBe("cancelled");
+    const m3 = await withTenant(tenantId, (tx) => tx.diningTable.findUniqueOrThrow({ where: { id: t3.id } }));
+    expect(m3.state).toBe("cleaning");
+    await expect(executeCommand(manager, mergeOrders, { fromOrderId: a.id, intoOrderId: a.id })).rejects.toThrow();
+
+    // The cancelled order shows in history.
+    const history = await executeQuery(manager, listOrderHistory, {});
+    expect(history.some((h) => h.orderId === b.id && h.state === "cancelled")).toBe(true);
+  });
+
   async function releaseTable(): Promise<void> {
     const table = await withTenant(tenantId, (tx) =>
       tx.diningTable.findUniqueOrThrow({ where: { id: tableId } }),

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { withPageAccess } from "@/components/ui/PageAccess";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
@@ -125,10 +126,15 @@ async function CounterPage() {
         title="Counter"
         description="Takeaway and delivery orders, bills to raise, and money to take."
         actions={
-          <NewChannelOrder
-            outlets={outlets.map((o) => ({ value: o.id, label: o.name }))}
-            channels={ORDER_CHANNELS.filter((c) => c !== "dine_in").map((c) => ({ value: c, label: ORDER_CHANNEL_LABEL[c] }))}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/counter/history" className="inline-flex min-h-11 items-center rounded-[10px] bg-control px-4 text-[15px] font-semibold text-accent-ink no-underline hover:bg-control-strong">
+              Order history
+            </Link>
+            <NewChannelOrder
+              outlets={outlets.map((o) => ({ value: o.id, label: o.name }))}
+              channels={ORDER_CHANNELS.filter((c) => c !== "dine_in").map((c) => ({ value: c, label: ORDER_CHANNEL_LABEL[c] }))}
+            />
+          </div>
         }
       />
 
