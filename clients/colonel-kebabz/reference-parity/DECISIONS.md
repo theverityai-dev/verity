@@ -62,3 +62,12 @@ than keying platform orders by hand. Neither blocks any build below.
 | C1 per-client security settings | **Not built in HQ.** | API keys are the client admin's own (`create_api_key`); OIDC is installation-wide. |
 | C2 compliance evidence | **Built:** the platform audit downloads as CSV (same metadata-only projection). | |
 | C3 global search | **Covered for clients** (the client table filters by name). Record search across clients is not built. | Searching client records from HQ would read across tenants. |
+
+## Internal tooling and line lists (2026-10-06)
+
+| Item | Decision | Basis |
+|---|---|---|
+| Appsmith as an internal ops console | **Rejected.** Its useful ideas go on the HQ backlog instead: a data import console (spreadsheet to Verity through commands, with column mapping and validation), a support record lookup with timeline, and a cross-client implementation roll-up. | Same class as Payload in ADR-019: a second application with its own database access and stored credentials is a second tenant-isolation and authorization surface outside `enforcePolicy()` and RLS. Most proposed screens already exist in HQ (ADR-034, ADR-035). Adopting it would need its own ADR. |
+| Order pad lines | Same item, portion and note on a draft order raise the line's quantity; unsent lines have a stepper and remove; after sending, removal is a void with a reason. A later round stays its own line. | A later round is a separate kitchen ticket; before sending nothing is money or work yet. |
+| Bill split and refund by items | A part of a line can be picked ("1 of 3 naan"). | Splitting a shared basket of breads is the common case. |
+| Stock count, finance invoice, journal, plywood board lines | **Left as typed numbers, no merging.** | A count sheet already has one row per item; invoice lines are free text; a journal may repeat an account; plywood board lines differ by size and grade. |

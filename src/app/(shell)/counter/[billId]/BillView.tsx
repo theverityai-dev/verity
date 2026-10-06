@@ -6,6 +6,7 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { BillDetail } from "@/server/capabilities/dinein";
@@ -60,35 +61,58 @@ function ItemPicker({
 }: {
   bill: BillDetail;
   shares: number[];
-  picked: Set<number>;
-  onChange: (next: Set<number>) => void;
+  /** Line index to how many of that line are picked ("1 of 3 naan"). */
+  picked: Map<number, number>;
+  onChange: (next: Map<number, number>) => void;
   legend: string;
 }) {
   return (
     <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
       <legend className="mb-1 p-0 text-[13px] text-text-secondary">{legend}</legend>
-      {bill.lines.map((line, index) => (
-        <label key={`${line.itemName}-${index}`} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[14px]">
-          <span className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={picked.has(index)}
-              onChange={() => {
-                const next = new Set(picked);
-                if (next.has(index)) next.delete(index);
-                else next.add(index);
-                onChange(next);
-              }}
-              className="size-[18px] accent-[var(--color-accent)]"
-            />
-            {line.qty} × {line.itemName}
-            {line.variantName ? ` (${line.variantName})` : ""}
-          </span>
-          <span className="tabular text-text-secondary">{rupees(shares[index] ?? 0)}</span>
-        </label>
-      ))}
+      {bill.lines.map((line, index) => {
+        const count = picked.get(index);
+        return (
+          <div key={`${line.itemName}-${index}`} className="flex min-h-11 items-center justify-between gap-3 text-[14px]">
+            <label className="flex min-w-0 cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={count !== undefined}
+                onChange={() => {
+                  const next = new Map(picked);
+                  if (next.has(index)) next.delete(index);
+                  else next.set(index, line.qty);
+                  onChange(next);
+                }}
+                className="size-[18px] accent-[var(--color-accent)]"
+              />
+              <span className="min-w-0">
+                {line.qty} × {line.itemName}
+                {line.variantName ? ` (${line.variantName})` : ""}
+              </span>
+            </label>
+            <span className="flex shrink-0 items-center gap-2">
+              {count !== undefined && line.qty > 1 && (
+                <QuantityStepper
+                  label={line.itemName}
+                  value={count}
+                  max={line.qty}
+                  onChange={(q) => onChange(new Map(picked).set(index, q))}
+                />
+              )}
+              <span className="tabular text-text-secondary">{rupees(pickedShare(shares, bill, index, count ?? line.qty))}</span>
+            </span>
+          </div>
+        );
+      })}
     </fieldset>
   );
+}
+
+/** The share of one line for `count` of its units, to the paisa. */
+function pickedShare(shares: number[], bill: BillDetail, index: number, count: number): number {
+  const line = bill.lines[index];
+  if (!line || line.qty <= 0) return 0;
+  return Math.round(((shares[index] ?? 0) * count) / line.qty);
 }
 
 /**
@@ -98,12 +122,17 @@ function ItemPicker({
 export function BillView({ bill }: { bill: BillDetail }) {
   const shares = lineShares(bill);
   const [payAmount, setPayAmount] = useState((bill.outstandingMinor / 100).toFixed(2));
-  const [payItems, setPayItems] = useState<Set<number>>(new Set());
+  const [payItems, setPayItems] = useState<Map<number, number>>(new Map());
   const [refundAmount, setRefundAmount] = useState((bill.refundableMinor / 100).toFixed(2));
-  const [refundItems, setRefundItems] = useState<Set<number>>(new Set());
+  const [refundItems, setRefundItems] = useState<Map<number, number>>(new Map());
   const [refundReason, setRefundReason] = useState("");
-  const sumOf = (picked: Set<number>) => [...picked].reduce((sum, i) => sum + (shares[i] ?? 0), 0);
-  const itemNames = (picked: Set<number>) => [...picked].map((i) => bill.lines[i]?.itemName).filter(Boolean).join(", ");
+  const sumOf = (picked: Map<number, number>) =>
+    [...picked].reduce((sum, [i, count]) => sum + pickedShare(shares, bill, i, count), 0);
+  const itemNames = (picked: Map<number, number>) =>
+    [...picked]
+      .map(([i, count]) => (bill.lines[i] ? `${count} × ${bill.lines[i]!.itemName}` : ""))
+      .filter(Boolean)
+      .join(", ");
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
@@ -347,7 +376,7 @@ export function BillView({ bill }: { bill: BillDetail }) {
                         type="button"
                         size="sm"
                         onClick={() => {
-                          setPayItems(new Set());
+                          setPayItems(new Map());
                           setPayAmount((Math.ceil(bill.outstandingMinor / n) / 100).toFixed(2));
                         }}
                       >
