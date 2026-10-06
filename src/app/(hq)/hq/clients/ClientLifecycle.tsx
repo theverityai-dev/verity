@@ -5,12 +5,8 @@ import { useRouter } from "next/navigation";
 import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Button, Field, Input, Select } from "@/components/ui/primitives";
 import { enterClientAction, setClientStatusAction } from "@/server/actions/hq";
+import { STATUS_LABEL } from "./status-label";
 
-export const STATUS_LABEL: Record<string, string> = {
-  onboarding: "Onboarding",
-  active: "Active",
-  suspended: "Suspended",
-};
 
 /**
  * Enter a client as Verity support (ADR-034 item 4). Entering is a privileged

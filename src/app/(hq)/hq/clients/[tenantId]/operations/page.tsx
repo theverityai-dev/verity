@@ -71,7 +71,8 @@ export default async function ClientOperationsPage({
   return (
     <>
       <StatRow className="mb-6">
-        <Stat label="Undelivered events" value={data.pendingOutbox} />
+        {/* No outbound event dispatcher exists (job.ts): every event is handled inside its own command and stays "undelivered", so this is a running total, not a backlog. */}
+        <Stat label="Events recorded" value={data.pendingOutbox} />
         <Stat label="SLA clocks running" value={data.runningClocks} />
         <Stat label="SLA breached" value={data.breachedClocks} />
         <Stat label="Unresolved sync exceptions" value={data.syncExceptions} />

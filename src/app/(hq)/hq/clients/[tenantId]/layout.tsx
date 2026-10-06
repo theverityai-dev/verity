@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { clientDirectory, requireOperator } from "@/server/platform/operator";
 import { ClientTabs } from "./ClientTabs";
-import { ClientLifecycle, EnterClientButton, STATUS_LABEL } from "../ClientLifecycle";
+import { ClientLifecycle, EnterClientButton } from "../ClientLifecycle";
+import { STATUS_LABEL } from "../status-label";
 
 export const dynamic = "force-dynamic";
 

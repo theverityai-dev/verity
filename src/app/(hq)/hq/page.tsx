@@ -50,10 +50,9 @@ export default async function HqOverviewPage() {
       const status = statusById.get(a.tenantId);
       if (status === "suspended") reasons.push("Suspended");
       if (status === "onboarding") reasons.push("Still onboarding");
-      if (a.undeliveredEvents > 0) reasons.push(`${a.undeliveredEvents} undelivered events`);
       if (a.syncExceptions > 0) reasons.push(`${a.syncExceptions} sync problems`);
       if (a.slaBreached > 0) reasons.push(`${a.slaBreached} late against SLA`);
-      if (a.peopleInvited > 0) reasons.push(`${a.peopleInvited} people never signed in`);
+      if (a.peopleInvited > 0) reasons.push(`${a.peopleInvited} ${a.peopleInvited === 1 ? "person has" : "people have"} never signed in`);
       if (status === "active") {
         const quietDays = a.lastActivityAt ? Math.floor((now - a.lastActivityAt.getTime()) / 86_400_000) : null;
         if (quietDays === null) reasons.push("No activity yet");
@@ -86,7 +85,7 @@ export default async function HqOverviewPage() {
           rows={attention}
           caption="Clients with something to look at"
           emptyTitle="Every client looks healthy"
-          emptyDescription="No undelivered events, sync problems, late work, unused invitations or suspended clients."
+          emptyDescription="No sync problems, late work, unused invitations, quiet or suspended clients."
           filterable={false}
         />
       </Panel>

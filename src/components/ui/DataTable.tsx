@@ -185,6 +185,9 @@ export function DataTable({
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  // Selection exists to feed bulk actions. Without any, a checkbox per row is a
+  // control that does nothing (iOS shows selection circles only in edit mode).
+  const selectable = Boolean(bulkActions);
 
   const visible = useMemo(() => {
     let out = rows;
@@ -302,6 +305,7 @@ export function DataTable({
               <caption className="sr-only">{caption}</caption>
               <thead>
                 <tr className="border-b border-line">
+                  {selectable && (
                   <th scope="col" className="w-11 pb-3 pl-0 pr-1">
                     {/* APPLE-P1-06: a bare 15px native checkbox is too small a
                         pointer/touch target on its own — wrapped so the
@@ -318,6 +322,7 @@ export function DataTable({
                       />
                     </span>
                   </th>
+                  )}
                   {columns.map((c) => {
                     const sorted = sort?.key === c.key;
                     const label = (
@@ -372,6 +377,7 @@ export function DataTable({
                     data-selected={selected.has(key) || undefined}
                     className="border-b border-line transition-colors last:border-b-0 hover:bg-[var(--color-control)] data-selected:bg-accent-subtle"
                   >
+                    {selectable && (
                     <td className="w-11 py-1 pl-0 pr-1 align-middle">
                       <span className="grid size-11 cursor-pointer place-items-center">
                         <input
@@ -383,6 +389,7 @@ export function DataTable({
                         />
                       </span>
                     </td>
+                    )}
                     {columns.map((c, i) => (
                       <td
                         key={c.key}

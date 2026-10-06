@@ -1,7 +1,8 @@
 "use client";
 
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { EnterClientButton, STATUS_LABEL } from "./ClientLifecycle";
+import { EnterClientButton } from "./ClientLifecycle";
+import { STATUS_LABEL } from "./status-label";
 
 const columns: Column[] = [
   { key: "name", header: "Client", sortable: true, variant: "link", href: "/hq/clients/{tenantId}" },
