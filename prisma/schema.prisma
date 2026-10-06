@@ -160,6 +160,8 @@ model Tenant {
   inventoryStockMovements InventoryStockMovement[]
   inventoryWastageRecords InventoryWastageRecord[]
   inventoryVendors             InventoryVendor[]
+  inventoryStockRequests       InventoryStockRequest[]
+  inventoryVendorPayments      InventoryVendorPayment[]
   billRefunds                  BillRefund[]
   inventoryPurchaseOrders      InventoryPurchaseOrder[]
   inventoryPurchaseOrderLines  InventoryPurchaseOrderLine[]
@@ -1552,6 +1554,7 @@ model Location {
   // Capability: inventory (Task 73). Back-relations only, as above.
   inventoryStockBalances  InventoryStockBalance[]
   inventoryPurchaseOrders InventoryPurchaseOrder[]
+  inventoryStockRequests  InventoryStockRequest[]
   inventoryStockMovements InventoryStockMovement[]
 
   // Capability: manufacturing (Task 118 minimal slice). Back-relations only.
@@ -4058,6 +4061,7 @@ model InventoryItem {
   itemGroup         InventoryItemGroup?      @relation(fields: [itemGroupId], references: [id], onDelete: SetNull)
   balances          InventoryStockBalance[]
   purchaseOrderLines InventoryPurchaseOrderLine[]
+  stockRequests      InventoryStockRequest[]
   movements         InventoryStockMovement[]
   recipeIngredients RecipeIngredient[]
   manufacturingOrderOutputs    ManufacturingOrder[]     @relation("ManufacturingOrderOutput")
@@ -4177,6 +4181,7 @@ model InventoryVendor {
 
   tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   purchaseOrders InventoryPurchaseOrder[]
+  payments       InventoryVendorPayment[]
 
   @@unique([tenantId, name])
   @@map("inventory_vendor")
@@ -4267,6 +4272,50 @@ model InventoryGoodsReceiptLine {
 
   @@index([receiptId])
   @@map("inventory_goods_receipt_line")
+}
+
+/// An outlet asking for an item; approval sends it from a chosen outlet.
+model InventoryStockRequest {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  itemId         String    @map("item_id") @db.Uuid
+  toLocationId   String    @map("to_location_id") @db.Uuid
+  qty            Int
+  reason         String?
+  /// Requested | Approved | Rejected (CHECKed in the database).
+  status         String    @default("Requested")
+  requestedById  String    @map("requested_by_id") @db.Uuid
+  decidedById    String?   @map("decided_by_id") @db.Uuid
+  decidedAt      DateTime? @map("decided_at")
+  fromLocationId String?   @map("from_location_id") @db.Uuid
+  decisionNote   String?   @map("decision_note")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  tenant     Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item       InventoryItem @relation(fields: [itemId], references: [id])
+  toLocation Location      @relation(fields: [toLocationId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("inventory_stock_request")
+}
+
+/// Money paid to a vendor. Append-only; what is owed is derived.
+model InventoryVendorPayment {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  vendorId    String   @map("vendor_id") @db.Uuid
+  amountPaise Int      @map("amount_paise")
+  method      String
+  reference   String?
+  paidById    String   @map("paid_by_id") @db.Uuid
+  paidAt      DateTime @default(now()) @map("paid_at")
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendor InventoryVendor @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@map("inventory_vendor_payment")
 }
 
 // ===========================================================================

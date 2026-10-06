@@ -301,6 +301,187 @@ export const transferStock: CommandDefinition<
   },
 };
 
+/* ============================== stock requests ============================== */
+
+/** An outlet asks for an item (inventory.md transfers workflow). */
+export const requestStock: CommandDefinition<{ itemId: string; toLocationId: string; qty: number; reason?: string }, { id: string }> = {
+  key: "verity.inventory.request_stock",
+  entity: ENTITY_INVENTORY_STOCK,
+  verb: "Create",
+  input: z.object({
+    itemId: z.string().uuid(),
+    toLocationId: z.string().uuid(),
+    qty: z.number().int().min(1),
+    reason: z.string().trim().max(200).optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    const item = await ctx.tx.inventoryItem.findUnique({ where: { id: input.itemId } });
+    if (!item || !item.active) throw new ValidationError("E_VALIDATION: item not found or deactivated");
+    if (!(await ctx.tx.location.findUnique({ where: { id: input.toLocationId }, select: { id: true } }))) {
+      throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+    }
+  },
+  handler: async (ctx, input) => {
+    const request = await ctx.tx.inventoryStockRequest.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        itemId: input.itemId,
+        toLocationId: input.toLocationId,
+        qty: input.qty,
+        reason: input.reason ?? null,
+        requestedById: ctx.actor.userId,
+      },
+    });
+    return { result: { id: request.id }, events: [{ name: "verity.inventory.stock_requested", entityId: request.id }] };
+  },
+};
+
+/**
+ * Approves a request by sending the stock from a chosen outlet (two Transfer
+ * movements, as `transfer_stock`), or rejects it with a note. Deciding needs
+ * `Edit` on stock, so an outlet that can ask cannot also grant itself stock
+ * unless its role says so.
+ */
+export const decideStockRequest: CommandDefinition<
+  { requestId: string; approve: boolean; fromLocationId?: string; note?: string },
+  { id: string; status: "Approved" | "Rejected" }
+> = {
+  key: "verity.inventory.decide_stock_request",
+  entity: ENTITY_INVENTORY_STOCK,
+  verb: "Edit",
+  input: z.object({
+    requestId: z.string().uuid(),
+    approve: z.boolean(),
+    fromLocationId: z.string().uuid().optional(),
+    note: z.string().trim().max(200).optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    const request = await ctx.tx.inventoryStockRequest.findUnique({ where: { id: input.requestId } });
+    if (!request) throw new ValidationError("E_VALIDATION: request not found");
+    if (request.status !== "Requested") throw new ValidationError(`E_VALIDATION: this request is already ${request.status}`);
+    if (!input.approve) {
+      if (!input.note) throw new ValidationError("E_VALIDATION: say why the request is rejected");
+      return;
+    }
+    if (!input.fromLocationId) throw new ValidationError("E_VALIDATION: choose the outlet to send from");
+    if (input.fromLocationId === request.toLocationId) throw new ValidationError("E_VALIDATION: choose a different outlet to send from");
+    const balance = await ctx.tx.inventoryStockBalance.findUnique({
+      where: { tenantId_itemId_locationId: { tenantId: ctx.actor.tenantId, itemId: request.itemId, locationId: input.fromLocationId } },
+    });
+    if ((balance?.qty ?? 0) < request.qty) {
+      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} is at the sending outlet`);
+    }
+  },
+  handler: async (ctx, input) => {
+    const request = await ctx.tx.inventoryStockRequest.findUniqueOrThrow({ where: { id: input.requestId } });
+    if (input.approve) {
+      const [from, to] = await Promise.all([
+        ctx.tx.location.findUniqueOrThrow({ where: { id: input.fromLocationId! }, select: { name: true } }),
+        ctx.tx.location.findUniqueOrThrow({ where: { id: request.toLocationId }, select: { name: true } }),
+      ]);
+      await applyMovement(ctx.tx, ctx.actor, { itemId: request.itemId, locationId: input.fromLocationId!, kind: "Transfer", qty: -request.qty, reference: `Sent to ${to.name} (request)` });
+      await applyMovement(ctx.tx, ctx.actor, { itemId: request.itemId, locationId: request.toLocationId, kind: "Transfer", qty: request.qty, reference: `Received from ${from.name} (request)` });
+    }
+    const status = input.approve ? "Approved" : "Rejected";
+    await ctx.tx.inventoryStockRequest.update({
+      where: { id: request.id },
+      data: {
+        status,
+        decidedById: ctx.actor.userId,
+        decidedAt: new Date(),
+        fromLocationId: input.approve ? input.fromLocationId! : null,
+        decisionNote: input.note ?? null,
+      },
+    });
+    return { result: { id: request.id, status }, events: [{ name: "verity.inventory.stock_request_decided", entityId: request.id, payload: { status } }] };
+  },
+};
+
+export const listStockRequests: QueryDefinition<
+  { status?: "Requested" | "Approved" | "Rejected" },
+  Array<{ id: string; itemId: string; itemName: string; unit: string; toLocationId: string; toLocation: string; qty: number; reason: string | null; status: string; createdAt: Date; decisionNote: string | null }>
+> = {
+  key: "verity.inventory.list_stock_requests",
+  entity: ENTITY_INVENTORY_STOCK,
+  input: z.object({ status: z.enum(["Requested", "Approved", "Rejected"]).optional() }),
+  handler: async (ctx, input) => {
+    const rows = await ctx.tx.inventoryStockRequest.findMany({
+      where: input.status ? { status: input.status } : {},
+      include: { item: { select: { name: true, unitLabel: true } }, toLocation: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      itemId: r.itemId,
+      itemName: r.item.name,
+      unit: r.item.unitLabel,
+      toLocationId: r.toLocationId,
+      toLocation: r.toLocation.name,
+      qty: r.qty,
+      reason: r.reason,
+      status: r.status,
+      createdAt: r.createdAt,
+      decisionNote: r.decisionNote,
+    }));
+  },
+};
+
+/* ============================ food-cost variance ============================ */
+
+export type VarianceRow = {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  usedByRecipes: number;
+  wasted: number;
+  countCorrection: number;
+  /** Value of what disappeared without a sale or a recorded waste (negative corrections), in paise. */
+  unexplainedPaise: number;
+};
+
+/**
+ * Food-cost variance for one outlet (menu-recipes.md §16): what recipes say was
+ * used, what was recorded as wasted, and what stock counts had to correct. A
+ * negative count correction is stock that left without a sale or a waste
+ * record, valued at the item's average cost.
+ */
+export const foodCostVariance: QueryDefinition<{ locationId: string; fromDate: string; toDate: string }, VarianceRow[]> = {
+  key: "verity.inventory.food_cost_variance",
+  entity: ENTITY_INVENTORY_STOCK,
+  input: z.object({ locationId: z.string().uuid(), fromDate: z.string().date(), toDate: z.string().date() }),
+  handler: async (ctx, input) => {
+    const movements = await ctx.tx.inventoryStockMovement.findMany({
+      where: {
+        locationId: input.locationId,
+        movedAt: { gte: new Date(`${input.fromDate}T00:00:00.000Z`), lte: new Date(`${input.toDate}T23:59:59.999Z`) },
+        OR: [{ kind: "Issue" }, { kind: "Adjustment" }],
+      },
+      include: { item: { select: { name: true, unitLabel: true, avgUnitCostPaise: true } }, wastageRecord: { select: { id: true } } },
+    });
+    const byItem = new Map<string, VarianceRow & { cost: number }>();
+    for (const m of movements) {
+      const row = byItem.get(m.itemId) ?? {
+        itemId: m.itemId,
+        itemName: m.item.name,
+        unit: m.item.unitLabel,
+        usedByRecipes: 0,
+        wasted: 0,
+        countCorrection: 0,
+        unexplainedPaise: 0,
+        cost: m.item.avgUnitCostPaise ?? 0,
+      };
+      if (m.wastageRecord) row.wasted += Math.abs(m.qty);
+      else if (m.kind === "Issue" && m.reference?.startsWith("dining_order:")) row.usedByRecipes += Math.abs(m.qty);
+      else if (m.kind === "Adjustment") row.countCorrection += m.qty;
+      byItem.set(m.itemId, row);
+    }
+    return [...byItem.values()]
+      .map(({ cost, ...row }) => ({ ...row, unexplainedPaise: row.countCorrection < 0 ? Math.abs(row.countCorrection) * cost : 0 }))
+      .sort((a, b) => b.unexplainedPaise - a.unexplainedPaise || a.itemName.localeCompare(b.itemName));
+  },
+};
+
 /* ================================ stock count ================================ */
 
 export type StockCountVariance = {
@@ -562,6 +743,10 @@ export function registerInventoryCapability(): void {
   registerCommand(recordStockMovement);
   registerCommand(applyStockCount);
   registerCommand(transferStock);
+  registerCommand(requestStock);
+  registerCommand(decideStockRequest);
+  registerQuery(listStockRequests);
+  registerQuery(foodCostVariance);
   registerCommand(recordWastage);
   registerProcurement();
   registerQuery(listItems);

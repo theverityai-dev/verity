@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs } from "@/components/ui/Tabs";
+import { RequestsTab, VarianceTab, type StockRequestRow, type VarianceRowView } from "./RequestsAndVariance";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { StockCount } from "./StockCount";
 
@@ -430,6 +431,9 @@ export function InventoryDesk({
   wastage,
   categories,
   wastageReasons,
+  requests,
+  variance,
+  varianceDays,
 }: {
   outlets: Outlet[];
   outletId: string;
@@ -437,6 +441,9 @@ export function InventoryDesk({
   wastage: WastageRow[];
   categories: CategoryRow[];
   wastageReasons: string[];
+  requests: StockRequestRow[];
+  variance: VarianceRowView[];
+  varianceDays: number;
 }) {
   // The badge marks what needs attention, so Stock counts low items only.
   const low = stock.filter((s) => s.status === "Low stock").length;
@@ -449,7 +456,21 @@ export function InventoryDesk({
           count: low,
           content: <StockTab stock={stock} categories={categories} outlets={outlets} outletId={outletId} wastageReasons={wastageReasons} />,
         },
+        {
+          id: "requests",
+          label: "Requests",
+          count: requests.filter((r) => r.status === "Requested").length,
+          content: (
+            <RequestsTab
+              requests={requests}
+              items={stock.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, unit: s.unit }))}
+              outlets={outlets}
+              outletId={outletId}
+            />
+          ),
+        },
         { id: "wastage", label: "Wastage", count: wastage.length, content: <WastageTab wastage={wastage} /> },
+        { id: "variance", label: "Variance", content: <VarianceTab rows={variance} days={varianceDays} /> },
         { id: "categories", label: "Categories", count: categories.length, content: <CategoriesTab categories={categories} /> },
       ]}
     />

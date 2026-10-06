@@ -26,9 +26,11 @@ import {
   getPurchaseOrder,
   listPurchaseOrders,
   receiveGoods,
+  recordVendorPayment,
   registerInventoryCapability,
   stockOnHand,
   submitPurchaseOrder,
+  vendorPerformance,
   vendorPriceHistory,
 } from "@/server/capabilities/inventory";
 import { LOCATION_CAPABILITY, registerLocationCapability } from "@/server/capabilities/location";
@@ -307,6 +309,32 @@ describeDb("capability: Inventory procurement", () => {
     for (let i = 1; i < rows.length; i++) {
       expect(rows[i - 1]!.receivedAt.getTime()).toBeGreaterThanOrEqual(rows[i]!.receivedAt.getTime());
     }
+  });
+
+  it("pays a vendor against what was accepted, never more than is owed, and only with the pay permission", async () => {
+    const before = (await executeQuery(owner, vendorPerformance, {})).find((v) => v.vendorId === vendorId)!;
+    expect(before.deliveries).toBeGreaterThan(0);
+    expect(before.owedPaise).toBe(before.receivedPaise - before.paidPaise);
+    expect(before.owedPaise).toBeGreaterThan(0);
+    // Some quantity was rejected on delivery, so the share is measurable.
+    expect(before.rejectionPercent).toBeGreaterThan(0);
+
+    await expect(
+      executeCommand(manager, recordVendorPayment, { vendorId, amountPaise: 100, method: "cash" }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    await withTenant(tenantId, (tx) =>
+      tx.permission.create({ data: { tenantId, roleId: owner.roleId!, verb: "ActionExecute", entity: ENTITY_INVENTORY_VENDOR, scope: "Tenant" } }),
+    );
+    await expect(
+      executeCommand(owner, recordVendorPayment, { vendorId, amountPaise: before.owedPaise + 1, method: "upi" }),
+    ).rejects.toThrow(/more than/);
+
+    const paid = await executeCommand(owner, recordVendorPayment, { vendorId, amountPaise: 10_000, method: "bank_transfer", reference: "UTR123" });
+    expect(paid.owedPaise).toBe(before.owedPaise - 10_000);
+    const after = (await executeQuery(owner, vendorPerformance, {})).find((v) => v.vendorId === vendorId)!;
+    expect(after.paidPaise).toBe(before.paidPaise + 10_000);
+    expect(after.owedPaise).toBe(before.owedPaise - 10_000);
   });
 
 });

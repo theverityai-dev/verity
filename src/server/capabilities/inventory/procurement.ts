@@ -610,6 +610,114 @@ export const vendorPriceHistory: QueryDefinition<{ vendorId?: string }, VendorPr
   },
 };
 
+export const VENDOR_PAYMENT_METHODS = ["cash", "bank_transfer", "upi", "cheque", "card", "other"] as const;
+
+/** Records money paid to a vendor against what was received (procurement.md bill and payment). */
+export const recordVendorPayment: CommandDefinition<
+  { vendorId: string; amountPaise: number; method: (typeof VENDOR_PAYMENT_METHODS)[number]; reference?: string },
+  { id: string; owedPaise: number }
+> = {
+  key: "verity.inventory.record_vendor_payment",
+  entity: ENTITY_INVENTORY_VENDOR,
+  verb: "ActionExecute",
+  input: z.object({
+    vendorId: z.string().uuid(),
+    amountPaise: z.number().int().min(1),
+    method: z.enum(VENDOR_PAYMENT_METHODS),
+    reference: z.string().trim().max(100).optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.inventoryVendor.findUnique({ where: { id: input.vendorId } }))) {
+      throw new ValidationError("E_VALIDATION: vendor not found in this tenant");
+    }
+    const owed = await vendorOwedPaise(ctx.tx, input.vendorId);
+    if (input.amountPaise > owed) {
+      throw new ValidationError(`E_VALIDATION: that is more than the ${owed} paise owed to this vendor`);
+    }
+  },
+  handler: async (ctx, input) => {
+    const payment = await ctx.tx.inventoryVendorPayment.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        vendorId: input.vendorId,
+        amountPaise: input.amountPaise,
+        method: input.method,
+        reference: input.reference ?? null,
+        paidById: ctx.actor.userId,
+      },
+    });
+    return {
+      result: { id: payment.id, owedPaise: await vendorOwedPaise(ctx.tx, input.vendorId) },
+      events: [{ name: "verity.inventory.vendor_paid", entityId: input.vendorId }],
+    };
+  },
+};
+
+/** Accepted goods received, at the price paid, less payments made. */
+async function vendorOwedPaise(tx: import("@/server/platform/tenancy").TenantScopedClient, vendorId: string): Promise<number> {
+  const [lines, paid] = await Promise.all([
+    tx.inventoryGoodsReceiptLine.findMany({
+      where: { receipt: { order: { vendorId } } },
+      select: { acceptedQty: true, unitPricePaise: true },
+    }),
+    tx.inventoryVendorPayment.aggregate({ where: { vendorId }, _sum: { amountPaise: true } }),
+  ]);
+  const received = lines.reduce((sum, l) => sum + l.acceptedQty * l.unitPricePaise, 0);
+  return received - (paid._sum.amountPaise ?? 0);
+}
+
+export type VendorPerformance = {
+  vendorId: string;
+  receivedPaise: number;
+  paidPaise: number;
+  owedPaise: number;
+  deliveries: number;
+  onTimePercent: number | null;
+  rejectionPercent: number | null;
+};
+
+/**
+ * Per vendor (procurement.md §5, PRD §25): what is owed, how often deliveries
+ * came on or before the expected date, and what share of delivered quantity was
+ * rejected. Null where there is nothing to measure yet.
+ */
+export const vendorPerformance: QueryDefinition<Record<string, never>, VendorPerformance[]> = {
+  key: "verity.inventory.vendor_performance",
+  entity: ENTITY_INVENTORY_VENDOR,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const [vendors, receipts, payments] = await Promise.all([
+      ctx.tx.inventoryVendor.findMany({ select: { id: true } }),
+      ctx.tx.inventoryGoodsReceipt.findMany({
+        include: {
+          order: { select: { vendorId: true, expectedDate: true } },
+          lines: { select: { acceptedQty: true, rejectedQty: true, unitPricePaise: true } },
+        },
+      }),
+      ctx.tx.inventoryVendorPayment.groupBy({ by: ["vendorId"], _sum: { amountPaise: true } }),
+    ]);
+    const paidBy = new Map(payments.map((p) => [p.vendorId, p._sum.amountPaise ?? 0]));
+    return vendors.map((v) => {
+      const mine = receipts.filter((r) => r.order.vendorId === v.id);
+      const received = mine.reduce((sum, r) => sum + r.lines.reduce((s2, l) => s2 + l.acceptedQty * l.unitPricePaise, 0), 0);
+      const accepted = mine.reduce((sum, r) => sum + r.lines.reduce((s2, l) => s2 + l.acceptedQty, 0), 0);
+      const rejected = mine.reduce((sum, r) => sum + r.lines.reduce((s2, l) => s2 + l.rejectedQty, 0), 0);
+      const dated = mine.filter((r) => r.order.expectedDate);
+      const onTime = dated.filter((r) => r.receivedAt.toISOString().slice(0, 10) <= r.order.expectedDate!.toISOString().slice(0, 10)).length;
+      const paid = paidBy.get(v.id) ?? 0;
+      return {
+        vendorId: v.id,
+        receivedPaise: received,
+        paidPaise: paid,
+        owedPaise: received - paid,
+        deliveries: mine.length,
+        onTimePercent: dated.length === 0 ? null : Math.round((onTime / dated.length) * 100),
+        rejectionPercent: accepted + rejected === 0 ? null : Math.round((rejected / (accepted + rejected)) * 100),
+      };
+    });
+  },
+};
+
 export function registerProcurement(): void {
   registerCommand(createVendor);
   registerCommand(setVendorActive);
@@ -619,6 +727,8 @@ export function registerProcurement(): void {
   registerCommand(approvePurchaseOrder);
   registerCommand(cancelPurchaseOrder);
   registerCommand(receiveGoods);
+  registerCommand(recordVendorPayment);
+  registerQuery(vendorPerformance);
   registerQuery(listVendors);
   registerQuery(listPurchaseOrders);
   registerQuery(getPurchaseOrder);

@@ -7,6 +7,8 @@ import { EmptyState, ErrorState, PageHeader, Stat, StatRow } from "@/components/
 import { day, rupees } from "@/components/ui/business/format";
 import { trailingDaysRange } from "@/lib/date-range";
 import { InventoryDesk, type CategoryRow, type StockRow, type WastageRow } from "./InventoryDesk";
+import type { StockRequestRow, VarianceRowView } from "./RequestsAndVariance";
+import type { VarianceRow } from "@/server/capabilities/inventory";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +51,12 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
     return <ErrorState title="Could not load inventory" message={onHand.message} issues={onHand.issues} retryable={onHand.retryable} />;
   }
 
-  const since = new Date(`${trailingDaysRange(WASTAGE_WINDOW_DAYS).fromDate}T00:00:00.000Z`);
+  const range = trailingDaysRange(WASTAGE_WINDOW_DAYS);
+  const since = new Date(`${range.fromDate}T00:00:00.000Z`);
+  const [requests, variance] = await Promise.all([
+    runQuery<Array<Omit<StockRequestRow, "createdAt"> & { createdAt: string | Date }>>("verity.inventory.list_stock_requests", {}),
+    runQuery<VarianceRow[]>("verity.inventory.food_cost_variance", { locationId: current.id, fromDate: range.fromDate, toDate: range.toDate }),
+  ]);
   const [items, groups, wastage] = await Promise.all([
     withTenant(actor.tenantId, (tx) =>
       tx.inventoryItem.findMany({ include: { itemGroup: { select: { name: true } } }, orderBy: { name: "asc" } }),
@@ -134,6 +141,13 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
         wastage={wastageRows}
         categories={categoryRows}
         wastageReasons={[...WASTAGE_REASONS]}
+        requests={requests.ok ? requests.data.map((r) => ({ ...r, createdAt: day(new Date(r.createdAt)) })) : []}
+        variance={
+          variance.ok
+            ? variance.data.map((v): VarianceRowView => ({ ...v, unexplained: v.unexplainedPaise === 0 ? "None" : rupees(v.unexplainedPaise) }))
+            : []
+        }
+        varianceDays={WASTAGE_WINDOW_DAYS}
       />
     </>
   );

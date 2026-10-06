@@ -28,6 +28,10 @@ export type VendorRow = {
   terms: string;
   active: boolean;
   orders: number;
+  owed: string;
+  owedPaise: number;
+  onTime: string;
+  rejected: string;
 };
 type Outlet = { id: string; name: string };
 type Item = { id: string; name: string; unit: string; lastPricePaise: number | null };
@@ -278,8 +282,10 @@ function OrdersTab({
 
 /* ---------------------------------- vendors --------------------------------- */
 
-function VendorsTab({ vendors, canAdd, prices }: { vendors: VendorRow[]; canAdd: boolean; prices: PriceRow[] }) {
+function VendorsTab({ vendors, canAdd, canPay, prices }: { vendors: VendorRow[]; canAdd: boolean; canPay: boolean; prices: PriceRow[] }) {
   const [open, setOpen] = useState(false);
+  const [paying, setPaying] = useState<VendorRow | null>(null);
+  const pay = useCommand(ROUTE);
   const [pricesFor, setPricesFor] = useState<VendorRow | null>(null);
   const shownPrices = pricesFor ? prices.filter((p) => p.vendorId === pricesFor.id) : [];
   const add = useCommand(ROUTE);
@@ -303,6 +309,9 @@ function VendorsTab({ vendors, canAdd, prices }: { vendors: VendorRow[]; canAdd:
           { key: "phone", header: "Phone" },
           { key: "terms", header: "Pays in" },
           { key: "orders", header: "Orders", numeric: true, sortable: true },
+          { key: "owed", header: "Owed", numeric: true },
+          { key: "onTime", header: "On time", numeric: true },
+          { key: "rejected", header: "Rejected", numeric: true },
           { key: "state", header: "Status" },
         ]}
         rows={vendors.map((v) => ({ ...v, state: v.active ? "Active" : "Inactive" }))}
@@ -310,6 +319,9 @@ function VendorsTab({ vendors, canAdd, prices }: { vendors: VendorRow[]; canAdd:
         rowActions={(row) => (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" onClick={() => setPricesFor(row as unknown as VendorRow)}>Prices</Button>
+            {canPay && Number(row.owedPaise) > 0 && (
+              <Button size="sm" variant="secondary" onClick={() => setPaying(row as unknown as VendorRow)}>Pay</Button>
+            )}
             {canAdd && (
               <Button
                 size="sm"
@@ -348,6 +360,56 @@ function VendorsTab({ vendors, canAdd, prices }: { vendors: VendorRow[]; canAdd:
           </ul>
         )}
       </Modal>
+      <FormModal
+        title={paying ? `Pay ${paying.name}` : "Pay vendor"}
+        description={paying ? `${paying.owed} is owed for goods accepted so far.` : ""}
+        open={paying !== null}
+        onClose={() => {
+          setPaying(null);
+          pay.clear();
+        }}
+        submitLabel="Record payment"
+        pending={pay.pending}
+        failure={pay.failure}
+        failureTitle="Could not record the payment"
+        onSubmit={(form) =>
+          paying &&
+          pay.run(
+            "verity.inventory.record_vendor_payment",
+            {
+              vendorId: paying.id,
+              amountPaise: rupeesTextToPaise(formText(form, "amount")) ?? 0,
+              method: formText(form, "method"),
+              reference: formOptional(form, "reference"),
+            },
+            () => setPaying(null),
+          )
+        }
+      >
+        <Field label="Amount (₹)" htmlFor="pay-amount" required>
+          <Input
+            id="pay-amount"
+            name="amount"
+            inputMode="decimal"
+            required
+            autoFocus
+            defaultValue={paying ? (paying.owedPaise / 100).toFixed(2) : ""}
+          />
+        </Field>
+        <Field label="Paid by" htmlFor="pay-method" required>
+          <Select id="pay-method" name="method" required defaultValue="bank_transfer">
+            <option value="bank_transfer">Bank transfer</option>
+            <option value="upi">UPI</option>
+            <option value="cash">Cash</option>
+            <option value="cheque">Cheque</option>
+            <option value="card">Card</option>
+            <option value="other">Other</option>
+          </Select>
+        </Field>
+        <Field label="Reference" htmlFor="pay-reference" hint="UTR, cheque number or bill number">
+          <Input id="pay-reference" name="reference" maxLength={100} />
+        </Field>
+      </FormModal>
       <FormModal
         title="Add vendor"
         description="Names are unique. GSTIN is optional but needed for input tax credit."
@@ -397,9 +459,11 @@ export function PurchaseOrdersDesk({
   items,
   canCreate,
   canAddVendor,
+  canPayVendor,
   prices,
 }: {
   prices: PriceRow[];
+  canPayVendor: boolean;
   orders: OrderListRow[];
   vendors: VendorRow[];
   outlets: Outlet[];
@@ -417,7 +481,7 @@ export function PurchaseOrdersDesk({
           count: waiting,
           content: <OrdersTab orders={orders} vendors={vendors} outlets={outlets} items={items} canCreate={canCreate} />,
         },
-        { id: "vendors", label: "Vendors", count: vendors.length, content: <VendorsTab vendors={vendors} canAdd={canAddVendor} prices={prices} /> },
+        { id: "vendors", label: "Vendors", count: vendors.length, content: <VendorsTab vendors={vendors} canAdd={canAddVendor} canPay={canPayVendor} prices={prices} /> },
       ]}
     />
   );

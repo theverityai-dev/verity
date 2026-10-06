@@ -500,6 +500,7 @@ describeDb("conformance: database enforcement", () => {
         "inventory_goods_receipt",
         "inventory_goods_receipt_line",
         "inventory_stock_movement",
+        "inventory_vendor_payment",
         "inventory_wastage_record",
         "journal_entry",
         "journal_line",

@@ -16,7 +16,11 @@ import {
   INVENTORY_CAPABILITY,
   applyStockCount,
   createItem,
+  decideStockRequest,
+  foodCostVariance,
+  listStockRequests,
   recordStockMovement,
+  requestStock,
   registerInventoryCapability,
   stockLedger,
   stockOnHand,
@@ -229,6 +233,46 @@ describeDb("capability: Inventory stock count", () => {
     await expect(
       executeCommand(reader, transferStock, { itemId: chicken, fromLocationId: outletA, toLocationId: outletB, qty: 1 }),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it("an outlet asks for stock; approving sends it from another outlet, rejecting needs a reason", async () => {
+    const asked = await executeCommand(manager, requestStock, { itemId: rice, toLocationId: outletB, qty: 5, reason: "Weekend rush" });
+    const listed = await executeQuery(manager, listStockRequests, { status: "Requested" });
+    expect(listed.find((r) => r.id === asked.id)?.toLocation).toBeTruthy();
+
+    await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: false })).rejects.toThrow(/why/);
+    await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true })).rejects.toThrow(/outlet to send from/);
+    await expect(
+      executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletB }),
+    ).rejects.toThrow(/different outlet/);
+    await expect(
+      executeCommand(reader, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletA }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+
+    const [a, b] = [await onHand(rice, outletA), await onHand(rice, outletB)];
+    const decided = await executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletA });
+    expect(decided.status).toBe("Approved");
+    expect(await onHand(rice, outletA)).toBe(a - 5);
+    expect(await onHand(rice, outletB)).toBe(b + 5);
+    await expect(
+      executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: false, note: "too late" }),
+    ).rejects.toThrow(/already Approved/);
+
+    const tooMuch = await executeCommand(manager, requestStock, { itemId: rice, toLocationId: outletB, qty: 1_000_000 });
+    await expect(
+      executeCommand(manager, decideStockRequest, { requestId: tooMuch.id, approve: true, fromLocationId: outletA }),
+    ).rejects.toThrow(/only/);
+    const rejected = await executeCommand(manager, decideStockRequest, { requestId: tooMuch.id, approve: false, note: "Order from vendor" });
+    expect(rejected.status).toBe("Rejected");
+  });
+
+  it("food-cost variance separates count corrections from other movements at one outlet", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = await executeQuery(manager, foodCostVariance, { locationId: outletA, fromDate: today, toDate: today });
+    const ledger = await executeQuery(manager, stockLedger, { itemId: chicken });
+    const corrections = ledger.filter((m) => m.kind === "Adjustment" && m.locationId === outletA).reduce((sum, m) => sum + m.qty, 0);
+    expect(rows.find((r) => r.itemId === chicken)?.countCorrection).toBe(corrections);
+    expect(rows.every((r) => r.unexplainedPaise >= 0)).toBe(true);
   });
 
 });
