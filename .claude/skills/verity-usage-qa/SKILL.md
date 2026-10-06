@@ -102,6 +102,22 @@ With two seeded tenants A and B: as A, request B's ids on every detail route and
 expect not-found/forbidden, never B's data. As a low role, call each command directly (not
 through the UI) and expect `ForbiddenError`. Confirm tenant comes from the session, not a payload.
 
+### Line-list basics pass (every screen that builds a list of lines)
+
+Order pad, purchase order, bill of materials, stock count, bill split, invoice, journal. A
+missing item here is HIGH, not polish — staff work around it with duplicate lines and voids.
+
+1. Adding an item already on the list raises its quantity; it does not stack a second line
+   (unless the lines are genuinely different: another portion, note, price or kitchen round).
+2. Quantity is adjustable in place with `QuantityStepper` (`src/components/ui/QuantityStepper.tsx`):
+   minus, a typed number, plus. 44pt targets; Enter or blur commits.
+3. A line can be removed before it is committed (minus at 1 becomes remove). After commit,
+   removing is the module's reversal (void, credit note, reversal) with a reason.
+4. Picking an item that is already on another line folds the two (`assignLineItem` in
+   `src/lib/line-list.ts`), never a "duplicate item" error the user must fix by hand.
+5. The running total updates as lines change, and the line's status says what has really
+   happened ("Not sent yet" before the kitchen has it, not "With kitchen").
+
 ## Workflow matrix (Verity-real)
 
 | Client / area | Workflow | Roles |

@@ -7,6 +7,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button, Field, Input, Select } from "@/components/ui/primitives";
+import { assignLineItem } from "@/lib/line-list";
 import { STATUS_CATEGORY, STATUS_LABEL, paiseToRupeesText, rupeesTextToPaise } from "./format";
 
 export type OrderListRow = {
@@ -74,8 +75,13 @@ function NewOrder({ vendors, outlets, items, onClose }: { vendors: VendorRow[]; 
 
   function pickItem(key: number, itemId: string) {
     const item = itemById.get(itemId);
-    // Offer the last cost as a starting price; the buyer overwrites it with the quote.
-    setLine(key, { itemId, price: item?.lastPricePaise != null ? String(item.lastPricePaise / 100) : "" });
+    // Offer the last cost as a starting price; the buyer overwrites it with the
+    // quote. An item already on the order folds into that line instead.
+    setLines((current) =>
+      assignLineItem(current, key, "itemId", itemId, "qty", {
+        price: item?.lastPricePaise != null ? String(item.lastPricePaise / 100) : "",
+      }),
+    );
   }
 
   function save() {
@@ -180,7 +186,7 @@ function NewOrder({ vendors, outlets, items, onClose }: { vendors: VendorRow[]; 
             Add another item
           </Button>
         </div>
-        {duplicate && <p role="alert" className="m-0 text-[13px] text-danger">An item can appear only once. Combine the quantities.</p>}
+        {duplicate && <p role="alert" className="m-0 text-[13px] text-danger">An item can appear only once.</p>}
         {!duplicate && lineProblem && (
           <p role="alert" className="m-0 text-[13px] text-danger">Each line needs an item, a whole-number quantity and a price like 255 or 255.50.</p>
         )}

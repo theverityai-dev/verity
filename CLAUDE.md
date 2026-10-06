@@ -140,6 +140,11 @@ shared shapes live in `src/components/ui/primitives.tsx`, `Modal.tsx`, `DataTabl
 - **Controls**: buttons are iOS filled (primary), gray (secondary, tint label), plain (ghost) and
   destructive-tinted (danger), 10px corners, semibold, press dims; rounded system-fill text fields;
   capsule filter chips; selection circles; 44pt touch targets.
+- **Lists of lines** (order pad, purchase order, BOM, bill, invoice): the same item added again
+  raises its quantity instead of stacking a line; quantity uses `QuantityStepper` (minus, typed
+  number, plus); a line is removable until committed, then reversed with a reason; picking an item
+  already listed folds the lines (`assignLineItem`, `src/lib/line-list.ts`). Checklist: the
+  verity-usage-qa skill's "Line-list basics pass".
 - **Navigation**: Large title at the top of each page; iPadOS sidebar on wide screens (selected row =
   tint fill, white label; tinted glyphs); iOS tab bar on phones (client shell and HQ); dialogs are
   bottom sheets on phones and centred form sheets on wider screens, with a gray circular close button.

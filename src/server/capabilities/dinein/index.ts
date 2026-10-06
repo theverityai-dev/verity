@@ -72,6 +72,9 @@ export const ENTITY_MENU_VARIANT = "verity.dinein.menu_variant";
 export const ENTITY_ZONE = "verity.dinein.zone";
 export const ENTITY_TABLE = "verity.dinein.table";
 export const ENTITY_ORDER = "verity.dinein.order";
+
+/** The most of one item a single order line can hold. */
+const MAX_LINE_QTY = 99;
 export const ENTITY_ORDER_LINE = "verity.dinein.order_line";
 export const ENTITY_BILL = "verity.dinein.bill";
 export const ENTITY_PAYMENT = "verity.dinein.payment";
@@ -600,6 +603,11 @@ export const createOrder: CommandDefinition<
  * Allowed after the order has been placed as well as before: a table ordering
  * dessert later is normal service, and those lines land in the kitchen queue as
  * `queued` exactly like the first round.
+ *
+ * While the order is still a draft, adding the same item (same portion, same
+ * note) again raises the quantity on the existing line instead of stacking a
+ * second "1 ×" line. Once sent, a later round stays a line of its own, because
+ * the kitchen cooks it as a separate ticket.
  */
 export const addOrderLines: CommandDefinition<
   {
@@ -618,7 +626,7 @@ export const addOrderLines: CommandDefinition<
         z.object({
           itemId: z.string().uuid(),
           variantId: z.string().uuid().optional(),
-          qty: z.number().int().min(1).max(99),
+          qty: z.number().int().min(1).max(MAX_LINE_QTY),
           lineNote: z.string().max(200).optional(),
         }),
       )
@@ -653,6 +661,25 @@ export const addOrderLines: CommandDefinition<
       }
       if (unitPriceMinor < 0) {
         throw new ValidationError("E_VALIDATION: that portion prices the item below zero");
+      }
+
+      if (order.state === "draft") {
+        const same = await ctx.tx.orderLine.findFirst({
+          where: {
+            orderId: order.id,
+            itemId: item.id,
+            variantId: line.variantId ?? null,
+            lineNote: line.lineNote ?? null,
+            state: "queued",
+          },
+        });
+        if (same) {
+          if (same.qty + line.qty > MAX_LINE_QTY) {
+            throw new ValidationError(`E_VALIDATION: one line holds at most ${MAX_LINE_QTY} of ${item.name}`);
+          }
+          await ctx.tx.orderLine.update({ where: { id: same.id }, data: { qty: same.qty + line.qty, version: { increment: 1 } } });
+          continue;
+        }
       }
 
       const created = await ctx.tx.orderLine.create({
@@ -690,6 +717,36 @@ export const addOrderLines: CommandDefinition<
     return {
       result: { added: input.lines.length },
       events: [{ name: "verity.dinein.order_lines_added", entityId: order.id }],
+    };
+  },
+};
+
+/**
+ * Changes how many of a line the table wants, or removes it (qty 0), while the
+ * order is still a draft. Nothing has reached the kitchen yet, so this is an
+ * edit, not a void. After the order is sent, taking something off is a void
+ * with a reason (`void_order_line`), because by then it is money and work.
+ */
+export const setOrderLineQty: CommandDefinition<{ lineId: string; qty: number }, { lineId: string; qty: number }> = {
+  key: "verity.dinein.set_order_line_qty",
+  entity: ENTITY_ORDER,
+  verb: "Edit",
+  input: z.object({ lineId: z.string().uuid(), qty: z.number().int().min(0).max(MAX_LINE_QTY) }),
+  preconditions: async (ctx, input) => {
+    const line = await ctx.tx.orderLine.findUnique({ where: { id: input.lineId }, include: { order: { select: { state: true } } } });
+    if (!line) throw new ValidationError("E_VALIDATION: order line not found");
+    if (line.order.state !== "draft" || line.state !== "queued") {
+      throw new ValidationError("E_VALIDATION: this line has gone to the kitchen; void it with a reason instead");
+    }
+  },
+  handler: async (ctx, input) => {
+    const line = await ctx.tx.orderLine.findUniqueOrThrow({ where: { id: input.lineId } });
+    if (input.qty === 0) await ctx.tx.orderLine.delete({ where: { id: line.id } });
+    else await ctx.tx.orderLine.update({ where: { id: line.id }, data: { qty: input.qty, version: { increment: 1 } } });
+    await ctx.tx.diningOrder.update({ where: { id: line.orderId }, data: { version: { increment: 1 } } });
+    return {
+      result: { lineId: line.id, qty: input.qty },
+      events: [{ name: "verity.dinein.order_line_quantity_set", entityId: line.orderId, payload: { lineId: line.id, qty: input.qty } }],
     };
   },
 };
@@ -2196,6 +2253,7 @@ export function registerDineinCapability(): void {
   registerCommand(placeOrder);
   registerCommand(advanceOrderLine);
   registerCommand(voidOrderLine);
+  registerCommand(setOrderLineQty);
   registerCommand(cancelOrder);
   registerCommand(generateBill);
   registerCommand(applyBillDiscount);

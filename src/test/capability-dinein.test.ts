@@ -52,6 +52,7 @@ import {
   moveOrderToTable,
   moveTable,
   placeOrder,
+  setOrderLineQty,
   recordPayment,
   registerDineinCapability,
   salesSummary,
@@ -394,6 +395,28 @@ describeDb("capability: Dine-in", () => {
     const detail = await executeQuery(manager, getOrderDetail, { orderId: order.id });
     expect(detail?.label).toBe("Takeaway · Ravi");
     await executeCommand(waiter, cancelOrder, { orderId: order.id });
+  });
+
+  it("combines the same item on a draft order, lets the waiter change or remove it, and refuses once sent", async () => {
+    const order = await executeCommand(waiter, createOrder, { channel: "takeaway", locationId, customerName: "Steps" });
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1 }] });
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 2 }] });
+    // A different note is a different dish for the kitchen, so it stays apart.
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, lineNote: "no onion" }] });
+    let detail = (await executeQuery(manager, getOrderDetail, { orderId: order.id }))!;
+    const plain = detail.lines.find((l) => !l.lineNote)!;
+    const noted = detail.lines.find((l) => l.lineNote)!;
+    expect(detail.lines).toHaveLength(2);
+    expect(plain.qty).toBe(3);
+
+    await executeCommand(waiter, setOrderLineQty, { lineId: plain.id, qty: 5 });
+    await executeCommand(waiter, setOrderLineQty, { lineId: noted.id, qty: 0 });
+    detail = (await executeQuery(manager, getOrderDetail, { orderId: order.id }))!;
+    expect(detail.lines.map((l) => l.qty)).toEqual([5]);
+
+    await executeCommand(waiter, placeOrder, { orderId: order.id });
+    await expect(executeCommand(waiter, setOrderLineQty, { lineId: plain.id, qty: 1 })).rejects.toThrow(/void it/);
+    await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "test cleanup" });
   });
 
   it("refuses inconsistent channel input: dine-in without a table, takeaway at a table, platform without a name", async () => {

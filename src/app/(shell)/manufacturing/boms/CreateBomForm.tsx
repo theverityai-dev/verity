@@ -6,6 +6,7 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { assignLineItem } from "@/lib/line-list";
 
 type Option = { id: string; name: string };
 type CustomField = { name: string; type: string; required: boolean; options: string[] };
@@ -106,7 +107,7 @@ export function CreateBomForm({ items, fields }: { items: Option[]; fields: Cust
                 id={`bom-c-${line.key}`}
                 required
                 value={line.componentItemId}
-                onChange={(e) => update(line.key, { componentItemId: e.target.value })}
+                onChange={(e) => setLines((ls) => assignLineItem(ls, line.key, "componentItemId", e.target.value, "qtyPerUnit"))}
               >
                 <option value="" disabled>Select an item</option>
                 {items.map((i) => (

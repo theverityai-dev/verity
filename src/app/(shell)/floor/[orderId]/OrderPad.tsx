@@ -5,6 +5,7 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ErrorState, Input, Panel } from "@/components/ui/primitives";
+import { QuantityStepper } from "@/components/ui/QuantityStepper";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { OrderDetail } from "@/server/capabilities/dinein";
@@ -192,12 +193,15 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {order.lines.map((line) => {
-                  const state = LINE_STATE[line.state] ?? LINE_STATE.queued!;
+                  // On a draft order nothing has reached the kitchen yet: the line
+                  // is still the waiter's to change, not something to void.
+                  const editable = order.state === "draft" && line.state === "queued";
+                  const state = editable ? { label: "Not sent yet", tone: "text-text-secondary" } : (LINE_STATE[line.state] ?? LINE_STATE.queued!);
                   return (
                     <li key={line.id} className="border-b border-line pb-2 last:border-b-0">
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="min-w-0 text-[14px] text-text">
-                          {line.qty} × {line.itemName}
+                          {editable ? "" : `${line.qty} × `}{line.itemName}
                           {line.variantName && (
                             <span className="text-text-tertiary"> ({line.variantName})</span>
                           )}
@@ -209,7 +213,17 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                       <div className="mt-1 flex items-center justify-between gap-3">
                         <span className={`text-[12px] ${state.tone}`}>{state.label}</span>
                         <span className="flex shrink-0 gap-1.5">
-                        {VOIDABLE.has(line.state) && voiding !== line.id && (
+                        {editable && (
+                          <QuantityStepper
+                            label={line.itemName}
+                            value={line.qty}
+                            max={99}
+                            disabled={pending}
+                            onChange={(qty) => run("verity.dinein.set_order_line_qty", { lineId: line.id, qty })}
+                            onRemove={() => run("verity.dinein.set_order_line_qty", { lineId: line.id, qty: 0 })}
+                          />
+                        )}
+                        {!editable && VOIDABLE.has(line.state) && voiding !== line.id && (
                           <CommandButton commands={"verity.dinein.void_order_line"}
                             size="sm"
                             variant="secondary"
