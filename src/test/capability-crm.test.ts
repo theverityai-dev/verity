@@ -34,6 +34,7 @@ import {
   moveTable,
   placeOrder,
   recordPayment,
+  refundBill,
   registerDineinCapability,
   settleBill,
 } from "@/server/capabilities/dinein";
@@ -188,6 +189,7 @@ describeDb("capability: CRM", () => {
     await prisma.$disconnect();
   });
 
+  let lastBillId = "";
   async function runOneVisit(tableLabel: string, qty: number): Promise<number> {
     const table = await executeCommand(manager, defineTable, { zoneId, label: tableLabel, seats: 2 });
     await executeCommand(manager, moveTable, { tableId: table.id, to: "occupied" });
@@ -217,6 +219,7 @@ describeDb("capability: CRM", () => {
     });
     await executeCommand(manager, settleBill, { billId: bill.id });
     await executeCommand(manager, moveTable, { tableId: table.id, to: "available" });
+    lastBillId = bill.id;
     return bill.totalMinor;
   }
 
@@ -255,5 +258,22 @@ describeDb("capability: CRM", () => {
     await expect(
       executeCommand(manager, redeemPoints, { customerId: customer!.id, points: 1 }),
     ).rejects.toThrow(/only 0 points available/);
+  });
+
+  it("takes back points in proportion to a refund, never more than were earned (decision 2026-10-06)", async () => {
+    const total = await runOneVisit("T-9", 20);
+    const customer = (await executeQuery(manager, getCustomer360, { phone: guestPhone }))!;
+    const earned = Math.floor((total / 10_000) * 5);
+    expect(earned).toBeGreaterThan(1);
+    const before = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
+
+    const half = Math.floor(total / 2);
+    await executeCommand(manager, refundBill, { billId: lastBillId, amountMinor: half, method: "cash", reason: "Half the order was cold" });
+    const afterHalf = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
+    expect(before - afterHalf).toBe(Math.floor((earned * half) / total));
+
+    await executeCommand(manager, refundBill, { billId: lastBillId, amountMinor: total - half, method: "cash", reason: "Rest refunded" });
+    const afterAll = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
+    expect(before - afterAll).toBe(earned);
   });
 });

@@ -17,7 +17,7 @@ import { withTenant, type TenantScopedClient } from "@/server/platform/tenancy";
 import { effectiveTimeZone } from "@/server/platform/temporal";
 import { postConsumptionForOrder } from "@/server/capabilities/recipe";
 import { upsertCustomerForOrder } from "@/server/capabilities/crm";
-import { awardPointsForOrder } from "@/server/capabilities/loyalty";
+import { awardPointsForOrder, reversePointsForRefund } from "@/server/capabilities/loyalty";
 import { assertOutletInScope, reachableOutletIds } from "./scope";
 import type { ActorContext as DineinActor } from "@/server/platform/command";
 
@@ -1631,6 +1631,9 @@ export const refundBill: CommandDefinition<
         refundedByUserId: ctx.actor.userId,
       },
     });
+    // Points earned on this bill come back in proportion to what was refunded.
+    // Coupons are not reversed: the refund is already net of the discount.
+    await reversePointsForRefund(ctx, input.billId);
     return {
       result: { refundId: refund.id, refundableMinor: await refundableMinor(ctx.tx, input.billId) },
       events: [

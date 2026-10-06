@@ -41,7 +41,69 @@ function rupees(minor: number): string {
  * and a guest querying a total should be able to read where it came from
  * without asking anyone.
  */
+/**
+ * What one line of the bill costs the guest, with tax, discount and rounding
+ * spread across lines in proportion to their pre-tax value. Used to split a
+ * payment by items and to refund chosen items, so both agree to the paisa.
+ */
+function lineShares(bill: BillDetail): number[] {
+  if (bill.subtotalMinor <= 0) return bill.lines.map(() => 0);
+  return bill.lines.map((line) => Math.round((line.lineTotalMinor * bill.totalMinor) / bill.subtotalMinor));
+}
+
+function ItemPicker({
+  bill,
+  shares,
+  picked,
+  onChange,
+  legend,
+}: {
+  bill: BillDetail;
+  shares: number[];
+  picked: Set<number>;
+  onChange: (next: Set<number>) => void;
+  legend: string;
+}) {
+  return (
+    <fieldset className="m-0 flex flex-col gap-1 border-0 p-0">
+      <legend className="mb-1 p-0 text-[13px] text-text-secondary">{legend}</legend>
+      {bill.lines.map((line, index) => (
+        <label key={`${line.itemName}-${index}`} className="flex min-h-11 cursor-pointer items-center justify-between gap-3 text-[14px]">
+          <span className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={picked.has(index)}
+              onChange={() => {
+                const next = new Set(picked);
+                if (next.has(index)) next.delete(index);
+                else next.add(index);
+                onChange(next);
+              }}
+              className="size-[18px] accent-[var(--color-accent)]"
+            />
+            {line.qty} × {line.itemName}
+            {line.variantName ? ` (${line.variantName})` : ""}
+          </span>
+          <span className="tabular text-text-secondary">{rupees(shares[index] ?? 0)}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/**
+ * Keyed on the outstanding and refundable amounts by the page, so after each
+ * payment or refund the amounts below start again from the new figures.
+ */
 export function BillView({ bill }: { bill: BillDetail }) {
+  const shares = lineShares(bill);
+  const [payAmount, setPayAmount] = useState((bill.outstandingMinor / 100).toFixed(2));
+  const [payItems, setPayItems] = useState<Set<number>>(new Set());
+  const [refundAmount, setRefundAmount] = useState((bill.refundableMinor / 100).toFixed(2));
+  const [refundItems, setRefundItems] = useState<Set<number>>(new Set());
+  const [refundReason, setRefundReason] = useState("");
+  const sumOf = (picked: Set<number>) => [...picked].reduce((sum, i) => sum + (shares[i] ?? 0), 0);
+  const itemNames = (picked: Set<number>) => [...picked].map((i) => bill.lines[i]?.itemName).filter(Boolean).join(", ");
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
@@ -210,6 +272,21 @@ export function BillView({ bill }: { bill: BillDetail }) {
                     <p className="m-0 text-[13px] text-text-secondary">
                       Up to {rupees(bill.refundableMinor)} can still be returned. The bill stays as it was; the refund is recorded beside it.
                     </p>
+                    <ItemPicker
+                      bill={bill}
+                      shares={shares}
+                      picked={refundItems}
+                      legend="Refund particular items (optional)"
+                      onChange={(next) => {
+                        setRefundItems(next);
+                        if (next.size > 0) {
+                          setRefundAmount((Math.min(sumOf(next), bill.refundableMinor) / 100).toFixed(2));
+                          if (!refundReason) setRefundReason(`Refund: ${itemNames(next)}`);
+                        } else {
+                          setRefundAmount((bill.refundableMinor / 100).toFixed(2));
+                        }
+                      }}
+                    />
                     <Field label="Amount (₹)" htmlFor="refundAmount" required>
                       <Input
                         id="refundAmount"
@@ -218,7 +295,8 @@ export function BillView({ bill }: { bill: BillDetail }) {
                         step="0.01"
                         min="0.01"
                         max={(bill.refundableMinor / 100).toFixed(2)}
-                        defaultValue={(bill.refundableMinor / 100).toFixed(2)}
+                        value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
                         required
                       />
                     </Field>
@@ -232,7 +310,7 @@ export function BillView({ bill }: { bill: BillDetail }) {
                       </Select>
                     </Field>
                     <Field label="Reason" htmlFor="refundReason" required hint="Recorded with your name. Say what went wrong.">
-                      <Input id="refundReason" name="refundReason" required minLength={3} maxLength={300} placeholder="Cold food, guest complaint" />
+                      <Input id="refundReason" name="refundReason" required minLength={3} maxLength={300} placeholder="Cold food, guest complaint" value={refundReason} onChange={(e) => setRefundReason(e.target.value)} />
                     </Field>
                     <CommandButton commands={"verity.dinein.refund_bill"} type="submit" variant="secondary" disabled={pending}>
                       {pending ? "Refunding…" : "Refund"}
@@ -260,6 +338,35 @@ export function BillView({ bill }: { bill: BillDetail }) {
                   </Select>
                 </Field>
 
+                <div className="flex flex-col gap-2">
+                  <span className="text-[13px] text-text-secondary">Splitting? Each guest pays their part as a separate payment.</span>
+                  <div className="flex flex-wrap gap-2">
+                    {[2, 3, 4, 5].map((n) => (
+                      <Button
+                        key={n}
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setPayItems(new Set());
+                          setPayAmount((Math.ceil(bill.outstandingMinor / n) / 100).toFixed(2));
+                        }}
+                      >
+                        Split {n} ways
+                      </Button>
+                    ))}
+                  </div>
+                  <ItemPicker
+                    bill={bill}
+                    shares={shares}
+                    picked={payItems}
+                    legend="Or pay for particular items"
+                    onChange={(next) => {
+                      setPayItems(next);
+                      setPayAmount((Math.min(next.size > 0 ? sumOf(next) : bill.outstandingMinor, bill.outstandingMinor) / 100).toFixed(2));
+                    }}
+                  />
+                </div>
+
                 <Field label="Amount (₹)" htmlFor="amount" required>
                   <Input
                     id="amount"
@@ -267,7 +374,9 @@ export function BillView({ bill }: { bill: BillDetail }) {
                     type="number"
                     step="0.01"
                     min="0.01"
-                    defaultValue={(bill.outstandingMinor / 100).toFixed(2)}
+                    max={(bill.outstandingMinor / 100).toFixed(2)}
+                    value={payAmount}
+                    onChange={(e) => setPayAmount(e.target.value)}
                     required
                   />
                 </Field>

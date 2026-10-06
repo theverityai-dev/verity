@@ -66,6 +66,42 @@ export async function awardPointsForOrder(ctx: CommandContext, orderId: string, 
   });
 }
 
+/**
+ * Takes back points earned on a bill in proportion to how much of it has been
+ * refunded (decision 2026-10-06). Recomputed from totals each time, so a second
+ * partial refund reverses only the difference, and the total taken back never
+ * exceeds what was earned. Plain function under refund_bill's own authorization,
+ * same posture as `awardPointsForOrder`. Reversals are `adjustment` entries
+ * with negative points against the bill, so the ledger stays append-only.
+ */
+export async function reversePointsForRefund(ctx: CommandContext, billId: string): Promise<number> {
+  const earned = await ctx.tx.loyaltyPointEntry.findFirst({ where: { billId, reason: "earn" } });
+  if (!earned || earned.points <= 0) return 0;
+
+  const [bill, refunded, reversed] = await Promise.all([
+    ctx.tx.bill.findUniqueOrThrow({ where: { id: billId }, select: { totalMinor: true } }),
+    ctx.tx.billRefund.aggregate({ where: { billId }, _sum: { amountMinor: true } }),
+    ctx.tx.loyaltyPointEntry.aggregate({ where: { billId, reason: "adjustment", points: { lt: 0 } }, _sum: { points: true } }),
+  ]);
+  if (bill.totalMinor <= 0) return 0;
+  const refundedMinor = Math.min(refunded._sum.amountMinor ?? 0, bill.totalMinor);
+  const shouldReverse = Math.floor((earned.points * refundedMinor) / bill.totalMinor);
+  const alreadyReversed = -(reversed._sum.points ?? 0);
+  const delta = shouldReverse - alreadyReversed;
+  if (delta <= 0) return 0;
+
+  await ctx.tx.loyaltyPointEntry.create({
+    data: {
+      tenantId: ctx.actor.tenantId,
+      customerId: earned.customerId,
+      points: -delta,
+      reason: "adjustment",
+      billId,
+    },
+  });
+  return delta;
+}
+
 export const redeemPoints: CommandDefinition<
   { customerId: string; points: number },
   { valuePaise: number; remainingBalance: number }

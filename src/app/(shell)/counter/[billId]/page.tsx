@@ -40,7 +40,7 @@ async function BillPage({ params }: { params: Promise<{ billId: string }> }) {
           description={bill.state === "settled" ? "Settled" : "Open — awaiting payment"}
         />
       </div>
-      <BillView bill={bill} />
+      <BillView key={`${bill.outstandingMinor}-${bill.refundableMinor}`} bill={bill} />
     </>
   );
 }
