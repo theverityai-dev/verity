@@ -102,6 +102,9 @@ jobs:
           GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO verity_app;
           GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO verity_app;
           REVOKE ALL ON TABLE public._prisma_migrations, public.request_quota FROM verity_app;
+          -- Read-only for the runtime, as in production (20261001000000); the
+          -- blanket grant above would otherwise undo that migration in CI.
+          REVOKE INSERT, UPDATE, DELETE ON TABLE public.deployment_state FROM verity_app;
           SQL
 
       - name: Prove SECURITY DEFINER functions are not public executable
