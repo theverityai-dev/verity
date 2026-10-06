@@ -342,7 +342,9 @@ export function DataTable({
                         }
                         className={
                           "whitespace-nowrap px-4 pb-3 text-[13px] font-normal text-text-tertiary " +
-                          (c.numeric ? "text-right" : "text-left")
+                          (c.numeric ? "text-right" : "text-left") +
+                          // The first column carries the cell inset when no selection column precedes it.
+                          (!selectable && c.key === columns[0]?.key ? " pl-6" : "")
                         }
                       >
                         {c.sortable === false ? (
@@ -394,7 +396,7 @@ export function DataTable({
                       <td
                         key={c.key}
                         className={
-                          "px-4 py-2.5 align-middle " + (c.numeric ? "tabular text-right" : "")
+                          "px-4 py-2.5 align-middle " + (c.numeric ? "tabular text-right" : "") + (!selectable && i === 0 ? " pl-6" : "")
                         }
                       >
                         <Cell column={c} row={row} lead={i === 0} />
