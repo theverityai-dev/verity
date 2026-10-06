@@ -507,12 +507,15 @@ export async function setClientStatus(tenantId: string, status: ClientStatus, re
 /**
  * The operator role inside a client tenant, created on first entry.
  *
- * Deliberately narrow: an operator entering a client gets administration of
- * identity, organization and role — the things HQ exists to manage — and not a
- * blanket grant over the client's business entities. Widening this is a
- * decision, so it should look like one.
+ * Full authority inside the client (ADR-035, 2026-10-06, superseding the
+ * earlier "deliberately narrow" role): every verb on every entity registered on
+ * the platform, every entity any role in this client already uses, and the
+ * platform entities in `OPERATOR_GRANTS`. How authority is obtained does not
+ * change: an operator has nothing in a client until they enter it, entering
+ * needs a stated reason in the client's own trail (ADR-034), and every action
+ * still passes `enforcePolicy()` as this ordinary membership.
  */
-async function operatorRoleFor(
+export async function operatorRoleFor(
   tx: Parameters<Parameters<typeof withTenant>[1]>[0],
   tenantId: string,
 ): Promise<string> {
@@ -541,7 +544,17 @@ async function operatorRoleFor(
   });
   const has = new Set(held.map((p) => `${p.verb}:${p.entity}`));
 
-  const missing = OPERATOR_GRANTS.filter((g) => !has.has(`${g.verb}:${g.entity}`));
+  const [registered, usedHere] = await Promise.all([
+    tx.entityDefinition.findMany({ select: { key: true } }),
+    tx.permission.findMany({ distinct: ["entity"], select: { entity: true } }),
+  ]);
+  const entities = new Set<string>([
+    ...registered.map((e) => e.key),
+    ...usedHere.map((p) => p.entity),
+    ...OPERATOR_GRANTS.map((g) => g.entity),
+  ]);
+  const desired = [...entities].flatMap((entity) => OPERATOR_VERBS.map((verb) => ({ verb, entity })));
+  const missing = desired.filter((g) => !has.has(`${g.verb}:${g.entity}`));
   if (missing.length > 0) {
     await tx.permission.createMany({
       data: missing.map((grant) => ({
@@ -639,6 +652,9 @@ export async function operatorActorFor(tenantId: string): Promise<ActorContext> 
 }
 
 export const OPERATOR_ROLE_NAME = "Verity Operator";
+
+/** Every permission verb (Spec PLA-AUT-003). ADR-035: the operator holds all of them. */
+export const OPERATOR_VERBS = ["Read", "Create", "Edit", "Delete", "ActionExecute"] as const;
 
 /**
  * What an operator may do inside a client.

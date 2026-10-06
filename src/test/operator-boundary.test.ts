@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/server/platform/db";
 import { withTenant } from "@/server/platform/tenancy";
+import { OPERATOR_VERBS, operatorRoleFor } from "@/server/platform/operator";
 
 /**
  * The HQ operator boundary — ADR-013.
@@ -197,5 +198,31 @@ describeDb("operator authority (ADR-013)", () => {
     const rows = await prisma.$queryRaw<unknown[]>`
       SELECT * FROM verity.operator_platform_activity(${randomUUID()}::uuid)`;
     expect(rows).toHaveLength(0);
+  });
+
+  it("gives the operator role every verb on every registered entity inside a client, idempotently (ADR-035)", async () => {
+    const tenantId = randomUUID();
+    await withTenant(tenantId, async (tx) => {
+      await tx.tenant.create({ data: { id: tenantId, name: `full-${tenantId.slice(0, 8)}` } });
+    });
+
+    const first = await withTenant(tenantId, (tx) => operatorRoleFor(tx, tenantId));
+    const second = await withTenant(tenantId, (tx) => operatorRoleFor(tx, tenantId));
+    expect(second).toBe(first);
+
+    const [registered, held] = await withTenant(tenantId, (tx) =>
+      Promise.all([
+        tx.entityDefinition.findMany({ select: { key: true } }),
+        tx.permission.findMany({ where: { roleId: first }, select: { verb: true, entity: true, scope: true } }),
+      ]),
+    );
+    const has = new Set(held.map((p) => `${p.verb}:${p.entity}`));
+    expect(registered.length).toBeGreaterThan(0);
+    for (const { key } of registered) {
+      for (const verb of OPERATOR_VERBS) expect(has.has(`${verb}:${key}`), `${verb} ${key}`).toBe(true);
+    }
+    // No duplicate grants from the second reconciliation, and nothing beyond tenant scope.
+    expect(held.length).toBe(has.size);
+    expect(held.every((p) => p.scope === "Tenant")).toBe(true);
   });
 });
