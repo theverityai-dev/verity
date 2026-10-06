@@ -4879,6 +4879,8 @@ model HrEmployee {
   departmentId  String?   @map("department_id") @db.Uuid
   designation   String?
   dateOfJoining DateTime? @map("date_of_joining")
+  /// Readable and editable only with `verity.hr.compensation` (DECISIONS.md #3).
+  monthlySalaryMinor Int? @map("monthly_salary_minor")
   active        Boolean   @default(true)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")

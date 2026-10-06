@@ -2,6 +2,7 @@ import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { hasPermission } from "@/server/platform/authorization";
 
 /**
  * CAPABILITY: Attendance — `verity.capability.attendance` (Colonel Kebabz
@@ -23,6 +24,29 @@ export const ENTITY_SHIFT = "verity.attendance.shift";
 export const ATTENDANCE_STATUSES = ["Present", "Absent", "Late", "OnLeave"] as const;
 export type AttendanceStatus = (typeof ATTENDANCE_STATUSES)[number];
 
+/** Minutes after shift start before "Present" becomes "Late" (decided 2026-10-06). */
+export const LATE_GRACE_MINUTES = 10;
+/** Hours in a working day when no shift says otherwise, for overtime. */
+export const STANDARD_DAY_HOURS = 9;
+
+/** Minutes since local midnight of an instant in a time zone. */
+function localMinutes(at: Date, timeZone: string | null): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timeZone ?? "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(at);
+  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0);
+  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
+  return hour * 60 + minute;
+}
+
+function hhmm(value: string): number {
+  const [h, m] = value.split(":").map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
+}
+
 export const recordAttendance: CommandDefinition<
   { employeeId: string; date: string; status: AttendanceStatus; checkInAt?: string; checkOutAt?: string },
   { id: string }
@@ -42,18 +66,33 @@ export const recordAttendance: CommandDefinition<
     if (!employee) throw new ValidationError("E_VALIDATION: employee not found in this tenant");
   },
   handler: async (ctx, input) => {
+    // A check-in later than the shift start plus grace is Late, whatever was
+    // ticked: lateness is a fact about the clock, not a choice (staff.md).
+    let status = input.status;
+    if (status === "Present" && input.checkInAt) {
+      const shift = await ctx.tx.shift.findFirst({
+        where: { employeeId: input.employeeId, date: new Date(input.date) },
+        orderBy: { startTime: "asc" },
+      });
+      if (shift) {
+        const tenant = await ctx.tx.tenant.findUnique({ where: { id: ctx.actor.tenantId }, select: { timeZone: true } });
+        if (localMinutes(new Date(input.checkInAt), tenant?.timeZone ?? null) > hhmm(shift.startTime) + LATE_GRACE_MINUTES) {
+          status = "Late";
+        }
+      }
+    }
     const record = await ctx.tx.attendanceRecord.upsert({
       where: { tenantId_employeeId_date: { tenantId: ctx.actor.tenantId, employeeId: input.employeeId, date: new Date(input.date) } },
       create: {
         tenantId: ctx.actor.tenantId,
         employeeId: input.employeeId,
         date: new Date(input.date),
-        status: input.status,
+        status,
         checkInAt: input.checkInAt ? new Date(input.checkInAt) : null,
         checkOutAt: input.checkOutAt ? new Date(input.checkOutAt) : null,
       },
       update: {
-        status: input.status,
+        status,
         checkInAt: input.checkInAt ? new Date(input.checkInAt) : undefined,
         checkOutAt: input.checkOutAt ? new Date(input.checkOutAt) : undefined,
         version: { increment: 1 },
@@ -61,7 +100,7 @@ export const recordAttendance: CommandDefinition<
     });
     return {
       result: { id: record.id },
-      events: [{ name: "verity.attendance.recorded", entityId: record.id, payload: { status: input.status } }],
+      events: [{ name: "verity.attendance.recorded", entityId: record.id, payload: { status } }],
     };
   },
 };
@@ -118,6 +157,72 @@ export const getPayrollInputs: QueryDefinition<
       absentCount: rows.filter((r) => r.status === "Absent").length,
       leaveCount: rows.filter((r) => r.status === "OnLeave").length,
     };
+  },
+};
+
+export type PayrollRow = {
+  employeeId: string;
+  name: string;
+  daysWorked: number;
+  hoursWorked: number;
+  overtimeHours: number;
+  lateCount: number;
+  absentCount: number;
+  leaveCount: number;
+  /** Null when the reader may not see pay (verity.hr.compensation) or none is set. */
+  monthlySalaryMinor: number | null;
+};
+
+/**
+ * Every active employee's attendance for a period, ready for payroll (staff.md,
+ * payroll-input export). Overtime is time worked beyond that day's shift, or
+ * beyond `STANDARD_DAY_HOURS` when there was no shift.
+ */
+export const payrollSummary: QueryDefinition<{ fromDate: string; toDate: string }, { rows: PayrollRow[]; canSeeSalary: boolean }> = {
+  key: "verity.attendance.payroll_summary",
+  entity: ENTITY_ATTENDANCE,
+  input: z.object({ fromDate: z.string().date(), toDate: z.string().date() }),
+  handler: async (ctx, input) => {
+    const range = { gte: new Date(input.fromDate), lte: new Date(input.toDate) };
+    const [employees, records, shifts, canSeeSalary] = await Promise.all([
+      ctx.tx.hrEmployee.findMany({ where: { active: true }, include: { party: { select: { displayName: true } } } }),
+      ctx.tx.attendanceRecord.findMany({ where: { date: range } }),
+      ctx.tx.shift.findMany({ where: { date: range } }),
+      hasPermission(ctx.tx, ctx.actor.roleId, "Read", "verity.hr.compensation"),
+    ]);
+    const shiftHours = new Map<string, number>();
+    for (const sh of shifts) {
+      const key = `${sh.employeeId}|${sh.date.toISOString().slice(0, 10)}`;
+      const hours = Math.max(0, (hhmm(sh.endTime) - hhmm(sh.startTime)) / 60);
+      shiftHours.set(key, (shiftHours.get(key) ?? 0) + hours);
+    }
+    const rows = employees
+      .map((e) => {
+        const mine = records.filter((r) => r.employeeId === e.id);
+        const worked = mine.filter((r) => r.status === "Present" || r.status === "Late");
+        let hoursWorked = 0;
+        let overtimeHours = 0;
+        for (const r of worked) {
+          if (!r.checkInAt || !r.checkOutAt) continue;
+          const hours = Math.max(0, (r.checkOutAt.getTime() - r.checkInAt.getTime()) / 3_600_000);
+          hoursWorked += hours;
+          const planned = shiftHours.get(`${e.id}|${r.date.toISOString().slice(0, 10)}`) ?? STANDARD_DAY_HOURS;
+          overtimeHours += Math.max(0, hours - planned);
+        }
+        return {
+          employeeId: e.id,
+          name: e.party.displayName,
+          daysWorked: worked.length,
+          hoursWorked: Math.round(hoursWorked * 100) / 100,
+          overtimeHours: Math.round(overtimeHours * 100) / 100,
+          lateCount: mine.filter((r) => r.status === "Late").length,
+          absentCount: mine.filter((r) => r.status === "Absent").length,
+          leaveCount: mine.filter((r) => r.status === "OnLeave").length,
+          monthlySalaryMinor: canSeeSalary ? e.monthlySalaryMinor : null,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { rows, canSeeSalary };
   },
 };
 
@@ -203,5 +308,6 @@ export function registerAttendanceCapability(): void {
   registerCommand(defineShift);
   registerQuery(getAttendanceDashboard);
   registerQuery(getPayrollInputs);
+  registerQuery(payrollSummary);
   registerQuery(listShifts);
 }

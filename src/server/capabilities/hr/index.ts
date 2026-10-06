@@ -2,6 +2,7 @@ import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { hasPermission } from "@/server/platform/authorization";
 
 /**
  * CAPABILITY: HR — `verity.capability.hr` (Task 78, MVP scope)
@@ -38,6 +39,8 @@ import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 export const HR_CAPABILITY = "verity.capability.hr";
 export const ENTITY_HR_EMPLOYEE = "verity.hr.employee";
 export const ENTITY_HR_LEAVE = "verity.hr.leave";
+/** Salary. Its own entity so pay can be hidden from people who run attendance. */
+export const ENTITY_HR_COMPENSATION = "verity.hr.compensation";
 
 export const LEAVE_DECISIONS = ["Approved", "Rejected", "Revoked"] as const;
 export type LeaveDecisionKind = (typeof LEAVE_DECISIONS)[number];
@@ -295,6 +298,100 @@ export const leaveApplicationStatus: QueryDefinition<
 /* ============================== registration ============================== */
 
 /** Called by `registry.ts`'s `installCapabilities()`. */
+/** Sets an employee's monthly salary (DECISIONS.md #3). */
+export const setEmployeeSalary: CommandDefinition<{ employeeId: string; monthlySalaryMinor: number | null }, { id: string }> = {
+  key: "verity.hr.set_employee_salary",
+  entity: ENTITY_HR_COMPENSATION,
+  verb: "Edit",
+  input: z.object({ employeeId: z.string().uuid(), monthlySalaryMinor: z.number().int().min(0).max(1_000_000_000).nullable() }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.hrEmployee.findUnique({ where: { id: input.employeeId } }))) {
+      throw new ValidationError("E_VALIDATION: employee not found in this tenant");
+    }
+  },
+  handler: async (ctx, input) => {
+    await ctx.tx.hrEmployee.update({
+      where: { id: input.employeeId },
+      data: { monthlySalaryMinor: input.monthlySalaryMinor, version: { increment: 1 } },
+    });
+    // No amount in the event: events are read more widely than salaries are.
+    return { result: { id: input.employeeId }, events: [{ name: "verity.hr.salary_set", entityId: input.employeeId }] };
+  },
+};
+
+export type EmployeeProfile = {
+  id: string;
+  name: string;
+  designation: string | null;
+  department: string | null;
+  dateOfJoining: Date | null;
+  active: boolean;
+  /** Null when the reader may not see pay, or when none is set. */
+  monthlySalaryMinor: number | null;
+  canSeeSalary: boolean;
+  leaveBalances: Array<{ leaveType: string; allowed: number; taken: number; remaining: number }>;
+  leaves: Array<{ id: string; leaveType: string; from: Date; to: Date; days: number; status: string }>;
+};
+
+function leaveDays(from: Date, to: Date): number {
+  return Math.max(1, Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1);
+}
+
+/**
+ * One employee: who they are, their leave balances for this calendar year and
+ * their leave history. Salary appears only for a reader holding Read on
+ * `verity.hr.compensation`; for anyone else it is null and flagged so.
+ */
+export const getEmployeeProfile: QueryDefinition<{ employeeId: string }, EmployeeProfile | null> = {
+  key: "verity.hr.get_employee_profile",
+  entity: ENTITY_HR_EMPLOYEE,
+  input: z.object({ employeeId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const employee = await ctx.tx.hrEmployee.findUnique({
+      where: { id: input.employeeId },
+      include: {
+        party: { select: { displayName: true } },
+        department: { select: { name: true } },
+        leaveApps: {
+          include: { leaveType: { select: { name: true } }, decisions: { orderBy: { decidedAt: "desc" }, take: 1 } },
+          orderBy: { fromDate: "desc" },
+        },
+      },
+    });
+    if (!employee) return null;
+    const canSeeSalary = await hasPermission(ctx.tx, ctx.actor.roleId, "Read", ENTITY_HR_COMPENSATION);
+    const year = new Date().getUTCFullYear();
+    const types = await ctx.tx.hrLeaveType.findMany({ where: { active: true }, orderBy: { name: "asc" } });
+    const apps = employee.leaveApps.map((a) => ({
+      id: a.id,
+      leaveTypeId: a.leaveTypeId,
+      leaveType: a.leaveType.name,
+      from: a.fromDate,
+      to: a.toDate,
+      days: leaveDays(a.fromDate, a.toDate),
+      status: a.decisions[0]?.decision ?? "Pending",
+    }));
+    const leaveBalances = types.map((t) => {
+      const taken = apps
+        .filter((l) => l.leaveTypeId === t.id && l.status === "Approved" && l.from.getUTCFullYear() === year)
+        .reduce((sum, l) => sum + l.days, 0);
+      return { leaveType: t.name, allowed: t.daysPerYear, taken, remaining: Math.max(0, t.daysPerYear - taken) };
+    });
+    return {
+      id: employee.id,
+      name: employee.party.displayName,
+      designation: employee.designation,
+      department: employee.department?.name ?? null,
+      dateOfJoining: employee.dateOfJoining,
+      active: employee.active,
+      monthlySalaryMinor: canSeeSalary ? employee.monthlySalaryMinor : null,
+      canSeeSalary,
+      leaveBalances,
+      leaves: apps.map((l) => ({ id: l.id, leaveType: l.leaveType, from: l.from, to: l.to, days: l.days, status: l.status })),
+    };
+  },
+};
+
 export function registerHrCapability(): void {
   registerContribution({
     capabilityId: HR_CAPABILITY,
@@ -318,4 +415,6 @@ export function registerHrCapability(): void {
   registerCommand(decideLeaveApplication);
   registerQuery(listEmployees);
   registerQuery(leaveApplicationStatus);
+  registerCommand(setEmployeeSalary);
+  registerQuery(getEmployeeProfile);
 }

@@ -46,7 +46,7 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
         emptyDescription="Add the first person from your existing contacts."
         emptyAction={parties.length > 0 ? <Button variant="primary" onClick={() => setOpen(true)}>Add employee</Button> : undefined}
         columns={[
-          { key: "name", header: "Name", sortable: true, subKey: "designation" },
+          { key: "name", header: "Name", sortable: true, subKey: "designation", variant: "link", href: "/hr/{id}" },
           { key: "department", header: "Department", sortable: true },
           { key: "joined", header: "Joined", sortable: true },
           { key: "status", header: "Status", sortable: true },

@@ -11,7 +11,8 @@ import { clearTransitionGuards } from "@/server/platform/state";
 import { clearContributions } from "@/server/platform/contribution";
 import { provisionIdentity } from "@/server/platform/identity";
 import { LOCATION_CAPABILITY, registerLocationCapability } from "@/server/capabilities/location";
-import { HR_CAPABILITY, ENTITY_HR_EMPLOYEE, registerHrCapability } from "@/server/capabilities/hr";
+import { HR_CAPABILITY, ENTITY_HR_COMPENSATION, ENTITY_HR_EMPLOYEE, getEmployeeProfile, registerHrCapability, setEmployeeSalary } from "@/server/capabilities/hr";
+import { ForbiddenError } from "@/server/platform/authorization";
 import {
   ATTENDANCE_CAPABILITY,
   ENTITY_ATTENDANCE,
@@ -20,6 +21,7 @@ import {
   getAttendanceDashboard,
   getPayrollInputs,
   listShifts,
+  payrollSummary,
   recordAttendance,
   registerAttendanceCapability,
 } from "@/server/capabilities/attendance";
@@ -175,5 +177,47 @@ describeDb("capability: Attendance", () => {
     const shifts = await executeQuery(manager, listShifts, { locationId, date: today });
     expect(shifts).toHaveLength(1);
     expect(shifts[0]?.label).toBe("Morning");
+  });
+
+  it("marks a late check-in Late from the shift, counts overtime past the shift (IST)", async () => {
+    const day = "2026-09-11";
+    await executeCommand(manager, defineShift, { locationId, employeeId, date: day, label: "Morning", startTime: "10:00", endTime: "18:00" });
+
+    // 10:15 IST is past 10:00 + 10 minutes' grace.
+    await executeCommand(manager, recordAttendance, { employeeId, date: day, status: "Present", checkInAt: `${day}T04:45:00.000Z` });
+    expect((await executeQuery(manager, getAttendanceDashboard, { date: day })).late).toBe(1);
+
+    // 10:05 IST is within grace; out at 20:00 IST is 9h55m against an 8h shift.
+    await executeCommand(manager, recordAttendance, {
+      employeeId, date: day, status: "Present", checkInAt: `${day}T04:35:00.000Z`, checkOutAt: `${day}T14:30:00.000Z`,
+    });
+    expect((await executeQuery(manager, getAttendanceDashboard, { date: day })).present).toBe(1);
+
+    const summary = await executeQuery(manager, payrollSummary, { fromDate: day, toDate: day });
+    const row = summary.rows.find((r) => r.employeeId === employeeId)!;
+    expect(row.hoursWorked).toBeCloseTo(9.92, 2);
+    expect(row.overtimeHours).toBeCloseTo(1.92, 2);
+  });
+
+  it("hides salary from a role without the pay permission and shows it once granted (DECISIONS.md #3)", async () => {
+    await expect(
+      executeCommand(manager, setEmployeeSalary, { employeeId, monthlySalaryMinor: 1_800_000 }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    const before = await executeQuery(manager, payrollSummary, { fromDate: today, toDate: today });
+    expect(before.canSeeSalary).toBe(false);
+    expect(before.rows.every((r) => r.monthlySalaryMinor === null)).toBe(true);
+
+    await withTenant(tenantId, (tx) =>
+      tx.permission.createMany({
+        data: (["Read", "Edit"] as const).map((verb) => ({ tenantId, roleId: manager.roleId!, verb, entity: ENTITY_HR_COMPENSATION, scope: "Tenant" as const })),
+      }),
+    );
+    await executeCommand(manager, setEmployeeSalary, { employeeId, monthlySalaryMinor: 1_800_000 });
+    const after = await executeQuery(manager, payrollSummary, { fromDate: today, toDate: today });
+    expect(after.canSeeSalary).toBe(true);
+    expect(after.rows.find((r) => r.employeeId === employeeId)!.monthlySalaryMinor).toBe(1_800_000);
+    const profile = (await executeQuery(manager, getEmployeeProfile, { employeeId }))!;
+    expect(profile.canSeeSalary).toBe(true);
+    expect(profile.monthlySalaryMinor).toBe(1_800_000);
   });
 });
