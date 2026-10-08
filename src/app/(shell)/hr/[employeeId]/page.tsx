@@ -66,7 +66,7 @@ async function EmployeePage({ params }: { params: Promise<{ employeeId: string }
           caption={`Leave balance for ${new Date().getUTCFullYear()}`}
           filterable={false}
           emptyTitle="No leave types set up"
-          emptyDescription="Add leave types on the People page to track balances."
+          emptyDescription="Add leave types under People operations to track balances."
           columns={[
             { key: "leaveType", header: "Leave type" },
             { key: "allowed", header: "Allowed", numeric: true },

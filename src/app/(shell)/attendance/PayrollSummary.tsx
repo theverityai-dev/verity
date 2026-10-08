@@ -87,7 +87,7 @@ export function PayrollSummary({
           { key: "name", header: "Employee", sortable: true, variant: "link", href: "/hr/{employeeId}" },
           { key: "daysWorked", header: "Days", numeric: true, sortable: true },
           { key: "hoursWorked", header: "Hours", numeric: true },
-          { key: "overtimeHours", header: "Overtime h", numeric: true, sortable: true },
+          { key: "overtimeHours", header: "Overtime", numeric: true, sortable: true },
           { key: "lateCount", header: "Late", numeric: true, sortable: true },
           { key: "absentCount", header: "Absent", numeric: true },
           { key: "leaveCount", header: "Leave", numeric: true },
