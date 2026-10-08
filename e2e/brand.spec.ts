@@ -252,7 +252,7 @@ test.describe("brand identity", () => {
   });
 
   test("keeps text on the accent fill legible", async ({ page }) => {
-    // Gold is a light accent, so its label is dark ink and the pair clears AA
+    // The label ink is chosen per accent (accent.ts) so the pair clears AA
     // outright — there is no exception to carve out here. This asserts the
     // floor so a future accent change cannot quietly reintroduce one.
     await setTheme(page, "light");

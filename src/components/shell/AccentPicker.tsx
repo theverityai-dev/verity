@@ -323,7 +323,7 @@ export function AccentPicker({
           </div>
           {!HEX.test(hexDraft) && (
             <span role="alert" className="text-[12px] text-danger">
-              Six-digit hex, e.g. #D4A017
+              Six-digit hex, e.g. #0A84FF
             </span>
           )}
         </div>

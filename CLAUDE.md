@@ -254,7 +254,8 @@ any requirement written because it is "common in ERP/SaaS" rather than traced to
   are reconciled to the sheet; semantic success is retuned away from the accent hue so status and
   theme cannot read as one signal; the mark is monochrome everywhere, including favicon and app
   icon. Supersedes ADR-011 in part — accent default only. **Its own default-accent clause
-  (`#00D1B2`) is in turn superseded by ADR-024** (Gold `#D4A017`); every other ADR-012 mechanic
+  (`#00D1B2`) is in turn superseded by ADR-024, then by ADR-033 (blue `#0A84FF`; gold survives
+  only as one selectable preset)**; every other ADR-012 mechanic
   (ten-preset system, monochrome mark, semantic independence) is unaffected.
 - **ADR-023** (2026-09-17) Structured minimalism replaces glass as the default Experience
   System material — supersedes ADR-011's five-level glass hierarchy and four glass surface
@@ -265,7 +266,8 @@ any requirement written because it is "common in ERP/SaaS" rather than traced to
 - **ADR-024** (2026-09-18) Scoped glass returns for structural chrome (sidebar, top bar,
   command palette, modals, dropdowns/popovers) — reactivating the glass token system ADR-023
   stopped defaulting to but never deleted. Dense content stays solid, exactly as ADR-023
-  specified. Default accent reverts Mint → Gold `#D4A017` (existing preset, not new), with a
+  specified. ~~Default accent reverts Mint → Gold `#D4A017`~~ **(gold default withdrawn
+  2026-10-08: the default is blue `#0A84FF`, ADR-033; gold is a preset only)**, with a
   new constraint: accent is tint/interactive-only, never a large filled background. Adds a
   spring-based motion system (`framer-motion`, already a dependency) for interactive/transient
   surfaces. Full text: `verity-spec/17_decisions/adr/adr-024.md`. **Follow-up closed

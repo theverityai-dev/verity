@@ -22,7 +22,7 @@ import { Icon, type IconName } from "./icons";
  *   • Labels are sentence case at 12–13px. The board's application screens use
  *     no tracked-out capitals anywhere; that treatment belongs to the printed
  *     identity sheet, not to the product.
- *   • Gold marks what is actionable, selected or live. Nothing else.
+ *   • The tint (blue by default, ADR-033) marks what is actionable, selected or live. Nothing else.
  *   • Status is a coloured dot beside a label, never a coloured pill. Six
  *     competing beds on one screen is noise; a dot and a word is a status.
  */
@@ -321,7 +321,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 /**
- * The board draws exactly three button weights: a gold fill, a white fill with
+ * The board draws exactly three button weights: a tint fill, a white fill with
  * a hairline, and a bare glyph. This is those three plus `danger`, which the
  * board has no example of and which is drawn as the secondary shape in danger
  * ink rather than as a red fill — a destructive action should be legible, not
@@ -415,7 +415,7 @@ export function IconButton({
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
   children: ReactNode;
-  /** `accent` is the board's single gold action at the end of a toolbar. */
+  /** `accent` is the board's single tint action at the end of a toolbar. */
   tone?: "default" | "accent" | "bare";
 }) {
   const tones = {
@@ -706,8 +706,8 @@ export function FieldSet({
 const CATEGORY_PRESENTATION: Record<string, { label: string; color: string }> = {
   Draft: { label: "Draft", color: "bg-[var(--color-state-draft)]" },
   Pending: { label: "Pending", color: "bg-[var(--color-state-pending)]" },
-  // Active is not gold. Gold means "selected or actionable" everywhere else in
-  // the shell; letting one StateCategory also claim it would make a gold row
+  // Active is not the tint. The tint means "selected or actionable" everywhere else in
+  // the shell; letting one StateCategory also claim it would make a tinted row
   // ambiguous between "this is where you are" and "this record is running".
   Active: { label: "Active", color: "bg-[var(--color-state-active)]" },
   Blocked: { label: "Blocked", color: "bg-[var(--color-state-blocked)]" },
