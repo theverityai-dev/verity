@@ -5,6 +5,7 @@ import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
 import { PageHeader, Stat, StatRow, DefinitionList, Panel, EmptyState, ErrorState } from "@/components/ui/primitives";
 import { GuestActions } from "./GuestActions";
+import { EditGuest } from "./EditGuest";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ function formatRupees(minor: number): string {
 
 type Customer360 = {
   id: string; phone: string; name: string | null; email: string | null;
+  birthday: string | null; marketingConsent: boolean;
   orderCount: number; totalSpendMinor: number; avgOrderValueMinor: number; lastOrderAt: string | null;
 };
 type Complaint = { id: string; category: string; severity: string; status: string; createdAt: string };
@@ -35,6 +37,8 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
   if (!customer) return <EmptyState title="Guest not found" description="No guest with this id in your scope." />;
 
   const balance = balanceResult.ok ? balanceResult.data.balance : 0;
+  // The query returns a Date; the form and the display both want the calendar day.
+  const birthday = customer.birthday ? new Date(customer.birthday).toISOString().slice(0, 10) : null;
   const complaints = complaintsResult.ok ? complaintsResult.data : [];
 
   return (
@@ -48,11 +52,13 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
         <Stat label="Loyalty points" value={balance} />
       </StatRow>
 
-      <Panel title="Details" className="mb-6">
+      <Panel title="Details" className="mb-6" action={<EditGuest customerId={customer.id} phone={customer.phone} name={customer.name} email={customer.email} birthday={birthday} marketingConsent={customer.marketingConsent} />}>
         <DefinitionList
           items={[
             { term: "Phone", value: customer.phone },
             { term: "Email", value: customer.email ?? "—" },
+            { term: "Birthday", value: birthday ? new Date(`${birthday}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }) : "—" },
+            { term: "Offers and messages", value: customer.marketingConsent ? "Agreed" : "Not agreed" },
             {
               term: "Last order",
               value: customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString("en-IN") : "Never",

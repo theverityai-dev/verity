@@ -151,7 +151,15 @@ Write each into `DECISIONS.md` with its basis.
   can read the loyalty ledger; refunds do not hand redeemed points back (the discount was a price, not
   a payment). `apply_bill_discount` now shares its repricing with the new command. Test added to
   `capability-crm.test.ts` (3 pass); 25 dine-in and coupon tests still pass.
-- **Sections 3 to 7 (build), other than 4.4, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **5.1 edit a guest: BUILT, DB-proven, not browser-verified. Merge duplicates: NOT built, decided.**
+  New command `verity.crm.update_customer` (name, email, birthday, marketing consent; blank clears;
+  phone is the identity key and is not editable) with an "Edit details" sheet on the guest page; test in
+  `capability-crm.test.ts` (4 pass). A client role needs `Edit` on `verity.crm.customer` (Roles screen;
+  the Verity operator already holds it, ADR-035). **Merge decision:** two guests with different phones
+  merge by moving the second phone to a `customer_phone_alias` row on the kept guest, never by rewriting
+  past orders (ADR-007: identity follows a verified contact; history is not edited). Needs one new table
+  plus the 360 and loyalty reads joining through aliases, so it is a migration slice, not started.
+- **Sections 3 to 7 (build), other than 4.4, 5.1 (edit), 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

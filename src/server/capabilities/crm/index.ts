@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
-import type { ActorContext, CommandContext } from "@/server/platform/command";
+import { registerCommand, ValidationError, type ActorContext, type CommandContext, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { diffFields, recordActivity } from "@/server/platform/audit";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
 
 /** The subset shared by CommandContext and QueryContext — all this module needs. */
@@ -167,6 +168,62 @@ export const listCustomers: QueryDefinition<
   },
 };
 
+/**
+ * Edits what staff know about a guest (Task 125 item 5.1). The phone number is
+ * the identity key and is NOT editable here: changing it would re-point every
+ * past order's history (ADR-007: identity follows verified contact, not a typed
+ * correction). A field left out is unchanged; `null` clears it.
+ */
+export const updateCustomer: CommandDefinition<
+  {
+    customerId: string;
+    name?: string | null;
+    email?: string | null;
+    birthday?: string | null;
+    marketingConsent?: boolean;
+  },
+  { id: string }
+> = {
+  key: "verity.crm.update_customer",
+  entity: ENTITY_CUSTOMER,
+  verb: "Edit",
+  input: z.object({
+    customerId: z.string().uuid(),
+    name: z.string().trim().min(1).max(120).nullable().optional(),
+    email: z.string().trim().email().max(200).nullable().optional(),
+    birthday: z.string().date().nullable().optional(),
+    marketingConsent: z.boolean().optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.customer.findUnique({ where: { id: input.customerId } }))) {
+      throw new ValidationError("E_VALIDATION: guest not found");
+    }
+  },
+  handler: async (ctx, input) => {
+    const before = await ctx.tx.customer.findUniqueOrThrow({ where: { id: input.customerId } });
+    const after = await ctx.tx.customer.update({
+      where: { id: input.customerId },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
+        ...(input.birthday !== undefined ? { birthday: input.birthday ? new Date(input.birthday) : null } : {}),
+        ...(input.marketingConsent !== undefined ? { marketingConsent: input.marketingConsent } : {}),
+        version: { increment: 1 },
+      },
+    });
+    await recordActivity(ctx, {
+      entityKey: ENTITY_CUSTOMER,
+      entityId: after.id,
+      commandKey: "verity.crm.update_customer",
+      changes: diffFields(
+        { name: before.name, email: before.email, birthday: before.birthday?.toISOString().slice(0, 10) ?? null, marketingConsent: before.marketingConsent },
+        { name: after.name, email: after.email, birthday: after.birthday?.toISOString().slice(0, 10) ?? null, marketingConsent: after.marketingConsent },
+      ),
+    });
+    return { result: { id: after.id }, events: [{ name: "verity.crm.customer_updated", entityId: after.id }] };
+  },
+};
+
 /* ============================== registration ============================== */
 
 export function registerCrmCapability(): void {
@@ -184,6 +241,7 @@ export function registerCrmCapability(): void {
       },
     ],
   });
+  registerCommand(updateCustomer);
   registerQuery(getCustomer360);
   registerQuery(listCustomers);
 }

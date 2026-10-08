@@ -47,6 +47,7 @@ import {
   getCustomer360,
   listCustomers,
   registerCrmCapability,
+  updateCustomer,
 } from "@/server/capabilities/crm";
 import {
   ENTITY_LOYALTY_ENTRY,
@@ -277,6 +278,27 @@ describeDb("capability: CRM", () => {
     await executeCommand(manager, refundBill, { billId: lastBillId, amountMinor: total - half, method: "cash", reason: "Rest refunded" });
     const afterAll = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
     expect(before - afterAll).toBe(earned);
+  });
+
+  it("edits a guest's details, clears a field with null, and never touches the phone (Task 125 5.1)", async () => {
+    const customer = (await executeQuery(manager, getCustomer360, { phone: guestPhone }))!;
+    await executeCommand(manager, updateCustomer, {
+      customerId: customer.id,
+      name: "Ravi Regular Kumar",
+      email: "ravi@example.com",
+      birthday: "1990-03-14",
+      marketingConsent: true,
+    });
+    const edited = (await executeQuery(manager, getCustomer360, { customerId: customer.id }))!;
+    expect(edited).toMatchObject({ name: "Ravi Regular Kumar", email: "ravi@example.com", marketingConsent: true, phone: guestPhone });
+    expect(edited.birthday?.toISOString().slice(0, 10)).toBe("1990-03-14");
+
+    // Left out means unchanged; null clears.
+    await executeCommand(manager, updateCustomer, { customerId: customer.id, email: null, birthday: null });
+    const cleared = (await executeQuery(manager, getCustomer360, { customerId: customer.id }))!;
+    expect(cleared).toMatchObject({ name: "Ravi Regular Kumar", email: null, birthday: null, marketingConsent: true });
+
+    await expect(executeCommand(manager, updateCustomer, { customerId: customer.id, email: "not-an-email" })).rejects.toThrow();
   });
 
   it("spends points as a discount on an open bill in one step, and does not stack (Task 125 5.3)", async () => {
