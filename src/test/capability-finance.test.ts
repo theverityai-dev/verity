@@ -45,7 +45,9 @@ import {
   FINANCE_CAPABILITY,
   decideExpense,
   getOutletPnL,
+  listCashMovements,
   listExpenses,
+  recordCashMovement,
   recordCashReconciliation,
   recordExpense,
   registerFinanceCapability,
@@ -253,6 +255,38 @@ describeDb("capability: Finance", () => {
     expect(pnl.totalExpensesMinor).toBe(5_000);
     expect(pnl.cogsIsApproximate).toBe(true);
     expect(pnl.operatingContributionMinor).toBe(pnl.grossProfitMinor - 5_000);
+  });
+
+  it("counts cash in and out in the day's expected cash, and the entries cannot be edited (Task 125 4.1)", async () => {
+    const day = "2026-01-05"; // a day with no sales, so expected cash is only opening plus movements
+    const floatIn = await executeCommand(manager, recordCashMovement, {
+      locationId, date: day, direction: "in", kind: "float", amountMinor: 200_000, reason: "Float for the day",
+    });
+    await executeCommand(manager, recordCashMovement, {
+      locationId, date: day, direction: "out", kind: "petty_cash", amountMinor: 35_000, reason: "Gas cylinder",
+    });
+
+    const listed = await executeQuery(manager, listCashMovements, { locationId, date: day });
+    expect(listed.map((m) => `${m.direction}:${m.kind}:${m.amountMinor}`)).toEqual(["in:float:200000", "out:petty_cash:35000"]);
+    expect(await executeQuery(manager, listCashMovements, { locationId, date: "2026-01-06" })).toEqual([]);
+
+    const reconciled = await executeCommand(manager, recordCashReconciliation, {
+      locationId, date: day, openingCashMinor: 10_000, actualCashMinor: 175_000,
+    });
+    expect(reconciled.expectedCashMinor).toBe(10_000 + 200_000 - 35_000);
+    expect(reconciled.varianceMinor).toBe(0);
+
+    // A kind must match its direction, and a reason is required.
+    await expect(
+      executeCommand(manager, recordCashMovement, { locationId, date: day, direction: "in", kind: "petty_cash", amountMinor: 100, reason: "Wrong way round" }),
+    ).rejects.toThrow();
+    await expect(
+      executeCommand(manager, recordCashMovement, { locationId, date: day, direction: "out", kind: "petty_cash", amountMinor: 100, reason: " " }),
+    ).rejects.toThrow();
+
+    // Append-only is held by the database, not just by the absence of an edit command.
+    await expect(withTenant(tenantId, (tx) => tx.cashMovement.update({ where: { id: floatIn.id }, data: { amountMinor: 1 } }))).rejects.toThrow();
+    await expect(withTenant(tenantId, (tx) => tx.cashMovement.delete({ where: { id: floatIn.id } }))).rejects.toThrow();
   });
 
   it("shows the labour line only to a role that may read compensation (DECISIONS.md #3)", async () => {

@@ -196,6 +196,7 @@ model Tenant {
   shifts             Shift[]
   expenses           Expense[]
   cashReconciliations DailyCashReconciliation[]
+  cashMovements      CashMovement[]
 
   // Capability: HR (Task 78). Back-relations only, as above.
   hrDepartments       HrDepartment[]
@@ -1571,6 +1572,7 @@ model Location {
   shifts       Shift[]
   expenses     Expense[]
   cashReconciliations DailyCashReconciliation[]
+  cashMovements CashMovement[]
 
   @@unique([tenantId, id], name: "location_tenant_scoped_id")
   @@index([tenantId, organizationId])
@@ -4818,6 +4820,28 @@ model Expense {
 
   @@index([tenantId, locationId, expenseDate])
   @@map("expense")
+}
+
+/// Money in or out of the till that is not a sale, refund or approved expense
+/// (Task 125 item 4.1). Append-only; corrected by an opposite entry.
+model CashMovement {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  locationId       String   @map("location_id") @db.Uuid
+  movementDate     DateTime @map("movement_date") @db.Date
+  /// 'in' or 'out'; `kind` must match (a check constraint holds the pairing).
+  direction        String
+  kind             String
+  amountMinor      Int      @map("amount_minor")
+  reason           String
+  recordedByUserId String   @map("recorded_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([tenantId, locationId, movementDate])
+  @@map("cash_movement")
 }
 
 /// PRD §45: Opening Cash + Cash Sales - Cash Expenses - Withdrawals =

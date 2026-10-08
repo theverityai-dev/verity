@@ -168,7 +168,17 @@ Write each into `DECISIONS.md` with its basis.
   "Delete segment". Commands `verity.crm.save_segment` (Create), `verity.crm.delete_segment` (Edit, my
   decision: it removes a filter, not a record), query `verity.crm.list_segments`. CRM tests 5 pass;
   conformance (RLS on every table) 23 pass.
-- **Sections 3 to 7 (build), other than 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **4.1 cash in and cash out: BUILT, DB-proven, not browser-verified. NEEDS THE MIGRATION ON
+  PRODUCTION BEFORE THE PUSH.** Migration `20261009020000_finance_cash_movement` (table `cash_movement`,
+  append-only trigger, forced RLS, check constraints: amount positive, reason present, direction and kind
+  must match: in = float, owner injection, other; out = petty cash, owner drawing, bank deposit, other).
+  Added to the conformance test's sorted append-only list. Expected cash is now
+  `opening + cash sales - cash refunds - cash expenses - withdrawn + cash in - cash out`; the old scalar
+  "cash withdrawn" field stays. `/cash-reconciliation` has a "Cash in and out" panel (outlet and day in
+  the URL, list, record form). A mistake is corrected by an opposite entry, never an edit (enforced by
+  the database, tested). Finance tests 3 pass, conformance 23 pass. Also corrected the finance header
+  comment that still said no labour data exists.
+- **Sections 3 to 7 (build), other than 4.1, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

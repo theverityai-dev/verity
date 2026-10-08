@@ -31,12 +31,10 @@ const COMPENSATION_ENTITY = "verity.hr.compensation";
  *   cost at the moment each ingredient was actually consumed — Issue
  *   movements don't carry a point-in-time unit cost (only Receipt does).
  *   Flagged in the result as `cogsIsApproximate: true`.
- * - Labour/payroll cost: NOT included. Verity's `attendance` capability
- *   supplies hours/days worked (PRD §42's own framing: "payroll-ready
- *   data," not a payroll engine) but has no wage-rate figure to multiply
- *   by — there is no salary data anywhere in this platform. A P&L line
- *   claiming a labour cost without a real number would be worse than
- *   omitting it.
+ * - Labour: an ESTIMATE shown only to a role that may read compensation
+ *   (Task 125 item 4.4). Monthly salary on the HR record, prorated to the range
+ *   and split between outlets by shift hours; people with no shifts in the range
+ *   are left out and counted, never guessed. See `src/lib/labour-cost.ts`.
  */
 
 export const FINANCE_CAPABILITY = "verity.capability.finance";
@@ -197,12 +195,14 @@ export const recordCashReconciliation: CommandDefinition<
   }),
   handler: async (ctx, input) => {
     const cashWithdrawnMinor = input.cashWithdrawnMinor ?? 0;
-    const [cashSales, cashRefunds, cashExpenses] = await Promise.all([
+    const [cashSales, cashRefunds, cashExpenses, movements] = await Promise.all([
       cashSalesForDay(ctx, input.locationId, input.date),
       cashRefundsForDay(ctx, input.locationId, input.date),
       cashExpensesForDay(ctx, input.locationId, input.date),
+      cashMovementsForDay(ctx, input.locationId, input.date),
     ]);
-    const expectedCashMinor = input.openingCashMinor + cashSales - cashRefunds - cashExpenses - cashWithdrawnMinor;
+    const expectedCashMinor =
+      input.openingCashMinor + cashSales - cashRefunds - cashExpenses - cashWithdrawnMinor + movements.inMinor - movements.outMinor;
     const varianceMinor = input.actualCashMinor - expectedCashMinor;
     if (varianceMinor !== 0 && !input.varianceNote) {
       throw new ValidationError("E_VALIDATION: a variance requires an explanation (varianceNote)");
@@ -282,6 +282,114 @@ async function cashExpensesForDay(
     select: { amountMinor: true },
   });
   return rows.reduce((sum, r) => sum + r.amountMinor, 0);
+}
+
+/**
+ * Cash in and cash out (Task 125 item 4.1): money that enters or leaves the till
+ * and is not a sale, refund or approved expense. Append-only with a required
+ * reason, so a mistake is corrected by an opposite entry and the trail stays
+ * whole. The daily reconciliation counts these as `+ in - out`.
+ */
+export const CASH_IN_KINDS = ["float", "owner_injection", "other"] as const;
+export const CASH_OUT_KINDS = ["petty_cash", "owner_drawing", "bank_deposit", "other"] as const;
+
+export type CashMovementRow = {
+  id: string;
+  direction: "in" | "out";
+  kind: string;
+  amountMinor: number;
+  reason: string;
+  at: Date;
+};
+
+export const recordCashMovement: CommandDefinition<
+  {
+    locationId: string;
+    date: string;
+    direction: "in" | "out";
+    kind: (typeof CASH_IN_KINDS)[number] | (typeof CASH_OUT_KINDS)[number];
+    amountMinor: number;
+    reason: string;
+  },
+  { id: string }
+> = {
+  key: "verity.finance.record_cash_movement",
+  entity: ENTITY_CASH_RECONCILIATION,
+  verb: "Create",
+  input: z
+    .object({
+      locationId: z.string().uuid(),
+      date: z.string().date(),
+      direction: z.enum(["in", "out"]),
+      kind: z.enum(["float", "owner_injection", "petty_cash", "owner_drawing", "bank_deposit", "other"]),
+      amountMinor: z.number().int().min(1),
+      reason: z.string().trim().min(3).max(300),
+    })
+    .refine(
+      (v) => (v.direction === "in" ? (CASH_IN_KINDS as readonly string[]) : (CASH_OUT_KINDS as readonly string[])).includes(v.kind),
+      "that kind does not match the direction (cash in: float, owner injection, other; cash out: petty cash, owner drawing, bank deposit, other)",
+    ),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.location.findUnique({ where: { id: input.locationId } }))) {
+      throw new ValidationError("E_VALIDATION: outlet not found");
+    }
+  },
+  handler: async (ctx, input) => {
+    const row = await ctx.tx.cashMovement.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        locationId: input.locationId,
+        movementDate: new Date(input.date),
+        direction: input.direction,
+        kind: input.kind,
+        amountMinor: input.amountMinor,
+        reason: input.reason,
+        recordedByUserId: ctx.actor.userId,
+      },
+    });
+    return {
+      result: { id: row.id },
+      events: [
+        { name: "verity.finance.cash_movement_recorded", entityId: row.id, payload: { direction: input.direction, kind: input.kind } },
+      ],
+    };
+  },
+};
+
+export const listCashMovements: QueryDefinition<{ locationId: string; date: string }, CashMovementRow[]> = {
+  key: "verity.finance.list_cash_movements",
+  entity: ENTITY_CASH_RECONCILIATION,
+  input: z.object({ locationId: z.string().uuid(), date: z.string().date() }),
+  handler: async (ctx, input) => {
+    const rows = await ctx.tx.cashMovement.findMany({
+      where: { locationId: input.locationId, movementDate: new Date(input.date) },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      direction: r.direction as "in" | "out",
+      kind: r.kind,
+      amountMinor: r.amountMinor,
+      reason: r.reason,
+      at: r.createdAt,
+    }));
+  },
+};
+
+/** Net of cash in minus cash out for one outlet and day. */
+async function cashMovementsForDay(
+  ctx: { tx: import("@/server/platform/tenancy").TenantScopedClient },
+  locationId: string,
+  date: string,
+): Promise<{ inMinor: number; outMinor: number }> {
+  const rows = await ctx.tx.cashMovement.findMany({
+    where: { locationId, movementDate: new Date(date) },
+    select: { direction: true, amountMinor: true },
+  });
+  return {
+    inMinor: rows.filter((r) => r.direction === "in").reduce((sum, r) => sum + r.amountMinor, 0),
+    outMinor: rows.filter((r) => r.direction === "out").reduce((sum, r) => sum + r.amountMinor, 0),
+  };
 }
 
 export const getOutletPnL: QueryDefinition<
@@ -436,6 +544,8 @@ export function registerFinanceCapability(): void {
   registerCommand(recordExpense);
   registerCommand(decideExpense);
   registerCommand(recordCashReconciliation);
+  registerCommand(recordCashMovement);
+  registerQuery(listCashMovements);
   registerQuery(listExpenses);
   registerQuery(getOutletPnL);
 }
