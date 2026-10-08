@@ -3,6 +3,7 @@ import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { hasPermission } from "@/server/platform/authorization";
+import { addDays, planCopyWeek, weekStartOf, type RosterShift } from "@/lib/roster-week";
 
 /**
  * CAPABILITY: Attendance — `verity.capability.attendance` (Colonel Kebabz
@@ -261,6 +262,57 @@ export const defineShift: CommandDefinition<
   },
 };
 
+/**
+ * Repeats one week of shifts into the following week (Task 125 item 6.1). Dates
+ * move by seven days; a shift that is already there (same person, day and times)
+ * is left alone, so running it twice changes nothing.
+ */
+export const copyWeek: CommandDefinition<{ fromWeekStart: string }, { created: number }> = {
+  key: "verity.attendance.copy_week",
+  entity: ENTITY_SHIFT,
+  verb: "Create",
+  input: z.object({ fromWeekStart: z.string().date() }),
+  preconditions: async (_ctx, input) => {
+    if (weekStartOf(input.fromWeekStart) !== input.fromWeekStart) {
+      throw new ValidationError("E_VALIDATION: a roster week starts on a Monday");
+    }
+  },
+  handler: async (ctx, input) => {
+    const from = input.fromWeekStart;
+    const to = addDays(from, 7);
+    // Both weeks in one read: the source to copy, the target to avoid doubling.
+    const rows = await ctx.tx.shift.findMany({
+      where: { date: { gte: new Date(from), lt: new Date(addDays(to, 7)) } },
+    });
+    const all: RosterShift[] = rows.map((r) => ({
+      locationId: r.locationId,
+      employeeId: r.employeeId,
+      date: r.date.toISOString().slice(0, 10),
+      label: r.label,
+      startTime: r.startTime,
+      endTime: r.endTime,
+    }));
+    const planned = planCopyWeek(all, from, to);
+    if (planned.length > 0) {
+      await ctx.tx.shift.createMany({
+        data: planned.map((s) => ({
+          tenantId: ctx.actor.tenantId,
+          locationId: s.locationId,
+          employeeId: s.employeeId,
+          date: new Date(s.date),
+          label: s.label,
+          startTime: s.startTime,
+          endTime: s.endTime,
+        })),
+      });
+    }
+    return {
+      result: { created: planned.length },
+      events: planned.length > 0 ? [{ name: "verity.attendance.week_copied", entityId: ctx.actor.tenantId }] : [],
+    };
+  },
+};
+
 export const listShifts: QueryDefinition<
   { locationId?: string; date?: string },
   Array<{ id: string; employeeId: string; date: Date; label: string; startTime: string; endTime: string }>
@@ -306,6 +358,7 @@ export function registerAttendanceCapability(): void {
   });
   registerCommand(recordAttendance);
   registerCommand(defineShift);
+  registerCommand(copyWeek);
   registerQuery(getAttendanceDashboard);
   registerQuery(getPayrollInputs);
   registerQuery(payrollSummary);

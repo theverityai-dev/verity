@@ -7,6 +7,8 @@ import { PageHeader, Stat, StatRow, ErrorState } from "@/components/ui/primitive
 import { AttendanceBoard } from "./AttendanceBoard";
 import { PayrollAndShifts } from "./PayrollAndShifts";
 import { PayrollSummary, type PayrollSummaryRow } from "./PayrollSummary";
+import { RosterWeek } from "./RosterWeek";
+import { weekStartOf } from "@/lib/roster-week";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +16,11 @@ type Dashboard = { present: number; absent: number; late: number; onLeave: numbe
 type ShiftRow = { id: string; employeeId: string; date: string; label: string; startTime: string; endTime: string };
 
 /** §39-40, 42 — today's check-ins, who to mark, payroll inputs, and shifts. */
-async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?: string; week?: string }> }) {
   const actor = await requireActor();
   const today = new Date().toISOString().slice(0, 10);
-  const { month: requested } = await searchParams;
+  const { month: requested, week: requestedWeek } = await searchParams;
+  const weekStart = weekStartOf(requestedWeek && /^\d{4}-\d{2}-\d{2}$/.test(requestedWeek) ? requestedWeek : today);
   const month = requested && /^\d{4}-\d{2}$/.test(requested) ? requested : today.slice(0, 7);
   const [year, monthNumber] = month.split("-").map(Number);
   const lastDay = new Date(Date.UTC(year!, monthNumber!, 0)).toISOString().slice(0, 10);
@@ -56,6 +59,13 @@ async function AttendancePage({ searchParams }: { searchParams: Promise<{ month?
           <PayrollSummary month={month} rows={payroll.data.rows} canSeeSalary={payroll.data.canSeeSalary} />
         </div>
       )}
+      <div className="mt-6">
+        <RosterWeek
+          weekStart={weekStart}
+          employees={employees.map((e) => ({ id: e.id, name: e.party.displayName }))}
+          shifts={(shiftsResult.ok ? shiftsResult.data : []).map((s) => ({ ...s, date: new Date(s.date).toISOString().slice(0, 10) }))}
+        />
+      </div>
       <div className="mt-6">
         <PayrollAndShifts
           employees={employees.map((e) => ({ id: e.id, name: e.party.displayName }))}

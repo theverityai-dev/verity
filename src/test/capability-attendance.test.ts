@@ -17,6 +17,7 @@ import {
   ATTENDANCE_CAPABILITY,
   ENTITY_ATTENDANCE,
   ENTITY_SHIFT,
+  copyWeek,
   defineShift,
   getAttendanceDashboard,
   getPayrollInputs,
@@ -177,6 +178,25 @@ describeDb("capability: Attendance", () => {
     const shifts = await executeQuery(manager, listShifts, { locationId, date: today });
     expect(shifts).toHaveLength(1);
     expect(shifts[0]?.label).toBe("Morning");
+  });
+
+  it("copies last week's roster forward once and never doubles it", async () => {
+    // 2026-10-05 is a Monday.
+    await executeCommand(manager, defineShift, { locationId, employeeId, date: "2026-10-05", label: "Open", startTime: "08:00", endTime: "16:00" });
+    await executeCommand(manager, defineShift, { locationId, employeeId, date: "2026-10-07", label: "Close", startTime: "14:00", endTime: "22:00" });
+
+    const first = await executeCommand(manager, copyWeek, { fromWeekStart: "2026-10-05" });
+    expect(first.created).toBe(2);
+    const copied = await executeQuery(manager, listShifts, { locationId, date: "2026-10-12" });
+    expect(copied.map((s) => s.label)).toEqual(["Open"]);
+    expect((await executeQuery(manager, listShifts, { locationId, date: "2026-10-14" })).map((s) => s.label)).toEqual(["Close"]);
+
+    const again = await executeCommand(manager, copyWeek, { fromWeekStart: "2026-10-05" });
+    expect(again.created).toBe(0);
+    expect(await executeQuery(manager, listShifts, { locationId, date: "2026-10-12" })).toHaveLength(1);
+
+    // A roster week starts on Monday: a Wednesday is refused, not silently shifted.
+    await expect(executeCommand(manager, copyWeek, { fromWeekStart: "2026-10-07" })).rejects.toThrow(/Monday/);
   });
 
   it("marks a late check-in Late from the shift, counts overtime past the shift (IST)", async () => {

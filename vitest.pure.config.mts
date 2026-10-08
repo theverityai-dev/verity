@@ -25,6 +25,7 @@ export default defineConfig({
       "src/test/write-confinement.test.ts",
       "src/test/ui-reachability.test.ts",
       "src/test/nav-icons.test.ts",
+      "src/lib/roster-week.test.ts",
       "src/test/deploy-env-mode.test.ts",
       "src/test/storage-s3-presign.test.ts",
       "src/test/storage-s3-matrix.test.ts",
