@@ -60,7 +60,14 @@ export type IconName =
   | "eyeOff"
   | "plus"
   | "eyedropper"
-  | "moreHorizontal";
+  | "moreHorizontal"
+  | "book"
+  | "clock"
+  | "flag"
+  | "manufacturing"
+  | "tag"
+  | "user"
+  | "wallet";
 
 const PATHS: Record<IconName, string> = {
   // Navigation — board nav geometry.
@@ -148,6 +155,26 @@ const PATHS: Record<IconName, string> = {
   // Three zero-length segments with the shared round linecap render as dots —
   // no separate dot-drawing code needed for a stroke-based icon set.
   moreHorizontal: "M5 12h.01M12 12h.01M19 12h.01",
+
+  // Navigation glyphs that capabilities already named but this set never had.
+  // `isIconName` drops an unknown name silently, so these seven nav items
+  // (Guests, Complaints, Recipes, Expenses, Coupons, Cash reconciliation,
+  // Attendance, Manufacturing) rendered with no glyph at all. A test now fails
+  // when a capability names an icon that is not here.
+  // book: an open recipe book, spine at the left.
+  book: "M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11",
+  // clock: attendance is time on the job.
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+  // flag: a complaint raised.
+  flag: "M6 21V4M6 5h11l-2 4 2 4H6",
+  // manufacturing: a sawtooth-roof works.
+  manufacturing: "M4 20V11l5 3v-3l5 3V5h4v15zM4 20h16",
+  // tag: a coupon, notched ticket with a tear line.
+  tag: "M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10",
+  // user: one guest — head and shoulders in a rounded frame.
+  user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0",
+  // wallet: money kept, expenses and cash counted.
+  wallet: "M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4zM4 7V6a2 2 0 0 1 2-2h11M16 14h.01",
 };
 
 export function Icon({

@@ -410,8 +410,9 @@ export function ShellChrome({
         {/* The one scroller in the application. Pages compose inside it and do
             not create a second one unless a dense region owns its own (D13).
             Bottom padding on mobile clears the fixed tab bar below (its own
-            height plus the device's safe-area inset) — `lg:pb-10` reverts to
-            the desktop figure where no tab bar exists. */}
+            height plus the device's safe-area inset). On desktop the floating
+            assistant button (bottom-6, 48px) would sit over the last row's
+            right-edge actions, so `lg:pb-24` leaves room to scroll them clear. */}
         <main
           id="main"
           // The page's real scroll container: html and body are 100dvh with
@@ -419,7 +420,7 @@ export function ShellChrome({
           // can freeze THIS while it is open — locking document.body, which is
           // what a dialog normally does, achieves nothing here.
           data-shell-scroll=""
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-6 print:p-0 sm:px-8 lg:px-8 lg:pb-10 lg:pt-0"
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto px-5 pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-6 print:p-0 sm:px-8 lg:px-8 lg:pb-24 lg:pt-0"
         >
           {children}
         </main>
