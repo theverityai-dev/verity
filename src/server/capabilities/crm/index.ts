@@ -224,6 +224,94 @@ export const updateCustomer: CommandDefinition<
   },
 };
 
+/**
+ * Saved segments (Task 125 item 5.2): a named filter, not a list of people, so
+ * membership is always the live result of `listCustomers` with these filters.
+ * Reuses the guest entity's permissions: whoever may Create guest records may
+ * save a segment, whoever may Edit them may remove one, and whoever may Read
+ * guests may list them.
+ */
+export type SegmentRow = {
+  id: string;
+  name: string;
+  minVisits: number | null;
+  minSpendMinor: number | null;
+  daysSinceLastOrder: number | null;
+};
+
+export const saveSegment: CommandDefinition<
+  { name: string; minVisits?: number; minSpendMinor?: number; daysSinceLastOrder?: number },
+  { id: string }
+> = {
+  key: "verity.crm.save_segment",
+  entity: ENTITY_CUSTOMER,
+  verb: "Create",
+  input: z
+    .object({
+      name: z.string().trim().min(1).max(80),
+      minVisits: z.number().int().min(0).optional(),
+      minSpendMinor: z.number().int().min(0).optional(),
+      daysSinceLastOrder: z.number().int().min(0).optional(),
+    })
+    .refine(
+      (v) => v.minVisits !== undefined || v.minSpendMinor !== undefined || v.daysSinceLastOrder !== undefined,
+      "a segment needs at least one filter",
+    ),
+  preconditions: async (ctx, input) => {
+    if (await ctx.tx.customerSegment.findUnique({ where: { tenantId_name: { tenantId: ctx.actor.tenantId, name: input.name } } })) {
+      throw new ValidationError(`E_VALIDATION: a segment called "${input.name}" already exists`);
+    }
+  },
+  handler: async (ctx, input) => {
+    const segment = await ctx.tx.customerSegment.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        name: input.name,
+        minVisits: input.minVisits ?? null,
+        minSpendMinor: input.minSpendMinor ?? null,
+        daysSinceLastOrder: input.daysSinceLastOrder ?? null,
+        createdByUserId: ctx.actor.userId,
+      },
+    });
+    return { result: { id: segment.id }, events: [{ name: "verity.crm.segment_saved", entityId: segment.id }] };
+  },
+};
+
+export const deleteSegment: CommandDefinition<{ segmentId: string }, { id: string }> = {
+  key: "verity.crm.delete_segment",
+  entity: ENTITY_CUSTOMER,
+  // Edit, not Delete: removing a saved filter touches no guest record, and
+  // Delete is the verb for removing records themselves.
+  verb: "Edit",
+  input: z.object({ segmentId: z.string().uuid() }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.customerSegment.findUnique({ where: { id: input.segmentId } }))) {
+      throw new ValidationError("E_VALIDATION: segment not found");
+    }
+  },
+  handler: async (ctx, input) => {
+    // Deleting a segment removes only the saved filter; no guest is touched.
+    await ctx.tx.customerSegment.delete({ where: { id: input.segmentId } });
+    return { result: { id: input.segmentId }, events: [{ name: "verity.crm.segment_deleted", entityId: input.segmentId }] };
+  },
+};
+
+export const listSegments: QueryDefinition<Record<string, never>, SegmentRow[]> = {
+  key: "verity.crm.list_segments",
+  entity: ENTITY_CUSTOMER,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const rows = await ctx.tx.customerSegment.findMany({ orderBy: { name: "asc" } });
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      minVisits: r.minVisits,
+      minSpendMinor: r.minSpendMinor,
+      daysSinceLastOrder: r.daysSinceLastOrder,
+    }));
+  },
+};
+
 /* ============================== registration ============================== */
 
 export function registerCrmCapability(): void {
@@ -242,6 +330,9 @@ export function registerCrmCapability(): void {
     ],
   });
   registerCommand(updateCustomer);
+  registerCommand(saveSegment);
+  registerCommand(deleteSegment);
+  registerQuery(listSegments);
   registerQuery(getCustomer360);
   registerQuery(listCustomers);
 }

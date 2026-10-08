@@ -1,5 +1,6 @@
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { CRM_CAPABILITY, listCustomers } from "@/server/capabilities/crm";
+import { CRM_CAPABILITY, listCustomers, type SegmentRow } from "@/server/capabilities/crm";
+import { SegmentBar } from "./SegmentBar";
 import { requireActor } from "@/server/platform/auth";
 import { runQuery } from "@/server/actions/platform";
 import { DataTable } from "@/components/ui/DataTable";
@@ -16,9 +17,24 @@ function formatRupees(minor: number): string {
  * `listCustomers` computes spend/visits live from settled Bills; this page
  * has no state of its own beyond what that query already returns.
  */
-async function GuestsPage() {
+async function GuestsPage({ searchParams }: { searchParams: Promise<{ segment?: string; visits?: string; spend?: string; quiet?: string }> }) {
   await requireActor();
-  const result = await runQuery<Awaited<ReturnType<typeof listCustomers.handler>>>("verity.crm.list_customers", {});
+  const params = await searchParams;
+  const segmentsResult = await runQuery<SegmentRow[]>("verity.crm.list_segments", {});
+  const segments = segmentsResult.ok ? segmentsResult.data : [];
+  const active = segments.find((s) => s.id === params.segment) ?? null;
+
+  // A saved segment supplies its own filters; otherwise they come from the URL.
+  const whole = (raw: string | undefined) => (raw !== undefined && /^\d+$/.test(raw) ? raw : "");
+  const visits = active ? String(active.minVisits ?? "") : whole(params.visits);
+  const spendRupees = active ? (active.minSpendMinor === null ? "" : String(active.minSpendMinor / 100)) : whole(params.spend);
+  const quietDays = active ? String(active.daysSinceLastOrder ?? "") : whole(params.quiet);
+
+  const result = await runQuery<Awaited<ReturnType<typeof listCustomers.handler>>>("verity.crm.list_customers", {
+    ...(visits !== "" ? { minVisits: Number(visits) } : {}),
+    ...(spendRupees !== "" ? { minSpendMinor: Math.round(Number(spendRupees) * 100) } : {}),
+    ...(quietDays !== "" ? { daysSinceLastOrder: Number(quietDays) } : {}),
+  });
   if (!result.ok) return <ErrorState title="Could not load guests" message={result.message} issues={result.issues} retryable={result.retryable} />;
 
   const guests = result.data;
@@ -31,6 +47,8 @@ async function GuestsPage() {
         title="Guests"
         description="Every diner matched by phone number, shared across outlets. Spend and visits are computed live from settled bills — never cached."
       />
+
+      <SegmentBar segments={segments} activeSegmentId={active?.id ?? null} visits={visits} spendRupees={spendRupees} quietDays={quietDays} />
 
       <StatRow cols={3} className="mb-6">
         <Stat label="Guests" value={guests.length} />

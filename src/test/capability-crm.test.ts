@@ -46,7 +46,10 @@ import {
   ENTITY_CUSTOMER,
   getCustomer360,
   listCustomers,
+  deleteSegment,
+  listSegments,
   registerCrmCapability,
+  saveSegment,
   updateCustomer,
 } from "@/server/capabilities/crm";
 import {
@@ -299,6 +302,28 @@ describeDb("capability: CRM", () => {
     expect(cleared).toMatchObject({ name: "Ravi Regular Kumar", email: null, birthday: null, marketingConsent: true });
 
     await expect(executeCommand(manager, updateCustomer, { customerId: customer.id, email: "not-an-email" })).rejects.toThrow();
+  });
+
+  it("saves a segment as a filter, not a list, and rejects duplicates and empty filters (Task 125 5.2)", async () => {
+    const saved = await executeCommand(manager, saveSegment, { name: "Regulars", minVisits: 2 });
+    await executeCommand(manager, saveSegment, { name: "Big spenders gone quiet", minSpendMinor: 100_000, daysSinceLastOrder: 30 });
+
+    const segments = await executeQuery(manager, listSegments, {});
+    expect(segments.map((s) => s.name)).toEqual(["Big spenders gone quiet", "Regulars"]);
+    const regulars = segments.find((s) => s.id === saved.id)!;
+    expect(regulars).toMatchObject({ minVisits: 2, minSpendMinor: null, daysSinceLastOrder: null });
+
+    // The saved filter gives the same guests as typing it: membership is live, not stored.
+    const live = await executeQuery(manager, listCustomers, { minVisits: regulars.minVisits ?? undefined });
+    expect(live.some((c) => c.phone === guestPhone)).toBe(true);
+
+    await expect(executeCommand(manager, saveSegment, { name: "Regulars", minVisits: 5 })).rejects.toThrow(/already exists/);
+    await expect(executeCommand(manager, saveSegment, { name: "Everyone" })).rejects.toThrow();
+
+    await executeCommand(manager, deleteSegment, { segmentId: saved.id });
+    expect((await executeQuery(manager, listSegments, {})).map((s) => s.name)).toEqual(["Big spenders gone quiet"]);
+    // Deleting a segment never touches a guest.
+    expect((await executeQuery(manager, getCustomer360, { phone: guestPhone }))).not.toBeNull();
   });
 
   it("spends points as a discount on an open bill in one step, and does not stack (Task 125 5.3)", async () => {

@@ -159,7 +159,16 @@ Write each into `DECISIONS.md` with its basis.
   merge by moving the second phone to a `customer_phone_alias` row on the kept guest, never by rewriting
   past orders (ADR-007: identity follows a verified contact; history is not edited). Needs one new table
   plus the 360 and loyalty reads joining through aliases, so it is a migration slice, not started.
-- **Sections 3 to 7 (build), other than 4.4, 5.1 (edit), 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **5.2 saved segments: BUILT, DB-proven, not browser-verified. NEEDS THE MIGRATION ON PRODUCTION
+  BEFORE THE PUSH.** Migration `20261009010000_crm_customer_segment` (table `customer_segment`, RLS
+  forced, check constraints: name present, at least one filter, no negatives). Applied to the local test
+  DB only; production is apply-then-push per the process rules below. A segment is a saved filter, not
+  a list, so who is in it is live. `/guests` has "All guests" and one chip per segment, a filter form
+  (visits, spend, days since last visit, in the URL so a view can be shared), "Save segment" and
+  "Delete segment". Commands `verity.crm.save_segment` (Create), `verity.crm.delete_segment` (Edit, my
+  decision: it removes a filter, not a record), query `verity.crm.list_segments`. CRM tests 5 pass;
+  conformance (RLS on every table) 23 pass.
+- **Sections 3 to 7 (build), other than 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

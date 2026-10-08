@@ -188,6 +188,7 @@ model Tenant {
 
   // Capability: CRM (Colonel Kebabz Phase 2). Back-relations only.
   customers          Customer[]
+  customerSegments   CustomerSegment[]
   loyaltyPointEntries LoyaltyPointEntry[]
   coupons            Coupon[]
   complaints         Complaint[]
@@ -4668,6 +4669,25 @@ model Customer {
 
   @@unique([tenantId, phone])
   @@map("customer")
+}
+
+/// A saved guest filter (Task 125 item 5.2). Membership is computed live from
+/// settled bills; nothing here lists guests. At least one filter is set.
+model CustomerSegment {
+  id                 String   @id @default(uuid()) @db.Uuid
+  tenantId           String   @map("tenant_id") @db.Uuid
+  name               String
+  minVisits          Int?     @map("min_visits")
+  minSpendMinor      Int?     @map("min_spend_minor")
+  daysSinceLastOrder Int?     @map("days_since_last_order")
+  createdByUserId    String   @map("created_by_user_id") @db.Uuid
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@map("customer_segment")
 }
 
 /// Append-only points ledger (PRD §31, lean V1: points only — no tiers,
