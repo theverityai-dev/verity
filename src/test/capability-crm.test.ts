@@ -30,10 +30,12 @@ import {
   defineTable,
   defineZone,
   generateBill,
+  getBillDetail,
   kitchenQueue,
   moveTable,
   placeOrder,
   recordPayment,
+  redeemPointsOnBill,
   refundBill,
   registerDineinCapability,
   settleBill,
@@ -275,5 +277,40 @@ describeDb("capability: CRM", () => {
     await executeCommand(manager, refundBill, { billId: lastBillId, amountMinor: total - half, method: "cash", reason: "Rest refunded" });
     const afterAll = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
     expect(before - afterAll).toBe(earned);
+  });
+
+  it("spends points as a discount on an open bill in one step, and does not stack (Task 125 5.3)", async () => {
+    await runOneVisit("T-10", 20); // earns points for the guest
+    const customer = (await executeQuery(manager, getCustomer360, { phone: guestPhone }))!;
+    const startBalance = (await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance;
+    expect(startBalance).toBeGreaterThan(0);
+
+    // A second visit, billed but not yet paid.
+    const table = await executeCommand(manager, defineTable, { zoneId, label: "T-11", seats: 2 });
+    await executeCommand(manager, moveTable, { tableId: table.id, to: "occupied" });
+    const order = await executeCommand(manager, createOrder, { tableId: table.id, covers: 2, customerName: "Ravi Regular", customerPhone: guestPhone });
+    await executeCommand(manager, addOrderLines, { orderId: order.id, lines: [{ itemId: kebabItemId, qty: 2 }] });
+    await executeCommand(manager, placeOrder, { orderId: order.id });
+    const queue = await executeQuery(manager, kitchenQueue, {});
+    for (const ticket of queue.filter((t) => t.orderId === order.id)) {
+      for (const to of ["preparing", "ready", "served"] as const) await executeCommand(manager, advanceOrderLine, { lineId: ticket.lineId, to });
+    }
+    const bill = await executeCommand(manager, generateBill, { orderId: order.id });
+
+    const offered = (await executeQuery(manager, getBillDetail, { billId: bill.id }))!.redeemable;
+    expect(offered).not.toBeNull();
+    // 2 x Rs 250 = 50,000 paise subtotal; 20 paise a point caps the bill at 2,500 points.
+    expect(offered!.maxPoints).toBe(Math.min(startBalance, 2_500));
+
+    const redeemed = await executeCommand(manager, redeemPointsOnBill, { billId: bill.id, points: offered!.maxPoints });
+    expect(redeemed.valueMinor).toBe(offered!.maxPoints * 20);
+    const after = (await executeQuery(manager, getBillDetail, { billId: bill.id }))!;
+    expect(after.discountMinor).toBe(redeemed.valueMinor);
+    expect(after.redeemable).toBeNull();
+    expect((await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance).toBe(startBalance - offered!.maxPoints);
+
+    // The same bill cannot be discounted twice, and the points are not taken again.
+    await expect(executeCommand(manager, redeemPointsOnBill, { billId: bill.id, points: 1 })).rejects.toThrow(/do not stack/);
+    expect((await executeQuery(manager, getLoyaltyBalance, { customerId: customer.id })).balance).toBe(startBalance - offered!.maxPoints);
   });
 });

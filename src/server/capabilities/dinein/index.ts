@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
-import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
+import { registerCommand, ValidationError, type CommandContext, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { registerTransitionGuard, transition } from "@/server/platform/state";
 import { diffFields, recordActivity } from "@/server/platform/audit";
@@ -17,7 +17,14 @@ import { withTenant, type TenantScopedClient } from "@/server/platform/tenancy";
 import { effectiveTimeZone } from "@/server/platform/temporal";
 import { postConsumptionForOrder } from "@/server/capabilities/recipe";
 import { upsertCustomerForOrder } from "@/server/capabilities/crm";
-import { awardPointsForOrder, reversePointsForRefund } from "@/server/capabilities/loyalty";
+import {
+  ENTITY_LOYALTY_ENTRY,
+  awardPointsForOrder,
+  debitPointsForBill,
+  redeemablePoints,
+  reversePointsForRefund,
+} from "@/server/capabilities/loyalty";
+import { hasPermission } from "@/server/platform/authorization";
 import { assertOutletInScope, reachableOutletIds } from "./scope";
 import type { ActorContext as DineinActor } from "@/server/platform/command";
 
@@ -1370,45 +1377,102 @@ export const applyBillDiscount: CommandDefinition<
       throw new ValidationError("E_VALIDATION: a discount cannot exceed the bill");
     }
   },
-  handler: async (ctx, input) => {
-    const before = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId } });
+  handler: (ctx, input) => setBillDiscount(ctx, "verity.dinein.apply_bill_discount", input),
+};
 
-    // Recomputed at the rate the bill was RAISED at, not the rate configured
-    // now — a discount is not an occasion to reprice yesterday's tax.
-    const totals = computeBillTotals({
-      subtotalMinor: before.subtotalMinor,
+/**
+ * Sets a bill's discount and re-prices it. Shared by `applyBillDiscount` and
+ * `redeemPointsOnBill`, so both reprice the same way and leave the same trail.
+ */
+async function setBillDiscount(
+  ctx: CommandContext,
+  commandKey: string,
+  input: { billId: string; discountMinor: number; reason: string },
+) {
+  const before = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId } });
+
+  // Recomputed at the rate the bill was RAISED at, not the rate configured
+  // now — a discount is not an occasion to reprice yesterday's tax.
+  const totals = computeBillTotals({
+    subtotalMinor: before.subtotalMinor,
+    discountMinor: input.discountMinor,
+    cgstRateBp: before.cgstRateBp,
+    sgstRateBp: before.sgstRateBp,
+  });
+
+  const after = await ctx.tx.bill.update({
+    where: { id: input.billId },
+    data: {
       discountMinor: input.discountMinor,
-      cgstRateBp: before.cgstRateBp,
-      sgstRateBp: before.sgstRateBp,
-    });
+      cgstMinor: totals.cgstMinor,
+      sgstMinor: totals.sgstMinor,
+      taxableMinor: totals.taxableMinor,
+      totalMinor: totals.totalMinor,
+      roundingMinor: totals.roundingMinor,
+      version: { increment: 1 },
+    },
+  });
 
-    const after = await ctx.tx.bill.update({
-      where: { id: input.billId },
-      data: {
-        discountMinor: input.discountMinor,
-        cgstMinor: totals.cgstMinor,
-        sgstMinor: totals.sgstMinor,
-        taxableMinor: totals.taxableMinor,
-        totalMinor: totals.totalMinor,
-        roundingMinor: totals.roundingMinor,
-        version: { increment: 1 },
-      },
-    });
+  await recordActivity(ctx, {
+    entityKey: ENTITY_BILL,
+    entityId: after.id,
+    commandKey,
+    changes: diffFields(
+      { discountMinor: before.discountMinor, totalMinor: before.totalMinor },
+      { discountMinor: after.discountMinor, totalMinor: after.totalMinor, reason: input.reason },
+    ),
+  });
 
-    await recordActivity(ctx, {
-      entityKey: ENTITY_BILL,
-      entityId: after.id,
-      commandKey: "verity.dinein.apply_bill_discount",
-      changes: diffFields(
-        { discountMinor: before.discountMinor, totalMinor: before.totalMinor },
-        { discountMinor: after.discountMinor, totalMinor: after.totalMinor, reason: input.reason },
-      ),
-    });
+  return {
+    result: { totalMinor: after.totalMinor },
+    events: [{ name: "verity.dinein.bill_discount_applied", entityId: after.id }],
+  };
+}
 
-    return {
-      result: { totalMinor: after.totalMinor },
-      events: [{ name: "verity.dinein.bill_discount_applied", entityId: after.id }],
-    };
+/**
+ * One tap at the counter (Task 125 item 5.3): spend a guest's loyalty points as
+ * a discount on their open bill. The ledger debit and the discount happen in one
+ * transaction. Offers do not stack (DECISIONS.md), so a bill that already has a
+ * coupon or discount is refused rather than overwritten, and the value can never
+ * exceed the bill's subtotal.
+ */
+export const redeemPointsOnBill: CommandDefinition<
+  { billId: string; points: number },
+  { totalMinor: number; valueMinor: number }
+> = {
+  key: "verity.dinein.redeem_points_on_bill",
+  entity: ENTITY_BILL,
+  verb: "ActionExecute",
+  input: z.object({ billId: z.string().uuid(), points: z.number().int().positive() }),
+  preconditions: async (ctx, input) => {
+    const bill = await ctx.tx.bill.findUnique({ where: { id: input.billId }, include: { order: { select: { customerPhone: true } } } });
+    if (!bill) throw new ValidationError("E_VALIDATION: bill not found");
+    await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_BILL, "ActionExecute", bill.locationId);
+    if (bill.state !== "open") throw new ValidationError("E_VALIDATION: that bill is closed");
+    if (bill.discountMinor > 0) {
+      throw new ValidationError("E_VALIDATION: this bill already has a discount; points and coupons do not stack");
+    }
+    if (!bill.order.customerPhone) throw new ValidationError("E_VALIDATION: this order has no guest phone, so there are no points to use");
+  },
+  handler: async (ctx, input) => {
+    const bill = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId }, include: { order: { select: { customerPhone: true } } } });
+    const customer = await ctx.tx.customer.findUnique({
+      where: { tenantId_phone: { tenantId: ctx.actor.tenantId, phone: bill.order.customerPhone! } },
+    });
+    if (!customer) throw new ValidationError("E_VALIDATION: this guest has no loyalty record yet");
+
+    const valueMinor = await debitPointsForBill(ctx, {
+      customerId: customer.id,
+      points: input.points,
+      billId: bill.id,
+      capMinor: bill.subtotalMinor,
+    });
+    const applied = await setBillDiscount(ctx, "verity.dinein.redeem_points_on_bill", {
+      billId: bill.id,
+      discountMinor: valueMinor,
+      reason: `${input.points} loyalty points`,
+    });
+    return { result: { totalMinor: applied.result.totalMinor, valueMinor }, events: applied.events };
   },
 };
 
@@ -1839,6 +1903,12 @@ export type BillDetail = {
   payments: Array<{ method: string; amountMinor: number; reference: string | null }>;
   refunds: Array<{ method: string; amountMinor: number; reason: string; at: Date }>;
   refundableMinor: number;
+  /**
+   * Points the guest could spend on this open bill right now, or null when there
+   * is nothing to offer (settled, already discounted, no guest, no points, or the
+   * viewer may not read the loyalty ledger).
+   */
+  redeemable: { balance: number; maxPoints: number; valueMinor: number } | null;
 };
 
 /**
@@ -1942,6 +2012,21 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
 
     const paidMinor = bill.payments.reduce((sum, payment) => sum + payment.amountMinor, 0);
 
+    // Offered only where a redemption would succeed: an open, undiscounted bill
+    // for a guest with points, and only to a role that may read the loyalty
+    // ledger (a bill's reader is not automatically a ledger reader).
+    let redeemable: BillDetail["redeemable"] = null;
+    if (bill.state === "open" && bill.discountMinor === 0 && bill.order.customerPhone) {
+      const customer = await ctx.tx.customer.findUnique({
+        where: { tenantId_phone: { tenantId: ctx.actor.tenantId, phone: bill.order.customerPhone } },
+        select: { id: true },
+      });
+      if (customer && (await hasPermission(ctx.tx, ctx.actor.roleId, "Read", ENTITY_LOYALTY_ENTRY))) {
+        const found = await redeemablePoints(ctx.tx, customer.id, bill.subtotalMinor);
+        if (found.maxPoints > 0) redeemable = { balance: found.balance, maxPoints: found.maxPoints, valueMinor: found.valueMinor };
+      }
+    }
+
     return {
       id: bill.id,
       state: bill.state,
@@ -1971,6 +2056,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
       })),
       refunds: bill.refunds.map((r) => ({ method: r.method, amountMinor: r.amountMinor, reason: r.reason, at: r.createdAt })),
       refundableMinor: paidMinor - bill.refunds.reduce((sum, r) => sum + r.amountMinor, 0),
+      redeemable,
     };
   },
 };
@@ -2257,6 +2343,7 @@ export function registerDineinCapability(): void {
   registerCommand(cancelOrder);
   registerCommand(generateBill);
   registerCommand(applyBillDiscount);
+  registerCommand(redeemPointsOnBill);
   registerCommand(recordPayment);
   registerCommand(settleBill);
   registerCommand(refundBill);

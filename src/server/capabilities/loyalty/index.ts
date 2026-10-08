@@ -102,6 +102,54 @@ export async function reversePointsForRefund(ctx: CommandContext, billId: string
   return delta;
 }
 
+/**
+ * What a guest can redeem against an amount (Task 125 item 5.3): their balance,
+ * the paise value of one point, and the most points whose value fits inside
+ * `capMinor` (the bill's subtotal), so a redemption can never exceed the bill.
+ */
+export async function redeemablePoints(
+  tx: CommandContext["tx"],
+  customerId: string,
+  capMinor: number,
+): Promise<{ balance: number; paisePerPoint: number; maxPoints: number; valueMinor: number }> {
+  const balance = (await tx.loyaltyPointEntry.aggregate({ where: { customerId }, _sum: { points: true } }))._sum.points ?? 0;
+  const paisePerPoint = Number(
+    (await resolveConfig<number>(tx, CONFIG_LOYALTY_REDEEM_PAISE_PER_POINT)) ?? DEFAULT_REDEEM_PAISE_PER_POINT,
+  );
+  const maxPoints = paisePerPoint > 0 ? Math.max(0, Math.min(balance, Math.floor(capMinor / paisePerPoint))) : 0;
+  return { balance, paisePerPoint, maxPoints, valueMinor: maxPoints * paisePerPoint };
+}
+
+/**
+ * Debits points against a bill and returns their value in paise. A plain
+ * function under the calling command's own authorization (same posture as
+ * `awardPointsForOrder`), so `dinein.redeemPointsOnBill` can debit the ledger and
+ * apply the discount in ONE transaction: points are never spent without the
+ * discount, and the discount is never given without the points.
+ */
+export async function debitPointsForBill(
+  ctx: CommandContext,
+  input: { customerId: string; points: number; billId: string; capMinor: number },
+): Promise<number> {
+  const available = await redeemablePoints(ctx.tx, input.customerId, input.capMinor);
+  if (input.points > available.balance) {
+    throw new ValidationError(`E_VALIDATION: only ${available.balance} points available, cannot redeem ${input.points}`);
+  }
+  if (input.points > available.maxPoints) {
+    throw new ValidationError(`E_VALIDATION: ${input.points} points are worth more than this bill; at most ${available.maxPoints} can be used`);
+  }
+  await ctx.tx.loyaltyPointEntry.create({
+    data: {
+      tenantId: ctx.actor.tenantId,
+      customerId: input.customerId,
+      points: -input.points,
+      reason: "redeem",
+      billId: input.billId,
+    },
+  });
+  return input.points * available.paisePerPoint;
+}
+
 export const redeemPoints: CommandDefinition<
   { customerId: string; points: number },
   { valuePaise: number; remainingBalance: number }

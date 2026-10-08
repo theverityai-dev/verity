@@ -427,6 +427,21 @@ export function BillView({ bill }: { bill: BillDetail }) {
 
           {!settled && (
             <>
+              {bill.redeemable && (
+                <Panel title="Loyalty points">
+                  <p className="m-0 mb-3 text-[14px] text-text-secondary">
+                    This guest has {bill.redeemable.balance} points. Use {bill.redeemable.maxPoints} for {rupees(bill.redeemable.valueMinor)} off this bill.
+                  </p>
+                  <CommandButton
+                    commands={"verity.dinein.redeem_points_on_bill"}
+                    variant="primary"
+                    disabled={pending}
+                    onClick={() => run("verity.dinein.redeem_points_on_bill", { billId: bill.id, points: bill.redeemable!.maxPoints })}
+                  >
+                    {pending ? "Applying…" : `Use ${bill.redeemable.maxPoints} points`}
+                  </CommandButton>
+                </Panel>
+              )}
               <Panel title="Coupon">
                 <form
                   className="flex items-end gap-3"

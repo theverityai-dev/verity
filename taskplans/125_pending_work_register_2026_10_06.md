@@ -142,7 +142,16 @@ Write each into `DECISIONS.md` with its basis.
   null unless the role has Read on `verity.hr.compensation` (DECISIONS #3), and the old note that said
   "no wage-rate data" is corrected. Pure logic `src/lib/labour-cost.ts` (5 tests); DB test in
   `capability-finance.test.ts` proves hidden for the manager and `100_000` for the owner (2 pass).
-- **Sections 3 to 7 (build), other than 4.4, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **5.3 one-tap loyalty redeem at the counter: BUILT, DB-proven, not browser-verified.** An open bill
+  for a guest with points shows "Loyalty points: Use N points" (N is the most whose value fits inside
+  the bill's subtotal). New command `verity.dinein.redeem_points_on_bill` debits the ledger and applies
+  the discount in one transaction (the older two-step `redeem_points` then `apply_bill_discount` could
+  spend points without giving the discount). Decisions: a bill that already has a coupon or discount is
+  refused ("points and coupons do not stack", per DECISIONS.md); the offer is shown only to a role that
+  can read the loyalty ledger; refunds do not hand redeemed points back (the discount was a price, not
+  a payment). `apply_bill_discount` now shares its repricing with the new command. Test added to
+  `capability-crm.test.ts` (3 pass); 25 dine-in and coupon tests still pass.
+- **Sections 3 to 7 (build), other than 4.4, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 
