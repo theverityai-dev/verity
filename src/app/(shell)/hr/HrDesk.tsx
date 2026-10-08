@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { LeaveCalendar } from "./LeaveCalendar";
 
 export type EmployeeRow = {
   id: string;
@@ -174,7 +175,7 @@ function DepartmentsTab({ departments }: { departments: DepartmentRow[] }) {
 
 /* ---------------------------------- leave ---------------------------------- */
 
-function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTypes: LeaveTypeRow[]; employees: EmployeeRow[] }) {
+function LeaveTab({ leave, leaveTypes, employees, today }: { leave: LeaveRow[]; leaveTypes: LeaveTypeRow[]; employees: EmployeeRow[]; today: string }) {
   const [applying, setApplying] = useState(false);
   const [addingType, setAddingType] = useState(false);
   const apply = useCommand("/hr");
@@ -189,6 +190,7 @@ function LeaveTab({ leave, leaveTypes, employees }: { leave: LeaveRow[]; leaveTy
 
   return (
     <>
+      <LeaveCalendar leave={leave} today={today} />
       <DataTable
         caption="Leave"
         emptyTitle="No leave requests"
@@ -333,12 +335,15 @@ export function HrDesk({
   leaveTypes,
   leave,
   parties,
+  today,
 }: {
   employees: EmployeeRow[];
   departments: DepartmentRow[];
   leaveTypes: LeaveTypeRow[];
   leave: LeaveRow[];
   parties: PartyOption[];
+  /** `YYYY-MM-DD` in the server's calendar, so the calendar does not differ between server and browser. */
+  today: string;
 }) {
   const pending = leave.filter((l) => l.status === "Pending").length;
   return (
@@ -346,7 +351,7 @@ export function HrDesk({
       tabs={[
         { id: "employees", label: "Employees", count: employees.length, content: <EmployeesTab employees={employees} departments={departments} parties={parties} /> },
         { id: "departments", label: "Departments", count: departments.length, content: <DepartmentsTab departments={departments} /> },
-        { id: "leave", label: "Leave", count: pending, content: <LeaveTab leave={leave} leaveTypes={leaveTypes} employees={employees} /> },
+        { id: "leave", label: "Leave", count: pending, content: <LeaveTab leave={leave} leaveTypes={leaveTypes} employees={employees} today={today} /> },
       ]}
     />
   );

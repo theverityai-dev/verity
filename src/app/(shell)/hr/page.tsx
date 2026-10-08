@@ -91,6 +91,7 @@ async function HrPage() {
         leaveTypes={leaveTypeRows}
         leave={leaveRows}
         parties={parties as PartyOption[]}
+        today={todayIso}
       />
     </>
   );

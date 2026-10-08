@@ -131,7 +131,11 @@ Write each into `DECISIONS.md` with its basis.
   `verity.attendance.copy_week`, idempotent, no migration). Pure date logic in `src/lib/roster-week.ts`
   with 5 unit tests; DB test added to `capability-attendance.test.ts` (4 pass on the local DB).
   A bare `<table>` is used on purpose (person-by-day matrix); the lint exception says why.
-- **Sections 3 to 7 (build), other than 6.1: NOT STARTED** this session. Each needs a migration on production before
+- **6.2 leave calendar: BUILT, not browser-verified.** The Leave tab on `/hr` opens with "Who is off,
+  next 14 days": approved and pending leave per day, pending shown as "waiting for a decision", and a
+  warning chip when two or more people are off the same day (counts pending, so the clash shows before
+  approving). Pure logic in `src/lib/leave-calendar.ts`, 5 unit tests. No migration, no new command.
+- **Sections 3 to 7 (build), other than 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 
