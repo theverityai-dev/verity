@@ -8,7 +8,27 @@ Grounded in migration `20260826000000_runtime_role_privileges`, CLAUDE.md "Datab
 is a security-boundary change; it needs an ADR before code, and nothing here is authorised to proceed
 without one.
 
-## Status: PROPOSED 2026-10-01 — design question only, nothing built
+## Status: DECIDED 2026-10-09 (first step built); revocations deferred
+
+Decided by the engineering lead under the product owner's standing instruction to take open decisions
+from project context. This is a security-boundary question, so the decision is deliberately the
+smallest safe one:
+
+1. **Question 1 and 2: yes in principle, by a per-table declaration enforced by a test**, not a
+   separate schema (a schema move would touch every query and migration for a defect that a test
+   catches). `src/test/runtime-privileges.test.ts` now lists every table with no `tenant_id` under
+   exactly one of read-only, no-access, or global-writable-with-a-reason, and fails when a table is
+   missing from the lists or a listed table no longer exists. A new global table therefore cannot
+   arrive with the blanket default grant unnoticed. **Built 2026-10-09; 5 tests pass.**
+2. **Question 3: keep the six catalogue tables as they are for now.** Revoking their runtime writes
+   is right but is not safe to do blind: `installCapabilities` and the pack control plane might write
+   one of them at runtime. The next step is to log or trace runtime writes to those six on a
+   disposable database over the full test suite; if none occurs, revoke in one migration and move
+   them to the read-only list. Until then the declared reason says what holds them.
+3. **Question 4: no default-privilege change is made**, so there is no upgrade path to design. The
+   existing blanket grant stays; the discovery test is the control.
+
+Original problem statement and survey follow, unchanged.
 
 ## Problem
 

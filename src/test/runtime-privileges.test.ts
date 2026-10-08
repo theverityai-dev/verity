@@ -27,6 +27,30 @@ const RUNTIME_NO_ACCESS: Record<string, string> = {
   request_quota: "reached only through verity.consume_request_quota (20260908000000)",
 };
 
+/**
+ * Tables with no `tenant_id` that the runtime role may write, with the reason
+ * (Task 124, decided 2026-10-09: discovery first). Tenant RLS is the boundary for
+ * every other table; these have no tenant boundary, so each one is named here and
+ * a NEW one fails the discovery test until someone chooses its access on purpose.
+ * The six catalogue tables are held read-only only by the absence of a write
+ * policy; revoking their writes outright is the next step once a run shows no
+ * runtime path writes them.
+ */
+const RUNTIME_GLOBAL_WRITABLE: Record<string, string> = {
+  oidc_login_transaction: "login state, created and consumed by the runtime",
+  scheduler_lease: "the scheduler's lease, taken and released by the runtime",
+  scheduler_run: "scheduler run history, appended by the runtime",
+  capability_definition: "catalogue; written by migrations, no runtime write policy",
+  entity_definition: "catalogue; written by migrations, no runtime write policy",
+  field_permission: "catalogue; written by migrations, no runtime write policy",
+  pack_release: "catalogue; written by migrations, no runtime write policy",
+  state_definition: "catalogue; written by migrations, no runtime write policy",
+  transition_definition: "catalogue; written by migrations, no runtime write policy",
+  tenant: "identity root; written under scoped policies by provisioning",
+  party: "identity; written under scoped policies by provisioning",
+  user: "identity; written under scoped policies by provisioning",
+};
+
 const hasDatabase = Boolean(process.env.DATABASE_URL && process.env.DIRECT_URL);
 const describeDb = hasDatabase ? describe : describe.skip;
 
@@ -107,6 +131,33 @@ describeDb("conformance: effective runtime privileges", () => {
         `SELECT status FROM public.deployment_state WHERE key = 'restore'`,
       );
       expect(rows).toHaveLength(1);
+    } finally {
+      await admin.$disconnect();
+    }
+  });
+
+  it("accounts for every table that has no tenant_id (Task 124 discovery)", async () => {
+    const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
+    try {
+      const rows = await admin.$queryRawUnsafe<{ relname: string }[]>(
+        `SELECT c.relname
+           FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relkind = 'r'
+            AND NOT EXISTS (
+              SELECT 1 FROM information_schema.columns k
+               WHERE k.table_schema = 'public' AND k.table_name = c.relname AND k.column_name = 'tenant_id')
+          ORDER BY 1`,
+      );
+      const actual = rows.map((r) => r.relname);
+      const declared = new Set([
+        ...Object.keys(RUNTIME_READ_ONLY),
+        ...Object.keys(RUNTIME_NO_ACCESS),
+        ...Object.keys(RUNTIME_GLOBAL_WRITABLE),
+      ]);
+      // A new global table must be listed in one of the three maps with its intended access.
+      expect(actual.filter((t) => !declared.has(t)), "global tables with no declared runtime access").toEqual([]);
+      // And a listed table that no longer exists is a stale entry to remove.
+      expect([...declared].filter((t) => !actual.includes(t)), "declared tables that do not exist").toEqual([]);
     } finally {
       await admin.$disconnect();
     }

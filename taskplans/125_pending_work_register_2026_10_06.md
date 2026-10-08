@@ -216,8 +216,33 @@ Write each into `DECISIONS.md` with its basis.
   at, then each change with the time and who made it. Menu has a "Price history" row action. Orders keep
   their own price snapshot as before. Limit: an item's history starts when audit started recording, and
   a price edited by a path that does not record activity would not appear (none exists today).
+- **Section 7 decisions taken 2026-10-09 (by the engineering lead, on the standing instruction to
+  decide from project context):**
+  - **7.4 failed-commands view:** ADR-036 ACCEPTED. Record failure metadata (never payload or message),
+    HQ reads totals through one definer function like ADR-034's health columns. Build authorised.
+  - **7.5 export and offboarding:** ADR-037 ACCEPTED. The client exports its own data through
+    `enforcePolicy()`; the operator never exports business rows; offboarding is suspend, export,
+    retention, archive, and a runbook deletion on the client's written request. Build authorised.
+  - **7.6 announcements:** ADR-038 ACCEPTED. One global table written only through an operator-checked
+    definer function; clients read and never receive a copy; dismissal is stored in the client's tenant.
+  - **7.7 outbound notifications:** ADR-039 ACCEPTED. `domain_event` is the outbox; dispatcher in the
+    scheduler; at-least-once with an idempotency key; per-tenant, per-event, per-channel opt-in, default
+    off; in-app channel first because it needs no credential.
+  - **7.8 ADR-031:** ACCEPTED, Mode A first. **Task 124:** DECIDED, discovery test built (5 pass),
+    catalogue revocations deferred until a trace shows no runtime writer. The load run itself still
+    needs measurement on a disposable database and is not done.
+  - **7.10 hosting:** decision: stay on Vercel Hobby plus the Supabase pooler while there are one or two
+    live clients on this one deployment, and move to Vercel Pro **before the third live client or the
+    first client with a paid SLA**, whichever is first. Basis: Hobby forbids commercial use and caps
+    cron to once a day; the CRON cadence and the connection ceiling (15 on the project pool, transaction
+    mode already in place) are the real limits, and Pro lifts the cron limit and adds instance headroom.
+    This is a commercial trigger, not a code change.
+  - **7.11 `enterprise-demo-prd/` (AstraGrid):** decision: **not authorised for build**, as CLAUDE.md
+    already says. It overlaps CRM, procurement and field service, which the 2026-09-30 scope note did not
+    open. It stays a demo document only. Reopen only when a named client asks for one of those modules,
+    and then build the module on the platform, not AstraGrid as a fork.
 - **Sections 3 to 7 (build), other than 3.1, 3.4, 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT
-  STARTED** this session. Each needs a migration on production before
+  STARTED** this session. 7.4 to 7.7 are now unblocked by the ADRs above. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 
