@@ -178,6 +178,11 @@ Write each into `DECISIONS.md` with its basis.
   the URL, list, record form). A mistake is corrected by an opposite entry, never an edit (enforced by
   the database, tested). Finance tests 3 pass, conformance 23 pass. Also corrected the finance header
   comment that still said no labour data exists.
+- **8.6 deploy test failures: CAUSE FOUND, nothing to fix in the repo.** The five `deploy-*` test files
+  shell out to bash scripts. Run from Windows PowerShell they exit 127 ("command not found": Git's Unix
+  tools are not on that PATH) and fail; run from Git Bash they pass (5 files, 33 passed, 1 skipped, about
+  60 s for the five because each test spawns a process, which is slow on Windows). Run the pure lane from
+  Git Bash on Windows. The older "times out at 5 s" note was the same slowness, not a hang.
 - **Sections 3 to 7 (build), other than 4.1, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
