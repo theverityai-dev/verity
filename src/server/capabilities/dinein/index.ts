@@ -352,6 +352,68 @@ export const createMenuVariant: CommandDefinition<
   },
 };
 
+/**
+ * Add-ons for one item (Task 125 item 3.1). Independent options priced zero or
+ * more; the order line snapshots the chosen ones, so editing or retiring a
+ * modifier never rewrites a bill. Governed by the same entity as portions.
+ */
+export type LineModifier = { name: string; priceDeltaMinor: number };
+
+/** An order line's add-on rows as a list sorted by name, so the same set always compares equal. */
+export function readModifiers(rows: ReadonlyArray<{ name: string; priceDeltaMinor: number }> | undefined): LineModifier[] {
+  return (rows ?? []).map((r) => ({ name: r.name, priceDeltaMinor: r.priceDeltaMinor })).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+const sameModifiers = (a: LineModifier[], b: LineModifier[]) =>
+  a.length === b.length && a.every((m, i) => m.name === b[i]!.name && m.priceDeltaMinor === b[i]!.priceDeltaMinor);
+
+export const createMenuModifier: CommandDefinition<
+  { itemId: string; name: string; priceDeltaMinor: number },
+  { id: string }
+> = {
+  key: "verity.dinein.create_menu_modifier",
+  entity: ENTITY_MENU_VARIANT,
+  verb: "Create",
+  input: z.object({
+    itemId: z.string().uuid(),
+    name: z.string().trim().min(1).max(60),
+    // Zero for a free option such as "Extra spicy"; never negative, since a
+    // discount is a discount and not an add-on.
+    priceDeltaMinor: z.number().int().min(0).max(1_000_000),
+  }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.menuItem.findUnique({ where: { id: input.itemId } }))) {
+      throw new ValidationError("E_VALIDATION: item not found");
+    }
+    if (await ctx.tx.menuModifier.findUnique({ where: { tenantId_itemId_name: { tenantId: ctx.actor.tenantId, itemId: input.itemId, name: input.name } } })) {
+      throw new ValidationError(`E_VALIDATION: this item already has an add-on called "${input.name}"`);
+    }
+  },
+  handler: async (ctx, input) => {
+    const modifier = await ctx.tx.menuModifier.create({
+      data: { tenantId: ctx.actor.tenantId, itemId: input.itemId, name: input.name, priceDeltaMinor: input.priceDeltaMinor },
+    });
+    return { result: { id: modifier.id }, events: [{ name: "verity.dinein.menu_modifier_created", entityId: modifier.id }] };
+  },
+};
+
+/** Retire or restore an add-on. Orders already taken keep their snapshot either way. */
+export const setMenuModifierActive: CommandDefinition<{ modifierId: string; active: boolean }, { id: string }> = {
+  key: "verity.dinein.set_menu_modifier_active",
+  entity: ENTITY_MENU_VARIANT,
+  verb: "Edit",
+  input: z.object({ modifierId: z.string().uuid(), active: z.boolean() }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.menuModifier.findUnique({ where: { id: input.modifierId } }))) {
+      throw new ValidationError("E_VALIDATION: add-on not found");
+    }
+  },
+  handler: async (ctx, input) => {
+    await ctx.tx.menuModifier.update({ where: { id: input.modifierId }, data: { active: input.active, version: { increment: 1 } } });
+    return { result: { id: input.modifierId }, events: [{ name: "verity.dinein.menu_modifier_updated", entityId: input.modifierId }] };
+  },
+};
+
 /* ================================= floor ================================== */
 
 export const defineZone: CommandDefinition<
@@ -619,7 +681,7 @@ export const createOrder: CommandDefinition<
 export const addOrderLines: CommandDefinition<
   {
     orderId: string;
-    lines: Array<{ itemId: string; variantId?: string; qty: number; lineNote?: string }>;
+    lines: Array<{ itemId: string; variantId?: string; modifierIds?: string[]; qty: number; lineNote?: string }>;
   },
   { added: number }
 > = {
@@ -633,6 +695,8 @@ export const addOrderLines: CommandDefinition<
         z.object({
           itemId: z.string().uuid(),
           variantId: z.string().uuid().optional(),
+          // Add-ons asked for on this item; each at most once.
+          modifierIds: z.array(z.string().uuid()).max(10).optional(),
           qty: z.number().int().min(1).max(MAX_LINE_QTY),
           lineNote: z.string().max(200).optional(),
         }),
@@ -670,8 +734,21 @@ export const addOrderLines: CommandDefinition<
         throw new ValidationError("E_VALIDATION: that portion prices the item below zero");
       }
 
+      // Add-ons: resolved here, priced into the unit price, and snapshotted
+      // (sorted by name) so the same set always compares equal.
+      const wanted = [...new Set(line.modifierIds ?? [])];
+      const chosen = wanted.length > 0 ? await ctx.tx.menuModifier.findMany({ where: { id: { in: wanted } } }) : [];
+      if (chosen.length !== wanted.length || chosen.some((m) => m.itemId !== item.id)) {
+        throw new ValidationError("E_VALIDATION: an add-on does not belong to this item");
+      }
+      const retired = chosen.find((m) => !m.active);
+      if (retired) throw new ValidationError(`E_VALIDATION: ${retired.name} is not available right now`);
+      const modifiers = readModifiers(chosen);
+      unitPriceMinor += modifiers.reduce((sum, m) => sum + m.priceDeltaMinor, 0);
+
       if (order.state === "draft") {
-        const same = await ctx.tx.orderLine.findFirst({
+        // A different set of add-ons is a different line, so compare them.
+        const candidates = await ctx.tx.orderLine.findMany({
           where: {
             orderId: order.id,
             itemId: item.id,
@@ -679,7 +756,9 @@ export const addOrderLines: CommandDefinition<
             lineNote: line.lineNote ?? null,
             state: "queued",
           },
+          include: { addOns: true },
         });
+        const same = candidates.find((c) => sameModifiers(readModifiers(c.addOns), modifiers));
         if (same) {
           if (same.qty + line.qty > MAX_LINE_QTY) {
             throw new ValidationError(`E_VALIDATION: one line holds at most ${MAX_LINE_QTY} of ${item.name}`);
@@ -704,6 +783,17 @@ export const addOrderLines: CommandDefinition<
           lineNote: line.lineNote ?? null,
         },
       });
+      // The add-on snapshot rows, written with the line in the same transaction.
+      if (modifiers.length > 0) {
+        await ctx.tx.orderLineModifier.createMany({
+          data: modifiers.map((m) => ({
+            tenantId: ctx.actor.tenantId,
+            orderLineId: created.id,
+            name: m.name,
+            priceDeltaMinor: m.priceDeltaMinor,
+          })),
+        });
+      }
 
       // A line added to an already-placed order is live work the moment it
       // exists, so its clock attaches now rather than at some later sweep.
@@ -1646,6 +1736,8 @@ export const listMenu: QueryDefinition<
       priceMinor: number;
       active: boolean;
       variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
+      /** Add-ons; retired ones appear only when `includeInactive` is set. */
+      modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
     }>;
   }>
 > = {
@@ -1660,7 +1752,10 @@ export const listMenu: QueryDefinition<
         items: {
           where: input.includeInactive ? {} : { active: true },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          include: { variants: { orderBy: { name: "asc" } } },
+          include: {
+            variants: { orderBy: { name: "asc" } },
+            modifiers: { where: input.includeInactive ? {} : { active: true }, orderBy: { name: "asc" } },
+          },
         },
       },
     });
@@ -1678,6 +1773,7 @@ export const listMenu: QueryDefinition<
           name: variant.name,
           priceDeltaMinor: variant.priceDeltaMinor,
         })),
+        modifiers: item.modifiers.map((m) => ({ id: m.id, name: m.name, priceDeltaMinor: m.priceDeltaMinor, active: m.active })),
       })),
     }));
   },
@@ -1757,6 +1853,7 @@ export type OrderDetail = {
     id: string;
     itemName: string;
     variantName: string | null;
+    modifiers: LineModifier[];
     qty: number;
     unitPriceMinor: number;
     lineTotalMinor: number;
@@ -1772,7 +1869,7 @@ export const getOrderDetail: QueryDefinition<{ orderId: string }, OrderDetail | 
   handler: async (ctx, input) => {
     const order = await ctx.tx.diningOrder.findUnique({
       where: { id: input.orderId },
-      include: { table: { select: { id: true, label: true } }, lines: { orderBy: { createdAt: "asc" } } },
+      include: { table: { select: { id: true, label: true } }, lines: { orderBy: { createdAt: "asc" }, include: { addOns: true } } },
     });
     if (!order) return null;
     await assertOutletInScope(ctx.tx, ctx.actor, ENTITY_ORDER, "Read", order.locationId);
@@ -1781,6 +1878,7 @@ export const getOrderDetail: QueryDefinition<{ orderId: string }, OrderDetail | 
       id: line.id,
       itemName: line.itemNameSnapshot,
       variantName: line.variantNameSnapshot,
+      modifiers: readModifiers(line.addOns),
       qty: line.qty,
       unitPriceMinor: line.unitPriceMinor,
       lineTotalMinor: line.unitPriceMinor * line.qty,
@@ -1809,6 +1907,8 @@ export type KitchenTicket = {
   lineId: string;
   itemName: string;
   variantName: string | null;
+  /** Add-ons asked for, by name: the kitchen needs the words, not the prices. */
+  modifiers: string[];
   qty: number;
   lineNote: string | null;
   state: string;
@@ -1844,6 +1944,7 @@ export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicke
       orderBy: { createdAt: "asc" },
       include: {
         order: { include: { table: { select: { label: true } } } },
+        addOns: true,
       },
     });
 
@@ -1868,6 +1969,7 @@ export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicke
         lineId: line.id,
         itemName: line.itemNameSnapshot,
         variantName: line.variantNameSnapshot,
+        modifiers: readModifiers(line.addOns).map((m) => m.name),
         qty: line.qty,
         lineNote: line.lineNote,
         state: line.state,
@@ -1899,7 +2001,7 @@ export type BillDetail = {
   totalMinor: number;
   paidMinor: number;
   outstandingMinor: number;
-  lines: Array<{ itemName: string; variantName: string | null; qty: number; lineTotalMinor: number }>;
+  lines: Array<{ itemName: string; variantName: string | null; modifiers: LineModifier[]; qty: number; lineTotalMinor: number }>;
   payments: Array<{ method: string; amountMinor: number; reference: string | null }>;
   refunds: Array<{ method: string; amountMinor: number; reason: string; at: Date }>;
   refundableMinor: number;
@@ -2002,7 +2104,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
         order: {
           include: {
             table: { select: { label: true } },
-            lines: { where: { state: { not: "voided" } }, orderBy: { createdAt: "asc" } },
+            lines: { where: { state: { not: "voided" } }, orderBy: { createdAt: "asc" }, include: { addOns: true } },
           },
         },
       },
@@ -2046,6 +2148,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
       lines: bill.order.lines.map((line) => ({
         itemName: line.itemNameSnapshot,
         variantName: line.variantNameSnapshot,
+        modifiers: readModifiers(line.addOns),
         qty: line.qty,
         lineTotalMinor: line.unitPriceMinor * line.qty,
       })),
@@ -2330,6 +2433,8 @@ export function registerDineinCapability(): void {
   registerCommand(editMenuItem);
   registerCommand(setMenuItemActive);
   registerCommand(createMenuVariant);
+  registerCommand(createMenuModifier);
+  registerCommand(setMenuModifierActive);
   registerCommand(defineZone);
   registerCommand(defineTable);
   registerCommand(positionTable);

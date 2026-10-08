@@ -194,7 +194,19 @@ Write each into `DECISIONS.md` with its basis.
   `src/lib/settlement-match.ts` (9 tests, including a CSV reader for quotes, BOM, CRLF and `;`/tab
   delimiters); query `verity.finance.list_platform_bills` (DB test, finance 4 pass). Limits: the column
   guess is by header name, so an unusual file needs the two column pickers set by hand.
-- **Sections 3 to 7 (build), other than 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **3.1 menu modifiers, server side: BUILT and DB-proven (25 dine-in tests, conformance 23). Screens
+  next. NEEDS BOTH MIGRATIONS ON PRODUCTION BEFORE THE PUSH.** `20261009030000_dinein_menu_modifiers`
+  (table `menu_modifier`; the JSON column it first added to `order_line` is removed again by the next
+  one) and `20261009031000_dinein_order_line_modifier_rows` (table `order_line_modifier`, one row per
+  add-on taken, tenant RLS). I first stored the snapshot as JSON; the conformance rule that keeps JSON to
+  declared extension points caught it, so it is relational. Decisions: add-ons are per item and
+  independent (no groups or min/max), priced zero or more (a free "Extra spicy" is fine, a negative one
+  is refused); the order line snapshots name and price and the price is already in the unit price;
+  different add-on sets are different lines, the same set combines; a retired add-on cannot be ordered
+  but never changes an order already taken; governed by the same permission as portions. Commands
+  `verity.dinein.create_menu_modifier`, `verity.dinein.set_menu_modifier_active`; `add_order_lines` takes
+  `modifierIds`; `list_menu`, `get_order_detail`, `get_bill_detail` and the kitchen queue return them.
+- **Sections 3 to 7 (build), other than 3.1 (server), 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

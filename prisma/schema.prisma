@@ -107,6 +107,8 @@ model Tenant {
   menuCategories MenuCategory[]
   menuItems      MenuItem[]
   menuVariants   MenuItemVariant[]
+  menuModifiers  MenuModifier[]
+  orderLineModifiers OrderLineModifier[]
   diningZones    DiningZone[]
   diningTables   DiningTable[]
   diningOrders   DiningOrder[]
@@ -2297,6 +2299,7 @@ model MenuItem {
   tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category MenuCategory      @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   variants MenuItemVariant[]
+  modifiers MenuModifier[]
   lines    OrderLine[]
   recipe   Recipe?
 
@@ -2323,6 +2326,29 @@ model MenuItemVariant {
   @@unique([tenantId, itemId, name])
   @@unique([tenantId, id], name: "menu_variant_tenant_scoped_id")
   @@map("menu_variant")
+}
+
+/// An add-on asked for on one item (Task 125 item 3.1): extra cheese +Rs 30, extra
+/// spicy at no charge. Independent options per item, priced zero or more; the
+/// order line snapshots the chosen ones, so editing this never rewrites a bill.
+model MenuModifier {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  itemId          String   @map("item_id") @db.Uuid
+  name            String
+  priceDeltaMinor Int      @default(0) @map("price_delta_minor")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+  version         Int      @default(1)
+  customFields    Json     @default("{}") @map("custom_fields")
+
+  tenant Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item   MenuItem @relation(fields: [tenantId, itemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([tenantId, itemId, name])
+  @@unique([tenantId, id], name: "menu_modifier_tenant_scoped_id")
+  @@map("menu_modifier")
 }
 
 /// A part of the floor — Ground, Mezzanine, Terrace.
@@ -2467,11 +2493,32 @@ model OrderLine {
   tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   order  DiningOrder @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
   item   MenuItem    @relation(fields: [tenantId, itemId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
+  /// The add-ons chosen: a snapshot, already included in `unitPriceMinor`. A line
+  /// with a different set of add-ons is a different line, so same-item combining
+  /// compares these too.
+  addOns OrderLineModifier[]
 
   @@unique([tenantId, id], name: "order_line_tenant_scoped_id")
   @@index([tenantId, orderId])
   @@index([tenantId, state])
   @@map("order_line")
+}
+
+/// One add-on taken on an order line, as it was when ordered (name and price). Rows
+/// are written with the line and never edited; the menu changing does not touch them.
+model OrderLineModifier {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  orderLineId     String   @map("order_line_id") @db.Uuid
+  name            String
+  priceDeltaMinor Int      @default(0) @map("price_delta_minor")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  line   OrderLine @relation(fields: [tenantId, orderLineId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([tenantId, orderLineId])
+  @@map("order_line_modifier")
 }
 
 /// The guest's bill for one order.

@@ -35,6 +35,7 @@ import {
   computeBillTotals,
   createMenuCategory,
   createMenuItem,
+  createMenuModifier,
   createMenuVariant,
   createOrder,
   defineTable,
@@ -57,6 +58,7 @@ import {
   registerDineinCapability,
   salesSummary,
   setMenuItemActive,
+  setMenuModifierActive,
   settleBill,
   voidOrderLine,
 } from "@/server/capabilities/dinein";
@@ -416,6 +418,48 @@ describeDb("capability: Dine-in", () => {
 
     await executeCommand(waiter, placeOrder, { orderId: order.id });
     await expect(executeCommand(waiter, setOrderLineQty, { lineId: plain.id, qty: 1 })).rejects.toThrow(/void it/);
+    await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "test cleanup" });
+  });
+
+  it("prices add-ons into the line, snapshots them, and keeps different add-on sets apart (Task 125 3.1)", async () => {
+    const cheese = await executeCommand(manager, createMenuModifier, { itemId: paneerId, name: "Extra cheese", priceDeltaMinor: 3_000 });
+    const spicy = await executeCommand(manager, createMenuModifier, { itemId: paneerId, name: "Extra spicy", priceDeltaMinor: 0 });
+    const garlic = await executeCommand(manager, createMenuModifier, { itemId: naanId, name: "Garlic", priceDeltaMinor: 1_000 });
+
+    const paneer = (await executeQuery(manager, listMenu, {})).flatMap((c) => c.items).find((i) => i.id === paneerId)!;
+    expect(paneer.modifiers.map((m) => m.name)).toEqual(["Extra cheese", "Extra spicy"]);
+
+    const order = await executeCommand(waiter, createOrder, { channel: "takeaway", locationId, customerName: "Mods" });
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, modifierIds: [cheese.id] }] });
+    // The same add-ons again combine, whatever order they are listed in.
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, modifierIds: [cheese.id, cheese.id] }] });
+    // A different set, and no add-ons at all, are different dishes for the kitchen.
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, modifierIds: [spicy.id, cheese.id] }] });
+    await executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1 }] });
+
+    const detail = (await executeQuery(manager, getOrderDetail, { orderId: order.id }))!;
+    expect(detail.lines).toHaveLength(3);
+    const byNames = (names: string[]) => detail.lines.find((l) => l.modifiers.map((m) => m.name).join("|") === names.join("|"))!;
+    expect(byNames(["Extra cheese"])).toMatchObject({ qty: 2, unitPriceMinor: 42_000 + 3_000 });
+    expect(byNames(["Extra cheese", "Extra spicy"])).toMatchObject({ qty: 1, unitPriceMinor: 42_000 + 3_000 });
+    expect(byNames([])).toMatchObject({ qty: 1, unitPriceMinor: 42_000 });
+
+    // An add-on belongs to its own item, a name is unique per item, and a free one is fine but not a negative one.
+    await expect(executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, modifierIds: [garlic.id] }] })).rejects.toThrow(/does not belong/);
+    await expect(executeCommand(manager, createMenuModifier, { itemId: paneerId, name: "Extra cheese", priceDeltaMinor: 100 })).rejects.toThrow(/already has/);
+    await expect(executeCommand(manager, createMenuModifier, { itemId: paneerId, name: "Discount", priceDeltaMinor: -100 })).rejects.toThrow();
+
+    // Retiring an add-on stops new orders but never rewrites the one already taken.
+    await executeCommand(manager, setMenuModifierActive, { modifierId: cheese.id, active: false });
+    await expect(executeCommand(waiter, addOrderLines, { orderId: order.id, lines: [{ itemId: paneerId, qty: 1, modifierIds: [cheese.id] }] })).rejects.toThrow(/not available/);
+    expect(((await executeQuery(manager, getOrderDetail, { orderId: order.id }))!).lines.find((l) => l.modifiers.length === 1)!.unitPriceMinor).toBe(45_000);
+    const afterRetire = (await executeQuery(manager, listMenu, {})).flatMap((c) => c.items).find((i) => i.id === paneerId)!;
+    expect(afterRetire.modifiers.map((m) => m.name)).toEqual(["Extra spicy"]);
+
+    // The kitchen reads the words; the bill carries what was charged.
+    await executeCommand(waiter, placeOrder, { orderId: order.id });
+    const tickets = (await executeQuery(manager, kitchenQueue, {})).filter((t) => t.orderId === order.id);
+    expect(tickets.map((t) => t.modifiers.join("+")).sort()).toEqual(["", "Extra cheese", "Extra cheese+Extra spicy"]);
     await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "test cleanup" });
   });
 
