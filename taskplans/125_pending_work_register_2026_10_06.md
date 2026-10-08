@@ -98,6 +98,38 @@ Write each into `DECISIONS.md` with its basis.
 | 8.6 | `deploy-public-url-preflight.test.ts` times out at 5 s on Windows; confirm the cause. |
 | 8.7 | Finish the `chore/repo-cleanup` branch remainder named in the handoffs index. |
 
+## Progress log
+
+### 2026-10-09
+
+- **Section 2 (decisions): DONE.** All four recorded in
+  `clients/colonel-kebabz/reference-parity/DECISIONS.md` ("Decisions recorded 2026-10-09"), plus two
+  new ones: blue is the default accent for every client (another preset only on request), and a
+  capability may only name a nav icon from the closed set.
+- **1.1 desktop walk: DONE read-only** (see row 1.1). Write-path checks need a throwaway order.
+- **1.2 phone width: BLOCKED on a signed-in session.** Opera CDP (port 9222) has real 390px device
+  emulation; it comes up signed out and needs the operator to sign in once. Nothing else is missing.
+- **1.3 Safari/Firefox: likely moot.** `LiquidGlass.tsx` no longer exists in `src` and ADR-033 limits
+  materials to bars and overlays (plain `backdrop-filter`, supported by Safari and Firefox 103+).
+  Close it after one look on a real device; do not build a fallback.
+- **8.3 unused files:** `knip --include files` reports 31. Most are entry points that scripts and
+  configs run (seeds, scheduler, k6, vitest and playwright configs, `server-only` stubs): keep. The
+  real candidates are six UI files: `AccentPicker` (accent is fixed to `--accent-seed`; the picker is
+  unwired), `OrganizationSwitcher` (workspace pills rejected 2026-09-19), `DynamicForm`,
+  `DynamicTable` (metadata-driven ingredients in `implementation/08-experience/metadata-driven-ui.md`),
+  `SplitButton` and `TrendChart` (orphan primitives kept on purpose, Task 115). **Decision: keep all
+  six**, because each is a documented platform ingredient with its own spec text; revisit only if a
+  release needs the bundle size.
+- **8.5 stale worktree and stash: ready, needs your confirmation.** The worktree
+  `.claude/worktrees/completion-gap` is clean, 0 commits ahead of `main`, and an ancestor of it, so
+  nothing is lost. Stash `codex-audit-temp` dates from 2026-08-24 and would delete about 11,800 lines
+  of current ADR and spec files if applied; a copy of its patch is kept outside the repo. Commands:
+  `git worktree remove .claude/worktrees/completion-gap`, `git branch -d worktree-completion-gap`,
+  `git stash drop stash@{0}`. An automated session was refused permission to run these.
+- **Sections 3 to 7 (build): NOT STARTED** this session. Each needs a migration on production before
+  its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
+  ADR before code and stay that way.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before

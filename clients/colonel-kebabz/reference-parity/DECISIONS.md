@@ -71,3 +71,14 @@ than keying platform orders by hand. Neither blocks any build below.
 | Order pad lines | Same item, portion and note on a draft order raise the line's quantity; unsent lines have a stepper and remove; after sending, removal is a void with a reason. A later round stays its own line. | A later round is a separate kitchen ticket; before sending nothing is money or work yet. |
 | Bill split and refund by items | A part of a line can be picked ("1 of 3 naan"). | Splitting a shared basket of breads is the common case. |
 | Stock count, finance invoice, journal, plywood board lines | **Left as typed numbers, no merging.** | A count sheet already has one row per item; invoice lines are free text; a journal may repeat an account; plywood board lines differ by size and grade. |
+
+## Decisions recorded 2026-10-09 (Task 125 section 2)
+
+| Item | Decision | Basis |
+|---|---|---|
+| Kitchen "accepted" step | **Skipped.** Moving a line to preparing is the pickup signal. | A separate accept tap adds a step on a busy line with no information the next state does not already carry. |
+| Invoice photo on goods receipt | **Deferred** until storage upload is exercised inside a client. | Evidence with no file is a row claiming a photo exists (CLAUDE.md, storage note); do not ship the control before the path is proven. |
+| Coupons on refund | **Not reversed.** Loyalty points are (built). | A coupon is a price concession already given on the bill; reversing it would let a refund create a second use of the same code. Points are a balance owed to the guest and must follow the money. |
+| Splitting a bill | **Several payments on one GST bill, never several invoices.** | One supply, one tax invoice; the payment split is a settlement detail, not a tax event. |
+| Default accent | **Blue `#0A84FF` for every client.** A client gets another preset only if they ask. | Product owner, 2026-10-09; ADR-033 keeps the tint configurable through presets. |
+| Platform nav icons | **A capability may only name an icon in the closed set; a test enforces it.** | Seven items shipped with no glyph because unknown names were dropped silently (`nav-icons.test.ts`). |
