@@ -52,6 +52,22 @@ already states for itself.
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
 
+## Since 2026-10-06 (added 2026-10-09)
+
+- **Task 125 progress log** (in `taskplans/125_pending_work_register_2026_10_06.md`) is the account of
+  what landed. Built, DB-proven, not yet browser-verified: roster week grid and leave calendar (6.1,
+  6.2), labour line in the outlet P&L (4.4), cash in and out (4.1), platform payout matching (4.2),
+  menu add-ons (3.1) and price history (3.4), guest edit, saved segments and one-tap points redeem
+  (5.1 to 5.3).
+- **Four migrations are written and applied to the local test database only; apply them to production
+  before the next push:** `20261009010000_crm_customer_segment`, `20261009020000_finance_cash_movement`,
+  `20261009030000_dinein_menu_modifiers`, `20261009031000_dinein_order_line_modifier_rows`.
+- **Decided 2026-10-09:** ADR-036 to ADR-039 ACCEPTED (failed-command metadata, client-owned export,
+  announcements, notification outbox: build authorised, not built); ADR-031 ACCEPTED (Mode A); Task 124
+  decided with a discovery test; hosting trigger and `enterprise-demo-prd` decided (register 7.10, 7.11).
+- **Still needs a person:** sign in once on the Opera agent browser for the 390px pass, approve the
+  production migrations and push, confirm deleting the stale worktree and stash.
+
 ## Since 2026-10-04 (added 2026-10-06)
 
 - **Task 125 is the live work order.** Everything still open — verification of built screens, menu,
