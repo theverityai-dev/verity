@@ -12,6 +12,8 @@ type PnL = {
   revenueMinor: number; cogsMinor: number; grossProfitMinor: number;
   expensesByCategory: Array<{ category: string; amountMinor: number }>;
   totalExpensesMinor: number; operatingContributionMinor: number; note: string;
+  labour: { labourMinor: number; placed: number; unplaced: number } | null;
+  contributionAfterLabourMinor: number | null;
 };
 
 function formatRupees(minor: number): string {
@@ -42,6 +44,19 @@ async function OutletPnLPage() {
         <Stat label="Gross profit" value={formatRupees(pnl.grossProfitMinor)} />
         <Stat label="Operating contribution" value={formatRupees(pnl.operatingContributionMinor)} />
       </StatRow>
+      {pnl.labour && pnl.contributionAfterLabourMinor !== null && (
+        <StatRow cols={2} className="mb-6">
+          <Stat
+            label="Labour (estimate)"
+            value={formatRupees(pnl.labour.labourMinor)}
+            hint={
+              `${pnl.labour.placed} ${pnl.labour.placed === 1 ? "person" : "people"} placed by shift hours` +
+              (pnl.labour.unplaced > 0 ? `; ${pnl.labour.unplaced} with no shifts left out` : "")
+            }
+          />
+          <Stat label="Contribution after labour" value={formatRupees(pnl.contributionAfterLabourMinor)} />
+        </StatRow>
+      )}
       <Panel title="Expenses by category" flush>
         {pnl.expensesByCategory.length === 0 ? (
           <p className="m-0 p-4 text-[13px] text-text-tertiary">No approved expenses in range.</p>

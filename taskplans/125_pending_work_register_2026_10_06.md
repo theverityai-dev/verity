@@ -135,7 +135,14 @@ Write each into `DECISIONS.md` with its basis.
   next 14 days": approved and pending leave per day, pending shown as "waiting for a decision", and a
   warning chip when two or more people are off the same day (counts pending, so the clash shows before
   approving). Pure logic in `src/lib/leave-calendar.ts`, 5 unit tests. No migration, no new command.
-- **Sections 3 to 7 (build), other than 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **4.4 labour line in the outlet P&L: BUILT, DB-proven, not browser-verified.** Rule (my decision,
+  basis: employees carry no outlet, shifts do): monthly salary prorated to the date range, split across
+  outlets by the person's share of shift hours; people with no shifts in the range are counted as left
+  out, never guessed. `get_outlet_pnl` now returns `labour` and `contributionAfterLabourMinor`, both
+  null unless the role has Read on `verity.hr.compensation` (DECISIONS #3), and the old note that said
+  "no wage-rate data" is corrected. Pure logic `src/lib/labour-cost.ts` (5 tests); DB test in
+  `capability-finance.test.ts` proves hidden for the manager and `100_000` for the owner (2 pass).
+- **Sections 3 to 7 (build), other than 4.4, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

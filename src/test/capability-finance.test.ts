@@ -254,4 +254,37 @@ describeDb("capability: Finance", () => {
     expect(pnl.cogsIsApproximate).toBe(true);
     expect(pnl.operatingContributionMinor).toBe(pnl.grossProfitMinor - 5_000);
   });
+
+  it("shows the labour line only to a role that may read compensation (DECISIONS.md #3)", async () => {
+    // The manager has no Read on compensation: the line is hidden, not zero.
+    const hidden = await executeQuery(manager, getOutletPnL, { locationId, fromDate: today, toDate: today });
+    expect(hidden.labour).toBeNull();
+    expect(hidden.contributionAfterLabourMinor).toBeNull();
+
+    const owner = await withTenant(tenantId, async (tx): Promise<ActorContext> => {
+      const role = await tx.role.create({ data: { tenantId, name: "Owner" }, select: { id: true } });
+      await tx.permission.createMany({
+        data: [ENTITY_EXPENSE, "verity.hr.compensation"].map((entity) => ({
+          tenantId,
+          roleId: role.id,
+          verb: "Read" as const,
+          entity,
+          scope: "Tenant" as const,
+        })),
+      });
+      const identity = await provisionIdentity(tx, { organizationId, authUserId: randomUUID(), displayName: "Owner" });
+      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: role.id } });
+      const cook = await provisionIdentity(tx, { organizationId, authUserId: randomUUID(), displayName: "Cook" });
+      const employee = await tx.hrEmployee.create({ data: { tenantId, partyId: cook.partyId, monthlySalaryMinor: 3_000_000 } });
+      await tx.shift.create({
+        data: { tenantId, locationId, employeeId: employee.id, date: new Date(today), label: "Day", startTime: "09:00", endTime: "17:00" },
+      });
+      return { tenantId, userId: identity.userId, membershipId: identity.membershipId, organizationId, roleId: role.id };
+    });
+
+    // One day of a 30-day month at one outlet: 3,000,000 / 30.
+    const shown = await executeQuery(owner, getOutletPnL, { locationId, fromDate: today, toDate: today });
+    expect(shown.labour).toEqual({ labourMinor: 100_000, placed: 1, unplaced: 0 });
+    expect(shown.contributionAfterLabourMinor).toBe(shown.operatingContributionMinor - 100_000);
+  });
 });

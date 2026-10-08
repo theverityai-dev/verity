@@ -2,6 +2,15 @@ import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { hasPermission } from "@/server/platform/authorization";
+import { outletLabour, type OutletLabour } from "@/lib/labour-cost";
+
+/**
+ * The HR capability's salary entity (`ENTITY_HR_COMPENSATION`). Held as a literal
+ * here so Finance does not import HR; Read on it is what lets a role see pay
+ * (DECISIONS.md #3), and the P&L labour line follows the same rule.
+ */
+const COMPENSATION_ENTITY = "verity.hr.compensation";
 
 /**
  * CAPABILITY: Finance — `verity.capability.finance` (Colonel Kebabz Phase 4,
@@ -286,6 +295,10 @@ export const getOutletPnL: QueryDefinition<
     expensesByCategory: Array<{ category: ExpenseCategory; amountMinor: number }>;
     totalExpensesMinor: number;
     operatingContributionMinor: number;
+    /** Null when the viewer lacks Read on compensation: the line is hidden, not zero. */
+    labour: OutletLabour | null;
+    /** Operating contribution less labour; null whenever `labour` is. */
+    contributionAfterLabourMinor: number | null;
     note: string;
   }
 > = {
@@ -343,6 +356,25 @@ export const getOutletPnL: QueryDefinition<
     const totalExpensesMinor = expenses.reduce((sum, e) => sum + e.amountMinor, 0);
 
     const grossProfitMinor = revenueMinor - cogsMinor;
+    const operatingContributionMinor = grossProfitMinor - totalExpensesMinor;
+
+    // Labour is an aggregate for the outlet, never a per-person figure, and only
+    // for roles that may read compensation.
+    let labour: OutletLabour | null = null;
+    if (await hasPermission(ctx.tx, ctx.actor.roleId, "Read", COMPENSATION_ENTITY)) {
+      const from = new Date(input.fromDate);
+      const to = new Date(input.toDate);
+      const windowDays = Math.round((to.getTime() - from.getTime()) / 86_400_000) + 1;
+      const people = await ctx.tx.hrEmployee.findMany({
+        where: { active: true, monthlySalaryMinor: { not: null } },
+        select: {
+          monthlySalaryMinor: true,
+          active: true,
+          shifts: { where: { date: { gte: from, lte: to } }, select: { locationId: true, startTime: true, endTime: true } },
+        },
+      });
+      labour = outletLabour(people, input.locationId, windowDays);
+    }
 
     return {
       revenueMinor,
@@ -355,10 +387,13 @@ export const getOutletPnL: QueryDefinition<
         amountMinor,
       })),
       totalExpensesMinor,
-      operatingContributionMinor: grossProfitMinor - totalExpensesMinor,
+      operatingContributionMinor,
+      labour,
+      contributionAfterLabourMinor: labour ? operatingContributionMinor - labour.labourMinor : null,
       note:
         "COGS is valued at ingredients' current average cost, not the cost at the moment of consumption. " +
-        "Labour cost is not included — Verity has hours/days worked (attendance) but no wage-rate data.",
+        "Labour, where shown, is monthly salary prorated to these dates and split between outlets by shift hours; " +
+        "it is an estimate and leaves out anyone with no shifts in the period.",
     };
   },
 };
