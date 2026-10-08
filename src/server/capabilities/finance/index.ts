@@ -506,6 +506,38 @@ export const getOutletPnL: QueryDefinition<
   },
 };
 
+/**
+ * Settled bills for orders that came through a delivery platform, with the
+ * platform's own order number (Task 125 item 4.2). What the platform paid is
+ * matched against these in the browser from the settlement file; nothing about
+ * the file is stored. Bill totals are before any refund.
+ */
+export type PlatformBillRow = { ref: string; billId: string; label: string; totalMinor: number; settledAt: Date | null };
+
+export const listPlatformBills: QueryDefinition<{ platform: string; fromDate: string; toDate: string }, PlatformBillRow[]> = {
+  key: "verity.finance.list_platform_bills",
+  entity: ENTITY_CASH_RECONCILIATION,
+  input: z.object({ platform: z.string().trim().min(1).max(60), fromDate: z.string().date(), toDate: z.string().date() }),
+  handler: async (ctx, input) => {
+    const bills = await ctx.tx.bill.findMany({
+      where: {
+        state: "settled",
+        settledAt: { gte: new Date(input.fromDate), lte: new Date(`${input.toDate}T23:59:59.999Z`) },
+        order: { channel: "delivery_platform", platform: input.platform, platformOrderRef: { not: null } },
+      },
+      select: { id: true, totalMinor: true, settledAt: true, order: { select: { platformOrderRef: true } } },
+      orderBy: { settledAt: "asc" },
+    });
+    return bills.map((b) => ({
+      ref: b.order.platformOrderRef ?? "",
+      billId: b.id,
+      label: `${input.platform} #${b.order.platformOrderRef}`,
+      totalMinor: b.totalMinor,
+      settledAt: b.settledAt,
+    }));
+  },
+};
+
 /* ============================== registration ============================== */
 
 export function registerFinanceCapability(): void {
@@ -531,6 +563,15 @@ export function registerFinanceCapability(): void {
         shells: ["platform", "operations"],
       },
       {
+        href: "/platform-payouts",
+        label: "Platform payouts",
+        group: "Money",
+        order: 52.5,
+        icon: "supplier",
+        requiresEntity: ENTITY_CASH_RECONCILIATION,
+        shells: ["platform", "operations"],
+      },
+      {
         href: "/outlet-pnl",
         label: "Outlet P&L",
         group: "Money",
@@ -546,6 +587,7 @@ export function registerFinanceCapability(): void {
   registerCommand(recordCashReconciliation);
   registerCommand(recordCashMovement);
   registerQuery(listCashMovements);
+  registerQuery(listPlatformBills);
   registerQuery(listExpenses);
   registerQuery(getOutletPnL);
 }

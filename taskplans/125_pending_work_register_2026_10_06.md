@@ -183,7 +183,18 @@ Write each into `DECISIONS.md` with its basis.
   tools are not on that PATH) and fail; run from Git Bash they pass (5 files, 33 passed, 1 skipped, about
   60 s for the five because each test spawns a process, which is slow on Windows). Run the pure lane from
   Git Bash on Windows. The older "times out at 5 s" note was the same slowness, not a hang.
-- **Sections 3 to 7 (build), other than 4.1, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **4.2 platform settlement matching: BUILT, DB-proven for the query, not browser-verified. No
+  migration.** New page `/platform-payouts` (Money, "Platform payouts"): pick a platform and dates,
+  upload the settlement CSV, say which column is the order number and which is the amount paid, give the
+  platform's commission (%), and it lists paid short, paid more, in the file but not in your orders, and
+  your orders the file does not mention (each links to its bill). The file is read in the browser and
+  never stored; nothing is written off. Rules (my decisions): matched by the platform's own order number
+  ignoring case, spaces and a leading "#"; several rows for one order are summed; payout is compared with
+  the bill total less the commission, within one rupee. Bill totals are before refunds. Pure logic
+  `src/lib/settlement-match.ts` (9 tests, including a CSV reader for quotes, BOM, CRLF and `;`/tab
+  delimiters); query `verity.finance.list_platform_bills` (DB test, finance 4 pass). Limits: the column
+  guess is by header name, so an unusual file needs the two column pickers set by hand.
+- **Sections 3 to 7 (build), other than 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

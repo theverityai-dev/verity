@@ -47,6 +47,7 @@ import {
   getOutletPnL,
   listCashMovements,
   listExpenses,
+  listPlatformBills,
   recordCashMovement,
   recordCashReconciliation,
   recordExpense,
@@ -255,6 +256,32 @@ describeDb("capability: Finance", () => {
     expect(pnl.totalExpensesMinor).toBe(5_000);
     expect(pnl.cogsIsApproximate).toBe(true);
     expect(pnl.operatingContributionMinor).toBe(pnl.grossProfitMinor - 5_000);
+  });
+
+  it("lists settled delivery-platform bills by the platform's own order number (Task 125 4.2)", async () => {
+    async function platformBill(platform: string, ref: string, settle: boolean): Promise<string> {
+      const order = await executeCommand(manager, createOrder, { channel: "delivery_platform", locationId, platform, platformOrderRef: ref });
+      await executeCommand(manager, addOrderLines, { orderId: order.id, lines: [{ itemId: kebabItemId, qty: 2 }] });
+      await executeCommand(manager, placeOrder, { orderId: order.id });
+      for (const ticket of (await executeQuery(manager, kitchenQueue, {})).filter((t) => t.orderId === order.id)) {
+        for (const to of ["preparing", "ready", "served"] as const) await executeCommand(manager, advanceOrderLine, { lineId: ticket.lineId, to });
+      }
+      const bill = await executeCommand(manager, generateBill, { orderId: order.id });
+      if (settle) {
+        await executeCommand(manager, recordPayment, { billId: bill.id, method: "delivery_platform", amountMinor: bill.totalMinor });
+        await executeCommand(manager, settleBill, { billId: bill.id });
+      }
+      return bill.id;
+    }
+
+    const zomatoBillId = await platformBill("Zomato", "ZM-1001", true);
+    await platformBill("Swiggy", "SW-77", true); // another platform: not listed under Zomato
+    await platformBill("Zomato", "ZM-1002", false); // billed but not settled: not listed yet
+
+    const listed = await executeQuery(manager, listPlatformBills, { platform: "Zomato", fromDate: today, toDate: today });
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).toMatchObject({ ref: "ZM-1001", billId: zomatoBillId, label: "Zomato #ZM-1001" });
+    expect(listed[0]!.totalMinor).toBeGreaterThan(0);
   });
 
   it("counts cash in and out in the day's expected cash, and the entries cannot be edited (Task 125 4.1)", async () => {
