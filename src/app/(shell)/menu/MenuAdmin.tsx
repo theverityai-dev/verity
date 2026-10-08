@@ -4,9 +4,10 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { EmptyState, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
+import { Button, EmptyState, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { runCommand } from "@/server/actions/platform";
+import { runCommand, runQuery } from "@/server/actions/platform";
+import type { PriceHistory } from "@/server/capabilities/dinein";
 import type { ActionFailure } from "@/server/platform/action-error";
 
 const itemColumns: Column[] = [
@@ -51,6 +52,17 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
   const [newCategory, setNewCategory] = useState(false);
   // One open inline form per screen: editing an item or adding a portion to it.
   const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" | "addon" } | null>(null);
+  // The price history being shown, for one item at a time (Task 125 item 3.4).
+  const [history, setHistory] = useState<{ itemId: string; data: PriceHistory } | null>(null);
+
+  function showHistory(itemId: string) {
+    setFailure(null);
+    startTransition(async () => {
+      const result = await runQuery<PriceHistory | null>("verity.dinein.list_menu_item_price_history", { itemId });
+      if (result.ok && result.data) setHistory({ itemId, data: result.data });
+      else if (!result.ok) setFailure(result);
+    });
+  }
   const [pending, startTransition] = useTransition();
 
   function run(key: string, input: unknown, after?: () => void) {
@@ -173,6 +185,31 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                     Add
                   </CommandButton>
                 </form>
+              )}
+
+              {history && category.items.some((i) => i.id === history.itemId) && (
+                <section aria-label={`Price history of ${history.data.itemName}`} className="mb-4 rounded-lg bg-surface-sunken p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h4 className="m-0 text-[15px] font-semibold text-text">Price history of {history.data.itemName}</h4>
+                    <Button size="sm" variant="secondary" onClick={() => setHistory(null)}>Close</Button>
+                  </div>
+                  <ul className="m-0 flex list-none flex-col gap-1 p-0 text-[14px]">
+                    {[...history.data.entries].reverse().map((e, i) => (
+                      <li key={i} className="flex flex-wrap items-baseline justify-between gap-x-3">
+                        <span className="tabular text-text">
+                          {e.fromMinor === null ? `Listed at ${rupees(e.toMinor)}` : `${rupees(e.fromMinor)} → ${rupees(e.toMinor)}`}
+                        </span>
+                        <span className="text-[13px] text-text-secondary">
+                          {new Date(e.at).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                          {e.by ? `, ${e.by}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="m-0 mt-2 text-[12px] text-text-tertiary">
+                    Orders already taken keep the price they were sold at; this shows when the menu price changed.
+                  </p>
+                </section>
               )}
 
               {(() => {
@@ -385,6 +422,9 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                       >
                         Add-ons
                       </CommandButton>
+                      <Button size="sm" variant="secondary" disabled={pending} onClick={() => showHistory(String(row.itemId))}>
+                        Price history
+                      </Button>
                       <CommandButton
                         commands={"verity.dinein.set_menu_item_active"}
                         size="sm"

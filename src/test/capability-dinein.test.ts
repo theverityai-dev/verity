@@ -47,6 +47,7 @@ import {
   kitchenQueue,
   listFloor,
   listMenu,
+  listMenuItemPriceHistory,
   listOrderHistory,
   listTableChangeTargets,
   mergeOrders,
@@ -461,6 +462,27 @@ describeDb("capability: Dine-in", () => {
     const tickets = (await executeQuery(manager, kitchenQueue, {})).filter((t) => t.orderId === order.id);
     expect(tickets.map((t) => t.modifiers.join("+")).sort()).toEqual(["", "Extra cheese", "Extra cheese+Extra spicy"]);
     await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "test cleanup" });
+  });
+
+  it("keeps a price history from the audit trail: listed price, each change, when and by whom (Task 125 3.4)", async () => {
+    const category = await executeCommand(manager, createMenuCategory, { name: "History Test" });
+    const item = await executeCommand(manager, createMenuItem, { categoryId: category.id, name: "Seekh Roll", priceMinor: 18_000 });
+
+    const fresh = (await executeQuery(manager, listMenuItemPriceHistory, { itemId: item.id }))!;
+    expect(fresh.entries.map((e) => e.toMinor)).toEqual([18_000]);
+
+    await executeCommand(manager, editMenuItem, { itemId: item.id, priceMinor: 20_000 });
+    await executeCommand(manager, editMenuItem, { itemId: item.id, name: "Seekh Roll Large" }); // not a price change
+    await executeCommand(manager, editMenuItem, { itemId: item.id, priceMinor: 22_000 });
+
+    const history = (await executeQuery(manager, listMenuItemPriceHistory, { itemId: item.id }))!;
+    expect(history.currentPriceMinor).toBe(22_000);
+    expect(history.entries.map((e) => [e.fromMinor, e.toMinor])).toEqual([[null, 18_000], [18_000, 20_000], [20_000, 22_000]]);
+    expect(history.entries[1]!.by).toBe("Kent"); // the manager in this file's fixtures
+    const times = history.entries.map((e) => e.at.getTime());
+    expect([...times].sort((a, b) => a - b)).toEqual(times); // oldest first
+
+    expect(await executeQuery(manager, listMenuItemPriceHistory, { itemId: randomUUID() })).toBeNull();
   });
 
   it("refuses inconsistent channel input: dine-in without a table, takeaway at a table, platform without a name", async () => {

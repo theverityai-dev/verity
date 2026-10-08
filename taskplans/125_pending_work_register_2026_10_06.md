@@ -210,7 +210,14 @@ Write each into `DECISIONS.md` with its basis.
   but never changes an order already taken; governed by the same permission as portions. Commands
   `verity.dinein.create_menu_modifier`, `verity.dinein.set_menu_modifier_active`; `add_order_lines` takes
   `modifierIds`; `list_menu`, `get_order_detail`, `get_bill_detail` and the kitchen queue return them.
-- **Sections 3 to 7 (build), other than 3.1 (server), 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT STARTED** this session. Each needs a migration on production before
+- **3.4 price history with effective dates: BUILT, DB-proven (dine-in 26 pass), not browser-verified.
+  No migration.** `verity.dinein.list_menu_item_price_history` reads the audit trail that
+  `edit_menu_item` already writes (so there is no second copy to drift): the price the item was listed
+  at, then each change with the time and who made it. Menu has a "Price history" row action. Orders keep
+  their own price snapshot as before. Limit: an item's history starts when audit started recording, and
+  a price edited by a path that does not record activity would not appear (none exists today).
+- **Sections 3 to 7 (build), other than 3.1, 3.4, 4.1, 4.2, 4.4, 5.1 (edit), 5.2, 5.3, 6.1 and 6.2: NOT
+  STARTED** this session. Each needs a migration on production before
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 

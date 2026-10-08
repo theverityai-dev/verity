@@ -277,6 +277,50 @@ export const editMenuItem: CommandDefinition<
 };
 
 /**
+ * What an item has cost on the menu and when that changed (Task 125 item 3.4). Read
+ * from the audit trail that `editMenuItem` already writes, so there is no second
+ * copy to drift. Orders keep their own price snapshot; this is for the owner to see
+ * what changed, when and by whom.
+ */
+export type PriceHistory = {
+  itemName: string;
+  currentPriceMinor: number;
+  /** Oldest first. The first entry is the price the item was listed at. */
+  entries: Array<{ at: Date; fromMinor: number | null; toMinor: number; by: string | null }>;
+};
+
+export const listMenuItemPriceHistory: QueryDefinition<{ itemId: string }, PriceHistory | null> = {
+  key: "verity.dinein.list_menu_item_price_history",
+  entity: ENTITY_MENU_ITEM,
+  input: z.object({ itemId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const item = await ctx.tx.menuItem.findUnique({ where: { id: input.itemId } });
+    if (!item) return null;
+    const changes = await ctx.tx.activity.findMany({
+      where: { entityKey: ENTITY_MENU_ITEM, entityId: item.id, fieldChanged: "priceMinor" },
+      orderBy: { occurredAt: "asc" },
+    });
+    const users = await ctx.tx.user.findMany({
+      where: { id: { in: [...new Set(changes.map((c) => c.actorUserId).filter((id): id is string => id !== null))] } },
+      include: { party: { select: { displayName: true } } },
+    });
+    const nameOf = new Map(users.map((u) => [u.id, u.party.displayName]));
+
+    const entries: PriceHistory["entries"] = [
+      // Listed at what the first change replaced; if it never changed, at today's price.
+      { at: item.createdAt, fromMinor: null, toMinor: changes[0] ? Number(changes[0].oldValue) : item.priceMinor, by: null },
+      ...changes.map((c) => ({
+        at: c.occurredAt,
+        fromMinor: c.oldValue === null ? null : Number(c.oldValue),
+        toMinor: Number(c.newValue),
+        by: c.actorUserId ? (nameOf.get(c.actorUserId) ?? null) : null,
+      })),
+    ];
+    return { itemName: item.name, currentPriceMinor: item.priceMinor, entries };
+  },
+};
+
+/**
  * Retires or restores a menu item.
  *
  * There is no delete command and no Delete grant anywhere in this capability.
@@ -2435,6 +2479,7 @@ export function registerDineinCapability(): void {
   registerCommand(createMenuVariant);
   registerCommand(createMenuModifier);
   registerCommand(setMenuModifierActive);
+  registerQuery(listMenuItemPriceHistory);
   registerCommand(defineZone);
   registerCommand(defineTable);
   registerCommand(positionTable);
