@@ -132,7 +132,7 @@ function MonthGrid({
           type="button"
           aria-label="Previous month"
           onClick={() => onViewMonthChange(viewMonth.subtract(1, "month"))}
-          className="grid size-8 cursor-pointer place-items-center rounded-md border-none bg-transparent text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
+          className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-md border-none bg-transparent text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
         >
           <Icon name="chevronRight" size={14} className="rotate-180" />
         </button>
@@ -141,7 +141,7 @@ function MonthGrid({
           type="button"
           aria-label="Next month"
           onClick={() => onViewMonthChange(viewMonth.add(1, "month"))}
-          className="grid size-8 cursor-pointer place-items-center rounded-md border-none bg-transparent text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
+          className="grid size-8 max-sm:size-11 cursor-pointer place-items-center rounded-md border-none bg-transparent text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text"
         >
           <Icon name="chevronRight" size={14} />
         </button>
@@ -166,7 +166,7 @@ function MonthGrid({
               aria-current={isToday ? "date" : undefined}
               aria-pressed={isSelected}
               className={
-                "grid h-8 cursor-pointer place-items-center rounded-md text-[13px] transition-colors " +
+                "grid h-8 max-sm:h-11 cursor-pointer place-items-center rounded-md text-[13px] transition-colors " +
                 (disabled
                   ? "cursor-not-allowed text-text-tertiary opacity-40"
                   : isSelected
@@ -445,7 +445,7 @@ export function DateTimeField({
                     value={current ? current.hour() : 9}
                     onChange={(e) => commitHour(Number(e.target.value))}
                     containerClassName="w-auto"
-                    className="h-8 w-auto rounded-md px-2 text-[13px]"
+                    className="h-8 max-sm:h-11 w-auto rounded-md px-2 text-[13px]"
                   >
                     {HOURS.map((h) => (
                       <option key={h} value={h}>
@@ -458,7 +458,7 @@ export function DateTimeField({
                     value={current ? current.minute() - (current.minute() % 5) : 0}
                     onChange={(e) => commitMinute(Number(e.target.value))}
                     containerClassName="w-auto"
-                    className="h-8 w-auto rounded-md px-2 text-[13px]"
+                    className="h-8 max-sm:h-11 w-auto rounded-md px-2 text-[13px]"
                   >
                     {MINUTES.map((m) => (
                       <option key={m} value={m}>

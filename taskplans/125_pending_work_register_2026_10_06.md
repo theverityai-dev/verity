@@ -22,7 +22,7 @@ bill line can be split or refunded (`9451db3`). Migration `20261006050000` is on
 | # | Item | Done when |
 |---|---|---|
 | 1.1 | Browser-check the Colonel Kebabz screens as the Verity operator (enter client from HQ → People → create the client's login): order pad, counter, history, move/merge table, inventory Requests and Variance tabs, purchase-order Vendors tab, staff profile, payroll summary. | Each screen opened once with real data; defects fixed or logged here. |
-| 1.2 | Phone-width pass on the same screens (44pt targets, the stepper, bottom sheets). Blocked earlier: the user's Chrome window ignores resize and framing is blocked by CSP. | Checked at 390px, on the user's device or a devtools-emulated viewport. |
+| 1.2 | Phone-width pass on the same screens (44pt targets, the stepper, bottom sheets). Blocked earlier: the user's Chrome window ignores resize and framing is blocked by CSP. | Checked at 390px, on the user's device or a devtools-emulated viewport. Code sweep 2026-10-08: shared Button sm, filter pill/link, DataTable search and paging, DateTimePicker and the sign-in theme toggle are now 44pt at phone width (`max-sm:`). The live pass is still open: it needs a local test DB (Docker was down) or the operator session. |
 | 1.3 | Real Safari and Firefox check of the liquid-glass layer (ADR-028). Only Chromium and a simulated Safari UA were verified. | Fallback blur confirmed on both. |
 | 1.4 | Task 116 matrix: route family × role × theme × viewport, with screenshots kept. | Evidence folder committed; Task 116 closed or its remainder re-listed. |
 

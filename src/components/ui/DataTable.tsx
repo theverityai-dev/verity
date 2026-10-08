@@ -282,7 +282,7 @@ export function DataTable({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 // iOS search field: system fill, 10px corners, glyph inside.
-                className="h-9 w-full rounded-[10px] border-0 bg-[var(--color-control)] pl-9 pr-3 text-[15px] text-text placeholder:text-text-tertiary transition-shadow focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
+                className="h-9 max-sm:h-11 w-full rounded-[10px] border-0 bg-[var(--color-control)] pl-9 pr-3 text-[15px] text-text placeholder:text-text-tertiary transition-shadow focus:shadow-[0_0_0_3px_var(--color-accent-subtle)] focus:outline-none"
               />
             </div>
           )}
@@ -474,7 +474,7 @@ export function DataTable({
                   onClick={() => setPage(current - 1)}
                   disabled={current === 0}
                   aria-label="Previous page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 max-sm:size-11 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="collapse" size={16} />
                 </button>
@@ -491,7 +491,7 @@ export function DataTable({
                       onClick={() => setPage(n)}
                       aria-current={n === current ? "page" : undefined}
                       className={
-                        "tabular grid h-9 min-w-9 cursor-pointer place-items-center rounded-lg px-2 text-[13px] transition-colors " +
+                        "tabular grid h-9 min-w-9 max-sm:h-11 max-sm:min-w-11 cursor-pointer place-items-center rounded-lg px-2 text-[13px] transition-colors " +
                         (n === current
                           ? "border border-accent text-accent-ink"
                           : " bg-surface text-text-secondary hover:bg-surface-sunken")
@@ -507,7 +507,7 @@ export function DataTable({
                   onClick={() => setPage(current + 1)}
                   disabled={current >= pageCount - 1}
                   aria-label="Next page"
-                  className="grid size-9 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
+                  className="grid size-9 max-sm:size-11 cursor-pointer place-items-center rounded-[12px] bg-surface text-text-secondary transition-colors hover:bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Icon name="expand" size={16} />
                 </button>

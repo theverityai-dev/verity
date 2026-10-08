@@ -340,7 +340,7 @@ export function Button({ variant = "secondary", size = "md", className, ...rest 
   // 44pt minimum touch target (HIG and WCAG) for md; sm is the compact
   // in-row size used inside tables.
   const sizes = {
-    sm: "h-9 px-3 text-[14px]",
+    sm: "h-9 px-3 text-[14px] max-sm:h-11",
     md: "h-11 px-5 text-[15px]",
   };
 
@@ -462,8 +462,8 @@ export function CardAction({
 }) {
   const className =
     variant === "pill"
-      ? "inline-flex h-8 items-center gap-1.5 rounded-full bg-[var(--color-control)] px-3 text-[13px] font-medium text-text no-underline transition-colors hover:bg-[var(--color-control-strong)]"
-      : "inline-flex h-8 items-center text-[15px] text-accent-ink no-underline transition-opacity hover:opacity-70";
+      ? "inline-flex h-8 max-sm:h-11 items-center gap-1.5 rounded-full bg-[var(--color-control)] px-3 text-[13px] font-medium text-text no-underline transition-colors hover:bg-[var(--color-control-strong)]"
+      : "inline-flex h-8 max-sm:h-11 items-center text-[15px] text-accent-ink no-underline transition-opacity hover:opacity-70";
 
   if (href) {
     return (

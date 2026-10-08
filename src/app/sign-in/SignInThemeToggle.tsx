@@ -51,7 +51,7 @@ export function SignInThemeToggle() {
   if (!mounted) return <div className="h-11 w-[92px]" aria-hidden="true" />;
 
   const buttonClass = (active: boolean) =>
-    "grid size-9 cursor-pointer place-items-center rounded-full transition-colors " +
+    "grid size-9 max-sm:size-11 cursor-pointer place-items-center rounded-full transition-colors " +
     (active ? "bg-accent text-accent-on" : "text-text-tertiary hover:text-text-secondary");
 
   return (
