@@ -194,8 +194,12 @@ Write each into `DECISIONS.md` with its basis.
   `src/lib/settlement-match.ts` (9 tests, including a CSV reader for quotes, BOM, CRLF and `;`/tab
   delimiters); query `verity.finance.list_platform_bills` (DB test, finance 4 pass). Limits: the column
   guess is by header name, so an unusual file needs the two column pickers set by hand.
-- **3.1 menu modifiers, server side: BUILT and DB-proven (25 dine-in tests, conformance 23). Screens
-  next. NEEDS BOTH MIGRATIONS ON PRODUCTION BEFORE THE PUSH.** `20261009030000_dinein_menu_modifiers`
+- **3.1 menu modifiers: BUILT (server DB-proven: 25 dine-in tests, conformance 23; screens lint, type
+  and design-detector clean, not browser-verified). NEEDS BOTH MIGRATIONS ON PRODUCTION BEFORE THE
+  PUSH.** Screens: Menu has an "Add-ons" column and an "Add-ons" row action (add, retire, bring back);
+  the order pad shows ticked-on add-on chips under each item that carry onto the next Add and then
+  clear (44pt on phones), and shows the chosen add-ons on each order line; the kitchen ticket shows
+  "+ Extra cheese, ..." in plain words; the bill and the split picker show them too. `20261009030000_dinein_menu_modifiers`
   (table `menu_modifier`; the JSON column it first added to `order_line` is removed again by the next
   one) and `20261009031000_dinein_order_line_modifier_rows` (table `order_line_modifier`, one row per
   add-on taken, tenant RLS). I first stored the snapshot as JSON; the conformance rule that keeps JSON to

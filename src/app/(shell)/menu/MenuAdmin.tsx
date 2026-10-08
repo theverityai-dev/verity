@@ -13,6 +13,7 @@ const itemColumns: Column[] = [
   { key: "name", header: "Item", sortable: true },
   { key: "price", header: "Price", numeric: true, sortable: true },
   { key: "portions", header: "Portions", sortable: false },
+  { key: "addOns", header: "Add-ons", sortable: false },
   { key: "state", header: "State", sortable: true },
 ];
 
@@ -25,6 +26,7 @@ type MenuCategory = {
     priceMinor: number;
     active: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
+    modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
   }>;
 };
 
@@ -48,7 +50,7 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCategory, setNewCategory] = useState(false);
   // One open inline form per screen: editing an item or adding a portion to it.
-  const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" } | null>(null);
+  const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" | "addon" } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function run(key: string, input: unknown, after?: () => void) {
@@ -176,6 +178,66 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
               {(() => {
                 const item = editing && category.items.find((i) => i.id === editing.itemId);
                 if (!editing || !item) return null;
+                if (editing.mode === "addon") {
+                  return (
+                    <div key={`addon-${item.id}`} className="mb-4 rounded-lg bg-surface-sunken p-3">
+                      <form
+                        className="flex flex-wrap items-end gap-3"
+                        action={(formData) =>
+                          run(
+                            "verity.dinein.create_menu_modifier",
+                            {
+                              itemId: item.id,
+                              name: String(formData.get("name") ?? "").trim(),
+                              // Rupees in, paise out. Zero is a free option such as "Extra spicy".
+                              priceDeltaMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
+                            },
+                            () => setEditing(null),
+                          )
+                        }
+                      >
+                        <div className="min-w-[200px] flex-1">
+                          <Field label={`Add-on for ${item.name}`} htmlFor={`addon-name-${item.id}`} required>
+                            <Input id={`addon-name-${item.id}`} name="name" required autoFocus maxLength={60} placeholder="Extra cheese" />
+                          </Field>
+                        </div>
+                        <div className="w-[200px]">
+                          <Field label="Extra charge (₹)" htmlFor={`addon-price-${item.id}`} hint="0 for a free option." required>
+                            <Input id={`addon-price-${item.id}`} name="price" type="number" step="0.01" min="0" defaultValue="0" required />
+                          </Field>
+                        </div>
+                        <CommandButton commands={"verity.dinein.create_menu_modifier"} type="submit" variant="primary" disabled={pending}>
+                          Add add-on
+                        </CommandButton>
+                        <CommandButton commands={"verity.dinein.create_menu_modifier"} type="button" onClick={() => setEditing(null)}>
+                          Close
+                        </CommandButton>
+                      </form>
+                      {item.modifiers.length > 0 && (
+                        <ul className="m-0 mt-3 flex list-none flex-col gap-1 p-0">
+                          {item.modifiers.map((m) => (
+                            <li key={m.id} className="flex min-h-11 items-center justify-between gap-3 text-[14px]">
+                              <span className={m.active ? "text-text" : "text-text-tertiary line-through"}>
+                                {m.name} {m.priceDeltaMinor > 0 ? `+${rupees(m.priceDeltaMinor)}` : "(free)"}
+                              </span>
+                              <CommandButton
+                                commands={"verity.dinein.set_menu_modifier_active"}
+                                size="sm"
+                                disabled={pending}
+                                onClick={() => run("verity.dinein.set_menu_modifier_active", { modifierId: m.id, active: !m.active })}
+                              >
+                                {m.active ? "Retire" : "Bring back"}
+                              </CommandButton>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p className="m-0 mt-2 text-[12px] text-text-tertiary">
+                        Retiring an add-on stops new orders using it; orders already taken keep what was charged.
+                      </p>
+                    </div>
+                  );
+                }
                 if (editing.mode === "edit") {
                   return (
                     <form
@@ -286,6 +348,13 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                                 )}`,
                             )
                             .join(", "),
+                    addOns:
+                      item.modifiers.filter((m) => m.active).length === 0
+                        ? "—"
+                        : item.modifiers
+                            .filter((m) => m.active)
+                            .map((m) => (m.priceDeltaMinor > 0 ? `${m.name} +${rupees(m.priceDeltaMinor)}` : m.name))
+                            .join(", "),
                     state: item.active ? "On the menu" : "Retired",
                     active: item.active,
                   }))}
@@ -307,6 +376,14 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                         onClick={() => setEditing({ itemId: String(row.itemId), mode: "portion" })}
                       >
                         Add portion
+                      </CommandButton>
+                      <CommandButton
+                        commands={"verity.dinein.create_menu_modifier"}
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setEditing({ itemId: String(row.itemId), mode: "addon" })}
+                      >
+                        Add-ons
                       </CommandButton>
                       <CommandButton
                         commands={"verity.dinein.set_menu_item_active"}

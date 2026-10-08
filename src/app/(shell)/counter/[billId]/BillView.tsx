@@ -88,6 +88,7 @@ function ItemPicker({
               <span className="min-w-0">
                 {line.qty} × {line.itemName}
                 {line.variantName ? ` (${line.variantName})` : ""}
+                {line.modifiers.length > 0 ? ` + ${line.modifiers.map((m) => m.name).join(", ")}` : ""}
               </span>
             </label>
             <span className="flex shrink-0 items-center gap-2">
@@ -193,6 +194,9 @@ export function BillView({ bill }: { bill: BillDetail }) {
                     {line.itemName}
                     {line.variantName && (
                       <span className="text-text-tertiary"> ({line.variantName})</span>
+                    )}
+                    {line.modifiers.length > 0 && (
+                      <span className="block text-[12px] text-text-secondary">{line.modifiers.map((m) => m.name).join(", ")}</span>
                     )}
                   </td>
                   <td className="tabular border-b border-line py-2 text-right text-[14px]">

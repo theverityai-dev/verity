@@ -19,6 +19,7 @@ type MenuCategory = {
     priceMinor: number;
     active: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
+    modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
   }>;
 };
 
@@ -58,6 +59,9 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   const [note, setNote] = useState("");
   const [voiding, setVoiding] = useState<string | null>(null);
   const [voidReason, setVoidReason] = useState("");
+  // Add-ons ticked per item before tapping Add; cleared once that item is added,
+  // so they never carry over to the next dish.
+  const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [pending, startTransition] = useTransition();
 
   const categories = useMemo(() => {
@@ -85,11 +89,22 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   }
 
   const canAdd = ["draft", "placed", "partially_served"].includes(order.state);
+  const toggleAddOn = (itemId: string, modifierId: string) =>
+    setPicked((current) => {
+      const now = current[itemId] ?? [];
+      return { ...current, [itemId]: now.includes(modifierId) ? now.filter((id) => id !== modifierId) : [...now, modifierId] };
+    });
   const addLine = (line: { itemId: string; variantId?: string }) =>
     run(
       "verity.dinein.add_order_lines",
-      { orderId: order.id, lines: [{ ...line, qty: 1, lineNote: note.trim() || undefined }] },
-      () => setNote(""),
+      {
+        orderId: order.id,
+        lines: [{ ...line, qty: 1, lineNote: note.trim() || undefined, modifierIds: (picked[line.itemId] ?? []).length > 0 ? picked[line.itemId] : undefined }],
+      },
+      () => {
+        setNote("");
+        setPicked((current) => ({ ...current, [line.itemId]: [] }));
+      },
     );
   const canPlace = order.state === "draft" && order.lines.length > 0;
   const servedCount = order.lines.filter((line) => line.state === "served").length;
@@ -149,7 +164,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                   {category.items.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between gap-3 rounded-[12px] bg-surface-sunken px-3 py-2.5"
+                      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[12px] bg-surface-sunken px-3 py-2.5"
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-[14px] text-text">{item.name}</span>
@@ -176,6 +191,29 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                           </CommandButton>
                         ))}
                       </span>
+                      {item.modifiers.length > 0 && (
+                        <span className="flex w-full flex-wrap gap-1.5" role="group" aria-label={`Add-ons for ${item.name}`}>
+                          {item.modifiers.map((m) => {
+                            const on = (picked[item.id] ?? []).includes(m.id);
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                aria-pressed={on}
+                                disabled={!canAdd}
+                                onClick={() => toggleAddOn(item.id, m.id)}
+                                className={
+                                  "inline-flex min-h-8 cursor-pointer items-center rounded-full px-3 text-[13px] font-medium transition-colors max-sm:min-h-11 disabled:cursor-not-allowed disabled:opacity-40 " +
+                                  (on ? "bg-accent text-accent-on" : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]")
+                                }
+                              >
+                                {m.name}
+                                {m.priceDeltaMinor > 0 && <span className="ml-1 opacity-80">+{rupees(m.priceDeltaMinor)}</span>}
+                              </button>
+                            );
+                          })}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -204,6 +242,11 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                           {editable ? "" : `${line.qty} × `}{line.itemName}
                           {line.variantName && (
                             <span className="text-text-tertiary"> ({line.variantName})</span>
+                          )}
+                          {line.modifiers.length > 0 && (
+                            <span className="block text-[12px] text-text-secondary">
+                              {line.modifiers.map((m) => m.name).join(", ")}
+                            </span>
                           )}
                         </span>
                         <span className="tabular shrink-0 text-[14px]">

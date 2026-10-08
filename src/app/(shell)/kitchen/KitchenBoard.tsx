@@ -137,6 +137,10 @@ export function KitchenBoard({ tickets }: { tickets: KitchenTicket[] }) {
                         </span>
                       </div>
 
+                      {/* The cook needs the words, not the prices. */}
+                      {ticket.modifiers.length > 0 && (
+                        <p className="mb-0 mt-1.5 text-[15px] font-medium text-text">+ {ticket.modifiers.join(", ")}</p>
+                      )}
                       {ticket.lineNote && (
                         <p className="mb-0 mt-1.5 text-[14px] text-accent-ink">{ticket.lineNote}</p>
                       )}
