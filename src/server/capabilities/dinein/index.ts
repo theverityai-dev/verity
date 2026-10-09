@@ -25,6 +25,7 @@ import {
   reversePointsForRefund,
 } from "@/server/capabilities/loyalty";
 import { hasPermission } from "@/server/platform/authorization";
+import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
 import { assertOutletInScope, reachableOutletIds } from "./scope";
 import type { ActorContext as DineinActor } from "@/server/platform/command";
 
@@ -458,6 +459,113 @@ export const setMenuModifierActive: CommandDefinition<{ modifierId: string; acti
   },
 };
 
+/* ============================ menu availability =========================== */
+
+/** One saved availability rule as the menu screens read it. */
+export type AvailabilityRuleView = AvailabilityRule & { id: string; locationName: string | null };
+
+const toRule = (r: { locationId: string | null; channel: string | null; fromMinute: number | null; toMinute: number | null }): AvailabilityRule => ({
+  locationId: r.locationId,
+  channel: r.channel,
+  fromMinute: r.fromMinute,
+  toMinute: r.toMinute,
+});
+
+const ruleKey = (r: AvailabilityRule) => `${r.channel ?? "*"}|${r.locationId ?? "*"}|${r.fromMinute ?? "*"}-${r.toMinute ?? "*"}`;
+
+/** Outlet names for the "why is this hidden" text. */
+async function ruleLabels(tx: TenantScopedClient, rules: readonly AvailabilityRule[]): Promise<RuleLabels> {
+  const ids = [...new Set(rules.map((r) => r.locationId).filter((id): id is string => id !== null))];
+  const rows = ids.length > 0 ? await tx.location.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+  const names = new Map(rows.map((l) => [l.id, l.name]));
+  return {
+    location: (id) => names.get(id) ?? "another outlet",
+    channel: (key) => ORDER_CHANNEL_LABEL[key as OrderChannel] ?? key,
+  };
+}
+
+/**
+ * Where and when an order is being taken: its outlet, its channel, and the minute
+ * of the day on that outlet's own clock. The zone comes from the outlet's
+ * organization, so a 07:00 breakfast cut-off means 07:00 where the kitchen is.
+ */
+async function orderAvailabilityContext(tx: TenantScopedClient, order: { locationId: string; channel: string }, at = new Date()) {
+  const location = await tx.location.findUniqueOrThrow({ where: { id: order.locationId }, select: { organizationId: true } });
+  const timeZone = await effectiveTimeZone(tx, location.organizationId);
+  return { locationId: order.locationId, channel: order.channel, minuteOfDay: minuteOfDay(at, timeZone) };
+}
+
+/**
+ * Replaces an item's availability rules (Task 125 items 3.2 and 3.3). An empty
+ * list removes every rule, so the item is available wherever it is active.
+ * Replace-all keeps the editor simple: it submits what it shows.
+ */
+export const setMenuItemAvailability: CommandDefinition<
+  { itemId: string; rules: AvailabilityRule[] },
+  { id: string; rules: number }
+> = {
+  key: "verity.dinein.set_menu_item_availability",
+  entity: ENTITY_MENU_ITEM,
+  verb: "Edit",
+  input: z.object({
+    itemId: z.string().uuid(),
+    rules: z
+      .array(
+        z
+          .object({
+            locationId: z.string().uuid().nullable(),
+            channel: z.enum(ORDER_CHANNELS).nullable(),
+            fromMinute: z.number().int().min(0).max(1439).nullable(),
+            toMinute: z.number().int().min(0).max(1439).nullable(),
+          })
+          .superRefine((rule, issue) => {
+            if ((rule.fromMinute === null) !== (rule.toMinute === null)) {
+              issue.addIssue({ code: "custom", path: ["toMinute"], message: "give both a start and an end time, or neither" });
+            }
+            if (rule.fromMinute !== null && rule.fromMinute === rule.toMinute) {
+              issue.addIssue({ code: "custom", path: ["toMinute"], message: "the start and end time must differ" });
+            }
+            if (rule.locationId === null && rule.channel === null && rule.fromMinute === null) {
+              issue.addIssue({ code: "custom", path: ["channel"], message: "a rule must limit an outlet, a channel or a time of day" });
+            }
+          }),
+      )
+      .max(20),
+  }),
+  preconditions: async (ctx, input) => {
+    if (!(await ctx.tx.menuItem.findUnique({ where: { id: input.itemId } }))) {
+      throw new ValidationError("E_VALIDATION: item not found");
+    }
+    const outletIds = [...new Set(input.rules.map((r) => r.locationId).filter((id): id is string => id !== null))];
+    if (outletIds.length > 0) {
+      const found = await ctx.tx.location.count({ where: { id: { in: outletIds }, active: true } });
+      if (found !== outletIds.length) throw new ValidationError("E_VALIDATION: an outlet in these rules was not found");
+    }
+  },
+  handler: async (ctx, input) => {
+    const before = await ctx.tx.menuAvailability.findMany({ where: { itemId: input.itemId } });
+    await ctx.tx.menuAvailability.deleteMany({ where: { itemId: input.itemId } });
+    if (input.rules.length > 0) {
+      await ctx.tx.menuAvailability.createMany({
+        data: input.rules.map((r) => ({ tenantId: ctx.actor.tenantId, itemId: input.itemId, ...r })),
+      });
+    }
+    await recordActivity(ctx, {
+      entityKey: ENTITY_MENU_ITEM,
+      entityId: input.itemId,
+      commandKey: "verity.dinein.set_menu_item_availability",
+      changes: diffFields(
+        { availability: before.map((r) => ruleKey(toRule(r))).sort().join(", ") || "always" },
+        { availability: input.rules.map(ruleKey).sort().join(", ") || "always" },
+      ),
+    });
+    return {
+      result: { id: input.itemId, rules: input.rules.length },
+      events: [{ name: "verity.dinein.menu_item_availability_set", entityId: input.itemId }],
+    };
+  },
+};
+
 /* ================================= floor ================================== */
 
 export const defineZone: CommandDefinition<
@@ -756,6 +864,8 @@ export const addOrderLines: CommandDefinition<
   },
   handler: async (ctx, input) => {
     const order = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.orderId } });
+    // Where and when this order is being taken, read once for every line.
+    const where = await orderAvailabilityContext(ctx.tx, order);
 
     for (const line of input.lines) {
       const item = await ctx.tx.menuItem.findUnique({ where: { id: line.itemId } });
@@ -763,6 +873,9 @@ export const addOrderLines: CommandDefinition<
       if (!item.active) {
         throw new ValidationError(`E_VALIDATION: ${item.name} is not available right now`);
       }
+      const rules = (await ctx.tx.menuAvailability.findMany({ where: { itemId: item.id } })).map(toRule);
+      const hidden = unavailableReason(rules, where, await ruleLabels(ctx.tx, rules));
+      if (hidden) throw new ValidationError(`E_VALIDATION: ${item.name} is not available on this order. ${hidden}`);
 
       let unitPriceMinor = item.priceMinor;
       let variantName: string | null = null;
@@ -1769,8 +1882,13 @@ export const settleBill: CommandDefinition<
 
 /* ================================ queries ================================= */
 
+/**
+ * The menu. With `orderId`, each item also says why it cannot be ordered on that
+ * order right now (`hiddenReason`), judged by its availability rules at that
+ * order's outlet, channel and local time of day. Without it, `hiddenReason` is null.
+ */
 export const listMenu: QueryDefinition<
-  { includeInactive?: boolean },
+  { includeInactive?: boolean; orderId?: string },
   Array<{
     categoryId: string;
     categoryName: string;
@@ -1782,12 +1900,14 @@ export const listMenu: QueryDefinition<
       variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
       /** Add-ons; retired ones appear only when `includeInactive` is set. */
       modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
+      availability: AvailabilityRuleView[];
+      hiddenReason: string | null;
     }>;
   }>
 > = {
   key: "verity.dinein.list_menu",
   entity: ENTITY_MENU_ITEM,
-  input: z.object({ includeInactive: z.boolean().optional() }),
+  input: z.object({ includeInactive: z.boolean().optional(), orderId: z.string().uuid().optional() }),
   handler: async (ctx, input) => {
     const categories = await ctx.tx.menuCategory.findMany({
       where: input.includeInactive ? {} : { active: true },
@@ -1799,10 +1919,15 @@ export const listMenu: QueryDefinition<
           include: {
             variants: { orderBy: { name: "asc" } },
             modifiers: { where: input.includeInactive ? {} : { active: true }, orderBy: { name: "asc" } },
+            availability: { include: { location: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
           },
         },
       },
     });
+
+    const order = input.orderId ? await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } }) : null;
+    const where = order ? await orderAvailabilityContext(ctx.tx, order) : null;
+    const labels = await ruleLabels(ctx.tx, categories.flatMap((c) => c.items.flatMap((i) => i.availability.map(toRule))));
 
     return categories.map((category) => ({
       categoryId: category.id,
@@ -1818,6 +1943,8 @@ export const listMenu: QueryDefinition<
           priceDeltaMinor: variant.priceDeltaMinor,
         })),
         modifiers: item.modifiers.map((m) => ({ id: m.id, name: m.name, priceDeltaMinor: m.priceDeltaMinor, active: m.active })),
+        availability: item.availability.map((r) => ({ id: r.id, locationName: r.location?.name ?? null, ...toRule(r) })),
+        hiddenReason: where ? unavailableReason(item.availability.map(toRule), where, labels) : null,
       })),
     }));
   },
@@ -2479,6 +2606,7 @@ export function registerDineinCapability(): void {
   registerCommand(createMenuVariant);
   registerCommand(createMenuModifier);
   registerCommand(setMenuModifierActive);
+  registerCommand(setMenuItemAvailability);
   registerQuery(listMenuItemPriceHistory);
   registerCommand(defineZone);
   registerCommand(defineTable);

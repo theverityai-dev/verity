@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import { minuteOfDay } from "@/lib/menu-availability";
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/server/platform/db";
 import { assertRlsEnforceable, withTenant } from "@/server/platform/tenancy";
@@ -54,6 +55,7 @@ import {
   moveOrderToTable,
   moveTable,
   placeOrder,
+  setMenuItemAvailability,
   setOrderLineQty,
   recordPayment,
   registerDineinCapability,
@@ -483,6 +485,56 @@ describeDb("capability: Dine-in", () => {
     expect([...times].sort((a, b) => a - b)).toEqual(times); // oldest first
 
     expect(await executeQuery(manager, listMenuItemPriceHistory, { itemId: randomUUID() })).toBeNull();
+  });
+
+  it("limits an item by channel, outlet and hours, says why, and refuses it at the till (Task 125 3.2, 3.3)", async () => {
+    const category = await executeCommand(manager, createMenuCategory, { name: "Hours Test" });
+    const item = await executeCommand(manager, createMenuItem, { categoryId: category.id, name: "Lunch Thali", priceMinor: 25_000 });
+    const takeaway = await executeCommand(waiter, createOrder, { channel: "takeaway", locationId, customerName: "Hours" });
+    const platform = await executeCommand(waiter, createOrder, { channel: "delivery_platform", locationId, platform: "Zomato" });
+    const hidden = async (orderId: string) =>
+      (await executeQuery(manager, listMenu, { orderId })).flatMap((c) => c.items).find((i) => i.id === item.id)!.hiddenReason;
+
+    // No rule: available everywhere.
+    expect(await hidden(takeaway.id)).toBeNull();
+
+    // A takeaway-only rule hides it from the platform order, with the reason.
+    await executeCommand(manager, setMenuItemAvailability, {
+      itemId: item.id,
+      rules: [{ locationId: null, channel: "takeaway", fromMinute: null, toMinute: null }],
+    });
+    expect(await hidden(takeaway.id)).toBeNull();
+    expect(await hidden(platform.id)).toBe("Only available: Takeaway");
+    await expect(executeCommand(waiter, addOrderLines, { orderId: platform.id, lines: [{ itemId: item.id, qty: 1 }] })).rejects.toThrow(/not available on this order. Only available: Takeaway/);
+    await executeCommand(waiter, addOrderLines, { orderId: takeaway.id, lines: [{ itemId: item.id, qty: 1 }] });
+
+    // An hours window that excludes right now, in the outlet's own clock, hides it too.
+    const zone = (await withTenant(tenantId, (tx) => tx.$queryRaw<Array<{ z: string }>>`SELECT verity.effective_time_zone(organization_id) AS z FROM location WHERE id = ${locationId}::uuid`))[0]!.z;
+    const now = minuteOfDay(new Date(), zone);
+    const from = (now + 120) % 1440;
+    const to = (now + 180) % 1440;
+    await executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [{ locationId: null, channel: null, fromMinute: from, toMinute: to }] });
+    expect(await hidden(takeaway.id)).toMatch(/^Only available: [0-9]{2}:[0-9]{2} to [0-9]{2}:[0-9]{2}$/);
+    // A window around now lets it through again.
+    await executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [{ locationId: null, channel: null, fromMinute: (now + 1380) % 1440, toMinute: (now + 60) % 1440 }] });
+    expect(await hidden(takeaway.id)).toBeNull();
+
+    // The shown rules carry the outlet name; clearing them restores "always".
+    await executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [{ locationId, channel: null, fromMinute: null, toMinute: null }] });
+    const shown = (await executeQuery(manager, listMenu, {})).flatMap((c) => c.items).find((i) => i.id === item.id)!;
+    expect(shown.availability).toHaveLength(1);
+    expect(shown.availability[0]!.locationName).toBeTruthy();
+    await executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [] });
+    expect(await hidden(platform.id)).toBeNull();
+
+    // A rule that limits nothing, or half a window, is refused, and so is an unknown outlet.
+    const empty = { locationId: null, channel: null, fromMinute: null, toMinute: null };
+    await expect(executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [empty] })).rejects.toThrow();
+    await expect(executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [{ ...empty, fromMinute: 60 }] })).rejects.toThrow();
+    await expect(executeCommand(manager, setMenuItemAvailability, { itemId: item.id, rules: [{ ...empty, locationId: randomUUID() }] })).rejects.toThrow(/outlet/);
+
+    await executeCommand(waiter, cancelOrder, { orderId: takeaway.id });
+    await executeCommand(waiter, cancelOrder, { orderId: platform.id });
   });
 
   it("refuses inconsistent channel input: dine-in without a table, takeaway at a table, platform without a name", async () => {

@@ -35,7 +35,7 @@ async function OrderPage({
   try {
     [order, menu] = await Promise.all([
       executeQuery(actor, getOrderDetail, { orderId }),
-      executeQuery(actor, listMenu, {}),
+      executeQuery(actor, listMenu, { orderId }),
     ]);
   } catch (error) {
     if (error instanceof ForbiddenError) return <PermissionDenied what="this order" />;

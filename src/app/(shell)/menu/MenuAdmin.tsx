@@ -9,12 +9,15 @@ import { DataTable, type Column } from "@/components/ui/DataTable";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { PriceHistory } from "@/server/capabilities/dinein";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { describeRule, type AvailabilityRule } from "@/lib/menu-availability";
+import { AvailabilityEditor } from "./AvailabilityEditor";
 
 const itemColumns: Column[] = [
   { key: "name", header: "Item", sortable: true },
   { key: "price", header: "Price", numeric: true, sortable: true },
   { key: "portions", header: "Portions", sortable: false },
   { key: "addOns", header: "Add-ons", sortable: false },
+  { key: "serves", header: "Served", sortable: false },
   { key: "state", header: "State", sortable: true },
 ];
 
@@ -28,6 +31,7 @@ type MenuCategory = {
     active: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
+    availability: Array<AvailabilityRule & { id: string; locationName: string | null }>;
   }>;
 };
 
@@ -45,13 +49,21 @@ function rupees(minor: number): string {
  * Retiring is the only way to remove something. The button says "Retire", not
  * "Delete", because that is what it does.
  */
-export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
+export function MenuAdmin({
+  menu,
+  outlets,
+  channels,
+}: {
+  menu: MenuCategory[];
+  outlets: Array<{ id: string; name: string }>;
+  channels: Array<{ value: string; label: string }>;
+}) {
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCategory, setNewCategory] = useState(false);
   // One open inline form per screen: editing an item or adding a portion to it.
-  const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" | "addon" } | null>(null);
+  const [editing, setEditing] = useState<{ itemId: string; mode: "edit" | "portion" | "addon" | "hours" } | null>(null);
   // The price history being shown, for one item at a time (Task 125 item 3.4).
   const [history, setHistory] = useState<{ itemId: string; data: PriceHistory } | null>(null);
 
@@ -215,6 +227,20 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
               {(() => {
                 const item = editing && category.items.find((i) => i.id === editing.itemId);
                 if (!editing || !item) return null;
+                if (editing.mode === "hours") {
+                  return (
+                    <AvailabilityEditor
+                      key={`hours-${item.id}`}
+                      itemName={item.name}
+                      rules={item.availability}
+                      outlets={outlets}
+                      channels={channels}
+                      pending={pending}
+                      onSave={(rules) => run("verity.dinein.set_menu_item_availability", { itemId: item.id, rules }, () => setEditing(null))}
+                      onCancel={() => setEditing(null)}
+                    />
+                  );
+                }
                 if (editing.mode === "addon") {
                   return (
                     <div key={`addon-${item.id}`} className="mb-4 rounded-lg bg-surface-sunken p-3">
@@ -392,6 +418,12 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                             .filter((m) => m.active)
                             .map((m) => (m.priceDeltaMinor > 0 ? `${m.name} +${rupees(m.priceDeltaMinor)}` : m.name))
                             .join(", "),
+                    serves:
+                      item.availability.length === 0
+                        ? "Always"
+                        : item.availability
+                            .map((r) => describeRule(r, { location: () => r.locationName ?? "an outlet", channel: (key) => channels.find((c) => c.value === key)?.label ?? key }))
+                            .join("; "),
                     state: item.active ? "On the menu" : "Retired",
                     active: item.active,
                   }))}
@@ -421,6 +453,14 @@ export function MenuAdmin({ menu }: { menu: MenuCategory[] }) {
                         onClick={() => setEditing({ itemId: String(row.itemId), mode: "addon" })}
                       >
                         Add-ons
+                      </CommandButton>
+                      <CommandButton
+                        commands={"verity.dinein.set_menu_item_availability"}
+                        size="sm"
+                        disabled={pending}
+                        onClick={() => setEditing({ itemId: String(row.itemId), mode: "hours" })}
+                      >
+                        Hours
                       </CommandButton>
                       <Button size="sm" variant="secondary" disabled={pending} onClick={() => showHistory(String(row.itemId))}>
                         Price history

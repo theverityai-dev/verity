@@ -3,7 +3,8 @@ import { requireActor } from "@/server/platform/auth";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
 import { ForbiddenError } from "@/server/platform/authorization";
-import { listMenu } from "@/server/capabilities/dinein";
+import { withTenant } from "@/server/platform/tenancy";
+import { listMenu, ORDER_CHANNELS, ORDER_CHANNEL_LABEL } from "@/server/capabilities/dinein";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { MenuAdmin } from "./MenuAdmin";
 
@@ -22,8 +23,12 @@ async function MenuPage() {
   const actor = await requireActor();
 
   let menu: Awaited<ReturnType<typeof listMenu.handler>>;
+  let outlets: Array<{ id: string; name: string }>;
   try {
     menu = await executeQuery(actor, listMenu, { includeInactive: true });
+    outlets = await withTenant(actor.tenantId, (tx) =>
+      tx.location.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    );
   } catch (error) {
     if (error instanceof ForbiddenError)
       return <PermissionDenied what="the menu" />;
@@ -36,7 +41,11 @@ async function MenuPage() {
         title="Menu"
         description="What can be ordered, and what it costs. Prices change forward — bills already raised keep the price they were raised at."
       />
-      <MenuAdmin menu={menu} />
+      <MenuAdmin
+        menu={menu}
+        outlets={outlets}
+        channels={ORDER_CHANNELS.map((c) => ({ value: c, label: ORDER_CHANNEL_LABEL[c] }))}
+      />
     </>
   );
 }

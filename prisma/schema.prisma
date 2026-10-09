@@ -108,6 +108,7 @@ model Tenant {
   menuItems      MenuItem[]
   menuVariants   MenuItemVariant[]
   menuModifiers  MenuModifier[]
+  menuAvailability MenuAvailability[]
   orderLineModifiers OrderLineModifier[]
   diningZones    DiningZone[]
   diningTables   DiningTable[]
@@ -1568,6 +1569,7 @@ model Location {
   diningZones  DiningZone[]
   diningTables DiningTable[]
   diningOrders DiningOrder[]
+  menuAvailability MenuAvailability[]
   bills        Bill[]
   customers    Customer[]
   complaints   Complaint[]
@@ -2300,12 +2302,38 @@ model MenuItem {
   category MenuCategory      @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   variants MenuItemVariant[]
   modifiers MenuModifier[]
+  availability MenuAvailability[]
   lines    OrderLine[]
   recipe   Recipe?
 
   @@unique([tenantId, id], name: "menu_item_tenant_scoped_id")
   @@index([tenantId, categoryId, sortOrder])
   @@map("menu_item")
+}
+
+/// A scoped availability rule for a menu item (Task 125 items 3.2, 3.3). No rule means
+/// available wherever active; any rule means available only where one matches. Null
+/// outlet/channel/window means "any". Minutes are since local midnight, in the
+/// outlet's own zone; a window that ends before it starts wraps past midnight.
+model MenuAvailability {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  itemId       String   @map("item_id") @db.Uuid
+  locationId   String?  @map("location_id") @db.Uuid
+  channel      String?
+  fromMinute   Int?     @map("from_minute")
+  toMinute     Int?     @map("to_minute")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  version      Int      @default(1)
+  customFields Json     @default("{}") @map("custom_fields")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item     MenuItem  @relation(fields: [tenantId, itemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "menu_availability_item_fkey")
+  location Location? @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "menu_availability_location_fkey")
+
+  @@index([tenantId, itemId])
+  @@map("menu_availability")
 }
 
 /// A portion of an item — Half, Full — priced as a delta from the item.

@@ -20,6 +20,8 @@ type MenuCategory = {
     active: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
+    /** Why the item cannot be ordered on this order right now, or null. */
+    hiddenReason: string | null;
   }>;
 };
 
@@ -175,7 +177,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                       <span className="flex shrink-0 gap-1.5">
                         <CommandButton commands={"verity.dinein.add_order_lines"}
                           size="sm"
-                          disabled={!canAdd || pending}
+                          disabled={!canAdd || pending || item.hiddenReason !== null}
                           onClick={() => addLine({ itemId: item.id })}
                         >
                           Add
@@ -184,14 +186,15 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                           <CommandButton commands={"verity.dinein.add_order_lines"}
                             key={variant.id}
                             size="sm"
-                            disabled={!canAdd || pending}
+                            disabled={!canAdd || pending || item.hiddenReason !== null}
                             onClick={() => addLine({ itemId: item.id, variantId: variant.id })}
                           >
                             {variant.name}
                           </CommandButton>
                         ))}
                       </span>
-                      {item.modifiers.length > 0 && (
+                      {item.hiddenReason && <span className="w-full text-[12px] text-text-secondary">{item.hiddenReason}</span>}
+                      {item.modifiers.length > 0 && !item.hiddenReason && (
                         <span className="flex w-full flex-wrap gap-1.5" role="group" aria-label={`Add-ons for ${item.name}`}>
                           {item.modifiers.map((m) => {
                             const on = (picked[item.id] ?? []).includes(m.id);
