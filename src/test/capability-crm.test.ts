@@ -51,6 +51,7 @@ import {
   registerCrmCapability,
   saveSegment,
   updateCustomer,
+  mergeCustomers,
 } from "@/server/capabilities/crm";
 import {
   ENTITY_LOYALTY_ENTRY,
@@ -196,14 +197,14 @@ describeDb("capability: CRM", () => {
   });
 
   let lastBillId = "";
-  async function runOneVisit(tableLabel: string, qty: number): Promise<number> {
+  async function runOneVisit(tableLabel: string, qty: number, phone: string = guestPhone): Promise<number> {
     const table = await executeCommand(manager, defineTable, { zoneId, label: tableLabel, seats: 2 });
     await executeCommand(manager, moveTable, { tableId: table.id, to: "occupied" });
     const order = await executeCommand(manager, createOrder, {
       tableId: table.id,
       covers: 2,
       customerName: "Ravi Regular",
-      customerPhone: guestPhone,
+      customerPhone: phone,
     });
     await executeCommand(manager, addOrderLines, {
       orderId: order.id,
@@ -302,6 +303,50 @@ describeDb("capability: CRM", () => {
     expect(cleared).toMatchObject({ name: "Ravi Regular Kumar", email: null, birthday: null, marketingConsent: true });
 
     await expect(executeCommand(manager, updateCustomer, { customerId: customer.id, email: "not-an-email" })).rejects.toThrow();
+  });
+
+  it("merges a duplicate guest without rewriting history: one guest, both phones, one balance (Task 125 5.1)", async () => {
+    const otherPhone = "9876511111";
+    const keep = (await executeQuery(manager, getCustomer360, { phone: guestPhone }))!;
+    const keepBalance = (await executeQuery(manager, getLoyaltyBalance, { customerId: keep.id })).balance;
+
+    await runOneVisit("T-20", 3, otherPhone);
+    const dup = (await executeQuery(manager, getCustomer360, { phone: otherPhone }))!;
+    expect(dup.id).not.toBe(keep.id);
+    const dupBalance = (await executeQuery(manager, getLoyaltyBalance, { customerId: dup.id })).balance;
+    expect(dupBalance).toBeGreaterThan(0);
+
+    const merged = await executeCommand(manager, mergeCustomers, { keepId: keep.id, mergeId: dup.id });
+    expect(merged).toMatchObject({ id: keep.id, mergedPhone: otherPhone });
+
+    // Reading either row gives the one guest, counting both phones.
+    const after = (await executeQuery(manager, getCustomer360, { customerId: keep.id }))!;
+    const viaDuplicate = (await executeQuery(manager, getCustomer360, { customerId: dup.id }))!;
+    expect(viaDuplicate.id).toBe(keep.id);
+    expect(after.mergedPhones).toEqual([otherPhone]);
+    expect(after.orderCount).toBe(keep.orderCount + 1);
+    expect(after.totalSpendMinor).toBeGreaterThan(keep.totalSpendMinor);
+    expect((await executeQuery(manager, getLoyaltyBalance, { customerId: keep.id })).balance).toBe(keepBalance + dupBalance);
+
+    // The duplicate is no longer listed on its own.
+    const listed = await executeQuery(manager, listCustomers, {});
+    expect(listed.some((c) => c.id === dup.id)).toBe(false);
+    expect(listed.some((c) => c.id === keep.id)).toBe(true);
+
+    // History is untouched: the duplicate row keeps its own ledger entry.
+    const dupEntries = await withTenant(tenantId, (tx) => tx.loyaltyPointEntry.count({ where: { customerId: dup.id } }));
+    expect(dupEntries).toBe(1);
+
+    // A later visit on the merged phone earns for the kept guest.
+    await runOneVisit("T-21", 1, otherPhone);
+    const keptNow = (await executeQuery(manager, getLoyaltyBalance, { customerId: keep.id })).balance;
+    expect(keptNow).toBeGreaterThan(keepBalance + dupBalance);
+    expect(await withTenant(tenantId, (tx) => tx.loyaltyPointEntry.count({ where: { customerId: dup.id } }))).toBe(1);
+
+    // Refusals: itself, an already merged guest, and keeping a merged row.
+    await expect(executeCommand(manager, mergeCustomers, { keepId: keep.id, mergeId: keep.id })).rejects.toThrow(/two different guests/);
+    await expect(executeCommand(manager, mergeCustomers, { keepId: keep.id, mergeId: dup.id })).rejects.toThrow(/already merged/);
+    await expect(executeCommand(manager, mergeCustomers, { keepId: dup.id, mergeId: keep.id })).rejects.toThrow(/itself merged/);
   });
 
   it("saves a segment as a filter, not a list, and rejects duplicates and empty filters (Task 125 5.2)", async () => {

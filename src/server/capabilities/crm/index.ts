@@ -4,6 +4,7 @@ import { registerCommand, ValidationError, type ActorContext, type CommandContex
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { diffFields, recordActivity } from "@/server/platform/audit";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
+import { guestGroup } from "./guests";
 
 /** The subset shared by CommandContext and QueryContext — all this module needs. */
 type ReadContext = { tx: TenantScopedClient; actor: ActorContext };
@@ -64,12 +65,13 @@ type CustomerAggregates = {
   lastOrderAt: Date | null;
 };
 
+/** Aggregates over every phone that is this guest (the kept guest plus any merged into it). */
 async function computeAggregates(
   ctx: ReadContext,
-  phone: string,
+  phones: string[],
 ): Promise<CustomerAggregates> {
   const bills = await ctx.tx.bill.findMany({
-    where: { state: "settled", order: { customerPhone: phone } },
+    where: { state: "settled", order: { customerPhone: { in: phones } } },
     select: { totalMinor: true, settledAt: true },
     orderBy: { settledAt: "desc" },
   });
@@ -93,6 +95,8 @@ export const getCustomer360: QueryDefinition<
     birthday: Date | null;
     marketingConsent: boolean;
     preferredLocationId: string | null;
+    /** Other phone numbers merged into this guest (Task 125 item 5.1). */
+    mergedPhones: string[];
   } & CustomerAggregates) | null
 > = {
   key: "verity.crm.get_customer_360",
@@ -108,15 +112,19 @@ export const getCustomer360: QueryDefinition<
         });
     if (!customer) return null;
 
-    const aggregates = await computeAggregates(ctx, customer.phone);
+    // A merged row answers as the guest it was merged into, so old links still work.
+    const group = await guestGroup(ctx.tx, customer.id);
+    const head = group.length > 0 && group[0].id !== customer.id ? await ctx.tx.customer.findUniqueOrThrow({ where: { id: group[0].id } }) : customer;
+    const aggregates = await computeAggregates(ctx, group.length > 0 ? group.map((g) => g.phone) : [customer.phone]);
     return {
-      id: customer.id,
-      phone: customer.phone,
-      name: customer.name,
-      email: customer.email,
-      birthday: customer.birthday,
-      marketingConsent: customer.marketingConsent,
-      preferredLocationId: customer.preferredLocationId,
+      id: head.id,
+      phone: head.phone,
+      name: head.name,
+      email: head.email,
+      birthday: head.birthday,
+      marketingConsent: head.marketingConsent,
+      preferredLocationId: head.preferredLocationId,
+      mergedPhones: group.slice(1).map((g) => g.phone),
       ...aggregates,
     };
   },
@@ -140,17 +148,21 @@ export const listCustomers: QueryDefinition<
     locationId: z.string().uuid().optional(),
   }),
   handler: async (ctx, input) => {
+    // Merged duplicates are not listed: they count inside the guest they were merged into.
     const customers = await ctx.tx.customer.findMany({
-      where: input.locationId ? { preferredLocationId: input.locationId } : {},
+      where: { mergedIntoId: null, ...(input.locationId ? { preferredLocationId: input.locationId } : {}) },
       orderBy: { createdAt: "desc" },
     });
+    const merged = await ctx.tx.customer.findMany({ where: { mergedIntoId: { not: null } }, select: { mergedIntoId: true, phone: true } });
+    const extraPhones = new Map();
+    for (const m of merged) extraPhones.set(m.mergedIntoId, [...(extraPhones.get(m.mergedIntoId) ?? []), m.phone]);
 
     const rows = await Promise.all(
       customers.map(async (c) => ({
         id: c.id,
         phone: c.phone,
         name: c.name,
-        ...(await computeAggregates(ctx, c.phone)),
+        ...(await computeAggregates(ctx, [c.phone, ...(extraPhones.get(c.id) ?? [])])),
       })),
     );
 
@@ -221,6 +233,57 @@ export const updateCustomer: CommandDefinition<
       ),
     });
     return { result: { id: after.id }, events: [{ name: "verity.crm.customer_updated", entityId: after.id }] };
+  },
+};
+
+/**
+ * Merges a duplicate guest into the one to keep (Task 125 item 5.1). Nothing is
+ * deleted and no order, bill or ledger entry is edited (ADR-007: identity
+ * follows a contact, history is not rewritten): the duplicate row is pointed at
+ * the kept guest, and every read counts both phones as one guest from then on.
+ * Details the kept guest lacks (name, email, birthday) are filled from the
+ * duplicate; marketing consent stays as the kept guest has it, because consent
+ * is given per person and is never widened by a merge.
+ */
+export const mergeCustomers: CommandDefinition<{ keepId: string; mergeId: string }, { id: string; mergedPhone: string }> = {
+  key: "verity.crm.merge_customers",
+  entity: ENTITY_CUSTOMER,
+  verb: "Edit",
+  input: z.object({ keepId: z.string().uuid(), mergeId: z.string().uuid() }),
+  preconditions: async (ctx, input) => {
+    if (input.keepId === input.mergeId) throw new ValidationError("E_VALIDATION: choose two different guests");
+    const [keep, merge] = await Promise.all([
+      ctx.tx.customer.findUnique({ where: { id: input.keepId } }),
+      ctx.tx.customer.findUnique({ where: { id: input.mergeId } }),
+    ]);
+    if (!keep || !merge) throw new ValidationError("E_VALIDATION: guest not found");
+    if (keep.mergedIntoId) throw new ValidationError("E_VALIDATION: the guest to keep was itself merged into another; keep that one instead");
+    if (merge.mergedIntoId) throw new ValidationError("E_VALIDATION: that guest is already merged");
+  },
+  handler: async (ctx, input) => {
+    const keep = await ctx.tx.customer.findUniqueOrThrow({ where: { id: input.keepId } });
+    const merge = await ctx.tx.customer.findUniqueOrThrow({ where: { id: input.mergeId } });
+    const now = new Date();
+    // Flatten first so a group stays one level deep: guests already merged into
+    // the duplicate now point at the kept guest.
+    await ctx.tx.customer.updateMany({ where: { mergedIntoId: merge.id }, data: { mergedIntoId: keep.id, mergedAt: now } });
+    await ctx.tx.customer.update({ where: { id: merge.id }, data: { mergedIntoId: keep.id, mergedAt: now, version: { increment: 1 } } });
+    const fill = {
+      name: keep.name ?? merge.name,
+      email: keep.email ?? merge.email,
+      birthday: keep.birthday ?? merge.birthday,
+    };
+    await ctx.tx.customer.update({ where: { id: keep.id }, data: { ...fill, version: { increment: 1 } } });
+    await recordActivity(ctx, {
+      entityKey: ENTITY_CUSTOMER,
+      entityId: keep.id,
+      commandKey: "verity.crm.merge_customers",
+      changes: diffFields({ mergedPhones: "" }, { mergedPhones: merge.phone }),
+    });
+    return {
+      result: { id: keep.id, mergedPhone: merge.phone },
+      events: [{ name: "verity.crm.customers_merged", entityId: keep.id }],
+    };
   },
 };
 
@@ -330,6 +393,7 @@ export function registerCrmCapability(): void {
     ],
   });
   registerCommand(updateCustomer);
+  registerCommand(mergeCustomers);
   registerCommand(saveSegment);
   registerCommand(deleteSegment);
   registerQuery(listSegments);

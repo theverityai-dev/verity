@@ -25,6 +25,7 @@ import {
   reversePointsForRefund,
 } from "@/server/capabilities/loyalty";
 import { hasPermission } from "@/server/platform/authorization";
+import { findGuestByPhone } from "@/server/capabilities/crm/guests";
 import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
 import { assertOutletInScope, reachableOutletIds } from "./scope";
 import type { ActorContext as DineinActor } from "@/server/platform/command";
@@ -1703,9 +1704,7 @@ export const redeemPointsOnBill: CommandDefinition<
   },
   handler: async (ctx, input) => {
     const bill = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId }, include: { order: { select: { customerPhone: true } } } });
-    const customer = await ctx.tx.customer.findUnique({
-      where: { tenantId_phone: { tenantId: ctx.actor.tenantId, phone: bill.order.customerPhone! } },
-    });
+    const customer = await findGuestByPhone(ctx.tx, ctx.actor.tenantId, bill.order.customerPhone!);
     if (!customer) throw new ValidationError("E_VALIDATION: this guest has no loyalty record yet");
 
     const valueMinor = await debitPointsForBill(ctx, {
@@ -2290,10 +2289,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
     // ledger (a bill's reader is not automatically a ledger reader).
     let redeemable: BillDetail["redeemable"] = null;
     if (bill.state === "open" && bill.discountMinor === 0 && bill.order.customerPhone) {
-      const customer = await ctx.tx.customer.findUnique({
-        where: { tenantId_phone: { tenantId: ctx.actor.tenantId, phone: bill.order.customerPhone } },
-        select: { id: true },
-      });
+      const customer = await findGuestByPhone(ctx.tx, ctx.actor.tenantId, bill.order.customerPhone);
       if (customer && (await hasPermission(ctx.tx, ctx.actor.roleId, "Read", ENTITY_LOYALTY_ENTRY))) {
         const found = await redeemablePoints(ctx.tx, customer.id, bill.subtotalMinor);
         if (found.maxPoints > 0) redeemable = { balance: found.balance, maxPoints: found.maxPoints, valueMinor: found.valueMinor };

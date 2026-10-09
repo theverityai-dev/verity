@@ -6,6 +6,7 @@ import { runQuery } from "@/server/actions/platform";
 import { PageHeader, Stat, StatRow, DefinitionList, Panel, EmptyState, ErrorState } from "@/components/ui/primitives";
 import { GuestActions } from "./GuestActions";
 import { EditGuest } from "./EditGuest";
+import { MergeGuest } from "./MergeGuest";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ type Customer360 = {
   id: string; phone: string; name: string | null; email: string | null;
   birthday: string | null; marketingConsent: boolean;
   orderCount: number; totalSpendMinor: number; avgOrderValueMinor: number; lastOrderAt: string | null;
+  mergedPhones: string[];
 };
 type Complaint = { id: string; category: string; severity: string; status: string; createdAt: string };
 
@@ -25,11 +27,13 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
   const { customerId } = await params;
   const actor = await requireActor();
 
-  const [customerResult, balanceResult, complaintsResult, locations] = await Promise.all([
+  const [customerResult, balanceResult, complaintsResult, locations, allGuests] = await Promise.all([
     runQuery<Customer360 | null>("verity.crm.get_customer_360", { customerId }),
     runQuery<{ balance: number }>("verity.loyalty.get_balance", { customerId }),
     runQuery<Complaint[]>("verity.complaint.list", { customerId }),
     withTenant(actor.tenantId, (tx) => tx.location.findMany({ select: { id: true, name: true } })),
+    // Candidates for "merge a duplicate": the other guests who are not already merged.
+    runQuery<Array<{ id: string; name: string | null; phone: string }>>("verity.crm.list_customers", {}),
   ]);
 
   if (!customerResult.ok) return <ErrorState title="Could not load guest" message={customerResult.message} issues={customerResult.issues} retryable={customerResult.retryable} />;
@@ -40,6 +44,7 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
   // The query returns a Date; the form and the display both want the calendar day.
   const birthday = customer.birthday ? new Date(customer.birthday).toISOString().slice(0, 10) : null;
   const complaints = complaintsResult.ok ? complaintsResult.data : [];
+  const others = allGuests.ok ? allGuests.data.filter((g) => g.id !== customer.id).map((g) => ({ id: g.id, name: g.name, phone: g.phone })) : [];
 
   return (
     <>
@@ -52,10 +57,10 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
         <Stat label="Loyalty points" value={balance} />
       </StatRow>
 
-      <Panel title="Details" className="mb-6" action={<EditGuest customerId={customer.id} phone={customer.phone} name={customer.name} email={customer.email} birthday={birthday} marketingConsent={customer.marketingConsent} />}>
+      <Panel title="Details" className="mb-6" action={<div className="flex flex-wrap gap-2"><MergeGuest customerId={customer.id} others={others} /><EditGuest customerId={customer.id} phone={customer.phone} name={customer.name} email={customer.email} birthday={birthday} marketingConsent={customer.marketingConsent} /></div>}>
         <DefinitionList
           items={[
-            { term: "Phone", value: customer.phone },
+            { term: "Phone", value: customer.mergedPhones.length > 0 ? [customer.phone, ...customer.mergedPhones].join(", ") : customer.phone },
             { term: "Email", value: customer.email ?? "—" },
             { term: "Birthday", value: birthday ? new Date(`${birthday}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "long", timeZone: "UTC" }) : "—" },
             { term: "Offers and messages", value: customer.marketingConsent ? "Agreed" : "Not agreed" },

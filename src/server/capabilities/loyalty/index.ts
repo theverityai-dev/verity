@@ -8,6 +8,7 @@ import {
 } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { resolveConfig } from "@/server/platform/capability";
+import { findGuestByPhone, guestGroup } from "@/server/capabilities/crm/guests";
 
 /**
  * CAPABILITY: Loyalty — `verity.capability.loyalty` (Colonel Kebabz Phase 2,
@@ -44,9 +45,8 @@ const DEFAULT_REDEEM_PAISE_PER_POINT = 20;
 export async function awardPointsForOrder(ctx: CommandContext, orderId: string, billId: string): Promise<void> {
   const order = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: orderId } });
   if (!order.customerPhone) return;
-  const customer = await ctx.tx.customer.findUnique({
-    where: { tenantId_phone: { tenantId: ctx.actor.tenantId, phone: order.customerPhone } },
-  });
+  // A phone merged into another guest earns on that guest (Task 125 item 5.1).
+  const customer = await findGuestByPhone(ctx.tx, ctx.actor.tenantId, order.customerPhone);
   if (!customer) return; // upsertCustomerForOrder runs earlier in generateBill; this is defensive.
 
   const bill = await ctx.tx.bill.findUniqueOrThrow({ where: { id: billId } });
@@ -107,12 +107,19 @@ export async function reversePointsForRefund(ctx: CommandContext, billId: string
  * the paise value of one point, and the most points whose value fits inside
  * `capMinor` (the bill's subtotal), so a redemption can never exceed the bill.
  */
+/** A guest's balance across every phone merged into them. */
+async function groupBalance(tx: CommandContext["tx"], customerId: string): Promise<number> {
+  const ids = (await guestGroup(tx, customerId)).map((g) => g.id);
+  const agg = await tx.loyaltyPointEntry.aggregate({ where: { customerId: { in: ids.length > 0 ? ids : [customerId] } }, _sum: { points: true } });
+  return agg._sum.points ?? 0;
+}
+
 export async function redeemablePoints(
   tx: CommandContext["tx"],
   customerId: string,
   capMinor: number,
 ): Promise<{ balance: number; paisePerPoint: number; maxPoints: number; valueMinor: number }> {
-  const balance = (await tx.loyaltyPointEntry.aggregate({ where: { customerId }, _sum: { points: true } }))._sum.points ?? 0;
+  const balance = await groupBalance(tx, customerId);
   const paisePerPoint = Number(
     (await resolveConfig<number>(tx, CONFIG_LOYALTY_REDEEM_PAISE_PER_POINT)) ?? DEFAULT_REDEEM_PAISE_PER_POINT,
   );
@@ -196,8 +203,7 @@ async function currentBalance(
   ctx: { tx: CommandContext["tx"] },
   customerId: string,
 ): Promise<number> {
-  const agg = await ctx.tx.loyaltyPointEntry.aggregate({ where: { customerId }, _sum: { points: true } });
-  return agg._sum.points ?? 0;
+  return groupBalance(ctx.tx, customerId);
 }
 
 export const getLoyaltyBalance: QueryDefinition<{ customerId: string }, { balance: number }> = {

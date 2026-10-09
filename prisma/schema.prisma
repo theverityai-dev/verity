@@ -4757,6 +4757,10 @@ model Customer {
   birthday            DateTime? @db.Date
   marketingConsent    Boolean   @default(false) @map("marketing_consent")
   preferredLocationId String?   @map("preferred_location_id") @db.Uuid
+  /// Set when this row is a duplicate of another guest (Task 125 item 5.1). Reads treat
+  /// the target as the guest; nothing here is deleted or rewritten.
+  mergedIntoId        String?   @map("merged_into_id") @db.Uuid
+  mergedAt            DateTime? @map("merged_at")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
   version             Int       @default(1)
@@ -4765,8 +4769,12 @@ model Customer {
   preferredLocation Location?           @relation(fields: [tenantId, preferredLocationId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction)
   loyaltyEntries    LoyaltyPointEntry[]
   complaints        Complaint[]
+  mergedInto        Customer?           @relation("GuestMerge", fields: [tenantId, mergedIntoId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "customer_merged_into_fkey")
+  mergedGuests      Customer[]          @relation("GuestMerge")
 
   @@unique([tenantId, phone])
+  @@unique([tenantId, id], name: "customer_tenant_scoped_id")
+  @@index([tenantId, mergedIntoId])
   @@map("customer")
 }
 
