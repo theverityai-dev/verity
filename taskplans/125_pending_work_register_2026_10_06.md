@@ -254,6 +254,15 @@ Write each into `DECISIONS.md` with its basis.
   uses them is committed but not yet pushed, so the live app is unaffected until the batch push. Remaining
   before the push: confirm CI, `/api/health` commit, `/api/ready`.
 
+- **3.2 and 3.3 built 2026-10-09 (commit `0777bba`).** `menu_availability` (migration
+  `20261009040000_dinein_menu_availability`, **applied to the local test DB only, not yet to production**): a rule
+  names an outlet, a channel, a daily window in the outlet's own clock, or any mix; no rule means available
+  wherever active, rules mean available only where one matches. `setMenuItemAvailability` (Edit on menu item,
+  replace-all, audited), `addOrderLines` refuses an unavailable item, `listMenu({orderId})` returns
+  `hiddenReason`, the order pad disables the item and prints the reason, Menu > Hours edits the rules. Pure
+  rules in `src/lib/menu-availability.ts` (10 tests); DB test in `capability-dinein`. Not built: per-item days
+  of the week, and a whole-menu (breakfast menu) grouping; per item rules cover the stated need.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
