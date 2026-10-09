@@ -280,6 +280,16 @@ Write each into `DECISIONS.md` with its basis.
   `20261009040000_dinein_menu_availability`, `20261009050000_command_failure`,
   `20261009060000_crm_customer_merge`. Applied to the local test DB only.
 
+- **Pushed and live 2026-10-09:** 27 commits to `main` (`c7b3e57`), CI green, `/api/health` shows the commit,
+  `/api/ready` 200. All seven session migrations are on production. The stale worktree
+  `completion-gap`, its branch and stash `codex-audit-temp` are deleted (8.5; patch backup kept in the session
+  scratchpad).
+- **1.2 / 1.4 first measured pass, Opera 390x844, live HQ (operator signed in):** no horizontal overflow on
+  `/hq` and `/hq/clients`, body 17px, tab bar and grouped cells render as ADR-033 specifies. Misses found and
+  fixed in `9b7344d` (not yet pushed): table link cells (client name, Administer) were 15-18px tall and the
+  mobile header logo link 26px. Not yet measured: the client shell screens (Menu > Hours, order pad reason,
+  Audit > Failed commands, guest merge), which need an entered client or the demo admin session.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
