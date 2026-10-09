@@ -263,6 +263,12 @@ Write each into `DECISIONS.md` with its basis.
   rules in `src/lib/menu-availability.ts` (10 tests); DB test in `capability-dinein`. Not built: per-item days
   of the week, and a whole-menu (breakfast menu) grouping; per item rules cover the stated need.
 
+- **7.4 built 2026-10-09 (ADR-036, commit `245e861`).** `command_failure` (migration
+  `20261009050000_command_failure`, **local test DB only, not yet on production**), written after rollback
+  from the command path with code, user, channel and correlation id and no payload or message; client sees
+  its own on Audit; HQ gets `operator_command_failures` totals (no ids, no text) feeding the attention list.
+  Tests: dinein (recording, no leakage, append-only), operator-boundary (empty for a stranger), conformance.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
