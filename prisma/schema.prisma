@@ -124,6 +124,11 @@ model Tenant {
   outletChecklistTicks OutletChecklistTick[]
   menuCourses          MenuCourse[]
   menuPriceRules       MenuPriceRule[]
+  selfOrderLinks       SelfOrderLink[]
+  selfOrderSessions    SelfOrderSession[]
+  selfOrderSubmissions SelfOrderSubmission[]
+  selfOrderSubmissionLines SelfOrderSubmissionLine[]
+  serviceRequests      ServiceRequest[]
   kitchenStations      KitchenStation[]
   kitchenStationCategories KitchenStationCategory[]
   kitchenTickets       KitchenTicket[]
@@ -1637,6 +1642,10 @@ model Location {
   outletChecklistRuns  OutletChecklistRun[]
   outletProfile OutletProfile?
   menuPriceRules       MenuPriceRule[]
+  selfOrderLinks       SelfOrderLink[]
+  selfOrderSessions    SelfOrderSession[]
+  selfOrderSubmissions SelfOrderSubmission[]
+  serviceRequests      ServiceRequest[]
   kitchenStations      KitchenStation[]
   kitchenStationCategories KitchenStationCategory[]
   kitchenTickets       KitchenTicket[]
@@ -2439,6 +2448,127 @@ model MenuAvailability {
   @@map("menu_availability")
 }
 
+/// A printed sticker's link (ADR-042): one live link per table, one per outlet for pickup.
+/// Only the SHA-256 of the token is stored; the token is shown once, in the QR.
+model SelfOrderLink {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  locationId      String    @map("location_id") @db.Uuid
+  tableId         String?   @map("table_id") @db.Uuid
+  /// table | pickup
+  kind            String
+  tokenHash       String    @unique @map("token_hash")
+  createdByUserId String    @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  revokedAt       DateTime? @map("revoked_at")
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location     @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_link_location_fkey")
+  table    DiningTable? @relation(fields: [tenantId, tableId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_link_table_fkey")
+
+  @@index([tenantId, locationId])
+  @@map("self_order_link")
+}
+
+/// A guest's visit (ADR-042): bound to one outlet and a table or a pickup point, expiring,
+/// closed when the table is released. Not an identity: nothing here names the guest.
+model SelfOrderSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  tenantId       String    @map("tenant_id") @db.Uuid
+  locationId     String    @map("location_id") @db.Uuid
+  tableId        String?   @map("table_id") @db.Uuid
+  kind           String
+  linkId         String    @map("link_id") @db.Uuid
+  tokenHash      String    @unique @map("token_hash")
+  openedAt       DateTime  @default(now()) @map("opened_at")
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at")
+  expiresAt      DateTime  @map("expires_at")
+  closedAt       DateTime? @map("closed_at")
+
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location    Location              @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_session_location_fkey")
+  table       DiningTable?          @relation(fields: [tenantId, tableId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_session_table_fkey")
+  submissions SelfOrderSubmission[]
+  requests    ServiceRequest[]
+
+  @@unique([tenantId, id], name: "self_order_session_tenant_scoped_id")
+  @@index([tenantId, locationId, closedAt])
+  @@map("self_order_session")
+}
+
+/// What a guest asked for: a proposal that staff accept, or that is applied at once when the
+/// table's order is already with the kitchen (ADR-042 item 5).
+model SelfOrderSubmission {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  sessionId       String    @map("session_id") @db.Uuid
+  locationId      String    @map("location_id") @db.Uuid
+  tableId         String?   @map("table_id") @db.Uuid
+  /// pending | accepted | rejected
+  status          String    @default("pending")
+  customerName    String?   @map("customer_name")
+  customerPhone   String?   @map("customer_phone")
+  /// Set when it was applied at once to an order already with the kitchen.
+  autoApplied     Boolean   @default(false) @map("auto_applied")
+  idempotencyKey  String?   @map("idempotency_key")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  decidedAt       DateTime? @map("decided_at")
+  decidedByUserId String?   @map("decided_by_user_id") @db.Uuid
+  rejectReason    String?   @map("reject_reason")
+  orderId         String?   @map("order_id") @db.Uuid
+
+  tenant   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  session  SelfOrderSession          @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_submission_session_fkey")
+  location Location                  @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_submission_location_fkey")
+  lines    SelfOrderSubmissionLine[]
+
+  @@unique([tenantId, id], name: "self_order_submission_tenant_scoped_id")
+  @@unique([sessionId, idempotencyKey], name: "self_order_submission_once")
+  @@index([tenantId, locationId, status])
+  @@map("self_order_submission")
+}
+
+model SelfOrderSubmissionLine {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  submissionId String   @map("submission_id") @db.Uuid
+  itemId       String   @map("item_id") @db.Uuid
+  variantId    String?  @map("variant_id") @db.Uuid
+  qty          Int
+  lineNote     String?  @map("line_note")
+  modifierIds  String[] @map("modifier_ids") @db.Uuid
+
+  tenant     Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  submission SelfOrderSubmission @relation(fields: [tenantId, submissionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "self_order_submission_line_submission_fkey")
+
+  @@index([tenantId, submissionId])
+  @@map("self_order_submission_line")
+}
+
+/// A guest asking for a waiter or the bill (ADR-042 item 8). Asking for the bill does not generate it.
+model ServiceRequest {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  locationId       String    @map("location_id") @db.Uuid
+  tableId          String?   @map("table_id") @db.Uuid
+  sessionId        String?   @map("session_id") @db.Uuid
+  /// waiter | bill
+  kind             String
+  /// open | acknowledged | resolved
+  status           String    @default("open")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  resolvedAt       DateTime? @map("resolved_at")
+  resolvedByUserId String?   @map("resolved_by_user_id") @db.Uuid
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location          @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "service_request_location_fkey")
+  table    DiningTable?      @relation(fields: [tenantId, tableId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "service_request_table_fkey")
+  session  SelfOrderSession? @relation(fields: [tenantId, sessionId], references: [tenantId, id], onDelete: SetNull, onUpdate: NoAction, map: "service_request_session_fkey")
+
+  @@index([tenantId, locationId, status])
+  @@map("service_request")
+}
+
 /// A price an item sells at under certain conditions (ADR-043): at one outlet, in one
 /// channel, from a date, until a date. The item's own price is the base; the most
 /// specific matching rule wins (see `src/lib/menu-price.ts`). Orders snapshot the
@@ -2760,6 +2890,9 @@ model DiningTable {
   zone     DiningZone    @relation(fields: [tenantId, zoneId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction)
   location Location      @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "dining_table_location_fkey")
   orders   DiningOrder[]
+  selfOrderLinks    SelfOrderLink[]
+  selfOrderSessions SelfOrderSession[]
+  serviceRequests   ServiceRequest[]
 
   @@unique([tenantId, locationId, label])
   @@unique([tenantId, id], name: "dining_table_tenant_scoped_id")
@@ -3080,6 +3213,10 @@ model OutletProfile {
   serviceChargeBp  Int      @default(0) @map("service_charge_bp")
   /// A delivery platform collects the tax on its orders, so the outlet's own invoice for them carries none.
   platformTaxFree  Boolean  @default(true) @map("platform_tax_free")
+  /// Customer self-order (ADR-042) is dark until the owner turns it on for the outlet.
+  selfOrderEnabled Boolean  @default(false) @map("self_order_enabled")
+  /// The provisioned identity guest orders run as: a real User with a narrow role and no credentials.
+  selfOrderUserId  String?  @map("self_order_user_id") @db.Uuid
   /// Bills raised before this moment keep their old label.
   cutoverAt        DateTime @default(now()) @map("cutover_at")
   createdAt        DateTime @default(now()) @map("created_at")

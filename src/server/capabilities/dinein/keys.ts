@@ -18,6 +18,9 @@ export const ENTITY_ORDER = "verity.dinein.order";
 export const ENTITY_ORDER_LINE = "verity.dinein.order_line";
 export const ENTITY_BILL = "verity.dinein.bill";
 export const ENTITY_PAYMENT = "verity.dinein.payment";
+/** Customer self-order (ADR-042): what a guest proposes, and what a guest asks of the floor. */
+export const ENTITY_SELF_ORDER_SUBMISSION = "verity.dinein.self_order_submission";
+export const ENTITY_SERVICE_REQUEST = "verity.dinein.service_request";
 
 /** Configuration keys this capability reads. Rates vary; arithmetic does not. */
 export const CONFIG_CGST_RATE = "verity.dinein.tax.cgst_rate";
