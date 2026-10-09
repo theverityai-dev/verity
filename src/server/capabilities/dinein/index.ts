@@ -32,6 +32,8 @@ import { assertOutletInScope, reachableOutletIds, scopedLocationIds } from "./sc
 import { registerDineinReports } from "./reports";
 import { registerDineinService } from "./service";
 import { registerDineinChecklist } from "./checklist";
+import { describeSource, resolvePrice } from "@/lib/menu-price";
+import { loadPriceRules, priceContextFor, registerDineinPrices, toPriceRule } from "./prices";
 import { noteVoidedAfterSend, registerDineinKitchen, routeToStation, writeTickets } from "./kitchen";
 import {
   buildTaxInvoice,
@@ -872,6 +874,9 @@ export const addOrderLines: CommandDefinition<
     // The station is worked out once per category, and the lines created are kept for the ticket.
     const stationFor = new Map<string, string | null>();
     const createdLineIds: string[] = [];
+    // One rule decides every price (ADR-043): the outlet, the channel and the service day.
+    const priceContext = await priceContextFor(ctx.tx, ctx.actor.organizationId, order);
+    const priceRules = await loadPriceRules(ctx.tx, input.lines.map((l) => l.itemId));
 
     for (const line of input.lines) {
       const item = await ctx.tx.menuItem.findUnique({ where: { id: line.itemId }, include: { course: true } });
@@ -883,7 +888,7 @@ export const addOrderLines: CommandDefinition<
       const hidden = unavailableReason(rules, where, await ruleLabels(ctx.tx, rules));
       if (hidden) throw new ValidationError(`E_VALIDATION: ${item.name} is not available on this order. ${hidden}`);
 
-      let unitPriceMinor = item.priceMinor;
+      let unitPriceMinor = resolvePrice(item.priceMinor, priceRules.get(item.id) ?? [], priceContext).priceMinor;
       let variantName: string | null = null;
       if (line.variantId) {
         const variant = await ctx.tx.menuItemVariant.findUnique({ where: { id: line.variantId } });
@@ -1991,6 +1996,8 @@ export const listMenu: QueryDefinition<
       /** Total GST rate in basis points, or null for the tenant default. */
       taxRateBp: number | null;
       courseId: string | null;
+      /** Where the price on an order pad came from, in words; null for the item's own price. */
+      priceSource: string | null;
       variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
       /** Add-ons; retired ones appear only when `includeInactive` is set. */
       modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
@@ -2014,6 +2021,7 @@ export const listMenu: QueryDefinition<
             variants: { orderBy: { name: "asc" } },
             modifiers: { where: input.includeInactive ? {} : { active: true }, orderBy: { name: "asc" } },
             availability: { include: { location: { select: { name: true } } }, orderBy: { createdAt: "asc" } },
+            priceRules: true,
           },
         },
       },
@@ -2021,6 +2029,8 @@ export const listMenu: QueryDefinition<
 
     const order = input.orderId ? await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } }) : null;
     const where = order ? await orderAvailabilityContext(ctx.tx, order) : null;
+    const priceCtx = order ? await priceContextFor(ctx.tx, ctx.actor.organizationId, order) : null;
+    const outletName = order ? (await ctx.tx.location.findUnique({ where: { id: order.locationId }, select: { name: true } }))?.name : undefined;
     const labels = await ruleLabels(ctx.tx, categories.flatMap((c) => c.items.flatMap((i) => i.availability.map(toRule))));
 
     return categories.map((category) => ({
@@ -2029,7 +2039,13 @@ export const listMenu: QueryDefinition<
       items: category.items.map((item) => ({
         id: item.id,
         name: item.name,
-        priceMinor: item.priceMinor,
+        priceMinor: priceCtx ? resolvePrice(item.priceMinor, item.priceRules.map((r) => toPriceRule(r)), priceCtx).priceMinor : item.priceMinor,
+        priceSource: priceCtx
+          ? describeSource(resolvePrice(item.priceMinor, item.priceRules.map((r) => toPriceRule(r)), priceCtx).source, {
+              outlet: outletName,
+              channel: ORDER_CHANNEL_LABEL[priceCtx.channel as OrderChannel],
+            })
+          : null,
         active: item.active,
         featured: item.featured,
         taxRateBp: item.taxRateBp,
@@ -2559,6 +2575,7 @@ export * from "./service";
 export * from "./checklist";
 export * from "./gst";
 export * from "./kitchen";
+export * from "./prices";
 
 export const salesSummary: QueryDefinition<
   { day?: string; locationId?: string },
@@ -2877,4 +2894,5 @@ export function registerDineinCapability(): void {
   registerDineinChecklist();
   registerDineinGst();
   registerDineinKitchen();
+  registerDineinPrices();
 }

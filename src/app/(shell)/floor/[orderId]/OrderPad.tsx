@@ -19,6 +19,8 @@ type MenuCategory = {
     priceMinor: number;
     active: boolean;
     featured: boolean;
+    /** Where this price came from when it is not the item's own, e.g. "Delivery platform price". */
+    priceSource: string | null;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
     /** Why the item cannot be ordered on this order right now, or null. */
@@ -192,6 +194,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                         <span className="text-[12px] text-text-tertiary">
                           {rupees(item.priceMinor)}
                           {item.featured ? " · Special" : ""}
+                          {item.priceSource ? " · " + item.priceSource : ""}
                         </span>
                       </span>
                       <span className="flex shrink-0 gap-1.5">

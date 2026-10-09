@@ -43,6 +43,9 @@ import {
   editMenuItem,
   defineZone,
   acknowledgeCancelledLine,
+  endMenuPriceRule,
+  listMenuPriceRules,
+  saveMenuPriceRule,
   checklistToday,
   getKitchenTicket,
   kitchenCancelled,
@@ -1364,6 +1367,68 @@ describeDb("capability: Dine-in", () => {
     await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "walked out" });
     expect((await executeQuery(manager, kitchenQueue, {})).some((q) => q.orderId === order.id)).toBe(false);
     expect((await executeQuery(manager, kitchenCancelled, {})).some((c) => c.label === "Table KS-1")).toBe(false);
+  });
+
+  it("prices a dish by outlet and channel from one rule, shows where the price came from, and leaves taken orders alone (ADR-043)", async () => {
+    const menuNow = async () => (await executeQuery(manager, listMenu, {})).flatMap((c) => c.items);
+    const basePrice = (await menuNow()).find((i) => i.id === naanId)!.priceMinor;
+    const todayStr = (await executeQuery(manager, salesSummary, {})).day;
+    const tomorrow = new Date(Date.parse(`${todayStr}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
+    // A rule must change something, and an outlet's staff cannot set head office's tenant-wide price.
+    await expect(
+      executeCommand(manager, saveMenuPriceRule, { itemId: naanId, channel: "delivery_platform", priceMinor: basePrice }),
+    ).rejects.toThrow(/changes? nothing|would change nothing/);
+    await expect(
+      executeCommand(waiter, saveMenuPriceRule, { itemId: naanId, channel: "delivery_platform", priceMinor: basePrice + 1_000 }),
+    ).rejects.toThrow();
+
+    const platformRule = await executeCommand(manager, saveMenuPriceRule, { itemId: naanId, channel: "delivery_platform", priceMinor: basePrice + 1_000 });
+    const outletRule = await executeCommand(manager, saveMenuPriceRule, { itemId: naanId, locationId, priceMinor: basePrice + 500 });
+    // Starts tomorrow: does not touch today's price.
+    await executeCommand(manager, saveMenuPriceRule, { itemId: naanId, priceMinor: basePrice + 9_000, effectiveFrom: tomorrow });
+
+    const priceOn = async (orderId: string) => (await executeQuery(manager, listMenu, { orderId })).flatMap((c) => c.items).find((i) => i.id === naanId)!;
+
+    // Dine-in at this outlet: the outlet rule wins over the base; the dated rule is not yet in force.
+    const t = await executeCommand(manager, defineTable, { zoneId, label: "PR-1", seats: 2 });
+    await executeCommand(manager, moveTable, { tableId: t.id, to: "occupied" });
+    const dineIn = await executeCommand(manager, createOrder, { tableId: t.id, covers: 1 });
+    const seen = await priceOn(dineIn.id);
+    expect(seen.priceMinor).toBe(basePrice + 500);
+    expect(seen.priceSource).toMatch(/price$/);
+    await executeCommand(manager, addOrderLines, { orderId: dineIn.id, lines: [{ itemId: naanId, qty: 1 }] });
+    expect((await executeQuery(manager, getOrderDetail, { orderId: dineIn.id }))!.lines[0]!.unitPriceMinor).toBe(basePrice + 500);
+
+    // A delivery-platform order at the same outlet: outlet beats channel only when both match,
+    // otherwise the more specific of those that apply wins: here outlet (2) over channel (1).
+    const platform = await executeCommand(manager, createOrder, { channel: "delivery_platform", locationId, platform: "Zomato", platformOrderRef: "P-1" });
+    expect((await priceOn(platform.id)).priceMinor).toBe(basePrice + 500);
+
+    // An outlet-and-channel rule is the most specific of all.
+    await executeCommand(manager, saveMenuPriceRule, { itemId: naanId, locationId, channel: "delivery_platform", priceMinor: basePrice + 2_000 });
+    expect((await priceOn(platform.id)).priceMinor).toBe(basePrice + 2_000);
+    expect((await priceOn(platform.id)).priceSource).toMatch(/price$/);
+    // The dine-in order already taken keeps the price it was taken at.
+    expect((await executeQuery(manager, getOrderDetail, { orderId: dineIn.id }))!.lines[0]!.unitPriceMinor).toBe(basePrice + 500);
+    await executeCommand(manager, addOrderLines, { orderId: platform.id, lines: [{ itemId: naanId, qty: 1 }] });
+    expect((await executeQuery(manager, getOrderDetail, { orderId: platform.id }))!.lines[0]!.unitPriceMinor).toBe(basePrice + 2_000);
+
+    // The Prices tab lists every rule with where it applies; two of the same scope over the same days are flagged.
+    await executeCommand(manager, saveMenuPriceRule, { itemId: naanId, channel: "delivery_platform", priceMinor: basePrice + 1_500 });
+    const rules = await executeQuery(manager, listMenuPriceRules, { itemId: naanId });
+    expect(rules.length).toBeGreaterThanOrEqual(5);
+    expect(rules.find((r) => r.id === platformRule.id)!.overlaps).toBe(true);
+    expect(rules.find((r) => r.id === outletRule.id)!.overlaps).toBe(false);
+    expect(rules.find((r) => r.priceMinor === basePrice + 9_000)!.current).toBe(false);
+
+    // Ending a rule keeps it on the list; the item goes back to the next price that applies.
+    await executeCommand(manager, endMenuPriceRule, { ruleId: outletRule.id, on: todayStr });
+    expect((await executeQuery(manager, listMenuPriceRules, { itemId: naanId })).some((r) => r.id === outletRule.id)).toBe(true);
+    await expect(executeCommand(manager, endMenuPriceRule, { ruleId: platformRule.id, on: "2000-01-01" })).rejects.toThrow(/before it starts/);
+
+    await executeCommand(manager, cancelOrder, { orderId: dineIn.id });
+    await executeCommand(manager, cancelOrder, { orderId: platform.id });
   });
 
   it("draws a table at a size, marks specials, and says how long a table has been open (Task 126 1.5, 1.6, 1.9)", async () => {

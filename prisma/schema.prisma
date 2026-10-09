@@ -123,6 +123,7 @@ model Tenant {
   outletChecklistRuns  OutletChecklistRun[]
   outletChecklistTicks OutletChecklistTick[]
   menuCourses          MenuCourse[]
+  menuPriceRules       MenuPriceRule[]
   kitchenStations      KitchenStation[]
   kitchenStationCategories KitchenStationCategory[]
   kitchenTickets       KitchenTicket[]
@@ -1635,6 +1636,7 @@ model Location {
   outletChecklistSteps OutletChecklistStep[]
   outletChecklistRuns  OutletChecklistRun[]
   outletProfile OutletProfile?
+  menuPriceRules       MenuPriceRule[]
   kitchenStations      KitchenStation[]
   kitchenStationCategories KitchenStationCategory[]
   kitchenTickets       KitchenTicket[]
@@ -2404,6 +2406,7 @@ model MenuItem {
   availability MenuAvailability[]
   lines    OrderLine[]
   recipe   Recipe?
+  priceRules MenuPriceRule[]
   course   MenuCourse? @relation(fields: [tenantId, courseId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "menu_item_course_fkey")
 
   @@unique([tenantId, id], name: "menu_item_tenant_scoped_id")
@@ -2434,6 +2437,32 @@ model MenuAvailability {
 
   @@index([tenantId, itemId])
   @@map("menu_availability")
+}
+
+/// A price an item sells at under certain conditions (ADR-043): at one outlet, in one
+/// channel, from a date, until a date. The item's own price is the base; the most
+/// specific matching rule wins (see `src/lib/menu-price.ts`). Orders snapshot the
+/// resolved price, so ending or editing a rule never rewrites a bill.
+model MenuPriceRule {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  itemId        String    @map("item_id") @db.Uuid
+  locationId    String?   @map("location_id") @db.Uuid
+  channel       String?
+  priceMinor    Int       @map("price_minor")
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdByUserId String  @map("created_by_user_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  version       Int       @default(1)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item     MenuItem  @relation(fields: [tenantId, itemId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "menu_price_rule_item_fkey")
+  location Location? @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "menu_price_rule_location_fkey")
+
+  @@index([tenantId, itemId])
+  @@map("menu_price_rule")
 }
 
 /// A course: the order dishes come to the pass in (Task 126 item 3.5; ADR-041). Lower

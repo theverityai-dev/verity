@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { withPageAccess } from "@/components/ui/PageAccess";
 import { requireActor } from "@/server/platform/auth";
 import { installCapabilities } from "@/server/capabilities/registry";
@@ -43,6 +44,11 @@ async function MenuPage() {
       <PageHeader
         title="Menu"
         description="What can be ordered, and what it costs. Prices change forward — bills already raised keep the price they were raised at."
+        actions={
+          <Link href="/menu/prices" className="text-[13px] text-text-secondary underline-offset-4 hover:underline">
+            Prices by outlet and order type
+          </Link>
+        }
       />
       <MenuAdmin
         menu={menu}
