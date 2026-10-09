@@ -204,9 +204,9 @@ VOLATILE
 SECURITY DEFINER
 SET search_path = public, verity, pg_temp
 AS $$
-#variable_conflict use_column
+DECLARE
+  r RECORD;
 BEGIN
-  RETURN QUERY
   UPDATE self_order_session s
      SET last_activity_at = now()
     FROM outlet_profile op
@@ -218,7 +218,10 @@ BEGIN
      AND op.self_order_enabled AND op.self_order_user_id IS NOT NULL
      AND (s.kind = 'pickup' OR EXISTS (
            SELECT 1 FROM dining_table t WHERE t.tenant_id = s.tenant_id AND t.id = s.table_id AND t.state = 'occupied'))
-  RETURNING s.tenant_id, s.id, s.location_id, s.table_id, s.kind, op.self_order_user_id;
+  RETURNING s.tenant_id AS a, s.id AS b, s.location_id AS c, s.table_id AS d, s.kind AS e, op.self_order_user_id AS f
+       INTO r;
+  IF NOT FOUND THEN RETURN; END IF;
+  RETURN QUERY SELECT r.a, r.b, r.c, r.d, r.e, r.f;
 END
 $$;
 

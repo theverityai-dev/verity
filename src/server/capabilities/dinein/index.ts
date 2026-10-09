@@ -47,6 +47,7 @@ import {
   writeTaxLines,
 } from "./gst";
 import { serviceDayRange } from "./day";
+import { closeTableSessions, purgeSelfOrderData, registerDineinSelfOrder } from "./selforder";
 
 /**
  * CAPABILITY: Dine-in — `verity.capability.dinein`
@@ -75,6 +76,7 @@ import { serviceDayRange } from "./day";
  */
 
 export * from "./keys";
+export * from "./selforder";
 import {
   CONFIG_ALERT_SEATED_MINUTES,
   CONFIG_CGST_RATE,
@@ -491,6 +493,37 @@ async function orderAvailabilityContext(tx: TenantScopedClient, order: { locatio
 }
 
 /**
+ * Refuses a line that cannot be ordered at this outlet and channel right now, with the reason the
+ * order pad shows. The same checks `add_order_lines` runs, asked early so a guest's proposal is
+ * turned away at once instead of when staff accept it (ADR-042 item 6).
+ */
+async function validateOrderableLine(
+  tx: TenantScopedClient,
+  order: { locationId: string; channel: string },
+  line: { itemId: string; variantId?: string; modifierIds?: string[] },
+): Promise<void> {
+  const item = await tx.menuItem.findUnique({ where: { id: line.itemId } });
+  if (!item) throw new ValidationError("E_VALIDATION: menu item not found");
+  if (!item.active) throw new ValidationError(`E_VALIDATION: ${item.name} is not available right now`);
+  const rules = (await tx.menuAvailability.findMany({ where: { itemId: item.id } })).map(toRule);
+  const hidden = unavailableReason(rules, await orderAvailabilityContext(tx, order), await ruleLabels(tx, rules));
+  if (hidden) throw new ValidationError(`E_VALIDATION: ${item.name} is not available on this order. ${hidden}`);
+  if (line.variantId) {
+    const variant = await tx.menuItemVariant.findUnique({ where: { id: line.variantId } });
+    if (!variant || variant.itemId !== item.id) throw new ValidationError("E_VALIDATION: that portion does not belong to this item");
+  }
+  const wanted = [...new Set(line.modifierIds ?? [])];
+  if (wanted.length > 0) {
+    const chosen = await tx.menuModifier.findMany({ where: { id: { in: wanted } } });
+    if (chosen.length !== wanted.length || chosen.some((m) => m.itemId !== item.id)) {
+      throw new ValidationError("E_VALIDATION: an add-on does not belong to this item");
+    }
+    const retired = chosen.find((m) => !m.active);
+    if (retired) throw new ValidationError(`E_VALIDATION: ${retired.name} is not available right now`);
+  }
+}
+
+/**
  * Replaces an item's availability rules (Task 125 items 3.2 and 3.3). An empty
  * list removes every rule, so the item is available wherever it is active.
  * Replace-all keeps the editor simple: it submits what it shows.
@@ -714,6 +747,7 @@ export const moveTable: CommandDefinition<
       where: { id: table.id },
       data: { state: input.to, version: { increment: 1 } },
     });
+    if (input.to !== "occupied") await closeTableSessions(ctx.tx, table.id);
 
     await recordActivity(ctx, {
       entityKey: ENTITY_TABLE,
@@ -1355,6 +1389,9 @@ export const moveOrderToTable: CommandDefinition<{ orderId: string; toTableId: s
       ? await transition(ctx, { entityKey: ENTITY_TABLE, entityId: from.id, fromKey: "occupied", toKey: "cleaning" })
       : null;
     if (leave) await ctx.tx.diningTable.update({ where: { id: from.id }, data: { state: "cleaning", version: { increment: 1 } } });
+    // The guests at the old table are not the guests at the new one: no earlier session carries over.
+    await closeTableSessions(ctx.tx, from.id);
+    await closeTableSessions(ctx.tx, to.id);
     await ctx.tx.diningOrder.update({ where: { id: order.id }, data: { tableId: to.id, version: { increment: 1 } } });
     await recordActivity(ctx, {
       entityKey: ENTITY_ORDER,
@@ -1423,6 +1460,7 @@ export const mergeOrders: CommandDefinition<{ fromOrderId: string; intoOrderId: 
       if (table.state === "occupied") {
         const cleaned = await transition(ctx, { entityKey: ENTITY_TABLE, entityId: table.id, fromKey: "occupied", toKey: "cleaning" });
         await ctx.tx.diningTable.update({ where: { id: table.id }, data: { state: "cleaning", version: { increment: 1 } } });
+        await closeTableSessions(ctx.tx, table.id);
         events.push(cleaned.event);
       }
     }
@@ -1958,6 +1996,8 @@ export const settleBill: CommandDefinition<
         where: { id: table.id },
         data: { state: "cleaning", version: { increment: 1 } },
       });
+      // Settled: the table's guests are done, so any self-order visit there ends with the bill.
+      await closeTableSessions(ctx.tx, table.id);
     }
 
     await recordActivity(ctx, {
@@ -1982,7 +2022,7 @@ export const settleBill: CommandDefinition<
  * order's outlet, channel and local time of day. Without it, `hiddenReason` is null.
  */
 export const listMenu: QueryDefinition<
-  { includeInactive?: boolean; orderId?: string },
+  { includeInactive?: boolean; orderId?: string; locationId?: string; channel?: OrderChannel },
   Array<{
     categoryId: string;
     categoryName: string;
@@ -2008,7 +2048,13 @@ export const listMenu: QueryDefinition<
 > = {
   key: "verity.dinein.list_menu",
   entity: ENTITY_MENU_ITEM,
-  input: z.object({ includeInactive: z.boolean().optional(), orderId: z.string().uuid().optional() }),
+  input: z.object({
+    includeInactive: z.boolean().optional(),
+    orderId: z.string().uuid().optional(),
+    // An outlet and channel stand in for an order, so a guest's menu is priced and filtered as that order would be.
+    locationId: z.string().uuid().optional(),
+    channel: z.enum(ORDER_CHANNELS).optional(),
+  }),
   handler: async (ctx, input) => {
     const categories = await ctx.tx.menuCategory.findMany({
       where: input.includeInactive ? {} : { active: true },
@@ -2027,7 +2073,11 @@ export const listMenu: QueryDefinition<
       },
     });
 
-    const order = input.orderId ? await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } }) : null;
+    const order = input.orderId
+      ? await ctx.tx.diningOrder.findUnique({ where: { id: input.orderId } })
+      : input.locationId
+        ? { locationId: input.locationId, channel: input.channel ?? "qr" }
+        : null;
     const where = order ? await orderAvailabilityContext(ctx.tx, order) : null;
     const priceCtx = order ? await priceContextFor(ctx.tx, ctx.actor.organizationId, order) : null;
     const outletName = order ? (await ctx.tx.location.findUnique({ where: { id: order.locationId }, select: { name: true } }))?.name : undefined;
@@ -2832,6 +2882,16 @@ export function registerDineinCapability(): void {
           };
         },
       },
+      {
+        key: "verity.dinein.purge_self_order",
+        label: "Purge old self-order visits",
+        cadence: "daily",
+        // ADR-042 item 12: a month after they end, sessions, proposals and requests go.
+        run: async ({ tx, now }) => {
+          await purgeSelfOrderData(tx, now);
+          return { events: [] };
+        },
+      },
     ],
     workspace: [
       {
@@ -2895,4 +2955,5 @@ export function registerDineinCapability(): void {
   registerDineinGst();
   registerDineinKitchen();
   registerDineinPrices();
+  registerDineinSelfOrder({ addOrderLines, createOrder, listMenu, validateOrderableLine });
 }
