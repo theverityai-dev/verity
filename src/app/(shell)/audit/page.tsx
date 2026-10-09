@@ -47,17 +47,30 @@ export default async function AuditPage() {
   const data = await withTenant(actor.tenantId, async (tx) => {
     if (!await hasTenantPermission(tx, actor.roleId, "Read", "verity.platform.activity")) return null;
     const canSeeSecurity = await hasTenantPermission(tx, actor.roleId, "Read", "verity.platform.security_event");
+    // ADR-036: this client's own failed commands, metadata only.
+    const canSeeFailures = await hasTenantPermission(tx, actor.roleId, "Read", "verity.platform.command_failure");
 
-    const [activity, security, events] = await Promise.all([
+    const [activity, security, events, failures] = await Promise.all([
       tx.activity.findMany({ orderBy: { occurredAt: "desc" }, take: 100 }),
       canSeeSecurity
         ? tx.securityAuditEvent.findMany({ orderBy: { occurredAt: "desc" }, take: 50 })
         : Promise.resolve([]),
       tx.domainEvent.count(),
+      canSeeFailures
+        ? tx.commandFailure.findMany({ orderBy: { occurredAt: "desc" }, take: 50 })
+        : Promise.resolve([]),
     ]);
 
     return {
       canSeeSecurity,
+      canSeeFailures,
+      failures: failures.map((f) => ({
+        id: f.id,
+        command: commandLabelOf(f.commandKey) ?? f.commandKey,
+        code: f.errorCode,
+        at: f.occurredAt.toISOString().replace("T", " ").slice(0, 16),
+        channel: f.channel ?? "—",
+      })),
       eventCount: events,
       activity: activity.map<ActivityRow>((a) => ({
         id: a.id,
@@ -119,6 +132,24 @@ export default async function AuditPage() {
           <SectionHeading note="Newest first">Operational history</SectionHeading>
           <OperationalHistory rows={data.activity} />
         </section>
+
+        {data.canSeeFailures && (
+          <section>
+            <SectionHeading note="Most recent 50">Failed commands</SectionHeading>
+            <DataTable
+              caption="Failed commands"
+              rows={data.failures}
+              columns={[
+                { key: "command", header: "Action" },
+                { key: "code", header: "Reason code" },
+                { key: "channel", header: "Via" },
+                { key: "at", header: "When" },
+              ]}
+              emptyTitle="Nothing has failed"
+              emptyDescription="An action that was refused or broke appears here with its code. Names and amounts are never kept."
+            />
+          </section>
+        )}
 
         <section>
           <SectionHeading>Security events</SectionHeading>

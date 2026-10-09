@@ -537,6 +537,29 @@ describeDb("capability: Dine-in", () => {
     await executeCommand(waiter, cancelOrder, { orderId: platform.id });
   });
 
+  it("records a failed command as metadata only: command, code, who and channel, never the input or the message (ADR-036)", async () => {
+    const before = await withTenant(tenantId, (tx) => tx.commandFailure.count());
+    // A refusal that names a guest in its input and a message that quotes them.
+    await expect(
+      executeCommand(waiter, createOrder, { channel: "takeaway", locationId, customerName: "Secret Guest" }, "api").then(() =>
+        executeCommand(waiter, addOrderLines, { orderId: randomUUID(), lines: [{ itemId: randomUUID(), qty: 1 }] }),
+      ),
+    ).rejects.toThrow(/order not found/);
+    const rows = await withTenant(tenantId, (tx) => tx.commandFailure.findMany({ orderBy: { occurredAt: "desc" }, take: 1 }));
+    expect(await withTenant(tenantId, (tx) => tx.commandFailure.count())).toBe(before + 1);
+    expect(rows[0]).toMatchObject({ commandKey: "verity.dinein.add_order_lines", errorCode: "E_VALIDATION", channel: "api" });
+    expect(rows[0]!.actorUserId).toBeTruthy();
+    expect(rows[0]!.correlationId).toBeTruthy();
+    // Nothing else is stored: no column can hold the input or the message.
+    expect(JSON.stringify(rows[0])).not.toMatch(/Secret Guest|order not found/);
+
+    // Append-only: no policy lets the application edit or remove a record of a failure.
+    const total = await withTenant(tenantId, (tx) => tx.commandFailure.count());
+    expect((await withTenant(tenantId, (tx) => tx.commandFailure.deleteMany({}))).count).toBe(0);
+    expect((await withTenant(tenantId, (tx) => tx.commandFailure.updateMany({ data: { errorCode: "E_FAKE" } }))).count).toBe(0);
+    expect(await withTenant(tenantId, (tx) => tx.commandFailure.count())).toBe(total);
+  });
+
   it("refuses inconsistent channel input: dine-in without a table, takeaway at a table, platform without a name", async () => {
     // Input validation refuses all three before any table state is read, so
     // no table needs seating (and none is left occupied for later tests).

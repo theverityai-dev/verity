@@ -928,7 +928,7 @@ export type GrantableGroup = { group: string; entities: GrantableEntity[] };
  * the platform administration entities are enumerated in code already
  * (`ENTITY_TENANT` etc., just above) and do not change per capability.
  */
-const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.overview", "verity.platform.capability"];
+const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.command_failure", "verity.platform.overview", "verity.platform.capability"];
 
 /**
  * Entities a role's permissions can target, grouped by owning capability —

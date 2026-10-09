@@ -201,6 +201,43 @@ export async function platformActivity(operator: OperatorContext): Promise<Clien
   }));
 }
 
+export type CommandFailureTotal = {
+  tenantId: string;
+  name: string;
+  commandKey: string;
+  errorCode: string;
+  /** Validation and permission refusals: the system working as designed (ADR-036). */
+  expected: boolean;
+  failures: number;
+  /** The most failures any one person had on this command. A number, never who. */
+  worstUser: number;
+  lastAt: Date;
+};
+
+/**
+ * Failed-command totals per client, command and error code (ADR-036). Counts and
+ * the latest time only: no row id, no user id, no payload, no message text. An
+ * operator who needs one failure's detail enters the client (ADR-035).
+ */
+export async function commandFailureTotals(operator: OperatorContext, days = 7): Promise<CommandFailureTotal[]> {
+  const rows = await prisma.$queryRaw<
+    {
+      tenant_id: string; name: string; command_key: string; error_code: string;
+      expected: boolean; failures: bigint; worst_user: bigint; last_at: Date;
+    }[]
+  >`SELECT * FROM verity.operator_command_failures(${operator.authUserId}::uuid, ${days}::int)`;
+  return rows.map((r) => ({
+    tenantId: r.tenant_id,
+    name: r.name,
+    commandKey: r.command_key,
+    errorCode: r.error_code,
+    expected: r.expected,
+    failures: Number(r.failures),
+    worstUser: Number(r.worst_user),
+    lastAt: r.last_at,
+  }));
+}
+
 export type PlatformAuditRow = {
   occurredAt: Date;
   tenantId: string;
@@ -676,6 +713,7 @@ export const OPERATOR_GRANTS = [
   { verb: "Read" as const, entity: "verity.platform.role" },
   { verb: "Read" as const, entity: "verity.platform.activity" },
   { verb: "Read" as const, entity: "verity.platform.security_event" },
+  { verb: "Read" as const, entity: "verity.platform.command_failure" },
   { verb: "Read" as const, entity: "verity.platform.overview" },
   { verb: "Read" as const, entity: "verity.platform.capability" },
 

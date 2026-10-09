@@ -1,4 +1,4 @@
-import { recordExecutionFailure } from "./execution-failure";
+import { recordCommandFailure, recordExecutionFailure } from "./execution-failure";
 import { limitActorRequests } from "./request-limits";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -292,6 +292,7 @@ export async function executeCommand<TInput, TResult>(
       return { result: outcome.result, events: outcome.events ?? [], ctx };
     }),
   ).catch(async (error: unknown) => {
+    await recordCommandFailure(error, actor, def.key, correlationId, channel);
     await recordExecutionFailure(error, actor, def.key, correlationId);
     throw error;
   });

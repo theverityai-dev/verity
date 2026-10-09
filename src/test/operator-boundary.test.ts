@@ -45,6 +45,9 @@ describeDb("operator authority (ADR-013)", () => {
       SELECT * FROM verity.operator_platform_activity(${stranger}::uuid)`;
     const audit = await prisma.$queryRaw<unknown[]>`
       SELECT * FROM verity.operator_platform_audit(${stranger}::uuid, 10)`;
+    // ADR-036: the failed-command totals are an operator-only projection too.
+    const failures = await prisma.$queryRaw<unknown[]>`
+      SELECT * FROM verity.operator_command_failures(${stranger}::uuid, 7)`;
 
     // Empty, not an error. A distinguishable error is itself a disclosure —
     // "that function exists and you are not allowed" tells an attacker where to
@@ -52,6 +55,7 @@ describeDb("operator authority (ADR-013)", () => {
     expect(directory).toHaveLength(0);
     expect(activity).toHaveLength(0);
     expect(audit).toHaveLength(0);
+    expect(failures).toHaveLength(0);
   });
 
   it("refuses a tenant user who holds a role but no operator grant", async () => {

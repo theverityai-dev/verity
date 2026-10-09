@@ -63,6 +63,7 @@ model Tenant {
   statusLabels            TenantStatusLabel[]
   activities              Activity[]
   securityEvents          SecurityAuditEvent[]
+  commandFailures         CommandFailure[]
   workflows               WorkflowDefinition[]
   workflowRuns            WorkflowRun[]
   credentials             Credential[]
@@ -789,6 +790,27 @@ model SecurityAuditEvent {
   @@index([tenantId, occurredAt])
   @@index([tenantId, eventType])
   @@map("security_audit_event")
+}
+
+/// A command that threw, recorded after its rollback (ADR-036). Metadata only: the
+/// command key, an error code, who, over which channel, and the request's
+/// correlation id. Never the input payload and never the message text. HQ reads
+/// totals through verity.operator_command_failures, never these rows.
+model CommandFailure {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  commandKey    String   @map("command_key")
+  errorCode     String   @map("error_code")
+  actorUserId   String?  @map("actor_user_id") @db.Uuid
+  channel       String?
+  correlationId String?  @map("correlation_id") @db.Uuid
+  occurredAt    DateTime @default(now()) @map("occurred_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, commandKey])
+  @@map("command_failure")
 }
 
 /// Automation node categories (Authority: Spec MET-AUT-001).

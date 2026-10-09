@@ -495,6 +495,7 @@ describeDb("conformance: database enforcement", () => {
         "billing_invoice",
         "billing_meter_reading",
         "cash_movement",
+        "command_failure",
         "domain_event",
         "evidence",
         "hr_leave_decision",

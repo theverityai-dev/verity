@@ -2,6 +2,7 @@ import { PageHeader, Panel, Stat, StatRow } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import {
   clientDirectory,
+  commandFailureTotals,
   platformActivity,
   requireOperator,
   schedulerRunSummary,
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 /** A live client with no change for this long is shown as gone quiet (B4). */
 const QUIET_DAYS = 14;
+
+/** One person refused this often on one command in a week is worth a look (ADR-036). */
+const REPEATED_REFUSALS = 5;
 
 const columns: Column[] = [
   { key: "name", header: "Client", sortable: true, variant: "link", href: "/hq/clients" },
@@ -30,10 +34,11 @@ const columns: Column[] = [
  */
 export default async function HqOverviewPage() {
   const operator = await requireOperator();
-  const [clients, activity, jobs] = await Promise.all([
+  const [clients, activity, jobs, failures] = await Promise.all([
     clientDirectory(operator),
     platformActivity(operator),
     schedulerRunSummary(operator),
+    commandFailureTotals(operator, 7),
   ]);
 
   const totalMembers = clients.reduce((sum, c) => sum + c.memberCount, 0);
@@ -52,6 +57,12 @@ export default async function HqOverviewPage() {
       if (status === "onboarding") reasons.push("Still onboarding");
       if (a.syncExceptions > 0) reasons.push(`${a.syncExceptions} sync problems`);
       if (a.slaBreached > 0) reasons.push(`${a.slaBreached} late against SLA`);
+      // ADR-036: broken things, and the same refusal repeating. Totals only.
+      const mine = failures.filter((f) => f.tenantId === a.tenantId);
+      const broken = mine.filter((f) => !f.expected).reduce((sum, f) => sum + f.failures, 0);
+      if (broken > 0) reasons.push(`${broken} ${broken === 1 ? "action" : "actions"} failed with an error this week`);
+      const repeating = mine.filter((f) => f.expected && f.worstUser >= REPEATED_REFUSALS).length;
+      if (repeating > 0) reasons.push(`${repeating} ${repeating === 1 ? "action is" : "actions are"} being refused over and over`);
       if (a.peopleInvited > 0) reasons.push(`${a.peopleInvited} ${a.peopleInvited === 1 ? "person has" : "people have"} never signed in`);
       if (status === "active") {
         const quietDays = a.lastActivityAt ? Math.floor((now - a.lastActivityAt.getTime()) / 86_400_000) : null;
