@@ -906,7 +906,7 @@ export function PermissionDenied({ what }: { what: string }) {
             <RequestAccessButton what={what} />
             <Link
               href="/"
-              className="inline-flex items-center rounded-[10px] bg-control px-3 py-1.5 text-[13px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
+              className="inline-flex items-center rounded-[10px] bg-control px-3 py-1.5 text-[13px] max-sm:min-h-11 max-sm:px-4 max-sm:text-[15px] font-semibold text-accent-ink no-underline transition-colors hover:bg-control-strong"
             >
               Go to dashboard
             </Link>
