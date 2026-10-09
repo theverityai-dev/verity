@@ -269,6 +269,17 @@ Write each into `DECISIONS.md` with its basis.
   its own on Audit; HQ gets `operator_command_failures` totals (no ids, no text) feeding the attention list.
   Tests: dinein (recording, no leakage, append-only), operator-boundary (empty for a stranger), conformance.
 
+- **5.1 merge built 2026-10-09 (commit `8349f43`).** Design refined from the recorded "alias table" to a
+  tenant-scoped self link, `customer.merged_into_id` (migration `20261009060000_crm_customer_merge`, **local
+  test DB only, not yet on production**): the loyalty ledger is append-only and cascades from the guest row, so
+  the duplicate row has to stay; deleting it or moving its entries would rewrite history (ADR-007). Reads follow
+  the link (360, list, redeemable points, points earned on a merged phone). `verity.crm.merge_customers` (Edit
+  on guest) fills blanks from the duplicate, never widens marketing consent, flattens earlier merges, refuses
+  self, already-merged and merged-keeper. UI: "Merge a duplicate" on the guest page. Not built: unmerge.
+- **Production migrations still to apply before the batch push (all additive):**
+  `20261009040000_dinein_menu_availability`, `20261009050000_command_failure`,
+  `20261009060000_crm_customer_merge`. Applied to the local test DB only.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
