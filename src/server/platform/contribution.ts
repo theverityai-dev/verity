@@ -210,6 +210,23 @@ export function registerContribution(contribution: CapabilityContribution): void
 
 export function clearContributions(): void {
   contributions.clear();
+  platformSchedules.clear();
+}
+
+/** The capability id reported for recurring work the platform itself owns. */
+export const PLATFORM_SCHEDULE_OWNER = "verity.platform";
+
+const platformSchedules = new Map<string, ScheduleContribution>();
+
+/**
+ * Recurring work that belongs to no capability, such as draining the event
+ * outbox (ADR-039). Same contract as a capability's schedule (idempotent, run
+ * under the tenant's own scope), but it is not gated on a capability being
+ * active, because no capability owns it. A duplicate key is a defect and throws.
+ */
+export function registerPlatformSchedule(unit: ScheduleContribution): void {
+  if (platformSchedules.has(unit.key)) throw new Error(`E_SCHEDULE_DUPLICATE: ${unit.key}`);
+  platformSchedules.set(unit.key, unit);
 }
 
 export function contributionFor(capabilityId: string): CapabilityContribution | undefined {
@@ -357,10 +374,16 @@ export async function runDueWork(args: {
   now?: Date;
 }): Promise<ScheduleOutcome[]> {
   const now = args.now ?? new Date();
-  const due = schedulesFor({
-    activeCapabilityIds: args.activeCapabilityIds,
-    cadence: args.cadence,
-  });
+  const platformDue = [...platformSchedules.values()]
+    .filter((unit) => !args.cadence || unit.cadence === args.cadence)
+    .map((unit) => ({ ...unit, capabilityId: PLATFORM_SCHEDULE_OWNER }));
+  const due = [
+    ...platformDue,
+    ...schedulesFor({
+      activeCapabilityIds: args.activeCapabilityIds,
+      cadence: args.cadence,
+    }),
+  ];
 
   const outcomes: ScheduleOutcome[] = [];
 
@@ -368,7 +391,7 @@ export async function runDueWork(args: {
     const started = Date.now();
     try {
       const result = await withTenant(args.tenantId, async (tx) => {
-        await requireCapabilityReady(tx, args.tenantId, unit.capabilityId);
+        if (unit.capabilityId !== PLATFORM_SCHEDULE_OWNER) await requireCapabilityReady(tx, args.tenantId, unit.capabilityId);
         return unit.run({ tx, tenantId: args.tenantId, now });
       });
       outcomes.push({

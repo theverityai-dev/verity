@@ -65,6 +65,7 @@ model Tenant {
   securityEvents          SecurityAuditEvent[]
   commandFailures         CommandFailure[]
   dataExports             DataExport[]
+  notificationSubscriptions NotificationSubscription[]
   workflows               WorkflowDefinition[]
   workflowRuns            WorkflowRun[]
   credentials             Credential[]
@@ -445,6 +446,7 @@ model Role {
   parentOf      RoleComposition[]  @relation("RoleCompositionParent")
   /// Compositions where this Role is the child — its permissions flow upward.
   childOf       RoleComposition[]  @relation("RoleCompositionChild")
+  notificationSubscriptions NotificationSubscription[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, id], name: "role_tenant_scoped_id")
@@ -2276,6 +2278,9 @@ model Notification {
   readAt      DateTime?           @map("read_at")
   sentAt      DateTime?           @map("sent_at")
   failure     String?
+  /// Event id, channel, recipient: makes the dispatcher at-least-once without duplicates (ADR-039).
+  /// Uniqueness is a partial index in the migration, which Prisma cannot express.
+  dedupeKey   String?             @map("dedupe_key")
   createdAt   DateTime            @default(now()) @map("created_at")
 
   tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -2284,6 +2289,26 @@ model Notification {
   @@index([tenantId, recipientId, readAt])
   @@index([tenantId, status])
   @@map("notification")
+}
+
+/// A tenant opt-in: members of this role get an in-app notification when this
+/// event type is raised (ADR-039). Default off: with no row, nothing is sent.
+model NotificationSubscription {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  eventName       String   @map("event_name")
+  roleId          String   @map("role_id") @db.Uuid
+  /// InApp only for now.
+  channel         String   @default("InApp")
+  createdByUserId String   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [tenantId, roleId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "notification_subscription_role_fkey")
+
+  @@unique([tenantId, eventName, roleId, channel], map: "notification_subscription_tenant_event_role_channel_key")
+  @@index([tenantId, eventName])
+  @@map("notification_subscription")
 }
 
 // ===========================================================================

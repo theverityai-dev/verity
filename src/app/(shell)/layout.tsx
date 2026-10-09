@@ -261,7 +261,6 @@ export default async function ShellLayout({
       areas={areas}
       userLabel={userLabel}
       userInitials={userInitials}
-      canAudit={canAudit}
       unreadCount={unreadCount}
     >
       {supportSession && (

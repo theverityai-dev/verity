@@ -5,6 +5,7 @@ import { prisma } from "@/server/platform/db";
 import { assertRlsEnforceable, withTenant } from "@/server/platform/tenancy";
 import { ENTITY_DATA_EXPORT, getDataExportLink, listDataExports, registerDataExport, requestDataExport } from "@/server/platform/data-export";
 import { registerStorageDriver } from "@/server/platform/files";
+import { ENTITY_NOTIFICATION_SUBSCRIPTION, dispatchEvents, registerNotificationOutbox, setNotificationSubscription } from "@/server/platform/notification-outbox";
 import { activateCapability, invalidateCapabilityCache, setConfig } from "@/server/platform/capability";
 import { clearCommands, clearHooks, executeCommand, type ActorContext } from "@/server/platform/command";
 import { clearQueries, executeQuery } from "@/server/platform/query";
@@ -420,6 +421,70 @@ describeDb("capability: CRM", () => {
     await expect(executeCommand(reader, requestDataExport, {})).rejects.toThrow();
 
     registerStorageDriver(null);
+  });
+
+  it("delivers subscribed alerts through the outbox: opt-in, no history flood, no self-alert, at-least-once without duplicates (ADR-039)", async () => {
+    registerNotificationOutbox();
+    const EVENT = "verity.dinein.order_created";
+    const dispatch = () => withTenant(tenantId, (tx) => dispatchEvents(tx));
+    const drain = async () => {
+      for (let i = 0; i < 50; i++) if ((await dispatch()).events === 0) return;
+      throw new Error("outbox did not drain");
+    };
+    const alertsFor = (userId: string) =>
+      withTenant(tenantId, (tx) => tx.notification.findMany({ where: { recipientId: userId, key: EVENT }, orderBy: { createdAt: "asc" } }));
+
+    await withTenant(tenantId, (tx) => tx.permission.createMany({
+      data: (["Read", "Edit"] as const).map((verb) => ({ tenantId, roleId: manager.roleId!, verb, entity: ENTITY_NOTIFICATION_SUBSCRIPTION, scope: "Tenant" as const })),
+    }));
+    const watcher = await withTenant(tenantId, async (tx) => {
+      const role = await tx.role.create({ data: { tenantId, name: "Alerts watcher" }, select: { id: true } });
+      const identity = await provisionIdentity(tx, { organizationId, authUserId: randomUUID(), displayName: "Alerts watcher" });
+      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: role.id } });
+      return { roleId: role.id, userId: identity.userId };
+    });
+    invalidateCapabilityCache();
+
+    // Default off: with nothing subscribed, events are processed and nobody is told.
+    await drain();
+    expect(await withTenant(tenantId, (tx) => tx.domainEvent.count({ where: { deliveredAt: null } }))).toBe(0);
+    expect(await alertsFor(watcher.userId)).toHaveLength(0);
+
+    // Subscribing never replays history: events raised before it do not notify.
+    await runOneVisit("T-30", 1);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await executeCommand(manager, setNotificationSubscription, { eventName: EVENT, roleId: watcher.roleId, enabled: true });
+    await drain();
+    expect(await alertsFor(watcher.userId)).toHaveLength(0);
+
+    // A new event after the subscription notifies the role, not the person who caused it.
+    await runOneVisit("T-31", 1);
+    await drain();
+    const first = await alertsFor(watcher.userId);
+    expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({ status: "Sent", subject: "Order Created", channel: "InApp", readAt: null });
+    expect(first[0]!.body).not.toMatch(/\d/); // the kind of record, never a figure
+    expect(await alertsFor(manager.userId)).toHaveLength(0);
+
+    // At-least-once: a crash before delivered_at was set repeats the run, and the dedupe key holds.
+    await withTenant(tenantId, (tx) => tx.domainEvent.updateMany({ where: { name: EVENT }, data: { deliveredAt: null } }));
+    await drain();
+    expect(await alertsFor(watcher.userId)).toHaveLength(1);
+
+    // A person's own opt-out is recorded as Suppressed, not dropped.
+    await withTenant(tenantId, (tx) => tx.notificationPreference.create({ data: { tenantId, userId: watcher.userId, key: EVENT, channel: "InApp", enabled: false } }));
+    await runOneVisit("T-32", 1);
+    await drain();
+    const afterOptOut = await alertsFor(watcher.userId);
+    expect(afterOptOut).toHaveLength(2);
+    expect(afterOptOut[1]!.status).toBe("Suppressed");
+
+    // Unsubscribing stops further alerts.
+    await executeCommand(manager, setNotificationSubscription, { eventName: EVENT, roleId: watcher.roleId, enabled: false });
+    await runOneVisit("T-33", 1);
+    await drain();
+    expect(await alertsFor(watcher.userId)).toHaveLength(2);
+    await expect(executeCommand(manager, setNotificationSubscription, { eventName: "Bad Name", roleId: watcher.roleId, enabled: true })).rejects.toThrow();
   });
 
   it("saves a segment as a filter, not a list, and rejects duplicates and empty filters (Task 125 5.2)", async () => {

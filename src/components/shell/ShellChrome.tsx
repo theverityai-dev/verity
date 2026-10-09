@@ -44,19 +44,13 @@ export function ShellChrome({
   areas,
   userLabel,
   userInitials,
-  canAudit,
   unreadCount = 0,
   children,
 }: {
   areas: NavArea[];
   userLabel: string;
   userInitials: string;
-  /** Task 114 P0.6 — the top-bar "Recent activity" bell link to `/audit` was
-   *  unconditional, so an actor without `Read` on `verity.platform.activity`
-   *  hit a bare permission-denied page with no warning. The sidebar's own
-   *  Audit entry already gates on this; the bell didn't. */
-  canAudit: boolean;
-  /** Task 114 P1.5 item 1 — unread in-app notification count for the bell. */
+  /** Unread in-app notification count for the bell, which opens `/notifications`. */
   unreadCount?: number;
   children: ReactNode;
 }) {
@@ -382,24 +376,25 @@ export function ShellChrome({
 
           <div className="flex shrink-0 items-center gap-3">
             <ThemeToggle />
-            {canAudit && (
-              <Link
-                href="/audit"
-                title="Recent activity"
-                className="glass-control relative grid size-11 place-items-center rounded-full text-accent-ink no-underline transition-opacity duration-200 active:opacity-70"
-              >
-                <Icon name="bell" size={19} />
-                {unreadCount > 0 && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-accent-on"
-                  >
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-                <span className="sr-only">Recent activity{unreadCount > 0 ? ` — ${unreadCount} unread` : ""}</span>
-              </Link>
-            )}
+            {/* Everyone has notifications (their own rows only), so the bell is
+                not gated on any permission. It used to open Audit for those who
+                could read it; Audit stays in the sidebar. */}
+            <Link
+              href="/notifications"
+              title="Notifications"
+              className="glass-control relative grid size-11 place-items-center rounded-full text-accent-ink no-underline transition-opacity duration-200 active:opacity-70"
+            >
+              <Icon name="bell" size={19} />
+              {unreadCount > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-accent-on"
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+              <span className="sr-only">Notifications{unreadCount > 0 ? ` — ${unreadCount} unread` : ""}</span>
+            </Link>
             {/* The one place Account, Settings and Sign out all live — was a
                 static, unclickable avatar with Sign out stranded in the
                 sidebar footer instead. */}

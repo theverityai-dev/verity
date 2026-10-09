@@ -425,7 +425,12 @@ describe("conformance: over-genericity (Phase G)", () => {
     // entity and the rule "an export never exceeds the requester's own Read
     // authority" are platform rules; what is exportable is declared by each
     // capability through registerExportable, so no capability logic lives here.
-    expect(platformModules.length).toBeLessThanOrEqual(55);
+    // 56: notification-outbox.ts (ADR-039, Task 125 item 7.7) — the event outbox
+    // dispatcher and per-tenant alert subscriptions. Platform because the outbox
+    // is domain_event, the dispatcher runs as a platform schedule (no capability
+    // owns it) and what a notification may say is a platform rule: the kind of
+    // record, never a figure the recipient could not already read.
+    expect(platformModules.length).toBeLessThanOrEqual(56);
   });
 });
 
