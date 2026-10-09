@@ -297,6 +297,20 @@ Write each into `DECISIONS.md` with its basis.
   recorded. **Remaining datasets to register:** finance, inventory, HR, attendance, coupons, complaints,
   recipes, and every other capability.
 
+- **7.7 built, in-app channel, 2026-10-09 (ADR-039, commit `77c5431`).** Migrations
+  `20261009080000_notification_outbox` and `20261009081000_domain_event_delivery_policy` (**local test DB only,
+  not yet on production**). Dispatcher as a platform schedule, subscriptions per role, `/notifications` inbox,
+  Settings > Alerts. DB test in `capability-crm.test.ts`. Conformance platform cap 55 to 56, reason recorded.
+- **Process lesson, 2026-10-09:** another session (Task 126, ADR-040 to 043, dinein reports and the day
+  screen) works in the same checkout. My `git add -A` in commits `b0ddcd2` and `fc17f36` swept in its in-progress
+  files (`adr-040` to `adr-042`, `dinein/keys.ts`, `dinein/scope.ts` and part of `dinein/index.ts`, which
+  imports `./reports`, not yet committed). Nothing is pushed. **Do not push until that session commits
+  `dinein/reports.ts` and its other files, or the pushed commit will not build.** Stage by explicit path from now on.
+- **Production migrations still to apply before the batch push (all additive):**
+  `20261009070000_platform_data_export`, `20261009071000_data_export_grants`,
+  `20261009080000_notification_outbox`, `20261009081000_domain_event_delivery_policy`
+  (the earlier `20261009040000` to `20261009060000` are already on production).
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
