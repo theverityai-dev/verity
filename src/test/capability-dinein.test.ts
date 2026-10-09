@@ -42,6 +42,9 @@ import {
   defineTable,
   editMenuItem,
   defineZone,
+  exceptionsReport,
+  outletToday,
+  salesReport,
   generateBill,
   getBillDetail,
   getOrderDetail,
@@ -953,6 +956,79 @@ describeDb("capability: Dine-in", () => {
     // The cancelled order shows in history.
     const history = await executeQuery(manager, listOrderHistory, {});
     expect(history.some((h) => h.orderId === b.id && h.state === "cancelled")).toBe(true);
+  });
+
+  /* ------------------- Task 126 wave 0 and 1: days and reports ------------------- */
+
+  it("honours the day asked for, and gives each service day its own bills (Task 126 G-01, G-02)", async () => {
+    const today = await executeQuery(manager, salesSummary, {});
+    expect(today.billsSettled).toBeGreaterThan(0);
+    // Before the fix a malformed pattern ignored `day`, so any date returned today's bills.
+    const long_ago = await executeQuery(manager, salesSummary, { day: "2020-01-01" });
+    expect(long_ago.billsSettled).toBe(0);
+    // Asking for today's own date returns the same figures as asking for "now".
+    const named = await executeQuery(manager, salesSummary, { day: today.day });
+    expect(named.billsSettled).toBe(today.billsSettled);
+    expect(named.grossMinor).toBe(today.grossMinor);
+    // Neighbouring days do not share a boundary instant.
+    const tomorrow = new Date(`${today.day}T00:00:00Z`);
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const next = await executeQuery(manager, salesSummary, { day: tomorrow.toISOString().slice(0, 10) });
+    expect(next.billsSettled).toBe(0);
+  });
+
+  it("answers the sales report by day, hour, channel, staff and item from the same settled bills", async () => {
+    const summary = await executeQuery(manager, salesSummary, {});
+    const range = { from: summary.day, to: summary.day };
+
+    const byDay = await executeQuery(manager, salesReport, { view: "day", ...range });
+    expect(byDay.rows).toHaveLength(1);
+    expect(byDay.totals.bills).toBe(summary.billsSettled);
+    expect(byDay.totals.grossMinor).toBe(summary.grossMinor);
+    expect(byDay.totals.netMinor).toBe(byDay.totals.grossMinor - byDay.totals.refundedMinor);
+
+    for (const view of ["hour", "channel", "staff"] as const) {
+      const report = await executeQuery(manager, salesReport, { view, ...range });
+      expect(report.totals.grossMinor).toBe(summary.grossMinor);
+      expect(report.rows.reduce((s, r) => s + r.bills, 0)).toBe(summary.billsSettled);
+    }
+    const channels = await executeQuery(manager, salesReport, { view: "channel", ...range });
+    expect(channels.rows.some((r) => r.key === "delivery_platform" && r.label === "Delivery platform")).toBe(true);
+    const staff = await executeQuery(manager, salesReport, { view: "staff", ...range });
+    expect(staff.rows.every((r) => r.label !== "Unknown")).toBe(true);
+
+    const items = await executeQuery(manager, salesReport, { view: "item", ...range });
+    expect(items.itemRows.length).toBeGreaterThan(0);
+    expect(items.itemRows.some((r) => r.label === "Paneer Butter Masala")).toBe(true);
+
+    await expect(executeQuery(manager, salesReport, { view: "day", from: "2026-01-31", to: "2026-01-01" })).rejects.toThrow(/after the end/);
+    await expect(executeQuery(manager, salesReport, { view: "day", from: "2025-01-01", to: "2026-01-01" })).rejects.toThrow(/at most/);
+    // A waiter has no Read on bills at all.
+    await expect(executeQuery(waiter, salesReport, { view: "day", ...range })).rejects.toThrow();
+  });
+
+  it("lists cancelled orders, voided lines and refunds in the exceptions report", async () => {
+    const summary = await executeQuery(manager, salesSummary, {});
+    const report = await executeQuery(manager, exceptionsReport, { from: summary.day, to: summary.day });
+    expect(report.rows.some((r) => r.kind === "cancelled_order")).toBe(true);
+    expect(report.rows.every((r) => r.amountMinor >= 0)).toBe(true);
+  });
+
+  it("shows the outlet's day: sales, tables, stages, attention and floor load", async () => {
+    const today = await executeQuery(manager, outletToday, {});
+    const summary = await executeQuery(manager, salesSummary, {});
+    expect(today.sales?.grossMinor).toBe(summary.grossMinor);
+    expect(today.sales?.bills).toBe(summary.billsSettled);
+    expect(today.tables.total).toBeGreaterThan(0);
+    // The moved order is placed with lines still in the kitchen.
+    expect(today.serviceLine.some((t) => t.stage === "with_kitchen")).toBe(true);
+    expect(today.serviceLine.some((t) => t.stage === "cleaning")).toBe(true);
+    expect(today.floorLoad.length).toBeGreaterThan(0);
+    expect(today.thresholds).toEqual({ unpaidMinutes: 15, seatedMinutes: 60 });
+    // A waiter reads orders but not bills: the money is withheld, the floor is not.
+    const forWaiter = await executeQuery(waiter, outletToday, {});
+    expect(forWaiter.sales).toBeNull();
+    expect(forWaiter.serviceLine.length).toBeGreaterThan(0);
   });
 
   async function releaseTable(): Promise<void> {
