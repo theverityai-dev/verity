@@ -28,25 +28,8 @@ import { hasPermission } from "@/server/platform/authorization";
 import { findGuestByPhone } from "@/server/capabilities/crm/guests";
 import { registerExportable } from "@/server/platform/data-export";
 import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
-import { assertOutletInScope, reachableOutletIds } from "./scope";
-import type { ActorContext as DineinActor } from "@/server/platform/command";
-
-/**
- * The outlet ids a query should read: the requested one, narrowed to scope
- * (empty if outside it), or every outlet the actor can reach when none is
- * requested. Shared by every location-scoped dinein query so "ask for an
- * outlet you cannot reach" behaves identically everywhere: an empty result,
- * not a thrown error, because these are polled dashboards and reports.
- */
-async function scopedLocationIds(
-  tx: TenantScopedClient,
-  actor: DineinActor,
-  entity: string,
-  requested: string | undefined,
-): Promise<string[]> {
-  const reachable = await reachableOutletIds(tx, actor, entity, "Read");
-  return requested ? reachable.filter((id) => id === requested) : reachable;
-}
+import { assertOutletInScope, reachableOutletIds, scopedLocationIds } from "./scope";
+import { registerDineinReports } from "./reports";
 
 /**
  * CAPABILITY: Dine-in — `verity.capability.dinein`
@@ -74,55 +57,28 @@ async function scopedLocationIds(
  * honest state categories rather than from any clock code written here.
  */
 
-export const DINEIN_CAPABILITY = "verity.capability.dinein";
-
-export const ENTITY_MENU_CATEGORY = "verity.dinein.menu_category";
-export const ENTITY_MENU_ITEM = "verity.dinein.menu_item";
-export const ENTITY_MENU_VARIANT = "verity.dinein.menu_variant";
-export const ENTITY_ZONE = "verity.dinein.zone";
-export const ENTITY_TABLE = "verity.dinein.table";
-export const ENTITY_ORDER = "verity.dinein.order";
+export * from "./keys";
+import {
+  CONFIG_CGST_RATE,
+  CONFIG_PREP_TARGET_MINUTES,
+  CONFIG_SGST_RATE,
+  DINEIN_CAPABILITY,
+  ENTITY_BILL,
+  ENTITY_MENU_CATEGORY,
+  ENTITY_MENU_ITEM,
+  ENTITY_MENU_VARIANT,
+  ENTITY_ORDER,
+  ENTITY_ORDER_LINE,
+  ENTITY_PAYMENT,
+  ENTITY_TABLE,
+  ENTITY_ZONE,
+  ORDER_CHANNEL_LABEL,
+  ORDER_CHANNELS,
+  type OrderChannel,
+} from "./keys";
 
 /** The most of one item a single order line can hold. */
 const MAX_LINE_QTY = 99;
-export const ENTITY_ORDER_LINE = "verity.dinein.order_line";
-export const ENTITY_BILL = "verity.dinein.bill";
-export const ENTITY_PAYMENT = "verity.dinein.payment";
-
-/** Configuration keys this capability reads. Rates vary; arithmetic does not. */
-export const CONFIG_CGST_RATE = "verity.dinein.tax.cgst_rate";
-export const CONFIG_SGST_RATE = "verity.dinein.tax.sgst_rate";
-export const CONFIG_PREP_TARGET_MINUTES = "verity.dinein.kitchen.prep_target_minutes";
-
-/**
- * Where an order came from (Colonel Kebabz PRD §9: "order source must be
- * stored"). Only `dine_in` sits at a table; a database CHECK enforces that a
- * dine-in order always has one. Closed set, same reasoning as MOVEMENT_KINDS.
- */
-export const ORDER_CHANNELS = [
-  "dine_in",
-  "takeaway",
-  "phone",
-  "delivery",
-  "delivery_platform",
-  "website",
-  "qr",
-  "corporate",
-  "catering",
-] as const;
-export type OrderChannel = (typeof ORDER_CHANNELS)[number];
-
-export const ORDER_CHANNEL_LABEL: Record<OrderChannel, string> = {
-  dine_in: "Dine-in",
-  takeaway: "Takeaway",
-  phone: "Phone order",
-  delivery: "Own delivery",
-  delivery_platform: "Delivery platform",
-  website: "Website",
-  qr: "QR order",
-  corporate: "Corporate",
-  catering: "Catering",
-};
 
 /** How a bill can be paid (PRD §46). Stored as these keys on `Payment.method`. */
 export const BILL_PAYMENT_METHODS = ["cash", "card", "upi", "wallet", "bank_transfer", "delivery_platform", "other"] as const;

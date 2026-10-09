@@ -32,6 +32,23 @@ export async function reachableOutletIds(
   return locations.map((location) => location.id);
 }
 
+/**
+ * The outlet ids a query should read: the requested one, narrowed to scope
+ * (empty if outside it), or every outlet the actor can reach when none is
+ * requested. Shared by every location-scoped dinein query so "ask for an
+ * outlet you cannot reach" behaves identically everywhere: an empty result,
+ * not a thrown error, because these are polled dashboards and reports.
+ */
+export async function scopedLocationIds(
+  tx: TenantScopedClient,
+  actor: ActorContext,
+  entity: string,
+  requested: string | undefined,
+): Promise<string[]> {
+  const reachable = await reachableOutletIds(tx, actor, entity, "Read");
+  return requested ? reachable.filter((id) => id === requested) : reachable;
+}
+
 export async function outletFilter(
   tx: TenantScopedClient,
   actor: ActorContext,

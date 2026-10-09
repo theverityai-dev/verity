@@ -290,6 +290,13 @@ Write each into `DECISIONS.md` with its basis.
   mobile header logo link 26px. Not yet measured: the client shell screens (Menu > Hours, order pad reason,
   Audit > Failed commands, guest merge), which need an entered client or the demo admin session.
 
+- **7.5 built, first slice, 2026-10-09 (ADR-037, commit `b87ad54`).** Migrations
+  `20261009070000_platform_data_export` and `20261009071000_data_export_grants` (**local test DB only, not yet
+  on production**). Client-owned ZIP of CSVs, permission-narrowed, operator excluded by design. Test in
+  `capability-crm.test.ts`; pure ZIP and CSV tests; conformance platform cap raised 54 to 55 with the reason
+  recorded. **Remaining datasets to register:** finance, inventory, HR, attendance, coupons, complaints,
+  recipes, and every other capability.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
