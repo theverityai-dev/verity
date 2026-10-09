@@ -25,7 +25,8 @@ import {
   ORDER_CHANNEL_LABEL,
   type OrderChannel,
 } from "./keys";
-import { DEFAULT_DAY_START_MINUTE, serviceDayRange } from "./day";
+import { serviceDayRange } from "./day";
+import { dayStartMinuteFor } from "./gst";
 import { scopedLocationIds } from "./scope";
 
 /**
@@ -68,14 +69,16 @@ async function resolveWindow(
   organizationId: string,
   from: string | undefined,
   to: string | undefined,
+  startMinute: number,
 ): Promise<{ from: string; to: string; start: Date; end: Date; timeZone: string }> {
-  const last = await serviceDayRange(tx, organizationId, to);
+  const last = await serviceDayRange(tx, organizationId, to, startMinute);
   const first = from
-    ? await serviceDayRange(tx, organizationId, from)
+    ? await serviceDayRange(tx, organizationId, from, startMinute)
     : await serviceDayRange(
         tx,
         organizationId,
         new Date(new Date(`${last.day}T00:00:00Z`).getTime() - 6 * 86_400_000).toISOString().slice(0, 10),
+        startMinute,
       );
   const days = Math.round((new Date(`${last.day}T00:00:00Z`).getTime() - new Date(`${first.day}T00:00:00Z`).getTime()) / 86_400_000) + 1;
   if (days < 1) throw new ValidationError("E_VALIDATION: the start date is after the end date");
@@ -120,8 +123,9 @@ export const salesReport: QueryDefinition<
   }),
   handler: async (ctx, input) => {
     const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_BILL, input.locationId);
-    const window = await resolveWindow(ctx.tx, ctx.actor.organizationId, input.from, input.to);
-    const zone = { timeZone: window.timeZone, startMinute: DEFAULT_DAY_START_MINUTE };
+    const startMinute = await dayStartMinuteFor(ctx.tx, locationIds);
+    const window = await resolveWindow(ctx.tx, ctx.actor.organizationId, input.from, input.to, startMinute);
+    const zone = { timeZone: window.timeZone, startMinute };
 
     const found = await ctx.tx.bill.findMany({
       where: {
@@ -215,7 +219,7 @@ export const exceptionsReport: QueryDefinition<
   }),
   handler: async (ctx, input) => {
     const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_BILL, input.locationId);
-    const window = await resolveWindow(ctx.tx, ctx.actor.organizationId, input.from, input.to);
+    const window = await resolveWindow(ctx.tx, ctx.actor.organizationId, input.from, input.to, await dayStartMinuteFor(ctx.tx, locationIds));
     const when = { gte: window.start, lt: window.end };
     const orderInclude = { table: { select: { label: true } } } as const;
 
@@ -319,8 +323,9 @@ export const outletToday: QueryDefinition<{ locationId?: string }, OutletToday> 
     const tx = ctx.tx;
     const now = new Date();
     const locationIds = await scopedLocationIds(tx, ctx.actor, ENTITY_ORDER, input.locationId);
-    const today = await serviceDayRange(tx, ctx.actor.organizationId);
-    const zone = { timeZone: today.timeZone, startMinute: DEFAULT_DAY_START_MINUTE };
+    const startMinute = await dayStartMinuteFor(tx, locationIds);
+    const today = await serviceDayRange(tx, ctx.actor.organizationId, undefined, startMinute);
+    const zone = { timeZone: today.timeZone, startMinute };
 
     const unpaidMinutes = (await resolveConfig<number>(tx, CONFIG_ALERT_UNPAID_MINUTES)) ?? DEFAULT_ALERT_UNPAID_MINUTES;
     const seatedMinutes = (await resolveConfig<number>(tx, CONFIG_ALERT_SEATED_MINUTES)) ?? DEFAULT_ALERT_SEATED_MINUTES;
@@ -434,7 +439,7 @@ export const outletToday: QueryDefinition<{ locationId?: string }, OutletToday> 
         _count: { _all: true },
       });
       if (closingSteps.length > 0) {
-        const prev = await serviceDayRange(tx, ctx.actor.organizationId, prevDay);
+        const prev = await serviceDayRange(tx, ctx.actor.organizationId, prevDay, startMinute);
         const runs = await tx.outletChecklistRun.findMany({
           where: { kind: "closing", serviceDay: new Date(`${prevDay}T00:00:00Z`), locationId: { in: closingSteps.map((c) => c.locationId) } },
           select: { locationId: true, completedAt: true },

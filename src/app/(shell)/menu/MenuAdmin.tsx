@@ -30,6 +30,8 @@ type MenuCategory = {
     priceMinor: number;
     active: boolean;
     featured: boolean;
+    taxRateBp: number | null;
+    courseId: string | null;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
     availability: Array<AvailabilityRule & { id: string; locationName: string | null }>;
@@ -54,8 +56,10 @@ export function MenuAdmin({
   menu,
   outlets,
   channels,
+  courses,
 }: {
   menu: MenuCategory[];
+  courses: Array<{ id: string; name: string }>;
   outlets: Array<{ id: string; name: string }>;
   channels: Array<{ value: string; label: string }>;
 }) {
@@ -173,6 +177,8 @@ export function MenuAdmin({
                         // Rupees in, paise out. The server never sees a decimal.
                         priceMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
                         featured: formData.get("featured") === "on",
+                        taxRateBp: formData.get("gst") ? Math.round(Number(formData.get("gst")) * 100) : null,
+                        courseId: formData.get("courseId") ? String(formData.get("courseId")) : null,
                       },
                       () => setAddingTo(null),
                     )
@@ -195,6 +201,23 @@ export function MenuAdmin({
                       />
                     </Field>
                   </div>
+                  <div className="w-[120px]">
+                    <Field label="GST (%)" htmlFor={`gst-${category.categoryId}`} hint="Blank for the usual rate">
+                      <Input id={`gst-${category.categoryId}`} name="gst" type="number" step="0.5" min="0" max="40" />
+                    </Field>
+                  </div>
+                  {courses.length > 0 && (
+                    <div className="w-[160px]">
+                      <Field label="Course" htmlFor={"course-" + category.categoryId}>
+                        <Select id={"course-" + category.categoryId} name="courseId" defaultValue="">
+                          <option value="">None</option>
+                          {courses.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </Select>
+                      </Field>
+                    </div>
+                  )}
                   <Checkbox name="featured" label="Special dish" className="min-h-11" />
                   <CommandButton commands={"verity.dinein.create_menu_item"} type="submit" variant="primary" disabled={pending}>
                     Add
@@ -318,6 +341,8 @@ export function MenuAdmin({
                             // Rupees in, paise out. The server never sees a decimal.
                             priceMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
                             featured: formData.get("featured") === "on",
+                            taxRateBp: formData.get("gst") ? Math.round(Number(formData.get("gst")) * 100) : null,
+                            courseId: formData.get("courseId") ? String(formData.get("courseId")) : null,
                           },
                           () => setEditing(null),
                         )
@@ -341,6 +366,23 @@ export function MenuAdmin({
                           />
                         </Field>
                       </div>
+                      <div className="w-[120px]">
+                        <Field label="GST (%)" htmlFor={`edit-gst-${item.id}`} hint="Blank for the usual rate">
+                          <Input id={`edit-gst-${item.id}`} name="gst" type="number" step="0.5" min="0" max="40" defaultValue={item.taxRateBp === null ? "" : item.taxRateBp / 100} />
+                        </Field>
+                      </div>
+                      {courses.length > 0 && (
+                        <div className="w-[160px]">
+                          <Field label="Course" htmlFor={"edit-course-" + item.id}>
+                            <Select id={"edit-course-" + item.id} name="courseId" defaultValue={item.courseId ?? ""}>
+                              <option value="">None</option>
+                              {courses.map((c) => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                              ))}
+                            </Select>
+                          </Field>
+                        </div>
+                      )}
                       <Checkbox name="featured" label="Special dish" defaultChecked={item.featured} className="min-h-11" />
                       <CommandButton commands={"verity.dinein.edit_menu_item"} type="submit" variant="primary" disabled={pending}>
                         Save

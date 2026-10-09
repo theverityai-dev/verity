@@ -502,6 +502,7 @@ describeDb("conformance: database enforcement", () => {
       expect(guarded).toEqual([
         "activity",
         "bill_refund",
+        "bill_refund_tax_line",
         "billing_invoice",
         "billing_meter_reading",
         "cash_movement",
@@ -516,6 +517,9 @@ describeDb("conformance: database enforcement", () => {
         "inventory_wastage_record",
         "journal_entry",
         "journal_line",
+        "kitchen_ticket",
+        "kitchen_ticket_line",
+        "kitchen_ticket_print",
         "loyalty_point_entry",
         "manufacturing_checkpoint_result",
         "manufacturing_dispatch",

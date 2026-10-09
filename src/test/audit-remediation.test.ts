@@ -224,7 +224,10 @@ describe("financial evidence requirements", () => {
   });
   it("refuses dine-in billing before any bill is stored if rates are missing", async () => {
     const create = vi.fn();
+    // An outlet with no profile bills as it always has, which is the path this test is about.
     const ctx = context({ orderLine: { findMany: vi.fn().mockResolvedValue([]) },
+      diningOrder: { findUniqueOrThrow: vi.fn().mockResolvedValue({ id: "o", locationId: "l", channel: "dine_in", state: "served" }) },
+      outletProfile: { findFirst: vi.fn().mockResolvedValue(null) },
       configParameter: { findFirst: vi.fn().mockResolvedValue(null) }, bill: { create } });
     await expect(generateBill.handler(ctx, { orderId: randomUUID() })).rejects.toBeInstanceOf(ValidationError);
     expect(create).not.toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import { assertRegularRegistration } from "./business";
+import { allocateSequence } from "@/server/runtime/document-number";
 import { z } from "zod";
 
 /**
@@ -190,34 +191,9 @@ export async function nextDocumentNumber(
   invoiceNumber: string;
 }> {
   await assertRegularRegistration(tx);
-  // Also serializes an absent series row; row locks alone cannot do that.
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify([tenantId, seriesKey, financialYear])}, 0))`;
-  const locked = await tx.$queryRaw<{ id: string; next_number: number }[]>`
-    SELECT id, next_number
-      FROM trading_invoice_series
-     WHERE series_key = ${seriesKey}
-       AND financial_year = ${financialYear}
-     FOR UPDATE`;
-
-  let seriesId: string;
-  let sequenceNumber: number;
-
-  if (locked[0]) {
-    seriesId = locked[0].id;
-    sequenceNumber = locked[0].next_number;
-    await tx.tradingInvoiceSeries.update({
-      where: { id: seriesId },
-      data: { nextNumber: sequenceNumber + 1, version: { increment: 1 } },
-    });
-  } else {
-    // First invoice in this series this year. The unique index on
-    // (tenant, series, year) is what resolves two callers racing to create it.
-    const created = await tx.tradingInvoiceSeries.create({
-      data: { tenantId, seriesKey, financialYear, nextNumber: 2 },
-    });
-    seriesId = created.id;
-    sequenceNumber = 1;
-  }
+  // The allocation itself is shared with other capabilities (ADR-040); what stays
+  // here is the trading rule that only a regular registration raises tax invoices.
+  const { seriesId, sequenceNumber } = await allocateSequence(tx, tenantId, seriesKey, financialYear);
 
   return {
     seriesId,

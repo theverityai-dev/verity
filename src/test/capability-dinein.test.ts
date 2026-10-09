@@ -42,7 +42,20 @@ import {
   defineTable,
   editMenuItem,
   defineZone,
+  acknowledgeCancelledLine,
   checklistToday,
+  getKitchenTicket,
+  kitchenCancelled,
+  listKitchenSetup,
+  listUnprintedTickets,
+  recordTicketPrint,
+  saveKitchenStation,
+  saveMenuCourse,
+  setStationCategories,
+  gstSummary,
+  saveOutletProfile,
+  waiveServiceCharge,
+  refundBill,
   exceptionsReport,
   handOverOrder,
   setChecklistSteps,
@@ -964,7 +977,7 @@ describeDb("capability: Dine-in", () => {
     expect(history.some((h) => h.orderId === b.id && h.state === "cancelled")).toBe(true);
   });
 
-  /* ------------------- Task 126 wave 0 and 1: days and reports ------------------- */
+  /* ------------------- Task 126 waves 0 to 2: days, reports, GST bill ------------------- */
 
   it("honours the day asked for, and gives each service day its own bills (Task 126 G-01, G-02)", async () => {
     const today = await executeQuery(manager, salesSummary, {});
@@ -1107,6 +1120,250 @@ describeDb("capability: Dine-in", () => {
     // with no steps at all there is nothing to flag.
     const view = await executeQuery(manager, outletToday, {});
     expect(view.attention.some((a) => a.kind === "closing_open")).toBe(false);
+  });
+
+  it("raises a numbered GST invoice at an outlet with a profile, leaves an outlet without one alone, and issues credit notes (ADR-040)", async () => {
+    // A second outlet with a profile; the first has none and must keep billing as it did.
+    const ggn = await withTenant(tenantId, (tx) => tx.location.create({ data: { tenantId, organizationId, name: "Gurugram" } }));
+    const gzone = await executeCommand(manager, defineZone, { locationId: ggn.id, name: "Hall" });
+    const gtable = async (label: string) => {
+      const t = await executeCommand(manager, defineTable, { zoneId: gzone.id, label, seats: 4 });
+      await executeCommand(manager, moveTable, { tableId: t.id, to: "occupied" });
+      return t.id;
+    };
+    const profile = {
+      locationId: ggn.id,
+      code: "GG",
+      legalName: "Kebabz Gurugram Pvt Ltd",
+      gstin: "06AAAAA0000A1Z5",
+      stateCode: "06",
+      registrationType: "regular" as const,
+      fssai: "10012345000678",
+      addressLines: "Sector 29, Gurugram",
+      dayStartMinute: 300,
+      serviceChargeBp: 0,
+      platformTaxFree: true,
+    };
+    await expect(executeCommand(waiter, saveOutletProfile, profile)).rejects.toThrow();
+    await expect(executeCommand(manager, saveOutletProfile, { ...profile, gstin: null })).rejects.toThrow();
+    await executeCommand(manager, saveOutletProfile, profile);
+    // Another outlet may not take the same code.
+    await expect(
+      executeCommand(manager, saveOutletProfile, { ...profile, locationId, code: "GG", legalName: "Other" }),
+    ).rejects.toThrow(/already another outlet/);
+
+    const drinkId = (await executeCommand(manager, createMenuItem, {
+      categoryId: (await executeQuery(manager, listMenu, {}))[0]!.categoryId,
+      name: "Cold Drink",
+      priceMinor: 6_000,
+      taxRateBp: 1800,
+    })).id;
+
+    // Earlier tests edit the fixture prices, so work from what the menu says now.
+    const paneerNow = (await executeQuery(manager, listMenu, {})).flatMap((c) => c.items).find((i) => i.id === paneerId)!.priceMinor;
+    const food = Math.round((paneerNow * 250) / 10_000);
+
+    const serve = async (orderId: string) => {
+      const detail = (await executeQuery(manager, getOrderDetail, { orderId }))!;
+      for (const line of detail.lines) {
+        for (const to of ["preparing", "ready", "served"]) {
+          await executeCommand(manager, advanceOrderLine, { lineId: line.id, to });
+        }
+      }
+    };
+
+    // Food at 5% and a drink at 18% on one bill.
+    const t1 = await gtable("G-1");
+    const o1 = await executeCommand(manager, createOrder, { tableId: t1, covers: 2 });
+    await executeCommand(manager, addOrderLines, { orderId: o1.id, lines: [{ itemId: paneerId, qty: 1 }, { itemId: drinkId, qty: 1 }] });
+    await executeCommand(manager, placeOrder, { orderId: o1.id });
+    await serve(o1.id);
+    const b1 = await executeCommand(manager, generateBill, { orderId: o1.id });
+    const d1 = (await executeQuery(manager, getBillDetail, { billId: b1.id }))!;
+    expect(d1.number).toMatch(/^GG\/\d{2}-\d{2}\/000001$/);
+    expect(d1.seller).toMatchObject({ legalName: "Kebabz Gurugram Pvt Ltd", gstin: "06AAAAA0000A1Z5", fssai: "10012345000678" });
+    expect(d1.taxLines.map((t) => [t.rateBp, t.cgstMinor, t.sgstMinor])).toEqual([[500, food, food], [1800, 540, 540]]);
+    const beforeRounding = paneerNow + 6_000 + 2 * food + 1_080;
+    expect(d1.totalMinor).toBe(Math.round(beforeRounding / 100) * 100);
+    expect(d1.roundingMinor).toBe(d1.totalMinor - beforeRounding);
+
+    // A discount reprices from the tax lines and the invoice keeps its number.
+    await executeCommand(manager, applyBillDiscount, { billId: b1.id, discountMinor: 4_800, reason: "regular guest" });
+    const d1b = (await executeQuery(manager, getBillDetail, { billId: b1.id }))!;
+    expect(d1b.number).toBe(d1.number);
+    expect(d1b.taxLines.reduce((s, t) => s + t.taxableMinor, 0)).toBe(paneerNow + 6_000 - 4_800);
+    const foot = d1b.taxLines.reduce((s, t) => s + t.taxableMinor + t.cgstMinor + t.sgstMinor, 0) + d1b.roundingMinor;
+    expect(foot).toBe(d1b.totalMinor);
+
+    // Numbers are consecutive: the next bill is 000002, whichever table.
+    const t2 = await gtable("G-2");
+    const o2 = await executeCommand(manager, createOrder, { tableId: t2, covers: 1 });
+    await executeCommand(manager, addOrderLines, { orderId: o2.id, lines: [{ itemId: naanId, qty: 2 }] });
+    await executeCommand(manager, placeOrder, { orderId: o2.id });
+    await serve(o2.id);
+    const b2 = await executeCommand(manager, generateBill, { orderId: o2.id });
+    expect((await executeQuery(manager, getBillDetail, { billId: b2.id }))!.number).toMatch(/\/000002$/);
+
+    // A service charge is taxed with the supply, and a manager can waive it on one bill.
+    await executeCommand(manager, saveOutletProfile, { ...profile, serviceChargeBp: 1000 });
+    const t3 = await gtable("G-3");
+    const o3 = await executeCommand(manager, createOrder, { tableId: t3, covers: 2 });
+    await executeCommand(manager, addOrderLines, { orderId: o3.id, lines: [{ itemId: paneerId, qty: 1 }] });
+    await executeCommand(manager, placeOrder, { orderId: o3.id });
+    await serve(o3.id);
+    const b3 = await executeCommand(manager, generateBill, { orderId: o3.id });
+    const d3 = (await executeQuery(manager, getBillDetail, { billId: b3.id }))!;
+    expect(d3.serviceChargeMinor).toBe(Math.round(paneerNow / 10));
+    expect(d3.taxLines[0]!.taxableMinor).toBe(paneerNow + Math.round(paneerNow / 10));
+    await expect(executeCommand(waiter, waiveServiceCharge, { billId: b3.id, reason: "guest asked" })).rejects.toThrow();
+    await executeCommand(manager, waiveServiceCharge, { billId: b3.id, reason: "guest asked" });
+    const d3b = (await executeQuery(manager, getBillDetail, { billId: b3.id }))!;
+    expect(d3b.serviceChargeMinor).toBe(0);
+    expect(d3b.taxLines[0]!.taxableMinor).toBe(paneerNow);
+    await expect(executeCommand(manager, waiveServiceCharge, { billId: b3.id, reason: "again" })).rejects.toThrow(/no service charge/);
+
+    // A delivery-platform order carries no tax on the restaurant's own invoice.
+    const op = await executeCommand(manager, createOrder, { channel: "delivery_platform", locationId: ggn.id, platform: "Zomato", platformOrderRef: "Z-9", customerName: "Asha" });
+    await executeCommand(manager, addOrderLines, { orderId: op.id, lines: [{ itemId: paneerId, qty: 1 }] });
+    await executeCommand(manager, placeOrder, { orderId: op.id });
+    await serve(op.id);
+    const bp = await executeCommand(manager, generateBill, { orderId: op.id });
+    const dp = (await executeQuery(manager, getBillDetail, { billId: bp.id }))!;
+    expect(dp.taxFree).toBe(true);
+    expect(dp.cgstMinor + dp.sgstMinor).toBe(0);
+    expect(dp.serviceChargeMinor).toBe(0);
+
+    // A refund is a credit note, with its own series and the tax it reverses.
+    await executeCommand(manager, recordPayment, { billId: b2.id, method: "cash", amountMinor: (await executeQuery(manager, getBillDetail, { billId: b2.id }))!.totalMinor });
+    await executeCommand(manager, settleBill, { billId: b2.id });
+    const full = (await executeQuery(manager, getBillDetail, { billId: b2.id }))!;
+    await executeCommand(manager, refundBill, { billId: b2.id, amountMinor: Math.floor(full.totalMinor / 2), method: "cash", reason: "Dish was cold" });
+    const refunded = (await executeQuery(manager, getBillDetail, { billId: b2.id }))!;
+    expect(refunded.refunds[0]!.creditNoteNumber).toMatch(/^CGG\/\d{2}-\d{2}\/00001$/);
+    const reversed = refunded.refunds[0]!.taxLines.reduce((s, t) => s + t.taxableMinor + t.cgstMinor + t.sgstMinor, 0);
+    expect(reversed).toBe(refunded.refunds[0]!.amountMinor);
+
+    // The month's summary: supplies by rate, the platform order as tax-free, the credit note, the number range.
+    await executeCommand(manager, recordPayment, { billId: b1.id, method: "cash", amountMinor: (await executeQuery(manager, getBillDetail, { billId: b1.id }))!.totalMinor });
+    await executeCommand(manager, settleBill, { billId: b1.id });
+    await executeCommand(manager, recordPayment, { billId: bp.id, method: "delivery_platform", amountMinor: dp.totalMinor });
+    await executeCommand(manager, settleBill, { billId: bp.id });
+    const summary = await executeQuery(manager, gstSummary, { locationId: ggn.id });
+    const outlet = summary.outlets[0]!;
+    expect(outlet.gstin).toBe("06AAAAA0000A1Z5");
+    expect(outlet.invoices.count).toBe(4);
+    expect(outlet.invoices.first).toMatch(/\/000001$/);
+    expect(outlet.invoices.last).toMatch(/\/000004$/);
+    expect(outlet.rates.map((r) => r.rateBp)).toContain(500);
+    expect(outlet.rates.map((r) => r.rateBp)).toContain(1800);
+    expect(outlet.taxFreeMinor).toBeGreaterThan(0);
+    expect(outlet.creditNotes.count).toBe(1);
+
+    // The outlet with no profile is untouched: no number, and its single-rate arithmetic as before.
+    const legacy = await withTenant(tenantId, (tx) => tx.bill.findMany({ where: { locationId }, select: { number: true } }));
+    expect(legacy.length).toBeGreaterThan(0);
+    expect(legacy.every((b) => b.number === null)).toBe(true);
+
+    // The code prefixes every number, so it cannot change once bills carry it.
+    await expect(executeCommand(manager, saveOutletProfile, { ...profile, code: "GX" })).rejects.toThrow(/cannot change/);
+  });
+
+  it("routes dishes to stations, orders them by course, writes tickets, and tells the kitchen when a started dish is withdrawn (ADR-041)", async () => {
+    const mains = (await executeQuery(manager, listMenu, {}))[0]!.categoryId;
+    const drinksCat = (await executeCommand(manager, createMenuCategory, { name: "Drinks (kitchen test)" })).id;
+    const lassi = (await executeCommand(manager, createMenuItem, { categoryId: drinksCat, name: "Sweet Lassi", priceMinor: 9_000 })).id;
+
+    const starter = (await executeCommand(manager, saveMenuCourse, { name: "Starter (kitchen test)", priority: 1, active: true })).id;
+    const mainCourse = (await executeCommand(manager, saveMenuCourse, { name: "Main (kitchen test)", priority: 2, active: true })).id;
+    await expect(executeCommand(manager, saveMenuCourse, { name: "Starter (kitchen test)", priority: 3, active: true })).rejects.toThrow(/already exists/);
+    await executeCommand(manager, editMenuItem, { itemId: paneerId, courseId: mainCourse });
+    await executeCommand(manager, editMenuItem, { itemId: naanId, courseId: starter });
+
+    // A waiter does not set up stations.
+    await expect(
+      executeCommand(waiter, saveKitchenStation, { locationId, name: "Nope", isDefault: false, active: true }),
+    ).rejects.toThrow();
+    const kitchen = (await executeCommand(manager, saveKitchenStation, { locationId, name: "Kitchen", isDefault: true, active: true })).id;
+    const bar = (await executeCommand(manager, saveKitchenStation, { locationId, name: "Bar", isDefault: false, active: true })).id;
+    await expect(
+      executeCommand(manager, saveKitchenStation, { locationId, name: "Bar", isDefault: false, active: true }),
+    ).rejects.toThrow(/already has a station/);
+    await executeCommand(manager, setStationCategories, { stationId: bar, categoryIds: [drinksCat] });
+
+    const setup = await executeQuery(manager, listKitchenSetup, {});
+    const outlet = setup.outlets.find((o) => o.locationId === locationId)!;
+    expect(outlet.stations.find((s) => s.id === bar)!.categoryIds).toEqual([drinksCat]);
+
+    const t = await executeCommand(manager, defineTable, { zoneId, label: "KS-1", seats: 4 });
+    await executeCommand(manager, moveTable, { tableId: t.id, to: "occupied" });
+    const order = await executeCommand(manager, createOrder, { tableId: t.id, covers: 2 });
+    await executeCommand(manager, addOrderLines, {
+      orderId: order.id,
+      lines: [{ itemId: paneerId, qty: 1 }, { itemId: lassi, qty: 2 }, { itemId: naanId, qty: 1 }],
+    });
+    // Nothing is told to the kitchen until the order is sent.
+    expect((await executeQuery(manager, getOrderDetail, { orderId: order.id }))!.lines).toHaveLength(3);
+    const before = await executeQuery(manager, listUnprintedTickets, {});
+    await executeCommand(manager, placeOrder, { orderId: order.id });
+
+    const fresh = (await executeQuery(manager, listUnprintedTickets, {})).filter((x) => !before.some((b) => b.id === x.id));
+    expect(fresh.map((x) => [x.kind, x.stationName]).sort()).toEqual([["new", "Bar"], ["new", "Kitchen"]]);
+    const [first, second] = [...fresh].sort((a, b) => a.number.localeCompare(b.number));
+    expect(Number(second!.number.slice(1))).toBe(Number(first!.number.slice(1)) + 1);
+
+    // Each station sees its own dishes; the main kitchen lists starters before mains.
+    const barQueue = await executeQuery(manager, kitchenQueue, { stationId: bar });
+    expect(barQueue.filter((q) => q.orderId === order.id).map((q) => q.itemName)).toEqual(["Sweet Lassi"]);
+    const kitchenQueueRows = (await executeQuery(manager, kitchenQueue, { stationId: kitchen })).filter((q) => q.orderId === order.id);
+    expect(kitchenQueueRows.map((q) => q.courseName)).toEqual(["Starter (kitchen test)", "Main (kitchen test)"]);
+    expect((await executeQuery(manager, kitchenQueue, {})).filter((q) => q.orderId === order.id)).toHaveLength(3);
+
+    // The ticket says what to cook, with the course; the first print is a print, the next a reprint.
+    const ticket = (await executeQuery(manager, getKitchenTicket, { ticketId: first!.id }))!;
+    expect(ticket.lines.length).toBeGreaterThan(0);
+    expect(ticket.label).toBe("Table KS-1");
+    expect((await executeCommand(manager, recordTicketPrint, { ticketId: first!.id })).reprint).toBe(false);
+    expect((await executeCommand(manager, recordTicketPrint, { ticketId: first!.id })).reprint).toBe(true);
+    expect((await executeQuery(manager, getKitchenTicket, { ticketId: first!.id }))!.prints).toBe(2);
+    expect((await executeQuery(manager, listUnprintedTickets, {})).some((x) => x.id === first!.id)).toBe(false);
+
+    // A ticket is a fact: the runtime role has no policy to edit or delete one, so both touch nothing.
+    expect(await withTenant(tenantId, (tx) => tx.$executeRaw`UPDATE kitchen_ticket SET kind = 'void' WHERE id = ${first!.id}::uuid`)).toBe(0);
+    expect(await withTenant(tenantId, (tx) => tx.$executeRaw`DELETE FROM kitchen_ticket WHERE id = ${first!.id}::uuid`)).toBe(0);
+    expect((await executeQuery(manager, getKitchenTicket, { ticketId: first!.id }))!.kind).toBe("new");
+
+    // A dish added after sending is an addition and goes to the right station.
+    await executeCommand(manager, addOrderLines, { orderId: order.id, lines: [{ itemId: lassi, qty: 1 }] });
+    const added = (await executeQuery(manager, listUnprintedTickets, {})).filter((x) => x.kind === "addition" && x.stationName === "Bar");
+    expect(added.length).toBeGreaterThan(0);
+
+    // Changing what a station cooks never moves a dish already sent.
+    await executeCommand(manager, setStationCategories, { stationId: kitchen, categoryIds: [drinksCat] });
+    expect((await executeQuery(manager, kitchenQueue, { stationId: bar })).filter((q) => q.orderId === order.id).length).toBeGreaterThan(0);
+    await executeCommand(manager, setStationCategories, { stationId: bar, categoryIds: [drinksCat] });
+    void mains;
+
+    // Withdrawing a dish nobody started: a void ticket, and no flag on the screen.
+    const lines = (await executeQuery(manager, getOrderDetail, { orderId: order.id }))!.lines;
+    const queuedDish = lines.find((l) => l.itemName === "Butter Naan")!;
+    await executeCommand(manager, voidOrderLine, { lineId: queuedDish.id, reason: "guest changed their mind" });
+    expect((await executeQuery(manager, listUnprintedTickets, {})).some((x) => x.kind === "void")).toBe(true);
+    expect((await executeQuery(manager, kitchenCancelled, {})).some((c) => c.lineId === queuedDish.id)).toBe(false);
+
+    // Withdrawing one being cooked: the station keeps seeing it until someone confirms.
+    const cooking = lines.find((l) => l.itemName === "Paneer Butter Masala")!;
+    await executeCommand(manager, advanceOrderLine, { lineId: cooking.id, to: "preparing" });
+    await executeCommand(manager, voidOrderLine, { lineId: cooking.id, reason: "table left" });
+    const flagged = await executeQuery(manager, kitchenCancelled, {});
+    expect(flagged.some((c) => c.lineId === cooking.id)).toBe(true);
+    await executeCommand(manager, acknowledgeCancelledLine, { lineId: cooking.id });
+    expect((await executeQuery(manager, kitchenCancelled, {})).some((c) => c.lineId === cooking.id)).toBe(false);
+    await expect(executeCommand(manager, acknowledgeCancelledLine, { lineId: cooking.id })).rejects.toThrow(/not waiting/);
+
+    // Cancelling the whole order withdraws what was sent: the board stops showing it.
+    await executeCommand(manager, cancelOrder, { orderId: order.id, reason: "walked out" });
+    expect((await executeQuery(manager, kitchenQueue, {})).some((q) => q.orderId === order.id)).toBe(false);
+    expect((await executeQuery(manager, kitchenCancelled, {})).some((c) => c.label === "Table KS-1")).toBe(false);
   });
 
   it("draws a table at a size, marks specials, and says how long a table has been open (Task 126 1.5, 1.6, 1.9)", async () => {

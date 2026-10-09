@@ -32,6 +32,18 @@ import { assertOutletInScope, reachableOutletIds, scopedLocationIds } from "./sc
 import { registerDineinReports } from "./reports";
 import { registerDineinService } from "./service";
 import { registerDineinChecklist } from "./checklist";
+import { noteVoidedAfterSend, registerDineinKitchen, routeToStation, writeTickets } from "./kitchen";
+import {
+  buildTaxInvoice,
+  dayStartMinuteFor,
+  defaultTaxRateBp,
+  loadOutletProfile,
+  planCreditNote,
+  registerDineinGst,
+  repriceTaxInvoice,
+  taxInvoiceBillFields,
+  writeTaxLines,
+} from "./gst";
 import { serviceDayRange } from "./day";
 
 /**
@@ -159,6 +171,8 @@ export const createMenuItem: CommandDefinition<
     costMinor?: number;
     sortOrder?: number;
     featured?: boolean;
+    taxRateBp?: number | null;
+    courseId?: string | null;
   },
   { id: string }
 > = {
@@ -175,6 +189,9 @@ export const createMenuItem: CommandDefinition<
     costMinor: z.number().int().min(0).optional(),
     sortOrder: z.number().int().min(0).optional(),
     featured: z.boolean().optional(),
+    // Total GST rate in basis points (5% is 500); null or absent means the tenant default.
+    taxRateBp: z.number().int().min(0).max(4000).nullish(),
+    courseId: z.string().uuid().nullish(),
   }),
   preconditions: async (ctx, input) => {
     const category = await ctx.tx.menuCategory.findUnique({ where: { id: input.categoryId } });
@@ -192,6 +209,8 @@ export const createMenuItem: CommandDefinition<
         costMinor: input.costMinor ?? null,
         sortOrder: input.sortOrder ?? 0,
         featured: input.featured ?? false,
+        taxRateBp: input.taxRateBp ?? null,
+        courseId: input.courseId ?? null,
       },
     });
     return {
@@ -202,7 +221,7 @@ export const createMenuItem: CommandDefinition<
 };
 
 export const editMenuItem: CommandDefinition<
-  { itemId: string; name?: string; priceMinor?: number; description?: string | null; featured?: boolean },
+  { itemId: string; name?: string; priceMinor?: number; description?: string | null; featured?: boolean; taxRateBp?: number | null; courseId?: string | null },
   { id: string }
 > = {
   key: "verity.dinein.edit_menu_item",
@@ -214,6 +233,8 @@ export const editMenuItem: CommandDefinition<
     priceMinor: z.number().int().min(0).optional(),
     description: z.string().max(2000).nullable().optional(),
     featured: z.boolean().optional(),
+    taxRateBp: z.number().int().min(0).max(4000).nullable().optional(),
+    courseId: z.string().uuid().nullable().optional(),
   }),
   handler: async (ctx, input) => {
     const before = await ctx.tx.menuItem.findUniqueOrThrow({ where: { id: input.itemId } });
@@ -224,6 +245,8 @@ export const editMenuItem: CommandDefinition<
         ...(input.priceMinor === undefined ? {} : { priceMinor: input.priceMinor }),
         ...(input.description === undefined ? {} : { description: input.description }),
         ...(input.featured === undefined ? {} : { featured: input.featured }),
+        ...(input.taxRateBp === undefined ? {} : { taxRateBp: input.taxRateBp }),
+        ...(input.courseId === undefined ? {} : { courseId: input.courseId }),
         version: { increment: 1 },
       },
     });
@@ -235,8 +258,8 @@ export const editMenuItem: CommandDefinition<
       entityId: after.id,
       commandKey: "verity.dinein.edit_menu_item",
       changes: diffFields(
-        { name: before.name, priceMinor: before.priceMinor, featured: before.featured },
-        { name: after.name, priceMinor: after.priceMinor, featured: after.featured },
+        { name: before.name, priceMinor: before.priceMinor, featured: before.featured, taxRateBp: before.taxRateBp },
+        { name: after.name, priceMinor: after.priceMinor, featured: after.featured, taxRateBp: after.taxRateBp },
       ),
     });
 
@@ -845,9 +868,13 @@ export const addOrderLines: CommandDefinition<
     const order = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.orderId } });
     // Where and when this order is being taken, read once for every line.
     const where = await orderAvailabilityContext(ctx.tx, order);
+    const defaultRateBp = await defaultTaxRateBp(ctx.tx);
+    // The station is worked out once per category, and the lines created are kept for the ticket.
+    const stationFor = new Map<string, string | null>();
+    const createdLineIds: string[] = [];
 
     for (const line of input.lines) {
-      const item = await ctx.tx.menuItem.findUnique({ where: { id: line.itemId } });
+      const item = await ctx.tx.menuItem.findUnique({ where: { id: line.itemId }, include: { course: true } });
       if (!item) throw new ValidationError("E_VALIDATION: menu item not found");
       if (!item.active) {
         throw new ValidationError(`E_VALIDATION: ${item.name} is not available right now`);
@@ -915,10 +942,21 @@ export const addOrderLines: CommandDefinition<
           itemNameSnapshot: item.name,
           variantNameSnapshot: variantName,
           unitPriceMinor,
+          // The GST rate it is sold at, snapshotted with the price (ADR-040 item 4).
+          taxRateBp: item.taxRateBp ?? defaultRateBp,
+          // Where it is cooked and in which course, fixed now (ADR-041): changing what a
+          // station cooks later never moves a dish already on the stove.
+          stationId: await (async () => {
+            if (!stationFor.has(item.categoryId)) stationFor.set(item.categoryId, await routeToStation(ctx.tx, order.locationId, item.categoryId));
+            return stationFor.get(item.categoryId)!;
+          })(),
+          courseName: item.course?.active ? item.course.name : null,
+          coursePriority: item.course?.active ? item.course.priority : null,
           qty: line.qty,
           lineNote: line.lineNote ?? null,
         },
       });
+      createdLineIds.push(created.id);
       // The add-on snapshot rows, written with the line in the same transaction.
       if (modifiers.length > 0) {
         await ctx.tx.orderLineModifier.createMany({
@@ -941,6 +979,9 @@ export const addOrderLines: CommandDefinition<
         });
       }
     }
+
+    // Lines added to an order already with the kitchen are an addition: tell each station.
+    if (order.state !== "draft") await writeTickets(ctx, order, "addition", createdLineIds);
 
     await ctx.tx.diningOrder.update({
       where: { id: order.id },
@@ -1023,6 +1064,8 @@ export const placeOrder: CommandDefinition<{ orderId: string }, { id: string; li
         entityId: line.id,
       });
     }
+    // The kitchen is told: one ticket per station for what was just sent.
+    await writeTickets(ctx, order, "new", lines.map((l) => l.id));
 
     await recordActivity(ctx, {
       entityKey: ENTITY_ORDER,
@@ -1076,6 +1119,11 @@ export const advanceOrderLine: CommandDefinition<
       entityId: line.id,
       category: moved.to.category,
     });
+
+    if (input.to === "voided") {
+      const sentOrder = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: line.orderId } });
+      if (sentOrder.state !== "draft") await noteVoidedAfterSend(ctx, sentOrder, [{ id: line.id, stateBefore: line.state }]);
+    }
 
     await recordActivity(ctx, {
       entityKey: ENTITY_ORDER_LINE,
@@ -1173,6 +1221,13 @@ export const voidOrderLine: CommandDefinition<
       category: moved.to.category,
     });
 
+    // A dish the kitchen was already told about must be un-told: a void ticket, and a flag
+    // on the station's screen if it was being cooked (ADR-041 item 4).
+    const orderForVoid = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: line.orderId } });
+    if (orderForVoid.state !== "draft") {
+      await noteVoidedAfterSend(ctx, orderForVoid, [{ id: line.id, stateBefore: line.state }]);
+    }
+
     // Voids are money. Who, when and why is a query afterwards, not an
     // investigation.
     await recordActivity(ctx, {
@@ -1212,6 +1267,24 @@ export const cancelOrder: CommandDefinition<
   },
   handler: async (ctx, input) => {
     const order = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.orderId } });
+
+    // What the kitchen was already told is withdrawn with the order, line by line, so the
+    // board stops showing it and a station sees the dishes that were being cooked
+    // (ADR-041 item 4). A draft was never sent, so there is nothing to withdraw.
+    if (order.state !== "draft") {
+      const sent = await ctx.tx.orderLine.findMany({ where: { orderId: order.id, state: { in: ["queued", "preparing"] } } });
+      for (const sentLine of sent) {
+        const movedLine = await transition(ctx, {
+          entityKey: ENTITY_ORDER_LINE,
+          entityId: sentLine.id,
+          fromKey: sentLine.state,
+          toKey: "voided",
+        });
+        await ctx.tx.orderLine.update({ where: { id: sentLine.id }, data: { state: "voided", version: { increment: 1 } } });
+        await applyStateToClocks(ctx.tx, { entityKey: ENTITY_ORDER_LINE, entityId: sentLine.id, category: movedLine.to.category });
+      }
+      await noteVoidedAfterSend(ctx, order, sent.map((l) => ({ id: l.id, stateBefore: l.state })));
+    }
 
     const moved = await transition(ctx, {
       entityKey: ENTITY_ORDER,
@@ -1519,6 +1592,40 @@ export const generateBill: CommandDefinition<
       0,
     );
 
+    // An outlet with a profile raises a numbered tax invoice, split by rate (ADR-040).
+    // One without bills as it always has, below.
+    const orderForProfile = await ctx.tx.diningOrder.findUniqueOrThrow({ where: { id: input.orderId } });
+    const profile = await loadOutletProfile(ctx.tx, orderForProfile.locationId);
+    if (profile) {
+      const built = await buildTaxInvoice(ctx, orderForProfile, lines, profile);
+      const invoice = await ctx.tx.bill.create({
+        data: {
+          tenantId: ctx.actor.tenantId,
+          orderId: input.orderId,
+          locationId: orderForProfile.locationId,
+          generatedByUserId: ctx.actor.userId,
+          ...taxInvoiceBillFields(built),
+        },
+      });
+      await writeTaxLines(ctx.tx, ctx.actor.tenantId, invoice.id, built.computation);
+
+      const movedInvoice = await transition(ctx, {
+        entityKey: ENTITY_ORDER,
+        entityId: orderForProfile.id,
+        fromKey: orderForProfile.state,
+        toKey: "billed",
+      });
+      await ctx.tx.diningOrder.update({
+        where: { id: orderForProfile.id },
+        data: { state: "billed", version: { increment: 1 } },
+      });
+      await upsertCustomerForOrder(ctx, orderForProfile.id);
+      return {
+        result: { id: invoice.id, totalMinor: invoice.totalMinor },
+        events: [{ name: "verity.dinein.bill_generated", entityId: invoice.id }, movedInvoice.event],
+      };
+    }
+
     const cgst = await resolveConfig<number>(ctx.tx, CONFIG_CGST_RATE);
     const sgst = await resolveConfig<number>(ctx.tx, CONFIG_SGST_RATE);
     if (cgst == null || sgst == null || !Number.isFinite(Number(cgst)) ||
@@ -1615,29 +1722,34 @@ async function setBillDiscount(
   commandKey: string,
   input: { billId: string; discountMinor: number; reason: string },
 ) {
-  const before = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId } });
+  const before = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId }, include: { _count: { select: { taxLines: true } } } });
 
-  // Recomputed at the rate the bill was RAISED at, not the rate configured
-  // now — a discount is not an occasion to reprice yesterday's tax.
-  const totals = computeBillTotals({
-    subtotalMinor: before.subtotalMinor,
-    discountMinor: input.discountMinor,
-    cgstRateBp: before.cgstRateBp,
-    sgstRateBp: before.sgstRateBp,
-  });
-
-  const after = await ctx.tx.bill.update({
-    where: { id: input.billId },
-    data: {
-      discountMinor: input.discountMinor,
-      cgstMinor: totals.cgstMinor,
-      sgstMinor: totals.sgstMinor,
-      taxableMinor: totals.taxableMinor,
-      totalMinor: totals.totalMinor,
-      roundingMinor: totals.roundingMinor,
-      version: { increment: 1 },
-    },
-  });
+  // A tax invoice (ADR-040) is repriced from its own tax lines; an older bill at the single
+  // rate it was raised with. Either way at the rate the bill was RAISED at, not the rate
+  // configured now: a discount is not an occasion to reprice yesterday's tax.
+  const after =
+    before._count.taxLines > 0
+      ? await repriceTaxInvoice(ctx, input.billId, { discountMinor: input.discountMinor })
+      : await (async () => {
+          const totals = computeBillTotals({
+            subtotalMinor: before.subtotalMinor,
+            discountMinor: input.discountMinor,
+            cgstRateBp: before.cgstRateBp,
+            sgstRateBp: before.sgstRateBp,
+          });
+          return ctx.tx.bill.update({
+            where: { id: input.billId },
+            data: {
+              discountMinor: input.discountMinor,
+              cgstMinor: totals.cgstMinor,
+              sgstMinor: totals.sgstMinor,
+              taxableMinor: totals.taxableMinor,
+              totalMinor: totals.totalMinor,
+              roundingMinor: totals.roundingMinor,
+              version: { increment: 1 },
+            },
+          });
+        })();
 
   await recordActivity(ctx, {
     entityKey: ENTITY_BILL,
@@ -1876,6 +1988,9 @@ export const listMenu: QueryDefinition<
       active: boolean;
       /** A special or priority dish; the order pad can filter to these. */
       featured: boolean;
+      /** Total GST rate in basis points, or null for the tenant default. */
+      taxRateBp: number | null;
+      courseId: string | null;
       variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
       /** Add-ons; retired ones appear only when `includeInactive` is set. */
       modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
@@ -1917,6 +2032,8 @@ export const listMenu: QueryDefinition<
         priceMinor: item.priceMinor,
         active: item.active,
         featured: item.featured,
+        taxRateBp: item.taxRateBp,
+        courseId: item.courseId,
         variants: item.variants.map((variant) => ({
           id: variant.id,
           name: variant.name,
@@ -2084,6 +2201,11 @@ export type KitchenTicket = {
   placedAt: Date | null;
   remainingMinutes: number | null;
   urgency: string;
+  /** Where it is cooked, and the course it is served in (ADR-041). */
+  stationId: string | null;
+  stationName: string | null;
+  courseName: string | null;
+  coursePriority: number | null;
 };
 
 /**
@@ -2095,23 +2217,28 @@ export type KitchenTicket = {
  * contract is capability code and unambiguous, so it exists; the surface waits
  * for the owner.
  */
-export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicket[]> = {
+export const kitchenQueue: QueryDefinition<{ locationId?: string; stationId?: string }, KitchenTicket[]> = {
   key: "verity.dinein.kitchen_queue",
   entity: ENTITY_ORDER_LINE,
-  input: z.object({ locationId: z.string().uuid().optional() }),
+  input: z.object({ locationId: z.string().uuid().optional(), stationId: z.string().uuid().optional() }),
   handler: async (ctx, input) => {
     const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_ORDER_LINE, input.locationId);
-    const lines = await ctx.tx.orderLine.findMany({
+    const found = await ctx.tx.orderLine.findMany({
       where: {
         state: { in: ["queued", "preparing", "ready"] },
+        ...(input.stationId ? { stationId: input.stationId } : {}),
         order: { is: { locationId: { in: locationIds } } },
       },
       orderBy: { createdAt: "asc" },
       include: {
         order: { include: { table: { select: { label: true } } } },
+        station: { select: { name: true } },
         addOns: true,
       },
     });
+    // Oldest first, but the course the pass wants first comes first within that: starters
+    // before mains, whichever was typed in first.
+    const lines = [...found].sort((a, b) => (a.coursePriority ?? 999) - (b.coursePriority ?? 999) || a.createdAt.getTime() - b.createdAt.getTime());
 
     const targetMinutes = Number(
       (await resolveConfig<number>(ctx.tx, CONFIG_PREP_TARGET_MINUTES)) ?? 15,
@@ -2145,6 +2272,10 @@ export const kitchenQueue: QueryDefinition<{ locationId?: string }, KitchenTicke
         remainingMinutes: remaining,
         // A computed axis, separate from any business priority.
         urgency: urgencyFor(remaining, targetMinutes),
+        stationId: line.stationId,
+        stationName: line.station?.name ?? null,
+        courseName: line.courseName,
+        coursePriority: line.coursePriority,
       });
     }
     return tickets;
@@ -2168,8 +2299,25 @@ export type BillDetail = {
   outstandingMinor: number;
   lines: Array<{ itemName: string; variantName: string | null; modifiers: LineModifier[]; qty: number; lineTotalMinor: number }>;
   payments: Array<{ method: string; amountMinor: number; reference: string | null }>;
-  refunds: Array<{ method: string; amountMinor: number; reason: string; at: Date }>;
+  refunds: Array<{
+    method: string;
+    amountMinor: number;
+    reason: string;
+    at: Date;
+    /** The credit note this refund is, once the outlet has a profile (ADR-040). */
+    creditNoteNumber: string | null;
+    taxLines: Array<{ rateBp: number; taxableMinor: number; cgstMinor: number; sgstMinor: number }>;
+  }>;
   refundableMinor: number;
+  /** Tax-invoice particulars; all null/empty on a bill raised before the outlet had a profile. */
+  number: string | null;
+  seller: { legalName: string | null; gstin: string | null; fssai: string | null; address: string | null };
+  taxLines: Array<{ rateBp: number; grossMinor: number; taxableMinor: number; cgstMinor: number; sgstMinor: number }>;
+  serviceChargeMinor: number;
+  serviceChargeBp: number;
+  taxFree: boolean;
+  /** When the bill was raised; the date on the invoice. */
+  raisedAt: Date;
   /**
    * Points the guest could spend on this open bill right now, or null when there
    * is nothing to offer (settled, already discounted, no guest, no points, or the
@@ -2221,6 +2369,10 @@ export const refundBill: CommandDefinition<
     }
   },
   handler: async (ctx, input) => {
+    // A refund against a numbered tax invoice is a credit note: its own gapless number,
+    // and the tax it reverses stated per rate (ADR-040). Older bills refund as before.
+    const billForNote = await ctx.tx.bill.findUniqueOrThrow({ where: { id: input.billId }, include: { taxLines: true } });
+    const note = await planCreditNote(ctx, billForNote, input.amountMinor);
     const refund = await ctx.tx.billRefund.create({
       data: {
         tenantId: ctx.actor.tenantId,
@@ -2229,8 +2381,22 @@ export const refundBill: CommandDefinition<
         method: input.method,
         reason: input.reason,
         refundedByUserId: ctx.actor.userId,
+        creditNoteNumber: note?.number ?? null,
+        creditNoteSequence: note?.sequenceNumber ?? null,
       },
     });
+    if (note) {
+      await ctx.tx.billRefundTaxLine.createMany({
+        data: note.taxLines.map((t) => ({
+          tenantId: ctx.actor.tenantId,
+          refundId: refund.id,
+          rateBp: t.rateBp,
+          taxableMinor: t.taxableMinor,
+          cgstMinor: t.cgstMinor,
+          sgstMinor: t.sgstMinor,
+        })),
+      });
+    }
     // Points earned on this bill come back in proportion to what was refunded.
     // Coupons are not reversed: the refund is already net of the discount.
     await reversePointsForRefund(ctx, input.billId);
@@ -2265,7 +2431,8 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
       where: { id: input.billId },
       include: {
         payments: { orderBy: { createdAt: "asc" } },
-        refunds: { orderBy: { createdAt: "asc" } },
+        refunds: { orderBy: { createdAt: "asc" }, include: { taxLines: true } },
+        taxLines: true,
         order: {
           include: {
             table: { select: { label: true } },
@@ -2319,9 +2486,27 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
         amountMinor: payment.amountMinor,
         reference: payment.reference,
       })),
-      refunds: bill.refunds.map((r) => ({ method: r.method, amountMinor: r.amountMinor, reason: r.reason, at: r.createdAt })),
+      refunds: bill.refunds.map((r) => ({
+        method: r.method,
+        amountMinor: r.amountMinor,
+        reason: r.reason,
+        at: r.createdAt,
+        creditNoteNumber: r.creditNoteNumber,
+        taxLines: r.taxLines
+          .map((t) => ({ rateBp: t.rateBp, taxableMinor: t.taxableMinor, cgstMinor: t.cgstMinor, sgstMinor: t.sgstMinor }))
+          .sort((a, b) => a.rateBp - b.rateBp),
+      })),
       refundableMinor: paidMinor - bill.refunds.reduce((sum, r) => sum + r.amountMinor, 0),
       redeemable,
+      number: bill.number,
+      seller: { legalName: bill.sellerLegalName, gstin: bill.sellerGstin, fssai: bill.sellerFssai, address: bill.sellerAddress },
+      taxLines: bill.taxLines
+        .map((t) => ({ rateBp: t.rateBp, grossMinor: t.grossMinor, taxableMinor: t.taxableMinor, cgstMinor: t.cgstMinor, sgstMinor: t.sgstMinor }))
+        .sort((a, b) => a.rateBp - b.rateBp),
+      serviceChargeMinor: bill.serviceChargeMinor,
+      serviceChargeBp: bill.serviceChargeBp,
+      taxFree: bill.taxFree,
+      raisedAt: bill.createdAt,
     };
   },
 };
@@ -2372,6 +2557,8 @@ export { DEFAULT_DAY_START_MINUTE, serviceDayRange } from "./day";
 export * from "./reports";
 export * from "./service";
 export * from "./checklist";
+export * from "./gst";
+export * from "./kitchen";
 
 export const salesSummary: QueryDefinition<
   { day?: string; locationId?: string },
@@ -2381,10 +2568,10 @@ export const salesSummary: QueryDefinition<
   entity: ENTITY_BILL,
   input: z.object({ day: z.string().optional(), locationId: z.string().uuid().optional() }),
   handler: async (ctx, input) => {
-    const range = await serviceDayRange(ctx.tx, ctx.actor.organizationId, input.day);
+    const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_BILL, input.locationId);
+    const range = await serviceDayRange(ctx.tx, ctx.actor.organizationId, input.day, await dayStartMinuteFor(ctx.tx, locationIds));
     const from = range.from;
     const to = range.to;
-    const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_BILL, input.locationId);
 
     const bills = await ctx.tx.bill.findMany({
       where: {
@@ -2566,6 +2753,26 @@ export function registerDineinCapability(): void {
         shells: ["platform", "operations"],
       },
       {
+        href: "/kitchen/setup",
+        label: "Stations and courses",
+        group: "Administration",
+        order: 25,
+        icon: "workspace",
+        // Setup, like the floor plan: gated on Create so only whoever shapes the kitchen reaches it.
+        requiresEntity: ENTITY_TABLE,
+        requiresVerb: "Create",
+        shells: ["platform"],
+      },
+      {
+        href: "/gst-summary",
+        label: "GST summary",
+        group: "Capabilities",
+        order: 26,
+        icon: "tax",
+        requiresEntity: ENTITY_BILL,
+        shells: ["platform"],
+      },
+      {
         href: "/sales-reports",
         label: "Sales reports",
         group: "Capabilities",
@@ -2668,4 +2875,6 @@ export function registerDineinCapability(): void {
   registerDineinReports();
   registerDineinService();
   registerDineinChecklist();
+  registerDineinGst();
+  registerDineinKitchen();
 }

@@ -5,6 +5,7 @@ import { recordActivity } from "@/server/platform/audit";
 import { ENTITY_TABLE } from "./keys";
 import { serviceDayRange } from "./day";
 import { assertOutletInScope, scopedLocationIds } from "./scope";
+import { dayStartMinuteFor } from "./gst";
 
 /**
  * Opening and closing checklists (Task 126 item 1.8; URY's POS checklists).
@@ -93,7 +94,7 @@ export const tickChecklistStep: CommandDefinition<
   },
   handler: async (ctx, input) => {
     const step = await ctx.tx.outletChecklistStep.findUniqueOrThrow({ where: { id: input.stepId } });
-    const day = (await serviceDayRange(ctx.tx, ctx.actor.organizationId)).day;
+    const day = (await serviceDayRange(ctx.tx, ctx.actor.organizationId, undefined, await dayStartMinuteFor(ctx.tx, [step.locationId]))).day;
     const serviceDay = new Date(`${day}T00:00:00Z`);
 
     const run = await ctx.tx.outletChecklistRun.upsert({
@@ -165,7 +166,7 @@ export const checklistToday: QueryDefinition<{ locationId?: string }, ChecklistT
   input: z.object({ locationId: z.string().uuid().optional() }),
   handler: async (ctx, input) => {
     const locationIds = await scopedLocationIds(ctx.tx, ctx.actor, ENTITY_TABLE, input.locationId);
-    const day = (await serviceDayRange(ctx.tx, ctx.actor.organizationId)).day;
+    const day = (await serviceDayRange(ctx.tx, ctx.actor.organizationId, undefined, await dayStartMinuteFor(ctx.tx, locationIds))).day;
     const locations = await ctx.tx.location.findMany({
       where: { id: { in: locationIds }, active: true },
       orderBy: { name: "asc" },

@@ -122,6 +122,12 @@ model Tenant {
   outletChecklistSteps OutletChecklistStep[]
   outletChecklistRuns  OutletChecklistRun[]
   outletChecklistTicks OutletChecklistTick[]
+  menuCourses          MenuCourse[]
+  kitchenStations      KitchenStation[]
+  kitchenStationCategories KitchenStationCategory[]
+  kitchenTickets       KitchenTicket[]
+  kitchenTicketLines   KitchenTicketLine[]
+  kitchenTicketPrints  KitchenTicketPrint[]
 
   // Capability: plywood trading. Back-relations only, as above.
   tradingBrands                    TradingBrand[]
@@ -172,6 +178,9 @@ model Tenant {
   inventoryStockRequests       InventoryStockRequest[]
   inventoryVendorPayments      InventoryVendorPayment[]
   billRefunds                  BillRefund[]
+  billTaxLines                 BillTaxLine[]
+  billRefundTaxLines           BillRefundTaxLine[]
+  outletProfiles               OutletProfile[]
   inventoryPurchaseOrders      InventoryPurchaseOrder[]
   inventoryPurchaseOrderLines  InventoryPurchaseOrderLine[]
   inventoryGoodsReceipts       InventoryGoodsReceipt[]
@@ -1625,6 +1634,10 @@ model Location {
   menuAvailability MenuAvailability[]
   outletChecklistSteps OutletChecklistStep[]
   outletChecklistRuns  OutletChecklistRun[]
+  outletProfile OutletProfile?
+  kitchenStations      KitchenStation[]
+  kitchenStationCategories KitchenStationCategory[]
+  kitchenTickets       KitchenTicket[]
   bills        Bill[]
   customers    Customer[]
   complaints   Complaint[]
@@ -2347,6 +2360,7 @@ model MenuCategory {
 
   tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   items  MenuItem[]
+  stationLinks KitchenStationCategory[]
 
   @@unique([tenantId, name])
   @@unique([tenantId, id], name: "menu_category_tenant_scoped_id")
@@ -2372,6 +2386,11 @@ model MenuItem {
   active       Boolean  @default(true)
   /// A special or priority dish the order pad can filter to (Task 126 item 1.9).
   featured     Boolean  @default(false)
+  /// The TOTAL GST rate for this dish in basis points (5% is 500). Null means the
+  /// tenant's default rate (ADR-040 item 4).
+  taxRateBp    Int?     @map("tax_rate_bp")
+  /// The course this dish is served in, ordering the pass (ADR-041 item 2).
+  courseId     String?  @map("course_id") @db.Uuid
   sortOrder    Int      @default(0) @map("sort_order")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -2385,6 +2404,7 @@ model MenuItem {
   availability MenuAvailability[]
   lines    OrderLine[]
   recipe   Recipe?
+  course   MenuCourse? @relation(fields: [tenantId, courseId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "menu_item_course_fkey")
 
   @@unique([tenantId, id], name: "menu_item_tenant_scoped_id")
   @@index([tenantId, categoryId, sortOrder])
@@ -2414,6 +2434,130 @@ model MenuAvailability {
 
   @@index([tenantId, itemId])
   @@map("menu_availability")
+}
+
+/// A course: the order dishes come to the pass in (Task 126 item 3.5; ADR-041). Lower
+/// priority is served first. A dish with no course has none.
+model MenuCourse {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  priority  Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items  MenuItem[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, id], name: "menu_course_tenant_scoped_id")
+  @@map("menu_course")
+}
+
+/// A station of an outlet's kitchen: the grill, the bar. A view over the kitchen, not a
+/// security boundary (ADR-041 item 1). Exactly one per outlet is the default, which takes
+/// any category no station claims.
+model KitchenStation {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  name       String
+  sortOrder  Int      @default(0) @map("sort_order")
+  isDefault  Boolean  @default(false) @map("is_default")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  version    Int      @default(1)
+
+  tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location   Location                 @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_station_location_fkey")
+  categories KitchenStationCategory[]
+  lines      OrderLine[]
+  tickets    KitchenTicket[]
+
+  @@unique([tenantId, locationId, name])
+  @@unique([tenantId, id], name: "kitchen_station_tenant_scoped_id")
+  @@map("kitchen_station")
+}
+
+/// Which station cooks a menu category at an outlet. One station per category per outlet.
+model KitchenStationCategory {
+  id         String @id @default(uuid()) @db.Uuid
+  tenantId   String @map("tenant_id") @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  stationId  String @map("station_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location       @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_station_category_location_fkey")
+  station  KitchenStation @relation(fields: [tenantId, stationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_station_category_station_fkey")
+  category MenuCategory   @relation(fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_station_category_category_fkey")
+
+  @@unique([tenantId, locationId, categoryId], name: "kitchen_station_category_once")
+  @@map("kitchen_station_category")
+}
+
+/// What the kitchen was told, and when (ADR-041 item 3): one per station per change to an
+/// order, numbered per outlet per service day. A fact, never edited.
+model KitchenTicket {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  locationId      String   @map("location_id") @db.Uuid
+  stationId       String?  @map("station_id") @db.Uuid
+  orderId         String   @map("order_id") @db.Uuid
+  /// "K017": the day's running number at this outlet.
+  number          String
+  sequenceNumber  Int      @map("sequence_number")
+  serviceDay      DateTime @map("service_day") @db.Date
+  /// new | addition | void
+  kind            String
+  createdByUserId String   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location            @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_ticket_location_fkey")
+  station  KitchenStation?     @relation(fields: [tenantId, stationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "kitchen_ticket_station_fkey")
+  order    DiningOrder         @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_ticket_order_fkey")
+  lines    KitchenTicketLine[]
+  prints   KitchenTicketPrint[]
+
+  @@unique([tenantId, locationId, serviceDay, number], name: "kitchen_ticket_number")
+  @@unique([tenantId, id], name: "kitchen_ticket_tenant_scoped_id")
+  @@index([tenantId, locationId, createdAt])
+  @@map("kitchen_ticket")
+}
+
+model KitchenTicketLine {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  ticketId    String @map("ticket_id") @db.Uuid
+  orderLineId String @map("order_line_id") @db.Uuid
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticket KitchenTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_ticket_line_ticket_fkey")
+  line   OrderLine     @relation(fields: [tenantId, orderLineId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "kitchen_ticket_line_line_fkey")
+
+  @@unique([ticketId, orderLineId], name: "kitchen_ticket_line_once")
+  @@map("kitchen_ticket_line")
+}
+
+/// Each time a ticket was printed. The first is the print; later rows are reprints, so
+/// the ticket itself never changes (ADR-041 item 5).
+model KitchenTicketPrint {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  ticketId        String   @map("ticket_id") @db.Uuid
+  printedByUserId String   @map("printed_by_user_id") @db.Uuid
+  printedAt       DateTime @default(now()) @map("printed_at")
+  reprint         Boolean  @default(false)
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ticket KitchenTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "kitchen_ticket_print_ticket_fkey")
+
+  @@index([tenantId, ticketId])
+  @@map("kitchen_ticket_print")
 }
 
 /// One line of an outlet's opening or closing checklist (Task 126 item 1.8). The list
@@ -2636,6 +2780,7 @@ model DiningOrder {
   location Location    @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "dining_order_location_fkey")
   lines    OrderLine[]
   bill     Bill?
+  kitchenTickets KitchenTicket[]
 
   @@unique([tenantId, id], name: "dining_order_tenant_scoped_id")
   @@index([tenantId, state])
@@ -2661,6 +2806,18 @@ model OrderLine {
   itemNameSnapshot    String   @map("item_name_snapshot")
   variantNameSnapshot String?  @map("variant_name_snapshot")
   unitPriceMinor      Int      @map("unit_price_minor")
+  /// The total GST rate this line was sold at, snapshotted with the price. Null on a
+  /// line taken before rates were per dish; the bill then uses the tenant default.
+  taxRateBp           Int?     @map("tax_rate_bp")
+  /// Where the kitchen cooks it, fixed when the line is added so re-mapping a category
+  /// never moves a dish already cooking (ADR-041 item 1). Course likewise.
+  stationId           String?  @map("station_id") @db.Uuid
+  courseName          String?  @map("course_name")
+  coursePriority      Int?     @map("course_priority")
+  /// Set when a dish already being cooked or on the pass is voided: the station shows it
+  /// until someone there confirms they have seen it.
+  needsKitchenAck     Boolean  @default(false) @map("needs_kitchen_ack")
+  kitchenAckAt        DateTime? @map("kitchen_ack_at")
   qty                 Int      @default(1)
   lineNote            String?  @map("line_note")
   state               String   @default("queued")
@@ -2676,6 +2833,8 @@ model OrderLine {
   /// with a different set of add-ons is a different line, so same-item combining
   /// compares these too.
   addOns OrderLineModifier[]
+  station     KitchenStation? @relation(fields: [tenantId, stationId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction, map: "order_line_station_fkey")
+  ticketLines KitchenTicketLine[]
 
   @@unique([tenantId, id], name: "order_line_tenant_scoped_id")
   @@index([tenantId, orderId])
@@ -2733,6 +2892,23 @@ model Bill {
   roundingMinor     Int       @default(0) @map("rounding_minor")
   state             String    @default("open")
   generatedByUserId String    @map("generated_by_user_id") @db.Uuid
+  /// The tax-invoice number, from the outlet's gapless series (ADR-040). Null on a bill
+  /// raised before the outlet had a profile, which keeps its old label.
+  number            String?
+  sequenceNumber    Int?      @map("sequence_number")
+  financialYear     String?   @map("financial_year")
+  /// The seller as it stood when the bill was raised, copied so a later edit of the
+  /// outlet profile never restates a bill a guest holds.
+  sellerLegalName   String?   @map("seller_legal_name")
+  sellerGstin       String?   @map("seller_gstin")
+  sellerFssai       String?   @map("seller_fssai")
+  sellerAddress     String?   @map("seller_address")
+  /// Service charge, in basis points of the amount after discount, and the amount. Zero
+  /// when the outlet charges none or a manager waived it on this bill.
+  serviceChargeBp   Int       @default(0) @map("service_charge_bp")
+  serviceChargeMinor Int      @default(0) @map("service_charge_minor")
+  /// True when this invoice carries no tax (a delivery-platform order, ADR-040 item 6).
+  taxFree           Boolean   @default(false) @map("tax_free")
   settledAt         DateTime? @map("settled_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -2744,6 +2920,10 @@ model Bill {
   location Location    @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "bill_location_fkey")
   payments Payment[]
   refunds  BillRefund[]
+  taxLines BillTaxLine[]
+
+  /// A bill number is unique within the tenant; many bills may have none (null).
+  @@unique([tenantId, number], name: "bill_tenant_number")
 
   // One bill per order in v1. The pair is unique as well as the id, because the
   // relation is defined on the tenant-scoped composite key and Prisma needs the
@@ -2793,13 +2973,96 @@ model BillRefund {
   reason           String
   refundedByUserId String   @map("refunded_by_user_id") @db.Uuid
   createdAt        DateTime @default(now()) @map("created_at")
+  /// The credit note this refund is (ADR-040 item 8): its own gapless series. Null on a
+  /// refund against a bill raised before the outlet had a profile.
+  creditNoteNumber   String? @map("credit_note_number")
+  creditNoteSequence Int?    @map("credit_note_sequence")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  bill   Bill   @relation(fields: [tenantId, billId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bill     Bill                @relation(fields: [tenantId, billId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+  taxLines BillRefundTaxLine[]
 
+  @@unique([tenantId, id], name: "bill_refund_tenant_scoped_id")
+  @@unique([tenantId, creditNoteNumber], name: "bill_refund_tenant_credit_note")
   @@index([tenantId, billId])
   @@index([tenantId, createdAt])
   @@map("bill_refund")
+}
+
+/// One rate's share of a bill (ADR-040 item 4). The bill's own cgst/sgst/taxable
+/// columns stay as the totals so every older reader keeps working; this is the detail a
+/// tax return and a printed invoice need.
+model BillTaxLine {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  billId       String @map("bill_id") @db.Uuid
+  /// The TOTAL GST rate in basis points: 5% is 500, shown as 2.5% CGST plus 2.5% SGST.
+  rateBp       Int    @map("rate_bp")
+  /// What the lines of this rate charged before any discount or service charge.
+  grossMinor   Int    @map("gross_minor")
+  taxableMinor Int    @map("taxable_minor")
+  cgstMinor    Int    @map("cgst_minor")
+  sgstMinor    Int    @map("sgst_minor")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bill   Bill   @relation(fields: [tenantId, billId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "bill_tax_line_bill_fkey")
+
+  @@unique([billId, rateBp], name: "bill_tax_line_rate")
+  @@index([tenantId, billId])
+  @@map("bill_tax_line")
+}
+
+/// The tax a credit note reverses, per rate. Append-only with the refund it belongs to.
+model BillRefundTaxLine {
+  id           String @id @default(uuid()) @db.Uuid
+  tenantId     String @map("tenant_id") @db.Uuid
+  refundId     String @map("refund_id") @db.Uuid
+  rateBp       Int    @map("rate_bp")
+  taxableMinor Int    @map("taxable_minor")
+  cgstMinor    Int    @map("cgst_minor")
+  sgstMinor    Int    @map("sgst_minor")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refund BillRefund @relation(fields: [tenantId, refundId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "bill_refund_tax_line_refund_fkey")
+
+  @@index([tenantId, refundId])
+  @@map("bill_refund_tax_line")
+}
+
+/// An outlet's identity for billing and its day (ADR-040 item 3): the code that prefixes
+/// its bill numbers, who the seller is, and the settings that vary by outlet. An outlet
+/// with no profile bills as it always has, until the owner fills this in.
+model OutletProfile {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  locationId       String   @map("location_id") @db.Uuid
+  /// Up to three letters or digits; the front of every bill number from this outlet.
+  code             String
+  legalName        String   @map("legal_name")
+  gstin            String?  @db.VarChar(15)
+  stateCode        String?  @map("state_code") @db.VarChar(2)
+  /// regular | composition | unregistered. Unregistered and composition outlets issue a bill with no tax.
+  registrationType String   @default("regular") @map("registration_type")
+  fssai            String?
+  addressLines     String?  @map("address_lines")
+  /// Minutes after local midnight at which the service day starts (default 05:00).
+  dayStartMinute   Int      @default(300) @map("day_start_minute")
+  /// Service charge in basis points of the amount after discount; zero for none.
+  serviceChargeBp  Int      @default(0) @map("service_charge_bp")
+  /// A delivery platform collects the tax on its orders, so the outlet's own invoice for them carries none.
+  platformTaxFree  Boolean  @default(true) @map("platform_tax_free")
+  /// Bills raised before this moment keep their old label.
+  cutoverAt        DateTime @default(now()) @map("cutover_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  version          Int      @default(1)
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_profile_location_fkey")
+
+  @@unique([tenantId, locationId], name: "outlet_profile_location")
+  @@unique([tenantId, code], name: "outlet_profile_code")
+  @@map("outlet_profile")
 }
 
 // ===========================================================================

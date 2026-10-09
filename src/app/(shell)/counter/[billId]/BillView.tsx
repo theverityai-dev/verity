@@ -166,10 +166,23 @@ export function BillView({ bill }: { bill: BillDetail }) {
         {/* ------------------------------ the bill ------------------------------ */}
         <section className="rounded-[12px] bg-surface p-6 print:border-0 print:p-0">
           <header className="mb-4 border-b border-line pb-4">
+            {bill.number && bill.seller.legalName && (
+              <div className="mb-3 text-[13px] leading-snug text-text-secondary">
+                <p className="m-0 text-[15px] font-medium text-text">{bill.seller.legalName}</p>
+                {bill.seller.address && <p className="m-0 whitespace-pre-line">{bill.seller.address}</p>}
+                {bill.seller.gstin && <p className="m-0">GSTIN {bill.seller.gstin}</p>}
+                {bill.seller.fssai && <p className="m-0">FSSAI {bill.seller.fssai}</p>}
+              </div>
+            )}
             <h2 className="m-0 text-[18px]">{bill.label}</h2>
             <p className="mb-0 mt-1 text-[12px] text-text-tertiary">
-              Bill {bill.id.slice(0, 8).toUpperCase()}
+              {bill.number
+                ? `${bill.taxFree ? "Invoice" : "Tax invoice"} ${bill.number} · ${new Date(bill.raisedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`
+                : `Bill ${bill.id.slice(0, 8).toUpperCase()}`}
             </p>
+            {bill.number && bill.taxFree && (
+              <p className="mb-0 mt-1 text-[12px] text-text-tertiary">No tax is charged on this invoice.</p>
+            )}
           </header>
 
           <table className="w-full border-collapse">
@@ -221,14 +234,38 @@ export function BillView({ bill }: { bill: BillDetail }) {
                 <dd className="tabular m-0">− {rupees(bill.discountMinor)}</dd>
               </div>
             )}
-            <div className="flex justify-between">
-              <dt className="text-text-secondary">CGST @ {bill.cgstRate}%</dt>
-              <dd className="tabular m-0">{rupees(bill.cgstMinor)}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-text-secondary">SGST @ {bill.sgstRate}%</dt>
-              <dd className="tabular m-0">{rupees(bill.sgstMinor)}</dd>
-            </div>
+            {bill.serviceChargeMinor > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-text-secondary">Service charge @ {bill.serviceChargeBp / 100}%</dt>
+                <dd className="tabular m-0">{rupees(bill.serviceChargeMinor)}</dd>
+              </div>
+            )}
+            {bill.taxLines.length > 0 ? (
+              !bill.taxFree &&
+              bill.taxLines.map((t) => (
+                <div key={t.rateBp} className="flex flex-col gap-1.5">
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">CGST @ {t.rateBp / 200}% on {rupees(t.taxableMinor)}</dt>
+                    <dd className="tabular m-0">{rupees(t.cgstMinor)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-text-secondary">SGST @ {t.rateBp / 200}% on {rupees(t.taxableMinor)}</dt>
+                    <dd className="tabular m-0">{rupees(t.sgstMinor)}</dd>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">CGST @ {bill.cgstRate}%</dt>
+                  <dd className="tabular m-0">{rupees(bill.cgstMinor)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-text-secondary">SGST @ {bill.sgstRate}%</dt>
+                  <dd className="tabular m-0">{rupees(bill.sgstMinor)}</dd>
+                </div>
+              </>
+            )}
             {bill.roundingMinor !== 0 && (
               <div className="flex justify-between">
                 <dt className="text-text-secondary">Rounding</dt>
@@ -270,8 +307,14 @@ export function BillView({ bill }: { bill: BillDetail }) {
                 {bill.refunds.map((refund, index) => (
                   <li key={index} className="flex justify-between">
                     <span className="text-text-secondary">
+                      {refund.creditNoteNumber && <span className="mr-2 text-text">Credit note {refund.creditNoteNumber}</span>}
                       {PAYMENT_METHOD_LABEL[refund.method] ?? refund.method}
                       <span className="ml-2 text-text-tertiary">{refund.reason}</span>
+                      {refund.taxLines.some((t) => t.cgstMinor + t.sgstMinor > 0) && (
+                        <span className="block text-[12px] text-text-tertiary">
+                          Tax reversed: {refund.taxLines.map((t) => `${t.rateBp / 100}% ${rupees(t.cgstMinor + t.sgstMinor)}`).join(", ")}
+                        </span>
+                      )}
                     </span>
                     <span className="tabular">− {rupees(refund.amountMinor)}</span>
                   </li>
@@ -502,6 +545,27 @@ export function BillView({ bill }: { bill: BillDetail }) {
                   </CommandButton>
                 </form>
               </Panel>
+
+              {bill.serviceChargeMinor > 0 && (
+                <Panel title="Service charge">
+                  <p className="m-0 mb-3 text-[13px] text-text-secondary">
+                    {rupees(bill.serviceChargeMinor)} is on this bill. It is voluntary: a guest who asks can have it taken off.
+                  </p>
+                  <form
+                    className="flex flex-col gap-3"
+                    action={(formData) =>
+                      run("verity.dinein.waive_service_charge", { billId: bill.id, reason: String(formData.get("waiveReason") ?? "") })
+                    }
+                  >
+                    <Field label="Reason" htmlFor="waiveReason" required>
+                      <Input id="waiveReason" name="waiveReason" required minLength={3} />
+                    </Field>
+                    <CommandButton commands={"verity.dinein.waive_service_charge"} type="submit" disabled={pending}>
+                      Take off the service charge
+                    </CommandButton>
+                  </form>
+                </Panel>
+              )}
 
               <CommandButton commands={"verity.dinein.settle_bill"}
                 variant="primary"

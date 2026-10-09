@@ -29,6 +29,7 @@ export default function SettingsPage() {
   const links: Array<{ href: string; icon: IconName; label: string; description: string }> = [
     { href: "/account", icon: "parties", label: "Account", description: "Your identity, email and password." },
     { href: "/settings/business", icon: "building", label: "Business", description: "Legal name, registration and tax identity." },
+    { href: "/settings/outlets", icon: "locations", label: "Outlets", description: "Seller details, bill numbering and service day for each outlet." },
     { href: "/settings/tax", icon: "tax", label: "Tax", description: "Tax rates and calculation rules." },
     { href: "/settings/alerts", icon: "bell", label: "Alerts", description: "Choose which events notify which roles." },
     { href: "/settings/data-export", icon: "evidence", label: "Export your data", description: "Download a copy of your records as spreadsheets." },
