@@ -246,6 +246,14 @@ Write each into `DECISIONS.md` with its basis.
   its push, so they wait for the push step in the process rules below. Items 7.4, 7.5 and 7.6 need an
   ADR before code and stay that way.
 
+- **Production migrations applied 2026-10-09** (`prisma migrate deploy` against the Supabase DIRECT_URL, after
+  `migrate status` showed exactly these four pending; `migrate status` now reports up to date, 124 migrations):
+  `20261009010000_crm_customer_segment`, `20261009020000_finance_cash_movement`,
+  `20261009030000_dinein_menu_modifiers`, `20261009031000_dinein_order_line_modifier_rows`. All additive; the
+  JSON column dropped by the last one was added in the third, so it never held production data. The code that
+  uses them is committed but not yet pushed, so the live app is unaffected until the batch push. Remaining
+  before the push: confirm CI, `/api/health` commit, `/api/ready`.
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
