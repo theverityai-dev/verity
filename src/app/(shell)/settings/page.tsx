@@ -30,6 +30,7 @@ export default function SettingsPage() {
     { href: "/account", icon: "parties", label: "Account", description: "Your identity, email and password." },
     { href: "/settings/business", icon: "building", label: "Business", description: "Legal name, registration and tax identity." },
     { href: "/settings/tax", icon: "tax", label: "Tax", description: "Tax rates and calculation rules." },
+    { href: "/settings/data-export", icon: "evidence", label: "Export your data", description: "Download a copy of your records as spreadsheets." },
     { href: "/configuration", icon: "configuration", label: "Advanced configuration", description: "Raw platform configuration values. Tenant-admin only." },
   ];
 

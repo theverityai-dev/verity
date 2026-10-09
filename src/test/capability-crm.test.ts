@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/server/platform/db";
 import { assertRlsEnforceable, withTenant } from "@/server/platform/tenancy";
+import { ENTITY_DATA_EXPORT, getDataExportLink, listDataExports, registerDataExport, requestDataExport } from "@/server/platform/data-export";
+import { registerStorageDriver } from "@/server/platform/files";
 import { activateCapability, invalidateCapabilityCache, setConfig } from "@/server/platform/capability";
 import { clearCommands, clearHooks, executeCommand, type ActorContext } from "@/server/platform/command";
 import { clearQueries, executeQuery } from "@/server/platform/query";
@@ -347,6 +349,77 @@ describeDb("capability: CRM", () => {
     await expect(executeCommand(manager, mergeCustomers, { keepId: keep.id, mergeId: keep.id })).rejects.toThrow(/two different guests/);
     await expect(executeCommand(manager, mergeCustomers, { keepId: keep.id, mergeId: dup.id })).rejects.toThrow(/already merged/);
     await expect(executeCommand(manager, mergeCustomers, { keepId: dup.id, mergeId: keep.id })).rejects.toThrow(/itself merged/);
+  });
+
+  it("exports the client's own data as a ZIP of CSVs, limited to what the requester may read (ADR-037)", async () => {
+    registerDataExport();
+    const stored = new Map<string, Uint8Array>();
+
+    // Without a storage driver the request is refused up front, not half-run.
+    await withTenant(tenantId, (tx) => tx.permission.createMany({
+      data: (["Read", "Export"] as const).map((verb) => ({ tenantId, roleId: manager.roleId!, verb, entity: ENTITY_DATA_EXPORT, scope: "Tenant" as const })),
+    }));
+    invalidateCapabilityCache();
+    await expect(executeCommand(manager, requestDataExport, {})).rejects.toThrow(/storage is not set up/);
+
+    registerStorageDriver({
+      name: "memory",
+      createUploadUrl: async () => ({ url: "mem://upload" }),
+      createReadUrl: async (key) => `mem://${key}`,
+      storeVerified: async (key, bytes) => void stored.set(key, bytes),
+      delete: async (key) => void stored.delete(key),
+    });
+
+    const done = await executeCommand(manager, requestDataExport, {});
+    expect(done).toMatchObject({ status: "completed", omitted: [] });
+    expect(done.datasets).toBeGreaterThanOrEqual(5);
+    const row = (await executeQuery(manager, listDataExports, {}))[0]!;
+    expect(row).toMatchObject({ id: done.id, status: "completed", rowCount: done.rows });
+    const bytes = [...stored.values()][0]!;
+    expect(row.byteSize).toBe(bytes.byteLength);
+    const text = Buffer.from(bytes).toString("utf8");
+    for (const name of ["manifest.csv", "export-info.csv", "customers.csv", "orders.csv", "bills.csv", "menu_items.csv", "loyalty_points.csv"]) {
+      expect(text).toContain(name);
+    }
+    expect(text).toContain(guestPhone);
+    expect(text).toContain("Ravi Regular");
+    // Cost price is field-restricted and is never part of the menu export.
+    expect(text).not.toMatch(/cost_minor/);
+
+    const link = await executeQuery(manager, getDataExportLink, { exportId: done.id });
+    expect(link?.url.startsWith("mem://")).toBe(true);
+
+    // A role that may export but only read the menu gets a file without guests or orders.
+    const limited = await withTenant(tenantId, async (tx) => {
+      const role = await tx.role.create({ data: { tenantId, name: "Menu exporter" }, select: { id: true } });
+      await tx.permission.createMany({
+        data: ([["Read", ENTITY_MENU_ITEM], ["Read", ENTITY_DATA_EXPORT], ["Export", ENTITY_DATA_EXPORT]] as const).map(([verb, entity]) => ({ tenantId, roleId: role.id, verb, entity, scope: "Tenant" as const })),
+      });
+      const identity = await provisionIdentity(tx, { organizationId, authUserId: randomUUID(), displayName: "Menu exporter" });
+      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: role.id } });
+      return { tenantId, userId: identity.userId, membershipId: identity.membershipId, organizationId, roleId: role.id };
+    });
+    invalidateCapabilityCache();
+    const narrow = await executeCommand(limited, requestDataExport, {});
+    expect(narrow.omitted).toEqual(expect.arrayContaining(["Guests", "Orders", "Bills"]));
+    const narrowText = Buffer.from([...stored.values()].at(-1)!).toString("utf8");
+    expect(narrowText).toContain("menu_items.csv");
+    expect(narrowText).not.toContain("Ravi Regular");
+    expect(narrowText).not.toContain(guestPhone);
+
+    // Reading the list is not enough to get a link: that needs Export.
+    const reader = await withTenant(tenantId, async (tx) => {
+      const role = await tx.role.create({ data: { tenantId, name: "Export reader" }, select: { id: true } });
+      await tx.permission.create({ data: { tenantId, roleId: role.id, verb: "Read", entity: ENTITY_DATA_EXPORT, scope: "Tenant" } });
+      const identity = await provisionIdentity(tx, { organizationId, authUserId: randomUUID(), displayName: "Export reader" });
+      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: role.id } });
+      return { tenantId, userId: identity.userId, membershipId: identity.membershipId, organizationId, roleId: role.id };
+    });
+    invalidateCapabilityCache();
+    await expect(executeQuery(reader, getDataExportLink, { exportId: done.id })).rejects.toThrow(/Export permission/);
+    await expect(executeCommand(reader, requestDataExport, {})).rejects.toThrow();
+
+    registerStorageDriver(null);
   });
 
   it("saves a segment as a filter, not a list, and rejects duplicates and empty filters (Task 125 5.2)", async () => {

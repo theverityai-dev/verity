@@ -11,6 +11,7 @@ import { OPERATOR_ROLE_NAME } from "./operator";
 import type { TenantScopedClient } from "./tenancy";
 import { entityLabel } from "./label";
 import { mintApiKey } from "./external-tools";
+import { registerDataExport } from "./data-export";
 
 /**
  * Platform administration — the write and read contracts HQ operates through.
@@ -624,7 +625,7 @@ export const grantPermission: CommandDefinition<
   impact: "destructive",
   input: z.object({
     roleId: z.string().uuid(),
-    verb: z.enum(["Read", "Create", "Edit", "Delete", "ActionExecute"]),
+    verb: z.enum(["Read", "Create", "Edit", "Delete", "ActionExecute", "Export"]),
     entity: z.string().min(1).max(200),
     scope: z.enum(["Tenant", "Organization", "Location"]),
   }),
@@ -928,7 +929,7 @@ export type GrantableGroup = { group: string; entities: GrantableEntity[] };
  * the platform administration entities are enumerated in code already
  * (`ENTITY_TENANT` etc., just above) and do not change per capability.
  */
-const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.command_failure", "verity.platform.overview", "verity.platform.capability"];
+const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.command_failure", "verity.platform.data_export", "verity.platform.overview", "verity.platform.capability"];
 
 /**
  * Entities a role's permissions can target, grouped by owning capability —
@@ -1158,6 +1159,7 @@ export function installAdministration(): void {
   installed = true;
 
   registerCommand(createOrganization);
+  registerDataExport();
   registerCommand(updateOrganization);
   registerCommand(invitePerson);
   registerCommand(assignRole);

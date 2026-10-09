@@ -64,6 +64,7 @@ model Tenant {
   activities              Activity[]
   securityEvents          SecurityAuditEvent[]
   commandFailures         CommandFailure[]
+  dataExports             DataExport[]
   workflows               WorkflowDefinition[]
   workflowRuns            WorkflowRun[]
   credentials             Credential[]
@@ -407,6 +408,8 @@ enum PermissionVerb {
   Edit
   Delete
   ActionExecute
+  /// Request a full export of the tenant own data (ADR-037). Never granted to operators.
+  Export
 }
 
 /// Permission scope levels (Authority: Spec PLA-AUT-002, refining Bible V2
@@ -811,6 +814,29 @@ model CommandFailure {
   @@index([tenantId, occurredAt])
   @@index([tenantId, commandKey])
   @@map("command_failure")
+}
+
+/// A client full-data export request and where its ZIP lives (ADR-037). The file is
+/// built as the requester through the policy gate; the operator never exports rows.
+model DataExport {
+  id                String    @id @default(uuid()) @db.Uuid
+  tenantId          String    @map("tenant_id") @db.Uuid
+  requestedByUserId String    @map("requested_by_user_id") @db.Uuid
+  /// requested | completed | failed
+  status            String    @default("requested")
+  storageKey        String?   @map("storage_key")
+  byteSize          Int?      @map("byte_size")
+  checksum          String?
+  datasetCount      Int       @default(0) @map("dataset_count")
+  rowCount          Int       @default(0) @map("row_count")
+  errorCode         String?   @map("error_code")
+  requestedAt       DateTime  @default(now()) @map("requested_at")
+  completedAt       DateTime? @map("completed_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, requestedAt])
+  @@map("data_export")
 }
 
 /// Automation node categories (Authority: Spec MET-AUT-001).

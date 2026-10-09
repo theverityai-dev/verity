@@ -420,7 +420,12 @@ describe("conformance: over-genericity (Phase G)", () => {
     // csp, execution-failure, request-limits and shared-rate-limit controls.
     // Current reviewed additions through Outreach and the pack/control-plane
     // work remain platform contracts, not capability implementations.
-    expect(platformModules.length).toBeLessThanOrEqual(54);
+    // 55: data-export.ts (ADR-037, Task 125 item 7.5) — a client exports its own
+    // data. Platform because the Export verb, the verity.platform.data_export
+    // entity and the rule "an export never exceeds the requester's own Read
+    // authority" are platform rules; what is exportable is declared by each
+    // capability through registerExportable, so no capability logic lives here.
+    expect(platformModules.length).toBeLessThanOrEqual(55);
   });
 });
 

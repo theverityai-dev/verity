@@ -26,6 +26,7 @@ import {
 } from "@/server/capabilities/loyalty";
 import { hasPermission } from "@/server/platform/authorization";
 import { findGuestByPhone } from "@/server/capabilities/crm/guests";
+import { registerExportable } from "@/server/platform/data-export";
 import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
 import { assertOutletInScope, reachableOutletIds } from "./scope";
 import type { ActorContext as DineinActor } from "@/server/platform/command";
@@ -2381,22 +2382,35 @@ export type SalesSummary = {
  * the summary disagree with the till. The zone comes from the organization,
  * resolved by the platform rather than guessed here.
  *
- * The day runs to 05:00 the next morning: a bill settled at 00:40 belongs to the
- * night that earned it, which is what anyone reading a day summary means.
+ * A service day starts at `startMinute` after local midnight (default 05:00) and
+ * runs for 24 hours: a bill settled at 00:40 belongs to the night that earned it,
+ * which is what anyone reading a day summary means. Consecutive days neither
+ * overlap nor leave a gap (Task 126 G-02); "today" at 02:00 is yesterday's
+ * service day, because that service is still running.
  */
+export const DEFAULT_DAY_START_MINUTE = 300;
+
 export async function serviceDayRange(
   tx: TenantScopedClient,
   organizationId: string,
   day?: string,
+  startMinute: number = DEFAULT_DAY_START_MINUTE,
 ): Promise<{ from: Date; to: Date; day: string; timeZone: string }> {
   const timeZone = await effectiveTimeZone(tx, organizationId);
 
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date());
-  const chosen = day && /^d{4}-d{2}-d{2}$/.test(day) ? day : today;
+  let chosen: string;
+  if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    chosen = day;
+  } else {
+    // The service day that contains "now": the local date of (now - day start).
+    const [current] = await tx.$queryRaw<Array<{ day: string }>>`
+      SELECT to_char(((now() AT TIME ZONE ${timeZone}) - make_interval(mins => ${startMinute}::int))::date, 'YYYY-MM-DD') AS day`;
+    chosen = current!.day;
+  }
 
   const [rows] = await tx.$queryRaw<Array<{ from: Date; to: Date }>>`
-    SELECT (${chosen}::date::timestamp AT TIME ZONE ${timeZone}) AS "from",
-           ((${chosen}::date + 1)::timestamp + interval '5 hours') AT TIME ZONE ${timeZone} AS "to"`;
+    SELECT ((${chosen}::date::timestamp + make_interval(mins => ${startMinute}::int)) AT TIME ZONE ${timeZone}) AS "from",
+           (((${chosen}::date + 1)::timestamp + make_interval(mins => ${startMinute}::int)) AT TIME ZONE ${timeZone}) AS "to"`;
 
   return { from: rows.from, to: rows.to, day: chosen, timeZone };
 }
@@ -2417,7 +2431,7 @@ export const salesSummary: QueryDefinition<
     const bills = await ctx.tx.bill.findMany({
       where: {
         state: "settled",
-        settledAt: { gte: from, lte: to },
+        settledAt: { gte: from, lt: to },
         locationId: { in: locationIds },
       },
       include: {
@@ -2467,6 +2481,48 @@ export const salesSummary: QueryDefinition<
 /* ============================== registration ============================== */
 
 export function registerDineinCapability(): void {
+  // Exportable datasets (ADR-037). Cost price is left out: it is field-restricted
+  // so it never reaches a shared floor tablet, and an export is no exception.
+  registerExportable({
+    key: "menu_items",
+    label: "Menu",
+    entity: ENTITY_MENU_ITEM,
+    columns: ["id", "category", "name", "price_minor", "active", "created_at"],
+    read: async (tx) =>
+      (await tx.menuItem.findMany({ include: { category: { select: { name: true } } }, orderBy: { createdAt: "asc" } })).map((i) => [
+        i.id, i.category.name, i.name, i.priceMinor, i.active, i.createdAt,
+      ]),
+  });
+  registerExportable({
+    key: "orders",
+    label: "Orders",
+    entity: ENTITY_ORDER,
+    columns: ["id", "channel", "state", "location_id", "covers", "customer_name", "customer_phone", "placed_at", "served_at", "created_at"],
+    read: async (tx) =>
+      (await tx.diningOrder.findMany({ orderBy: { createdAt: "asc" } })).map((o) => [
+        o.id, o.channel, o.state, o.locationId, o.covers, o.customerName, o.customerPhone, o.placedAt, o.servedAt, o.createdAt,
+      ]),
+  });
+  registerExportable({
+    key: "order_lines",
+    label: "Order lines",
+    entity: ENTITY_ORDER,
+    columns: ["id", "order_id", "item", "portion", "unit_price_minor", "qty", "state", "note", "created_at"],
+    read: async (tx) =>
+      (await tx.orderLine.findMany({ orderBy: { createdAt: "asc" } })).map((l) => [
+        l.id, l.orderId, l.itemNameSnapshot, l.variantNameSnapshot, l.unitPriceMinor, l.qty, l.state, l.lineNote, l.createdAt,
+      ]),
+  });
+  registerExportable({
+    key: "bills",
+    label: "Bills",
+    entity: ENTITY_BILL,
+    columns: ["id", "order_id", "location_id", "state", "subtotal_minor", "discount_minor", "cgst_minor", "sgst_minor", "rounding_minor", "total_minor", "settled_at", "created_at"],
+    read: async (tx) =>
+      (await tx.bill.findMany({ orderBy: { createdAt: "asc" } })).map((b) => [
+        b.id, b.orderId, b.locationId, b.state, b.subtotalMinor, b.discountMinor, b.cgstMinor, b.sgstMinor, b.roundingMinor, b.totalMinor, b.settledAt, b.createdAt,
+      ]),
+  });
   /**
    * A dish already on the pass has been cooked. Voiding it from the kitchen
    * would erase a cost the restaurant has borne, so only a manager may — and

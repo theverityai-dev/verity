@@ -28,6 +28,7 @@ export default defineConfig({
       "src/lib/roster-week.test.ts",
       "src/lib/leave-calendar.test.ts",
       "src/lib/menu-availability.test.ts",
+      "src/lib/export-formats.test.ts",
       "src/lib/labour-cost.test.ts",
       "src/lib/settlement-match.test.ts",
       "src/test/deploy-env-mode.test.ts",

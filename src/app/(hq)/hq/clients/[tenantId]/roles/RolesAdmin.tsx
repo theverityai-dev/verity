@@ -34,7 +34,7 @@ const SCOPE_LABEL: Record<string, string> = {
   Location: "own location",
 };
 
-const VERBS = ["Read", "Create", "Edit", "Delete", "ActionExecute"] as const;
+const VERBS = ["Read", "Create", "Edit", "Delete", "ActionExecute", "Export"] as const;
 const SCOPES = ["Tenant", "Organization", "Location"] as const;
 
 type DirectGrant = RoleRow["directGrants"][number];

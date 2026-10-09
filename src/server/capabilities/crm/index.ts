@@ -5,6 +5,7 @@ import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { diffFields, recordActivity } from "@/server/platform/audit";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
 import { guestGroup } from "./guests";
+import { registerExportable } from "@/server/platform/data-export";
 
 /** The subset shared by CommandContext and QueryContext — all this module needs. */
 type ReadContext = { tx: TenantScopedClient; actor: ActorContext };
@@ -378,6 +379,16 @@ export const listSegments: QueryDefinition<Record<string, never>, SegmentRow[]> 
 /* ============================== registration ============================== */
 
 export function registerCrmCapability(): void {
+  registerExportable({
+    key: "customers",
+    label: "Guests",
+    entity: ENTITY_CUSTOMER,
+    columns: ["id", "phone", "name", "email", "birthday", "marketing_consent", "merged_into_id", "created_at"],
+    read: async (tx) =>
+      (await tx.customer.findMany({ orderBy: { createdAt: "asc" } })).map((c) => [
+        c.id, c.phone, c.name, c.email, c.birthday?.toISOString().slice(0, 10) ?? null, c.marketingConsent, c.mergedIntoId, c.createdAt,
+      ]),
+  });
   registerContribution({
     capabilityId: CRM_CAPABILITY,
     navigation: [

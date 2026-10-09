@@ -9,6 +9,7 @@ import {
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { resolveConfig } from "@/server/platform/capability";
 import { findGuestByPhone, guestGroup } from "@/server/capabilities/crm/guests";
+import { registerExportable } from "@/server/platform/data-export";
 
 /**
  * CAPABILITY: Loyalty — `verity.capability.loyalty` (Colonel Kebabz Phase 2,
@@ -216,6 +217,14 @@ export const getLoyaltyBalance: QueryDefinition<{ customerId: string }, { balanc
 /* ============================== registration ============================== */
 
 export function registerLoyaltyCapability(): void {
+  registerExportable({
+    key: "loyalty_points",
+    label: "Loyalty points",
+    entity: ENTITY_LOYALTY_ENTRY,
+    columns: ["id", "customer_id", "points", "reason", "bill_id", "created_at"],
+    read: async (tx) =>
+      (await tx.loyaltyPointEntry.findMany({ orderBy: { createdAt: "asc" } })).map((e) => [e.id, e.customerId, e.points, e.reason, e.billId, e.createdAt]),
+  });
   registerContribution({
     capabilityId: LOYALTY_CAPABILITY,
     navigation: [],
