@@ -11,7 +11,7 @@ line below matching recent commits), regenerate it from `git log` and the
 taskplans it points to before trusting it, same rule `00_STATUS_INDEX.md`
 already states for itself.
 
-**Last updated: 2026-10-09 (Task 125 progress log added: section 2 decisions done, desktop walk of Colonel Kebabz done, phone-width pass waiting on a signed-in session; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
+**Last updated: 2026-10-09 (Task 126 URY gap closure proposed with ADR-040 to ADR-043; Task 125 progress log added: section 2 decisions done, desktop walk of Colonel Kebabz done, phone-width pass waiting on a signed-in session; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
 
 ## How to use this folder
 
@@ -51,6 +51,18 @@ already states for itself.
   design-system.md` §2, REQ-004..009). `verity-design-companion` skill
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
+
+## Since 2026-10-09 (URY comparison, added 2026-10-09)
+
+- **Task 126 — URY gap closure: PROPOSED, awaiting approval.** `taskplans/126_ury_gap_closure_restaurant_
+  operations.md` maps 41 gaps between URY and Verity and sequences six waves. Waves 0 (two defects) and 1
+  (sales reports, "today" dashboard, small floor items) need no ADR and can start on the product owner's
+  word. Waves 2 to 5 wait on **ADR-040** (GST bill: dine-in bills have no consecutive invoice number today),
+  **ADR-041** (kitchen stations, courses, tickets, printing), **ADR-043** (outlet and channel prices) and
+  **ADR-042** (customer self-order, a new public write surface), all PROPOSED in
+  `verity-spec/17_decisions/adr/`. Comparison: `docs/reference/ury-parity/ury-vs-verity-a-to-z.md`.
+- **Needs the product owner:** approve or amend the four ADRs; give outlet codes for the three Colonel
+  Kebabz outlets; name who confirms the tax points in ADR-040 with the client's adviser.
 
 ## Since 2026-10-06 (added 2026-10-09)
 

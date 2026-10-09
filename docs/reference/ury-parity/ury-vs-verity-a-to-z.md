@@ -70,7 +70,7 @@ printing. Customer self-ordering is the largest feature URY has that Verity does
 
 | Capability | URY | Verity | Verdict |
 |---|---|---|---|
-| **Bill** | The POS Invoice is the bill. A table invoice **must be printed before it can be submitted** (`ury/ury/hooks/ury_pos_invoice.py`, `validate_invoice_print`). After printing, removing items or lowering quantities is refused unless the POS Profile allows it (`validate_invoice`, `POS Profile-remove_items`). Invoice series per restaurant. Waiter order slip and merged-bill print formats. | Bill generated from a served order, taxes computed once and stored (CGST and SGST as basis points plus amounts), rounding, discount, several payments, settle, refund (append-only), browser print (`src/app/(shell)/counter/[billId]/BillView.tsx`). No "print before close" gate. Bill-number format not verified. | **Parity**. Verity ahead on refunds; URY ahead on the print gate |
+| **Bill** | The POS Invoice is the bill. A table invoice **must be printed before it can be submitted** (`ury/ury/hooks/ury_pos_invoice.py`, `validate_invoice_print`). After printing, removing items or lowering quantities is refused unless the POS Profile allows it (`validate_invoice`, `POS Profile-remove_items`). Invoice series per restaurant. Waiter order slip and merged-bill print formats. | Bill generated from a served order, taxes computed once and stored (CGST and SGST as basis points plus amounts), rounding, discount, several payments, settle, refund (append-only), browser print (`src/app/(shell)/counter/[billId]/BillView.tsx`). No "print before close" gate. **The bill's number is the first eight characters of its UUID** (`BillView.tsx`: `bill.id.slice(0, 8)`), not a consecutive GST serial; no seller GSTIN or FSSAI on the bill (ADR-040). | **Partial**. Verity ahead on refunds; URY ahead on numbering and the print gate |
 | **Bill merge** | `merge_bills` joins several table invoices into one bill and prints `merged_pos_invoice_format` (`ury/ury_pos/api.py:1460`; `POS Invoice-custom_merged_pos_invoice`). | `merge_orders` merges orders into one (`verity.dinein.merge_orders`). | **Parity** |
 | **Bill split** | Split groups by items or custom customer splits (`get_split_group`; `pos/src/components/BillSplitDialog.tsx`, `SplitGroupPanel.tsx`). | Pay-by-items split across payments on one GST bill (decision 2026-10-09: never several invoices); refund by items with part quantity (`BillView.tsx` split picker). | **Parity**, different rule: URY makes sub-invoices, Verity makes payments |
 | **BOM** | ERPNext BOM. The daily P&L expands BOM sub-items and product bundles for cost of goods. | `recipe` capability: recipe per menu item, `get_recipe_cost`, food-cost variance (`verity.inventory.food_cost_variance`). | **Parity**; **Not in URY** |
@@ -239,6 +239,17 @@ These came out of reading code for this document. I did not change code.
 4. **The bill carries one tax rate pair.** A 5 percent food line beside an 18 percent line cannot be billed
    correctly on one bill. Acceptable for a food-only outlet; wrong the day one sells anything taxed
    differently.
+5. **A dine-in bill has no consecutive invoice number, no seller identity, and a refund is not a credit
+   note.** The trading side has all three (`trading_invoice_series`, seller GSTIN snapshot); the restaurant
+   side does not. Colonel Kebabz has billed this way since 2026-09-10. Found after the first version of
+   this document; the largest item in the plan. See ADR-040.
+6. **Service days overlap.** `serviceDayRange` returns day D as 00:00 on D to 05:00 on D+1, so bills settled
+   between 00:00 and 05:00 fall in two consecutive days' ranges (`dinein/index.ts:2397-2399`).
+
+**What happens next:** the gaps in section 2 and these defects are mapped, dispositioned and sequenced in
+`taskplans/126_ury_gap_closure_restaurant_operations.md`, with ADR-040 (GST bill), ADR-041 (kitchen
+stations, courses, tickets, printing), ADR-042 (customer self-order) and ADR-043 (scoped menu prices),
+all PROPOSED and awaiting approval.
 
 URY's own overstatement: the README advertises offline mode that this source tree does not implement.
 
