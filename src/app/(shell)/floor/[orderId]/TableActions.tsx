@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormModal, formText, useCommand } from "@/components/ui/CommandForm";
-import { Button, Field, Select } from "@/components/ui/primitives";
+import { Button, Field, Input, Select } from "@/components/ui/primitives";
 
 type Target = { id: string; label: string };
 
@@ -16,16 +16,21 @@ export function TableActions({
   orderId,
   freeTables,
   openOrders,
+  takers,
 }: {
   orderId: string;
   freeTables: Target[];
   openOrders: Target[];
+  /** Staff who could take this order over (Task 126 item 1.4). */
+  takers: Array<{ userId: string; name: string }>;
 }) {
   const router = useRouter();
   const move = useCommand(`/floor/${orderId}`);
   const merge = useCommand("/floor");
+  const handOver = useCommand(`/floor/${orderId}`);
   const [moving, setMoving] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [handing, setHanding] = useState(false);
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -35,6 +40,41 @@ export function TableActions({
       <Button size="sm" disabled={openOrders.length === 0} onClick={() => setMerging(true)}>
         Merge into another order
       </Button>
+      <Button size="sm" disabled={takers.length === 0} onClick={() => setHanding(true)}>
+        Hand over
+      </Button>
+
+      <FormModal
+        title="Hand this order to someone else"
+        description="The table, the dishes and the bill stay as they are. Only the person looking after the order changes, and the change is recorded."
+        open={handing}
+        onClose={() => {
+          setHanding(false);
+          handOver.clear();
+        }}
+        submitLabel="Hand over"
+        pending={handOver.pending}
+        failure={handOver.failure}
+        failureTitle="Could not hand the order over"
+        onSubmit={(form) =>
+          handOver.run(
+            "verity.dinein.hand_over_order",
+            { orderId, toUserId: formText(form, "toUserId"), reason: formText(form, "reason") || undefined },
+            () => setHanding(false),
+          )
+        }
+      >
+        <Field label="Hand over to" htmlFor="handover-to" required>
+          <Select id="handover-to" name="toUserId" required>
+            {takers.map((t) => (
+              <option key={t.userId} value={t.userId}>{t.name}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Reason (optional)" htmlFor="handover-reason">
+          <Input id="handover-reason" name="reason" placeholder="For example: end of shift" maxLength={200} />
+        </Field>
+      </FormModal>
 
       <FormModal
         title="Move to another table"

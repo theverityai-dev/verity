@@ -4,7 +4,7 @@ import { requireActor } from "@/server/platform/auth";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
 import { ForbiddenError } from "@/server/platform/authorization";
-import { getOrderDetail, listMenu, listTableChangeTargets, type OrderDetail } from "@/server/capabilities/dinein";
+import { getOrderDetail, listHandoverTargets, listMenu, listTableChangeTargets, type OrderDetail } from "@/server/capabilities/dinein";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { OrderPad } from "./OrderPad";
 import { TableActions } from "./TableActions";
@@ -47,6 +47,8 @@ async function OrderPage({
   const targets = canChangeTable
     ? await executeQuery(actor, listTableChangeTargets, { orderId }).catch(() => ({ freeTables: [], openOrders: [] }))
     : null;
+  const isOpen = canChangeTable || order.state === "served" || order.state === "billed";
+  const takers = isOpen ? await executeQuery(actor, listHandoverTargets, { orderId }).catch(() => []) : [];
 
   return (
     <>
@@ -58,11 +60,12 @@ async function OrderPage({
             : `Order is ${order.state.replace("_", " ")}`
         }
         actions={
-          targets ? (
+          isOpen ? (
             <TableActions
               orderId={order.id}
-              freeTables={order.tableId ? targets.freeTables : []}
-              openOrders={targets.openOrders}
+              freeTables={order.tableId && targets ? targets.freeTables : []}
+              openOrders={targets?.openOrders ?? []}
+              takers={takers}
             />
           ) : undefined
         }

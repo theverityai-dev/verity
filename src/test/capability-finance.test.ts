@@ -258,6 +258,37 @@ describeDb("capability: Finance", () => {
     expect(pnl.operatingContributionMinor).toBe(pnl.grossProfitMinor - 5_000);
   });
 
+  it("spreads an expense that covers a period across its days in the outlet P&L (Task 126 1.3)", async () => {
+    const shift = (days: number) => new Date(Date.parse(`${today}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+    await expect(
+      executeCommand(manager, recordExpense, {
+        locationId, category: "Electricity", amountMinor: 300_000, paymentMethod: "BankTransfer", expenseDate: today, periodFrom: shift(-4),
+      }),
+    ).rejects.toThrow(/input rejected/);
+    await expect(
+      executeCommand(manager, recordExpense, {
+        locationId, category: "Electricity", amountMinor: 300_000, paymentMethod: "BankTransfer", expenseDate: today, periodFrom: shift(3), periodTo: shift(-3),
+      }),
+    ).rejects.toThrow(/input rejected/);
+
+    // Rs 3,000 of electricity for ten days: today is one tenth of it.
+    const before = await executeQuery(manager, getOutletPnL, { locationId, fromDate: today, toDate: today });
+    const bill = await executeCommand(manager, recordExpense, {
+      locationId, category: "Electricity", amountMinor: 300_000, paymentMethod: "BankTransfer",
+      expenseDate: shift(7), periodFrom: shift(-4), periodTo: shift(5),
+    });
+    await executeCommand(manager, decideExpense, { expenseId: bill.id, approve: true });
+
+    const day = await executeQuery(manager, getOutletPnL, { locationId, fromDate: today, toDate: today });
+    expect(day.totalExpensesMinor - before.totalExpensesMinor).toBe(30_000);
+    const whole = await executeQuery(manager, getOutletPnL, { locationId, fromDate: shift(-4), toDate: shift(5) });
+    expect(whole.expensesByCategory.find((c) => c.category === "Electricity")!.amountMinor).toBeGreaterThanOrEqual(300_000);
+    // A window clear of the period sees none of it, even though it was paid inside the window.
+    const outside = await executeQuery(manager, getOutletPnL, { locationId, fromDate: shift(6), toDate: shift(9) });
+    expect(outside.expensesByCategory.find((c) => c.category === "Electricity")).toBeUndefined();
+  });
+
   it("lists settled delivery-platform bills by the platform's own order number (Task 125 4.2)", async () => {
     async function platformBill(platform: string, ref: string, settle: boolean): Promise<string> {
       const order = await executeCommand(manager, createOrder, { channel: "delivery_platform", locationId, platform, platformOrderRef: ref });

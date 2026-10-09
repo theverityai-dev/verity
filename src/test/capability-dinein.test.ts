@@ -42,8 +42,14 @@ import {
   defineTable,
   editMenuItem,
   defineZone,
+  checklistToday,
   exceptionsReport,
+  handOverOrder,
+  setChecklistSteps,
+  tickChecklistStep,
+  listHandoverTargets,
   outletToday,
+  positionTable,
   salesReport,
   generateBill,
   getBillDetail,
@@ -1029,6 +1035,101 @@ describeDb("capability: Dine-in", () => {
     const forWaiter = await executeQuery(waiter, outletToday, {});
     expect(forWaiter.sales).toBeNull();
     expect(forWaiter.serviceLine.length).toBeGreaterThan(0);
+  });
+
+  it("hands an open order to another waiter, only to someone who can take orders, and only while open (Task 126 1.4)", async () => {
+    const table = await executeCommand(manager, defineTable, { zoneId, label: "H-1", seats: 2 });
+    await executeCommand(manager, moveTable, { tableId: table.id, to: "occupied" });
+    const order = await executeCommand(manager, createOrder, { tableId: table.id, covers: 2 });
+
+    const targets = await executeQuery(manager, listHandoverTargets, { orderId: order.id });
+    expect(targets.some((t) => t.userId === waiter.userId)).toBe(true);
+    // The manager took it, so the manager is not offered.
+    expect(targets.some((t) => t.userId === manager.userId)).toBe(false);
+
+    await expect(
+      executeCommand(manager, handOverOrder, { orderId: order.id, toUserId: randomUUID() }),
+    ).rejects.toThrow(/does not work this outlet/);
+    await expect(
+      executeCommand(manager, handOverOrder, { orderId: order.id, toUserId: manager.userId }),
+    ).rejects.toThrow(/already has this order/);
+
+    await executeCommand(manager, handOverOrder, { orderId: order.id, toUserId: waiter.userId, reason: "end of shift" });
+    const after = await withTenant(tenantId, (tx) => tx.diningOrder.findUniqueOrThrow({ where: { id: order.id } }));
+    expect(after.takenByUserId).toBe(waiter.userId);
+
+    // Who held it before is a question for the audit trail, with the reason.
+    const trail = await withTenant(tenantId, (tx) =>
+      tx.activity.findMany({ where: { entityId: order.id, commandKey: "verity.dinein.hand_over_order" } }),
+    );
+    expect(trail.some((r) => r.fieldChanged === "takenByUserId" && r.oldValue === manager.userId)).toBe(true);
+    expect(trail.some((r) => r.fieldChanged === "reason" && r.newValue === "end of shift")).toBe(true);
+
+    await executeCommand(manager, cancelOrder, { orderId: order.id });
+    await expect(
+      executeCommand(manager, handOverOrder, { orderId: order.id, toUserId: manager.userId }),
+    ).rejects.toThrow(/closed/);
+  });
+
+  it("keeps an opening and closing list per outlet, records who ticked what, and does not block selling (Task 126 1.8)", async () => {
+    // Floor staff may tick; setting the list is floor setup, which a waiter may not do.
+    await expect(
+      executeCommand(waiter, setChecklistSteps, { locationId, kind: "opening", steps: ["Unlock the gate"] }),
+    ).rejects.toThrow();
+    await executeCommand(manager, setChecklistSteps, { locationId, kind: "opening", steps: ["Unlock the gate", "Switch on the fridges", "Count the float"] });
+    await expect(
+      executeCommand(manager, setChecklistSteps, { locationId, kind: "opening", steps: ["Same", "same"] }),
+    ).rejects.toThrow(/same wording/);
+
+    let today = await executeQuery(waiter, checklistToday, {});
+    const list = () => today.find((o) => o.locationId === locationId)!.lists.find((l) => l.kind === "opening")!;
+    expect(list().steps).toHaveLength(3);
+    expect(list().complete).toBe(false);
+
+    for (const step of list().steps) await executeCommand(waiter, tickChecklistStep, { stepId: step.id, done: true });
+    today = await executeQuery(waiter, checklistToday, {});
+    expect(list().complete).toBe(true);
+    expect(list().steps.every((s) => s.done && s.doneBy === "Ravi")).toBe(true);
+
+    // Un-ticking reopens the list.
+    await executeCommand(waiter, tickChecklistStep, { stepId: list().steps[0]!.id, done: false });
+    today = await executeQuery(waiter, checklistToday, {});
+    expect(list().complete).toBe(false);
+
+    // Taking a step off retires it: it leaves the list, and cannot be ticked.
+    const gone = list().steps[2]!.id;
+    await executeCommand(manager, setChecklistSteps, { locationId, kind: "opening", steps: ["Unlock the gate", "Switch on the fridges"] });
+    today = await executeQuery(waiter, checklistToday, {});
+    expect(list().steps.map((s) => s.label)).toEqual(["Unlock the gate", "Switch on the fridges"]);
+    await expect(executeCommand(waiter, tickChecklistStep, { stepId: gone, done: true })).rejects.toThrow(/no longer on the list/);
+
+    // A closing list nobody finished yesterday is flagged on the day view only if trading happened;
+    // with no steps at all there is nothing to flag.
+    const view = await executeQuery(manager, outletToday, {});
+    expect(view.attention.some((a) => a.kind === "closing_open")).toBe(false);
+  });
+
+  it("draws a table at a size, marks specials, and says how long a table has been open (Task 126 1.5, 1.6, 1.9)", async () => {
+    const table = await executeCommand(manager, defineTable, { zoneId, label: "S-1", seats: 6 });
+    await executeCommand(manager, positionTable, { tableId: table.id, posX: 40, posY: 60, width: 200, height: 120 });
+    await expect(
+      executeCommand(manager, positionTable, { tableId: table.id, posX: 0, posY: 0, width: 5 }),
+    ).rejects.toThrow();
+
+    await executeCommand(manager, moveTable, { tableId: table.id, to: "occupied" });
+    const order = await executeCommand(manager, createOrder, { tableId: table.id, covers: 4 });
+    const floor = await executeQuery(manager, listFloor, {});
+    const row = floor.find((t) => t.id === table.id)!;
+    expect([row.width, row.height]).toEqual([200, 120]);
+    expect(row.openMinutes).toBe(0);
+    expect(row.needsAttention).toBe(false);
+    await executeCommand(manager, cancelOrder, { orderId: order.id });
+
+    // A flag on an item shows up in the menu and in the audit diff.
+    await executeCommand(manager, editMenuItem, { itemId: paneerId, featured: true });
+    const menu = await executeQuery(manager, listMenu, {});
+    expect(menu.flatMap((c) => c.items).find((i) => i.id === paneerId)!.featured).toBe(true);
+    await executeCommand(manager, editMenuItem, { itemId: paneerId, featured: false });
   });
 
   async function releaseTable(): Promise<void> {

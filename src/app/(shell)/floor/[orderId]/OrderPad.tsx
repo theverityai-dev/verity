@@ -18,6 +18,7 @@ type MenuCategory = {
     name: string;
     priceMinor: number;
     active: boolean;
+    featured: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
     /** Why the item cannot be ordered on this order right now, or null. */
@@ -56,6 +57,8 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [search, setSearch] = useState("");
+  // Show only the special dishes the manager has flagged (Task 126 item 1.9).
+  const [specialsOnly, setSpecialsOnly] = useState(false);
   // A note rides on the next item added ("no onion"), then clears, so it can
   // never silently attach to a second dish.
   const [note, setNote] = useState("");
@@ -66,16 +69,19 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [pending, startTransition] = useTransition();
 
+  const hasSpecials = useMemo(() => menu.some((category) => category.items.some((item) => item.featured)), [menu]);
   const categories = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return menu;
+    if (!term && !specialsOnly) return menu;
     return menu
       .map((category) => ({
         ...category,
-        items: category.items.filter((item) => item.name.toLowerCase().includes(term)),
+        items: category.items.filter(
+          (item) => item.name.toLowerCase().includes(term) && (!specialsOnly || item.featured),
+        ),
       }))
       .filter((category) => category.items.length > 0);
-  }, [menu, search]);
+  }, [menu, search, specialsOnly]);
 
   function run(key: string, input: unknown, after?: () => void) {
     setFailure(null);
@@ -138,6 +144,19 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+            {hasSpecials && (
+              <button
+                type="button"
+                aria-pressed={specialsOnly}
+                onClick={() => setSpecialsOnly((on) => !on)}
+                className={
+                  "mt-2 inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-medium transition-colors " +
+                  (specialsOnly ? "bg-accent text-accent-on" : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]")
+                }
+              >
+                Specials only
+              </button>
+            )}
             <label htmlFor="line-note" className="sr-only">
               Note for the next item
             </label>
@@ -172,6 +191,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
                         <span className="block truncate text-[14px] text-text">{item.name}</span>
                         <span className="text-[12px] text-text-tertiary">
                           {rupees(item.priceMinor)}
+                          {item.featured ? " · Special" : ""}
                         </span>
                       </span>
                       <span className="flex shrink-0 gap-1.5">

@@ -98,6 +98,8 @@ export const getCustomer360: QueryDefinition<
     preferredLocationId: string | null;
     /** Other phone numbers merged into this guest (Task 125 item 5.1). */
     mergedPhones: string[];
+    /** The three dishes this guest has ordered most, over settled orders (Task 126 item 1.7). */
+    favourites: Array<{ name: string; qty: number }>;
   } & CustomerAggregates) | null
 > = {
   key: "verity.crm.get_customer_360",
@@ -116,7 +118,20 @@ export const getCustomer360: QueryDefinition<
     // A merged row answers as the guest it was merged into, so old links still work.
     const group = await guestGroup(ctx.tx, customer.id);
     const head = group.length > 0 && group[0].id !== customer.id ? await ctx.tx.customer.findUniqueOrThrow({ where: { id: group[0].id } }) : customer;
-    const aggregates = await computeAggregates(ctx, group.length > 0 ? group.map((g) => g.phone) : [customer.phone]);
+    const phones = group.length > 0 ? group.map((g) => g.phone) : [customer.phone];
+    const aggregates = await computeAggregates(ctx, phones);
+    const ordered = await ctx.tx.orderLine.groupBy({
+      by: ["itemNameSnapshot"],
+      where: {
+        state: { not: "voided" },
+        order: { is: { customerPhone: { in: phones }, bill: { is: { state: "settled" } } } },
+      },
+      _sum: { qty: true },
+    });
+    const favourites = ordered
+      .map((row) => ({ name: row.itemNameSnapshot, qty: row._sum.qty ?? 0 }))
+      .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+      .slice(0, 3);
     return {
       id: head.id,
       phone: head.phone,
@@ -126,6 +141,7 @@ export const getCustomer360: QueryDefinition<
       marketingConsent: head.marketingConsent,
       preferredLocationId: head.preferredLocationId,
       mergedPhones: group.slice(1).map((g) => g.phone),
+      favourites,
       ...aggregates,
     };
   },

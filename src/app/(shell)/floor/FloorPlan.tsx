@@ -161,15 +161,20 @@ export function FloorPlan({ tables }: { tables: FloorTable[] }) {
                           run("verity.dinein.move_table", { tableId: table.id, to: "available" });
                       }}
                       className={
-                        "absolute flex h-[104px] w-[124px] flex-col justify-between rounded-lg border p-3 text-left " +
+                        "absolute flex flex-col justify-between rounded-lg border p-3 text-left " +
                         "transition-[border-color,transform] duration-150 hover:border-line-strong active:translate-y-px " +
-                        (table.state === "occupied"
-                          ? "border-accent-line bg-accent-subtle"
-                          : "border-line bg-surface")
+                        (table.needsAttention
+                          ? "border-warning bg-surface"
+                          : table.state === "occupied"
+                            ? "border-accent-line bg-accent-subtle"
+                            : "border-line bg-surface")
                       }
                       style={{
                         left: positioned ? table.posX : 16 + (index % 5) * 140,
                         top: positioned ? table.posY : 16 + Math.floor(index / 5) * 120,
+                        // The size the manager drew, but never smaller than the three lines of text need.
+                        width: Math.max(table.width, 124),
+                        height: Math.max(table.height, 104),
                       }}
                     >
                       <span className="flex items-center justify-between gap-2">
@@ -184,7 +189,7 @@ export function FloorPlan({ tables }: { tables: FloorTable[] }) {
 
                       <span className="text-[12px] text-text-secondary">
                         {table.state === "occupied"
-                          ? `${table.covers} covers · ${table.openLines} out`
+                          ? `${table.covers} covers · ${table.openLines} out · ${table.openMinutes ?? 0} min${table.needsAttention ? ", long" : ""}`
                           : table.state === "cleaning"
                             ? "Tap when clean"
                             : "Tap to seat"}

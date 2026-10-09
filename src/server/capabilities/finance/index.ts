@@ -4,6 +4,7 @@ import { registerCommand, ValidationError, type CommandDefinition } from "@/serv
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { hasPermission } from "@/server/platform/authorization";
 import { outletLabour, type OutletLabour } from "@/lib/labour-cost";
+import { expenseShareInWindow } from "@/lib/expense-proration";
 
 /**
  * The HR capability's salary entity (`ENTITY_HR_COMPENSATION`). Held as a literal
@@ -69,21 +70,33 @@ export const recordExpense: CommandDefinition<
     expenseDate: string;
     vendor?: string;
     receiptEvidenceId?: string;
+    /** The days this expense pays for, when more than one (both or neither). */
+    periodFrom?: string;
+    periodTo?: string;
   },
   { id: string }
 > = {
   key: "verity.finance.record_expense",
   entity: ENTITY_EXPENSE,
   verb: "Create",
-  input: z.object({
-    locationId: z.string().uuid(),
-    category: z.enum(EXPENSE_CATEGORIES),
-    amountMinor: z.number().int().positive(),
-    paymentMethod: z.enum(PAYMENT_METHODS),
-    expenseDate: z.string().date(),
-    vendor: z.string().max(120).optional(),
-    receiptEvidenceId: z.string().uuid().optional(),
-  }),
+  input: z
+    .object({
+      locationId: z.string().uuid(),
+      category: z.enum(EXPENSE_CATEGORIES),
+      amountMinor: z.number().int().positive(),
+      paymentMethod: z.enum(PAYMENT_METHODS),
+      expenseDate: z.string().date(),
+      vendor: z.string().max(120).optional(),
+      receiptEvidenceId: z.string().uuid().optional(),
+      periodFrom: z.string().date().optional(),
+      periodTo: z.string().date().optional(),
+    })
+    .refine((v) => (v.periodFrom === undefined) === (v.periodTo === undefined), {
+      message: "give both ends of the period, or neither",
+    })
+    .refine((v) => v.periodFrom === undefined || v.periodTo! >= v.periodFrom, {
+      message: "the period ends before it starts",
+    }),
   handler: async (ctx, input) => {
     const expense = await ctx.tx.expense.create({
       data: {
@@ -94,6 +107,8 @@ export const recordExpense: CommandDefinition<
         amountMinor: input.amountMinor,
         paymentMethod: input.paymentMethod,
         expenseDate: new Date(input.expenseDate),
+        periodFrom: input.periodFrom ? new Date(input.periodFrom) : null,
+        periodTo: input.periodTo ? new Date(input.periodTo) : null,
         receiptEvidenceId: input.receiptEvidenceId ?? null,
         recordedById: ctx.actor.userId,
       },
@@ -451,17 +466,38 @@ export const getOutletPnL: QueryDefinition<
       consumption.reduce((sum, c) => sum + Math.abs(c.qty) * (costById.get(c.itemId) ?? 0), 0),
     );
 
+    // An expense with a period (a monthly bill) is spread over its days and counted
+    // by the share that falls inside the window; one without belongs to its own date.
+    const windowFrom = new Date(input.fromDate);
+    const windowTo = new Date(input.toDate);
     const expenses = await ctx.tx.expense.findMany({
       where: {
         locationId: input.locationId,
         status: "Approved",
-        expenseDate: { gte: new Date(input.fromDate), lte: new Date(input.toDate) },
+        OR: [
+          { periodFrom: null, expenseDate: { gte: windowFrom, lte: windowTo } },
+          { periodFrom: { lte: windowTo }, periodTo: { gte: windowFrom } },
+        ],
       },
-      select: { category: true, amountMinor: true },
+      select: { category: true, amountMinor: true, expenseDate: true, periodFrom: true, periodTo: true },
     });
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
     const byCategory = new Map<string, number>();
-    for (const e of expenses) byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + e.amountMinor);
-    const totalExpensesMinor = expenses.reduce((sum, e) => sum + e.amountMinor, 0);
+    let totalExpensesMinor = 0;
+    for (const e of expenses) {
+      const share = expenseShareInWindow(
+        {
+          amountMinor: e.amountMinor,
+          expenseDate: iso(e.expenseDate),
+          periodFrom: e.periodFrom ? iso(e.periodFrom) : null,
+          periodTo: e.periodTo ? iso(e.periodTo) : null,
+        },
+        input.fromDate,
+        input.toDate,
+      );
+      byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + share);
+      totalExpensesMinor += share;
+    }
 
     const grossProfitMinor = revenueMinor - cogsMinor;
     const operatingContributionMinor = grossProfitMinor - totalExpensesMinor;

@@ -30,6 +30,8 @@ import { registerExportable } from "@/server/platform/data-export";
 import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
 import { assertOutletInScope, reachableOutletIds, scopedLocationIds } from "./scope";
 import { registerDineinReports } from "./reports";
+import { registerDineinService } from "./service";
+import { registerDineinChecklist } from "./checklist";
 import { serviceDayRange } from "./day";
 
 /**
@@ -60,9 +62,11 @@ import { serviceDayRange } from "./day";
 
 export * from "./keys";
 import {
+  CONFIG_ALERT_SEATED_MINUTES,
   CONFIG_CGST_RATE,
   CONFIG_PREP_TARGET_MINUTES,
   CONFIG_SGST_RATE,
+  DEFAULT_ALERT_SEATED_MINUTES,
   DINEIN_CAPABILITY,
   ENTITY_BILL,
   ENTITY_MENU_CATEGORY,
@@ -154,6 +158,7 @@ export const createMenuItem: CommandDefinition<
     description?: string;
     costMinor?: number;
     sortOrder?: number;
+    featured?: boolean;
   },
   { id: string }
 > = {
@@ -169,6 +174,7 @@ export const createMenuItem: CommandDefinition<
     description: z.string().max(2000).optional(),
     costMinor: z.number().int().min(0).optional(),
     sortOrder: z.number().int().min(0).optional(),
+    featured: z.boolean().optional(),
   }),
   preconditions: async (ctx, input) => {
     const category = await ctx.tx.menuCategory.findUnique({ where: { id: input.categoryId } });
@@ -185,6 +191,7 @@ export const createMenuItem: CommandDefinition<
         description: input.description ?? null,
         costMinor: input.costMinor ?? null,
         sortOrder: input.sortOrder ?? 0,
+        featured: input.featured ?? false,
       },
     });
     return {
@@ -195,7 +202,7 @@ export const createMenuItem: CommandDefinition<
 };
 
 export const editMenuItem: CommandDefinition<
-  { itemId: string; name?: string; priceMinor?: number; description?: string | null },
+  { itemId: string; name?: string; priceMinor?: number; description?: string | null; featured?: boolean },
   { id: string }
 > = {
   key: "verity.dinein.edit_menu_item",
@@ -206,6 +213,7 @@ export const editMenuItem: CommandDefinition<
     name: z.string().min(1).max(200).optional(),
     priceMinor: z.number().int().min(0).optional(),
     description: z.string().max(2000).nullable().optional(),
+    featured: z.boolean().optional(),
   }),
   handler: async (ctx, input) => {
     const before = await ctx.tx.menuItem.findUniqueOrThrow({ where: { id: input.itemId } });
@@ -215,6 +223,7 @@ export const editMenuItem: CommandDefinition<
         ...(input.name === undefined ? {} : { name: input.name }),
         ...(input.priceMinor === undefined ? {} : { priceMinor: input.priceMinor }),
         ...(input.description === undefined ? {} : { description: input.description }),
+        ...(input.featured === undefined ? {} : { featured: input.featured }),
         version: { increment: 1 },
       },
     });
@@ -226,8 +235,8 @@ export const editMenuItem: CommandDefinition<
       entityId: after.id,
       commandKey: "verity.dinein.edit_menu_item",
       changes: diffFields(
-        { name: before.name, priceMinor: before.priceMinor },
-        { name: after.name, priceMinor: after.priceMinor },
+        { name: before.name, priceMinor: before.priceMinor, featured: before.featured },
+        { name: after.name, priceMinor: after.priceMinor, featured: after.featured },
       ),
     });
 
@@ -615,7 +624,7 @@ export const defineTable: CommandDefinition<
 
 /** Where the manager dragged it on the floor plan. */
 export const positionTable: CommandDefinition<
-  { tableId: string; posX: number; posY: number },
+  { tableId: string; posX: number; posY: number; width?: number; height?: number },
   { id: string }
 > = {
   key: "verity.dinein.position_table",
@@ -625,11 +634,20 @@ export const positionTable: CommandDefinition<
     tableId: z.string().uuid(),
     posX: z.number().int().min(0).max(10_000),
     posY: z.number().int().min(0).max(10_000),
+    // Canvas pixels; the database holds the same 40 to 600 range.
+    width: z.number().int().min(40).max(600).optional(),
+    height: z.number().int().min(40).max(600).optional(),
   }),
   handler: async (ctx, input) => {
     const table = await ctx.tx.diningTable.update({
       where: { id: input.tableId },
-      data: { posX: input.posX, posY: input.posY, version: { increment: 1 } },
+      data: {
+        posX: input.posX,
+        posY: input.posY,
+        ...(input.width === undefined ? {} : { width: input.width }),
+        ...(input.height === undefined ? {} : { height: input.height }),
+        version: { increment: 1 },
+      },
     });
     return {
       result: { id: table.id },
@@ -1856,6 +1874,8 @@ export const listMenu: QueryDefinition<
       name: string;
       priceMinor: number;
       active: boolean;
+      /** A special or priority dish; the order pad can filter to these. */
+      featured: boolean;
       variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
       /** Add-ons; retired ones appear only when `includeInactive` is set. */
       modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
@@ -1896,6 +1916,7 @@ export const listMenu: QueryDefinition<
         name: item.name,
         priceMinor: item.priceMinor,
         active: item.active,
+        featured: item.featured,
         variants: item.variants.map((variant) => ({
           id: variant.id,
           name: variant.name,
@@ -1917,12 +1938,18 @@ export type FloorTable = {
   state: string;
   posX: number;
   posY: number;
+  width: number;
+  height: number;
   zoneId: string;
   zoneName: string;
   orderId: string | null;
   orderState: string | null;
   covers: number | null;
   openLines: number;
+  /** Minutes the open order has been running; null when the table has none. */
+  openMinutes: number | null;
+  /** True once the open order has run longer than the outlet's "seated too long" setting. */
+  needsAttention: boolean;
 };
 
 /** The floor map feed: every table, where it sits, and what it is doing. */
@@ -1948,8 +1975,12 @@ export const listFloor: QueryDefinition<{ locationId?: string }, FloorTable[]> =
       },
     });
 
+    const seatedMinutes = (await resolveConfig<number>(ctx.tx, CONFIG_ALERT_SEATED_MINUTES)) ?? DEFAULT_ALERT_SEATED_MINUTES;
+    const now = Date.now();
+
     return tables.map((table) => {
       const order = table.orders[0];
+      const openMinutes = order ? Math.floor((now - order.createdAt.getTime()) / 60_000) : null;
       return {
         id: table.id,
         label: table.label,
@@ -1958,12 +1989,16 @@ export const listFloor: QueryDefinition<{ locationId?: string }, FloorTable[]> =
         state: table.state,
         posX: table.posX,
         posY: table.posY,
+        width: table.width,
+        height: table.height,
         zoneId: table.zone.id,
         zoneName: table.zone.name,
         orderId: order?.id ?? null,
         orderState: order?.state ?? null,
         covers: order?.covers ?? null,
         openLines: order?.lines.length ?? 0,
+        openMinutes,
+        needsAttention: openMinutes !== null && openMinutes > seatedMinutes,
       };
     });
   },
@@ -2335,6 +2370,8 @@ export type SalesSummary = {
  */
 export { DEFAULT_DAY_START_MINUTE, serviceDayRange } from "./day";
 export * from "./reports";
+export * from "./service";
+export * from "./checklist";
 
 export const salesSummary: QueryDefinition<
   { day?: string; locationId?: string },
@@ -2520,6 +2557,15 @@ export function registerDineinCapability(): void {
         shells: ["platform"],
       },
       {
+        href: "/checklists",
+        label: "Checklists",
+        group: "Capabilities",
+        order: 25,
+        icon: "approvals",
+        requiresEntity: ENTITY_TABLE,
+        shells: ["platform", "operations"],
+      },
+      {
         href: "/sales-reports",
         label: "Sales reports",
         group: "Capabilities",
@@ -2620,4 +2666,6 @@ export function registerDineinCapability(): void {
   registerQuery(listOpenBills);
   registerQuery(salesSummary);
   registerDineinReports();
+  registerDineinService();
+  registerDineinChecklist();
 }

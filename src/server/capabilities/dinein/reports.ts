@@ -303,7 +303,7 @@ export type OutletToday = {
     avgTicketMinutes: number | null;
   } | null;
   tables: { seated: number; total: number };
-  attention: Array<{ kind: "unpaid" | "seated_long" | "left_open"; message: string; count: number; href: string }>;
+  attention: Array<{ kind: "unpaid" | "seated_long" | "left_open" | "closing_open"; message: string; count: number; href: string }>;
   baseline: { sampleDays: number; medianSalesMinor: number; medianCovers: number };
   floorLoad: Array<{ staffName: string; tables: number }>;
   serviceLine: Array<{ tableId: string; label: string; stage: ServiceStage; minutes: number | null; over: boolean }>;
@@ -423,6 +423,40 @@ export const outletToday: QueryDefinition<{ locationId?: string }, OutletToday> 
         message: `${leftOpen} order${leftOpen === 1 ? "" : "s"} still open from before today`,
         href: "/floor",
       });
+    }
+
+    /* yesterday's closing list: asked for, trading happened, and it was not finished */
+    {
+      const prevDay = new Date(new Date(`${today.day}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10);
+      const closingSteps = await tx.outletChecklistStep.groupBy({
+        by: ["locationId"],
+        where: { kind: "closing", active: true, locationId: { in: locationIds } },
+        _count: { _all: true },
+      });
+      if (closingSteps.length > 0) {
+        const prev = await serviceDayRange(tx, ctx.actor.organizationId, prevDay);
+        const runs = await tx.outletChecklistRun.findMany({
+          where: { kind: "closing", serviceDay: new Date(`${prevDay}T00:00:00Z`), locationId: { in: closingSteps.map((c) => c.locationId) } },
+          select: { locationId: true, completedAt: true },
+        });
+        let unfinished = 0;
+        for (const c of closingSteps) {
+          const run = runs.find((r) => r.locationId === c.locationId);
+          if (run?.completedAt) continue;
+          const traded = await tx.bill.count({
+            where: { locationId: c.locationId, state: "settled", settledAt: { gte: prev.from, lt: prev.to } },
+          });
+          if (traded > 0) unfinished += 1;
+        }
+        if (unfinished > 0) {
+          attention.push({
+            kind: "closing_open",
+            count: unfinished,
+            message: `${unfinished} outlet${unfinished === 1 ? "" : "s"} did not finish the closing checklist yesterday`,
+            href: "/checklists",
+          });
+        }
+      }
     }
 
     /* floor load */

@@ -19,6 +19,7 @@ type Customer360 = {
   birthday: string | null; marketingConsent: boolean;
   orderCount: number; totalSpendMinor: number; avgOrderValueMinor: number; lastOrderAt: string | null;
   mergedPhones: string[];
+  favourites: Array<{ name: string; qty: number }>;
 };
 type Complaint = { id: string; category: string; severity: string; status: string; createdAt: string };
 
@@ -67,6 +68,10 @@ async function GuestDetailPage({ params }: { params: Promise<{ customerId: strin
             {
               term: "Last order",
               value: customer.lastOrderAt ? new Date(customer.lastOrderAt).toLocaleDateString("en-IN") : "Never",
+            },
+            {
+              term: "Usually orders",
+              value: customer.favourites.length > 0 ? customer.favourites.map((f) => `${f.name} (${f.qty})`).join(", ") : "Nothing yet",
             },
           ]}
         />

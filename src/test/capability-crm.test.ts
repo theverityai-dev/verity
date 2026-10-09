@@ -244,6 +244,9 @@ describeDb("capability: CRM", () => {
     expect(customer!.totalSpendMinor).toBe(firstTotal + secondTotal);
     expect(customer!.avgOrderValueMinor).toBe(Math.round((firstTotal + secondTotal) / 2));
     expect(customer!.lastOrderAt).not.toBeNull();
+    // Two visits of 1 and 2 of the same dish: that dish is what this guest usually orders (Task 126 1.7).
+    expect(customer!.favourites).toHaveLength(1);
+    expect(customer!.favourites[0]!.qty).toBe(3);
 
     const list = await executeQuery(manager, listCustomers, { minVisits: 2 });
     expect(list.some((c) => c.phone === guestPhone)).toBe(true);

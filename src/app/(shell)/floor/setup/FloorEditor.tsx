@@ -291,8 +291,8 @@ export function FloorEditor({ tables }: { tables: FloorTable[] }) {
                       style={{
                         left: at.x,
                         top: at.y,
-                        width: TABLE_W,
-                        height: TABLE_H,
+                        width: table.width || TABLE_W,
+                        height: table.height || TABLE_H,
                         borderRadius: table.shape === "round" ? "50%" : undefined,
                       }}
                     >
@@ -303,9 +303,40 @@ export function FloorEditor({ tables }: { tables: FloorTable[] }) {
                 })}
               </div>
 
+              {zone.tables.filter((t) => t.id === selected).map((table) => (
+                <form
+                  key={`${table.id}-${table.width}-${table.height}`}
+                  className="mt-3 flex flex-wrap items-end gap-3"
+                  action={(formData) =>
+                    run("verity.dinein.position_table", {
+                      tableId: table.id,
+                      posX: positionOf(table).x,
+                      posY: positionOf(table).y,
+                      width: Number(formData.get("width")),
+                      height: Number(formData.get("height")),
+                    })
+                  }
+                >
+                  <span className="min-h-11 content-center text-[14px] font-medium text-text">Size of {table.label}</span>
+                  <div className="w-[110px]">
+                    <Field label="Width" htmlFor={`w-${table.id}`}>
+                      <Input id={`w-${table.id}`} name="width" type="number" inputMode="numeric" min={40} max={600} step={GRID} defaultValue={table.width} />
+                    </Field>
+                  </div>
+                  <div className="w-[110px]">
+                    <Field label="Height" htmlFor={`h-${table.id}`}>
+                      <Input id={`h-${table.id}`} name="height" type="number" inputMode="numeric" min={40} max={600} step={GRID} defaultValue={table.height} />
+                    </Field>
+                  </div>
+                  <CommandButton commands={"verity.dinein.position_table"} type="submit" disabled={pending}>
+                    Set size
+                  </CommandButton>
+                </form>
+              ))}
+
               <p className="mb-0 mt-3 text-[12px] text-text-tertiary">
                 Drag to place, or select a table and use the arrow keys. Positions snap to the grid
-                and save when you let go.
+                and save when you let go. Select a table to change its size.
               </p>
             </Panel>
           </div>

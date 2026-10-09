@@ -43,6 +43,8 @@ function RecordExpenseForm({ locations }: { locations: Array<{ id: string; name:
                 paymentMethod: String(form.get("paymentMethod") ?? ""),
                 expenseDate: String(form.get("expenseDate") ?? ""),
                 vendor: String(form.get("vendor") ?? "") || undefined,
+                periodFrom: String(form.get("periodFrom") ?? "") || undefined,
+                periodTo: String(form.get("periodTo") ?? "") || undefined,
               },
               "/expenses",
             );
@@ -73,6 +75,12 @@ function RecordExpenseForm({ locations }: { locations: Array<{ id: string; name:
         </Field>
         <Field label="Vendor" htmlFor="vendor" hint="Optional">
           <Input id="vendor" name="vendor" />
+        </Field>
+        <Field label="Covers from" htmlFor="periodFrom" hint="Only for a bill that pays for many days, such as electricity. Leave both dates empty otherwise.">
+          <Input id="periodFrom" name="periodFrom" type="date" />
+        </Field>
+        <Field label="Covers to" htmlFor="periodTo">
+          <Input id="periodTo" name="periodTo" type="date" />
         </Field>
         {failure && <div className="sm:col-span-2"><ErrorState title="Could not record expense" message={failure.message} issues={failure.issues} retryable={failure.retryable} /></div>}
         <div className="flex items-center gap-2 sm:col-span-2">

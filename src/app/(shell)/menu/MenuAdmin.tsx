@@ -4,7 +4,7 @@ import { CommandButton } from "@/components/ui/CommandAccess";
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, EmptyState, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
+import { Button, Checkbox, EmptyState, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { PriceHistory } from "@/server/capabilities/dinein";
@@ -29,6 +29,7 @@ type MenuCategory = {
     name: string;
     priceMinor: number;
     active: boolean;
+    featured: boolean;
     variants: Array<{ id: string; name: string; priceDeltaMinor: number }>;
     modifiers: Array<{ id: string; name: string; priceDeltaMinor: number; active: boolean }>;
     availability: Array<AvailabilityRule & { id: string; locationName: string | null }>;
@@ -171,6 +172,7 @@ export function MenuAdmin({
                         name: String(formData.get("name") ?? ""),
                         // Rupees in, paise out. The server never sees a decimal.
                         priceMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
+                        featured: formData.get("featured") === "on",
                       },
                       () => setAddingTo(null),
                     )
@@ -193,6 +195,7 @@ export function MenuAdmin({
                       />
                     </Field>
                   </div>
+                  <Checkbox name="featured" label="Special dish" className="min-h-11" />
                   <CommandButton commands={"verity.dinein.create_menu_item"} type="submit" variant="primary" disabled={pending}>
                     Add
                   </CommandButton>
@@ -314,6 +317,7 @@ export function MenuAdmin({
                             name: String(formData.get("name") ?? "").trim(),
                             // Rupees in, paise out. The server never sees a decimal.
                             priceMinor: Math.round(Number(formData.get("price") ?? 0) * 100),
+                            featured: formData.get("featured") === "on",
                           },
                           () => setEditing(null),
                         )
@@ -337,6 +341,7 @@ export function MenuAdmin({
                           />
                         </Field>
                       </div>
+                      <Checkbox name="featured" label="Special dish" defaultChecked={item.featured} className="min-h-11" />
                       <CommandButton commands={"verity.dinein.edit_menu_item"} type="submit" variant="primary" disabled={pending}>
                         Save
                       </CommandButton>

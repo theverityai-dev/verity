@@ -119,6 +119,9 @@ model Tenant {
   orderLines     OrderLine[]
   bills          Bill[]
   payments       Payment[]
+  outletChecklistSteps OutletChecklistStep[]
+  outletChecklistRuns  OutletChecklistRun[]
+  outletChecklistTicks OutletChecklistTick[]
 
   // Capability: plywood trading. Back-relations only, as above.
   tradingBrands                    TradingBrand[]
@@ -1620,6 +1623,8 @@ model Location {
   diningTables DiningTable[]
   diningOrders DiningOrder[]
   menuAvailability MenuAvailability[]
+  outletChecklistSteps OutletChecklistStep[]
+  outletChecklistRuns  OutletChecklistRun[]
   bills        Bill[]
   customers    Customer[]
   complaints   Complaint[]
@@ -2365,6 +2370,8 @@ model MenuItem {
   /// never reaches a shared floor tablet.
   costMinor    Int?     @map("cost_minor")
   active       Boolean  @default(true)
+  /// A special or priority dish the order pad can filter to (Task 126 item 1.9).
+  featured     Boolean  @default(false)
   sortOrder    Int      @default(0) @map("sort_order")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -2407,6 +2414,74 @@ model MenuAvailability {
 
   @@index([tenantId, itemId])
   @@map("menu_availability")
+}
+
+/// One line of an outlet's opening or closing checklist (Task 126 item 1.8). The list
+/// belongs to the outlet and is edited by replacing it; a step that is taken off is
+/// retired (`active` false), never deleted, so earlier days keep what they were asked.
+model OutletChecklistStep {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  /// `opening` or `closing`.
+  kind       String
+  label      String
+  sortOrder  Int      @default(0) @map("sort_order")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  version    Int      @default(1)
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location              @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_checklist_step_location_fkey")
+  ticks    OutletChecklistTick[]
+
+  @@unique([tenantId, id], name: "outlet_checklist_step_tenant_scoped_id")
+  @@index([tenantId, locationId, kind])
+  @@map("outlet_checklist_step")
+}
+
+/// One outlet's opening or closing list for one service day. Created the first time a
+/// step is ticked; `completedAt` is set when every active step is ticked and cleared if
+/// one is un-ticked.
+model OutletChecklistRun {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  locationId  String    @map("location_id") @db.Uuid
+  kind        String
+  serviceDay  DateTime  @map("service_day") @db.Date
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location Location              @relation(fields: [tenantId, locationId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_checklist_run_location_fkey")
+  ticks    OutletChecklistTick[]
+
+  @@unique([tenantId, locationId, kind, serviceDay], name: "outlet_checklist_run_day")
+  @@unique([tenantId, id], name: "outlet_checklist_run_tenant_scoped_id")
+  @@map("outlet_checklist_run")
+}
+
+/// A step done, by whom and when. The label is copied so the day's record reads as it
+/// did even after the list changes.
+model OutletChecklistTick {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  runId        String   @map("run_id") @db.Uuid
+  stepId       String   @map("step_id") @db.Uuid
+  label        String
+  doneByUserId String   @map("done_by_user_id") @db.Uuid
+  doneAt       DateTime @default(now()) @map("done_at")
+  note         String?
+
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run    OutletChecklistRun  @relation(fields: [tenantId, runId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction, map: "outlet_checklist_tick_run_fkey")
+  step   OutletChecklistStep @relation(fields: [tenantId, stepId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "outlet_checklist_tick_step_fkey")
+
+  @@unique([runId, stepId], name: "outlet_checklist_tick_once")
+  @@index([tenantId, runId])
+  @@map("outlet_checklist_tick")
 }
 
 /// A portion of an item — Half, Full — priced as a delta from the item.
@@ -2499,6 +2574,9 @@ model DiningTable {
   /// generic diagram abstraction.
   posX         Int      @default(0) @map("pos_x")
   posY         Int      @default(0) @map("pos_y")
+  /// Size on the floor-plan canvas, in canvas pixels (Task 126 item 1.6).
+  width        Int      @default(110)
+  height       Int      @default(84)
   state        String   @default("available")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -4963,6 +5041,11 @@ model Expense {
   amountMinor  Int       @map("amount_minor")
   paymentMethod String   @map("payment_method")
   expenseDate  DateTime  @map("expense_date") @db.Date
+  /// The days this expense pays for, when it covers more than one (a monthly
+  /// electricity bill). The outlet P&L spreads it across them. Null means the
+  /// expense belongs to `expenseDate` alone (Task 126 item 1.3).
+  periodFrom   DateTime? @map("period_from") @db.Date
+  periodTo     DateTime? @map("period_to") @db.Date
   receiptEvidenceId String? @map("receipt_evidence_id") @db.Uuid
   status       String    @default("Pending")
   recordedById String    @map("recorded_by_id") @db.Uuid
