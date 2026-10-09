@@ -111,7 +111,7 @@ export function Cell({
     column.variant === "link" && column.href ? (
       <Link
         href={fillTemplate(column.href, row)}
-        className="text-text no-underline hover:text-accent-ink hover:underline"
+        className="text-text no-underline hover:text-accent-ink hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:items-center"
       >
         {value}
       </Link>

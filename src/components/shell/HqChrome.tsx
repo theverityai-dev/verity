@@ -115,7 +115,7 @@ export function HqChrome({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="glass-shell z-30 flex h-14 shrink-0 items-center justify-between gap-3 rounded-none border-b border-line px-4 lg:hidden">
-          <Link href="/hq" aria-label="Verity HQ" className="no-underline">
+          <Link href="/hq" aria-label="Verity HQ" className="inline-flex min-h-11 items-center no-underline">
             <VerityLockup size={22} />
           </Link>
           <ThemeToggle />

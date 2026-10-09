@@ -329,7 +329,7 @@ export function ShellChrome({
         {/* Mobile top bar: identity + theme only. Navigation lives in the
             bottom tab bar below (P1-05) — no duplicate "Menu" trigger. */}
         <div className="glass-shell z-30 flex h-14 shrink-0 items-center justify-between gap-3 rounded-none border-b border-line px-4 print:hidden lg:hidden">
-          <Link href="/" aria-label="Verity" className="no-underline">
+          <Link href="/" aria-label="Verity" className="inline-flex min-h-11 items-center no-underline">
             <VerityLockup size={22} className="text-text" />
           </Link>
           <ThemeToggle />
