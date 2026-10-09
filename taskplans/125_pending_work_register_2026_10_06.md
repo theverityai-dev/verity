@@ -311,6 +311,16 @@ Write each into `DECISIONS.md` with its basis.
   `20261009080000_notification_outbox`, `20261009081000_domain_event_delivery_policy`
   (the earlier `20261009040000` to `20261009060000` are already on production).
 
+- **Production state, 2026-10-09 evening:** every migration through `20261009102000` is applied (the data
+  export and outbox pair, then Task 126 wave 1's three), each applied from a temporary worktree at the exact
+  commit being pushed so that no other session's uncommitted migration could ride along. `main` is at
+  `623b033`, CI green, `/api/health` shows it. **Readiness flaps on `scheduler_stale`:** the freshness limit is
+  15 minutes (`SCHEDULER_FRESH_MS`) but the "Scheduled work" workflow fires about every 15 to 20 minutes, so
+  `/api/ready` returns 503 for a few minutes between runs even though every run succeeds. Not caused by a
+  deploy. Either widen the limit to about 30 minutes or move the trigger off GitHub Actions cron; widening is
+  a one-line change and is the smaller fix. **Not yet done: verify the dispatcher in production** (needs a
+  tenant context; counts read through the app role without one are always zero).
+
 ## Process rules that apply to all of the above
 
 - Commit as work lands; push once at the end of a batch; apply any migration to production before
