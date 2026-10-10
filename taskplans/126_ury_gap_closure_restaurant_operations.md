@@ -7,10 +7,38 @@ ADR-043 (written with this plan), the Colonel Kebabz parity set
 (`clients/colonel-kebabz/reference-parity/`, `DECISIONS.md`) and the Task 125 register. Stop conditions:
 `CLAUDE.md`. Anything that adds a security boundary needs its ADR approved before code; Wave 5 does.
 
-## Status: PROPOSED 2026-10-09 — plan and four ADRs written, nothing built, awaiting approval
+## Status: BUILT 2026-10-10 (Waves 0 to 5), nothing pushed, no migration applied to production
 
-Evidence: the plan and ADRs are the only artefacts. Waves 0 and 1 need no ADR and can start on the
-product owner's word; Waves 2 to 5 each wait for their ADR to be approved (ADR-040, 041, 043, 042).
+The product owner approved the plan and ADR-040 to ADR-043 on 2026-10-09 ("yes go ahead complete it all"); the
+ADRs are ACCEPTED. Every wave is committed on `main` (last: `96f3916a`). All six migrations (`20261009100000`
+to `20261009140000`, all additive) were applied to the local test database only; **applying them to production
+still needs the owner's say-so**.
+
+Evidence (PROVEN against the real database): `capability-dinein.test.ts` (reports, hand-over, checklists, GST
+invoice and credit notes, stations/courses/tickets, scoped prices), `capability-dinein-selforder.test.ts` (9
+tests, below), plus the conformance, write-confinement, UI-reachability, runtime-privilege and audit-remediation
+suites. `tsc` and `eslint` clean; the impeccable detector reports nothing on the new pages.
+
+Deviations from the plan as written (none changes an ADR constraint):
+
+- **1.8 checklists** use native dine-in tables rather than a configurable form.
+- **Not built:** the order-pad "favourites" shortcut and an *unmerge* for merged orders (small Wave 1 items).
+- **5.2** the two definer functions are `verity.self_order_open_session` and `verity.self_order_resolve`
+  (hash in, least out), not one `self_order_lookup`; opening and resolving are different acts.
+- **Self-order scope:** table and pickup only. **Kiosk and table-tablet modes are not built** (ADR-042 names them;
+  nothing needs them yet). Direct-apply means a guest's lines join the table's order the moment a person has
+  opened it (draft, placed or partly served); they still wait for staff to send a draft to the kitchen.
+- **5.5** a service request shows as a floor badge and an inbox row. It does **not** raise an ADR-039 in-app
+  notification yet.
+- **Not exercised:** the guest page and the sticker sheet have not been walked in a real browser or on a phone;
+  the routes are tested by calling their handlers, not against a running server.
+
+Self-order proof: the sticker alone opens nothing at an empty table, nor while the outlet is off; every wrong,
+expired, closed or unseated token answers identically; the guest identity holds exactly three grants and is
+refused the floor, kitchen and inbox; prices and availability are the server's (a retired dish, a foreign add-on
+and an oversize quantity are refused); proposals wait for staff and are accepted as the accepter; a retried
+submission with the same key makes nothing new; releasing a table, idling 31 minutes, or turning the outlet off
+ends the visit; pickup needs a phone; a body cannot carry a tenant; retention purges at 30 days.
 
 Scope note: `CLAUDE.md` lists Sales, Inventory, Commerce and Finance as out of scope for the platform
 foundation, and the 2026-09-30 scope decision names only Tasks 118 to 120. Colonel Kebabz's restaurant

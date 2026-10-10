@@ -11,7 +11,7 @@ line below matching recent commits), regenerate it from `git log` and the
 taskplans it points to before trusting it, same rule `00_STATUS_INDEX.md`
 already states for itself.
 
-**Last updated: 2026-10-09 (Task 126 URY gap closure proposed with ADR-040 to ADR-043; Task 125 progress log added: section 2 decisions done, desktop walk of Colonel Kebabz done, phone-width pass waiting on a signed-in session; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
+**Last updated: 2026-10-10 (Task 126 URY gap closure built, Waves 0 to 5, ADR-040 to ADR-043 accepted; Task 125 progress log added: section 2 decisions done, desktop walk of Colonel Kebabz done, phone-width pass waiting on a signed-in session; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
 
 ## How to use this folder
 
@@ -54,15 +54,15 @@ already states for itself.
 
 ## Since 2026-10-09 (URY comparison, added 2026-10-09)
 
-- **Task 126 — URY gap closure: PROPOSED, awaiting approval.** `taskplans/126_ury_gap_closure_restaurant_
-  operations.md` maps 41 gaps between URY and Verity and sequences six waves. Waves 0 (two defects) and 1
-  (sales reports, "today" dashboard, small floor items) need no ADR and can start on the product owner's
-  word. Waves 2 to 5 wait on **ADR-040** (GST bill: dine-in bills have no consecutive invoice number today),
-  **ADR-041** (kitchen stations, courses, tickets, printing), **ADR-043** (outlet and channel prices) and
-  **ADR-042** (customer self-order, a new public write surface), all PROPOSED in
-  `verity-spec/17_decisions/adr/`. Comparison: `docs/reference/ury-parity/ury-vs-verity-a-to-z.md`.
-- **Needs the product owner:** approve or amend the four ADRs; give outlet codes for the three Colonel
-  Kebabz outlets; name who confirms the tax points in ADR-040 with the client's adviser.
+- **Task 126 — URY gap closure: BUILT 2026-10-10 (Waves 0 to 5), not pushed, not on production.**
+  `taskplans/126_ury_gap_closure_restaurant_operations.md` (its Status section lists the deviations).
+  ADR-040 (GST tax invoice), ADR-041 (stations, courses, tickets), ADR-043 (outlet and channel prices) and
+  ADR-042 (customer self-order) are ACCEPTED. Comparison: `docs/reference/ury-parity/ury-vs-verity-a-to-z.md`.
+- **Needs the product owner:** approval to apply migrations `20261009100000` to `20261009140000` to
+  production (all additive); give outlet codes for the three Colonel Kebabz outlets; name who confirms the
+  tax points in ADR-040 with the client's adviser; turn self-order on per outlet only after a phone walk of
+  the guest page and a printed sticker. Not built: kiosk mode, order-pad favourites, unmerge, and an ADR-039
+  notification for service requests.
 
 ## Since 2026-10-06 (added 2026-10-09)
 
