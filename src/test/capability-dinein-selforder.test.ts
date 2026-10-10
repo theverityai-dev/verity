@@ -53,6 +53,12 @@ import {
   submitSelfOrder,
 } from "@/server/capabilities/dinein";
 import { openGuestSession, resolveGuestSession, type GuestSession } from "@/server/capabilities/dinein/selforder-public";
+// The routes bootstrap every capability on first use; this suite registers dinein itself, so a second
+// registration would be a duplicate-key defect rather than the idempotent install production relies on.
+vi.mock("@/server/capabilities/registry", () => ({ installCapabilities: () => undefined }));
+
+import { GET as openLink } from "@/app/o/[token]/route";
+import { GET as readVisit, POST as writeVisit } from "@/app/api/self-order/[token]/route";
 
 /**
  * Customer self-order (ADR-042; Task 126 Wave 5), proven as an anonymous visitor would meet it:
@@ -429,6 +435,42 @@ describeDb("capability: Dine-in customer self-order (ADR-042)", () => {
     const accepted = await executeCommand(waiter, decideSelfOrderSubmission, { submissionId: proposal.id, decision: "accept" });
     const order = await withTenant(tenantId, (tx) => tx.diningOrder.findUniqueOrThrow({ where: { id: accepted.orderId! } }));
     expect(order).toMatchObject({ channel: "qr", locationId, customerName: "Meera", customerPhone: "+91 98100 00000", takenByUserId: waiter.userId });
+  });
+
+  it("serves the routes a phone actually calls: a redirect to a fresh visit, one bare 404, a required idempotency key", async () => {
+    const tableId = await newTable("D-8", true);
+    const link = await executeCommand(manager, createSelfOrderLink, { locationId, tableId });
+    const params = (token: string) => ({ params: Promise.resolve({ token }) });
+    const call = (path: string, init?: RequestInit) => new Request(`http://localhost${path}`, init);
+
+    const opened = await openLink(call(`/o/${link.token}`), params(link.token));
+    expect(opened.status).toBe(302);
+    const location = opened.headers.get("location")!;
+    expect(location).toMatch(/^\/o\/s\/[A-Za-z0-9_-]{32}$/);
+    expect(opened.headers.get("cache-control")).toBe("no-store");
+    const sessionToken = location.split("/").pop()!;
+    expect(sessionToken).not.toBe(link.token);
+
+    // A wrong link and a wrong visit are the same bare answer.
+    const wrong = await openLink(call("/o/" + "B".repeat(32)), params("B".repeat(32)));
+    expect(wrong.status).toBe(404);
+    expect((await readVisit(call("/api/self-order/x"), params("B".repeat(32)))).status).toBe(404);
+
+    const read = await readVisit(call(`/api/self-order/${sessionToken}`), params(sessionToken));
+    expect(read.status).toBe(200);
+    expect(((await read.json()) as { view: { tableLabel: string } }).view.tableLabel).toBe("D-8");
+
+    const post = (body: unknown, headers: Record<string, string> = {}) =>
+      writeVisit(call(`/api/self-order/${sessionToken}`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) }), params(sessionToken));
+    const lines = [{ itemId: paneerId, qty: 1 }];
+    // Without a key a retry could double-send, so it is refused.
+    expect((await post({ action: "submit", lines })).status).toBe(422);
+    // Nothing in the body can name a tenant, an outlet or a price.
+    expect((await post({ action: "submit", lines, tenantId: randomUUID() }, { "idempotency-key": randomUUID().replaceAll("-", "") })).status).toBe(422);
+    const sent = await post({ action: "submit", lines }, { "idempotency-key": randomUUID().replaceAll("-", "") });
+    expect(sent.status).toBe(200);
+    expect(((await sent.json()) as { result: { status: string } }).result.status).toBe("pending");
+    expect((await post({ action: "request", kind: "waiter" })).status).toBe(200);
   });
 
   it("purges visits a month after they end, and nothing sooner", async () => {

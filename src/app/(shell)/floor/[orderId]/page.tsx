@@ -4,8 +4,9 @@ import { requireActor } from "@/server/platform/auth";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
 import { ForbiddenError } from "@/server/platform/authorization";
-import { getOrderDetail, listHandoverTargets, listMenu, listTableChangeTargets, type OrderDetail } from "@/server/capabilities/dinein";
+import { getOrderDetail, listHandoverTargets, listMenu, listSelfOrderInbox, listTableChangeTargets, type OrderDetail } from "@/server/capabilities/dinein";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
+import { SelfOrderInbox } from "../SelfOrderInbox";
 import { OrderPad } from "./OrderPad";
 import { TableActions } from "./TableActions";
 
@@ -49,6 +50,9 @@ async function OrderPage({
     : null;
   const isOpen = canChangeTable || order.state === "served" || order.state === "billed";
   const takers = isOpen ? await executeQuery(actor, listHandoverTargets, { orderId }).catch(() => []) : [];
+  const inbox = order.tableId
+    ? await executeQuery(actor, listSelfOrderInbox, {}).catch(() => ({ submissions: [], requests: [] }))
+    : { submissions: [], requests: [] };
 
   return (
     <>
@@ -70,6 +74,7 @@ async function OrderPage({
           ) : undefined
         }
       />
+      {order.tableId && <SelfOrderInbox inbox={inbox} tableId={order.tableId} />}
       <OrderPad order={order} menu={menu} />
     </>
   );

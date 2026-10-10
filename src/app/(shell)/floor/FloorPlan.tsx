@@ -32,7 +32,7 @@ const STATE_STYLE: Record<string, { dot: string; label: string; tone: string }> 
   out_of_service: { dot: "bg-text-tertiary", label: "Out of service", tone: "text-text-tertiary" },
 };
 
-export function FloorPlan({ tables }: { tables: FloorTable[] }) {
+export function FloorPlan({ tables, waiting = {} }: { tables: FloorTable[]; waiting?: Record<string, number> }) {
   const router = useRouter();
   const canCommand = useCommandAccess();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
@@ -185,6 +185,7 @@ export function FloorPlan({ tables }: { tables: FloorTable[] }) {
                       <span className="flex items-center gap-2">
                         <span aria-hidden="true" className={`size-2 rounded-full ${style.dot}`} />
                         <span className={`text-[12px] ${style.tone}`}>{style.label}</span>
+                        {waiting[table.id] ? <span className="text-[12px] font-medium text-warning">· Guest waiting</span> : null}
                       </span>
 
                       <span className="text-[12px] text-text-secondary">
@@ -213,7 +214,7 @@ export function FloorPlan({ tables }: { tables: FloorTable[] }) {
                 id: table.id,
                 tableId: table.id,
                 label: table.label,
-                state: (STATE_STYLE[table.state] ?? STATE_STYLE.available!).label,
+                state: `${(STATE_STYLE[table.state] ?? STATE_STYLE.available!).label}${waiting[table.id] ? " · guest waiting" : ""}`,
                 covers: table.covers ?? "—",
                 outstanding: table.openLines,
                 tableState: table.state,

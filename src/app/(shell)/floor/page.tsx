@@ -3,10 +3,11 @@ import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
-import { listFloor, type FloorTable } from "@/server/capabilities/dinein";
+import { listFloor, listSelfOrderInbox, type FloorTable } from "@/server/capabilities/dinein";
 import { ForbiddenError } from "@/server/platform/authorization";
 import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
 import { FloorPlan } from "./FloorPlan";
+import { SelfOrderInbox } from "./SelfOrderInbox";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,13 @@ async function FloorPage() {
     throw error;
   }
 
+  // What guests are waiting on. Someone who may not see it simply sees nothing here.
+  const inbox = await executeQuery(actor, listSelfOrderInbox, {}).catch(() => ({ submissions: [], requests: [] }));
+  const waiting: Record<string, number> = {};
+  for (const item of [...inbox.submissions, ...inbox.requests]) {
+    if (item.tableId) waiting[item.tableId] = (waiting[item.tableId] ?? 0) + 1;
+  }
+
   const occupied = tables.filter((table) => table.state === "occupied").length;
   const cleaning = tables.filter((table) => table.state === "cleaning").length;
   const seatsInUse = tables
@@ -57,7 +65,8 @@ async function FloorPage() {
         />
       </StatRow>
 
-      <FloorPlan tables={tables} />
+      <SelfOrderInbox inbox={inbox} />
+      <FloorPlan tables={tables} waiting={waiting} />
     </>
   );
 }
