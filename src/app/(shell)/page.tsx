@@ -4,6 +4,7 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { PLYWOOD_CAPABILITY, landingRouteFor } from "@/server/capabilities/plywood";
 import { OUTREACH_CAPABILITY, outreachLandingRouteFor } from "@/server/capabilities/outreach";
 import { DINEIN_CAPABILITY, dineinLandingRouteFor } from "@/server/capabilities/dinein";
+import { PROJECT_CAPABILITY, projectLandingRouteFor } from "@/server/capabilities/project";
 import { withTenant } from "@/server/platform/tenancy";
 import { resolvePermissions, hasTenantPermission } from "@/server/platform/authorization";
 import {
@@ -50,7 +51,7 @@ export default async function OverviewPage() {
   installCapabilities();
   const landing = await withTenant(actor.tenantId, async (tx) => {
     if (!actor.roleId) return null;
-    const [plywoodActive, outreachActive, dineinActive] = await Promise.all([
+    const [plywoodActive, outreachActive, dineinActive, projectActive] = await Promise.all([
       tx.tenantActivation.findFirst({
         where: { capabilityId: PLYWOOD_CAPABILITY, status: "Active" },
         select: { capabilityId: true },
@@ -63,8 +64,12 @@ export default async function OverviewPage() {
         where: { capabilityId: DINEIN_CAPABILITY, status: "Active" },
         select: { capabilityId: true },
       }),
+      tx.tenantActivation.findFirst({
+        where: { capabilityId: PROJECT_CAPABILITY, status: "Active" },
+        select: { capabilityId: true },
+      }),
     ]);
-    if (!plywoodActive && !outreachActive && !dineinActive) return null;
+    if (!plywoodActive && !outreachActive && !dineinActive && !projectActive) return null;
     const permissions = await resolvePermissions(tx, actor.roleId);
     // A tenant runs at most one of these packs today, but check all rather
     // than assume — a null from one is exactly the "leave them here" signal
@@ -72,7 +77,8 @@ export default async function OverviewPage() {
     return (
       (plywoodActive ? landingRouteFor(permissions) : null) ??
       (outreachActive ? outreachLandingRouteFor(permissions) : null) ??
-      (dineinActive ? dineinLandingRouteFor(permissions) : null)
+      (dineinActive ? dineinLandingRouteFor(permissions) : null) ??
+      (projectActive ? projectLandingRouteFor(permissions) : null)
     );
   });
   if (landing) redirect(landing);

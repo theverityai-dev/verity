@@ -205,6 +205,16 @@ model Tenant {
   manufacturingDispatches ManufacturingDispatch[]
   manufacturingBatches ManufacturingBatch[]
   manufacturingReservations ManufacturingReservation[]
+  projectJobs        ProjectJob[]
+  projectLostReasons ProjectLostReason[]
+  projectQuotes      ProjectQuote[]
+  projectQuoteLines  ProjectQuoteLine[]
+  projectMilestones  ProjectMilestone[]
+  projectTasks       ProjectTask[]
+  projectTaskDeps    ProjectTaskDependency[]
+  projectTimeEntries ProjectTimeEntry[]
+  projectCostEntries ProjectCostEntry[]
+  projectJobOrders   ProjectJobOrder[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -5020,6 +5030,7 @@ model ManufacturingOrder {
   passports  ManufacturingPassport[]
   dispatches ManufacturingDispatch[]
   reservations ManufacturingReservation[]
+  projectLink ProjectJobOrder?
   batch      ManufacturingBatch?      @relation(fields: [batchId], references: [id], onDelete: SetNull)
   bom        ManufacturingBom?        @relation(fields: [bomId], references: [id], onDelete: Restrict)
   tenant     Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -6732,4 +6743,223 @@ model ManufacturingReservation {
   @@index([tenantId, componentItemId, locationId, releasedAt])
   @@index([tenantId, orderId])
   @@map("manufacturing_reservation")
+}
+
+/// CAPABILITY: Project (Jobs) — first client D & S Electric Works (clients/dsew/prd.md).
+/// A Job is an engineered order run end to end. Money is integer minor units. Cost and
+/// margin are derived reads over time entries, cost entries and linked manufacturing
+/// orders, never stored. `quotedValueMinor` is the one snapshot: copied from the approved
+/// quote revision so a later revision never rewrites what was agreed.
+model ProjectJob {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  /// Per-tenant running number; shown as the job reference.
+  number           Int
+  title            String
+  customerName     String    @map("customer_name")
+  customerContact  String?   @map("customer_contact")
+  description      String?
+  state            String    @default("enquiry")
+  priority         String    @default("normal")
+  dueDate          DateTime? @map("due_date") @db.Date
+  startedAt        DateTime? @map("started_at")
+  finishedAt       DateTime? @map("finished_at")
+  quotedValueMinor Int?      @map("quoted_value_minor")
+  approvedQuoteId  String?   @map("approved_quote_id") @db.Uuid
+  lostReasonId     String?   @map("lost_reason_id") @db.Uuid
+  lostNote         String?   @map("lost_note")
+  createdById      String?   @map("created_by_id") @db.Uuid
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
+  customFields     Json      @default("{}") @map("custom_fields")
+
+  tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lostReason  ProjectLostReason?  @relation(fields: [lostReasonId], references: [id], onDelete: Restrict)
+  quotes      ProjectQuote[]
+  milestones  ProjectMilestone[]
+  tasks       ProjectTask[]
+  timeEntries ProjectTimeEntry[]
+  costEntries ProjectCostEntry[]
+  orders      ProjectJobOrder[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, state])
+  @@map("project_job")
+}
+
+/// Tenant-owned registry of why a job was lost. Retired, never deleted.
+model ProjectLostReason {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  label     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  jobs   ProjectJob[]
+
+  @@unique([tenantId, key])
+  @@map("project_lost_reason")
+}
+
+model ProjectQuote {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  jobId       String    @map("job_id") @db.Uuid
+  revision    Int
+  /// open | approved | superseded | lost
+  status      String    @default("open")
+  amountMinor Int       @map("amount_minor")
+  validUntil  DateTime? @map("valid_until") @db.Date
+  scopeNote   String?   @map("scope_note")
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job    ProjectJob         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  lines  ProjectQuoteLine[]
+
+  @@unique([jobId, revision])
+  @@index([tenantId, jobId])
+  @@map("project_quote")
+}
+
+model ProjectQuoteLine {
+  id             String @id @default(uuid()) @db.Uuid
+  tenantId       String @map("tenant_id") @db.Uuid
+  quoteId        String @map("quote_id") @db.Uuid
+  sequence       Int
+  description    String
+  qty            Int
+  unitPriceMinor Int    @map("unit_price_minor")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  quote  ProjectQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@unique([quoteId, sequence])
+  @@map("project_quote_line")
+}
+
+model ProjectMilestone {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  jobId           String    @map("job_id") @db.Uuid
+  name            String
+  dueDate         DateTime? @map("due_date") @db.Date
+  reachedAt       DateTime? @map("reached_at")
+  customerVisible Boolean   @default(true) @map("customer_visible")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job    ProjectJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, jobId])
+  @@map("project_milestone")
+}
+
+model ProjectTask {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  jobId           String    @map("job_id") @db.Uuid
+  parentId        String?   @map("parent_id") @db.Uuid
+  title           String
+  state           String    @default("todo")
+  assigneeLabel   String?   @map("assignee_label")
+  dueDate         DateTime? @map("due_date") @db.Date
+  expectedMinutes Int?      @map("expected_minutes")
+  weight          Int       @default(1)
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  version         Int       @default(1)
+
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job          ProjectJob              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  parent       ProjectTask?            @relation("ProjectTaskTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     ProjectTask[]           @relation("ProjectTaskTree")
+  dependsOn    ProjectTaskDependency[] @relation("TaskDependsOn")
+  dependedOnBy ProjectTaskDependency[] @relation("TaskDependedOnBy")
+  timeEntries  ProjectTimeEntry[]
+
+  @@index([tenantId, jobId])
+  @@map("project_task")
+}
+
+model ProjectTaskDependency {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  taskId      String @map("task_id") @db.Uuid
+  dependsOnId String @map("depends_on_id") @db.Uuid
+
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  task      ProjectTask @relation("TaskDependsOn", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn ProjectTask @relation("TaskDependedOnBy", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@map("project_task_dependency")
+}
+
+/// Append-only: a wrong entry is voided (kept and marked), then entered again.
+model ProjectTimeEntry {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  jobId           String    @map("job_id") @db.Uuid
+  taskId          String?   @map("task_id") @db.Uuid
+  workerLabel     String    @map("worker_label")
+  workDate        DateTime  @map("work_date") @db.Date
+  minutes         Int
+  hourlyRateMinor Int       @map("hourly_rate_minor")
+  note            String?
+  voidedAt        DateTime? @map("voided_at")
+  voidReason      String?   @map("void_reason")
+  createdById     String?   @map("created_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job    ProjectJob   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  task   ProjectTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, jobId])
+  @@map("project_time_entry")
+}
+
+/// Costs that are not stock and not labour: outsourced work, external testing, freight.
+model ProjectCostEntry {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  jobId        String    @map("job_id") @db.Uuid
+  /// outsourced | testing | freight | other
+  kind         String
+  description  String
+  supplierName String?   @map("supplier_name")
+  amountMinor  Int       @map("amount_minor")
+  incurredOn   DateTime  @map("incurred_on") @db.Date
+  voidedAt     DateTime? @map("voided_at")
+  voidReason   String?   @map("void_reason")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job    ProjectJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, jobId])
+  @@map("project_cost_entry")
+}
+
+/// A manufacturing order belongs to at most one job; a job may span several orders.
+model ProjectJobOrder {
+  id       String   @id @default(uuid()) @db.Uuid
+  tenantId String   @map("tenant_id") @db.Uuid
+  jobId    String   @map("job_id") @db.Uuid
+  orderId  String   @unique @map("order_id") @db.Uuid
+  linkedAt DateTime @default(now()) @map("linked_at")
+
+  tenant Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job    ProjectJob         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  order  ManufacturingOrder @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, jobId])
+  @@map("project_job_order")
 }

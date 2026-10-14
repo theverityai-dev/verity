@@ -10,6 +10,7 @@ import { registerPlywoodCapability } from "./plywood";
 import { registerAccountingCapability } from "./accounting";
 import { registerInventoryCapability } from "./inventory";
 import { registerManufacturingCapability } from "./manufacturing";
+import { registerProjectCapability } from "./project";
 import { registerDecisionNode } from "@/server/platform/decision";
 import { registerHrCapability } from "./hr";
 import { registerBillingCapability } from "./billing";
@@ -58,6 +59,7 @@ export function installCapabilities(): void {
   registerAccountingCapability();
   registerInventoryCapability();
   registerManufacturingCapability();
+  registerProjectCapability();
   registerHrCapability();
   registerBillingCapability();
   registerRecipeCapability();
