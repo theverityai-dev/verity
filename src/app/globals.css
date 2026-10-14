@@ -42,7 +42,7 @@
    * ------------------------------------------------------------------- */
   --color-text: light-dark(#000000, #ffffff);
   --color-text-secondary: light-dark(#3c3c43cc, #ebebf5c7);
-  --color-text-tertiary: light-dark(#6c6c70, #aeaeb2);
+  --color-text-tertiary: light-dark(#636366, #aeaeb2);
 
   /* Kept as tokens because components reference them; on iOS every one of
      these is a material over the canvas, approximated by the matching fill. */
@@ -114,7 +114,7 @@
   /* ---------------------------------------------------------------------
    * SEMANTIC — iOS system colours, accessible variants. Independent of tint.
    * ------------------------------------------------------------------- */
-  --color-success: light-dark(#248a3d, #30db5b);
+  --color-success: light-dark(#1f7a36, #30db5b);
   --color-success-subtle: light-dark(rgb(52 199 89 / 0.14), rgb(48 209 88 / 0.18));
   --color-warning: light-dark(#c93400, #ffb340);
   --color-warning-subtle: light-dark(rgb(255 149 0 / 0.14), rgb(255 159 10 / 0.18));
@@ -127,7 +127,7 @@
   --color-state-pending: light-dark(#c93400, #ffb340);
   --color-state-active: light-dark(#0040dd, #409cff);
   --color-state-blocked: light-dark(#d70015, #ff6961);
-  --color-state-completed: light-dark(#248a3d, #30db5b);
+  --color-state-completed: light-dark(#1f7a36, #30db5b);
   --color-state-cancelled: light-dark(#6c6c70, #aeaeb2);
 
   /* ---------------------------------------------------------------------
