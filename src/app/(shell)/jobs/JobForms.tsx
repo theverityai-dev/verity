@@ -109,7 +109,7 @@ function QuickAction({
 
 /* ================================== jobs ================================== */
 
-export function NewJobButton() {
+export function NewJobButton({ customers }: { customers: Array<{ id: string; name: string }> }) {
   return (
     <ActionDialog
       command="verity.project.create_job"
@@ -120,7 +120,7 @@ export function NewJobButton() {
       variant="primary"
       build={(f) => ({
         title: formText(f, "title"),
-        customerName: formText(f, "customerName"),
+        customerId: formText(f, "customerId"),
         customerContact: formOptional(f, "customerContact"),
         description: formOptional(f, "description"),
         priority: formText(f, "priority") || "normal",
@@ -130,8 +130,13 @@ export function NewJobButton() {
       <Field label="What is being made" htmlFor="job-title" required hint="For example: 500 kVA cast resin transformer, 11 kV / 433 V">
         <Input id="job-title" name="title" required minLength={3} maxLength={200} />
       </Field>
-      <Field label="Customer" htmlFor="job-customer" required>
-        <Input id="job-customer" name="customerName" required minLength={2} maxLength={200} />
+      <Field label="Customer" htmlFor="job-customer" required hint="Not listed? Close this and use New customer.">
+        <Select id="job-customer" name="customerId" required defaultValue="">
+          <option value="" disabled>{customers.length === 0 ? "Add a customer first" : "Choose a customer"}</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </Select>
       </Field>
       <Field label="Contact person and phone" htmlFor="job-contact">
         <Input id="job-contact" name="customerContact" maxLength={200} />
@@ -546,6 +551,40 @@ export function LinkOrderButton({ jobId, orders }: { jobId: string; orders: Arra
           ))}
         </Select>
       </Field>
+    </ActionDialog>
+  );
+}
+
+/** A company the business sells to. Trading owns the customer; Jobs only points at it. */
+export function NewCustomerButton() {
+  return (
+    <ActionDialog
+      command="verity.trading.create_customer"
+      label="New customer"
+      title="New customer"
+      description="A company or person you quote to. Jobs, invoices and payments all attach to this one record."
+      submitLabel="Add customer"
+      build={(f) => ({
+        displayName: formText(f, "name"),
+        gstin: formOptional(f, "gstin")?.toUpperCase(),
+        phone: formOptional(f, "phone"),
+        email: formOptional(f, "email"),
+      })}
+    >
+      <Field label="Name" htmlFor="cust-name" required>
+        <Input id="cust-name" name="name" required maxLength={200} />
+      </Field>
+      <Field label="GSTIN" htmlFor="cust-gstin" hint="Optional now; needed before a GST invoice.">
+        <Input id="cust-gstin" name="gstin" maxLength={15} autoCapitalize="characters" />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Phone" htmlFor="cust-phone">
+          <Input id="cust-phone" name="phone" inputMode="tel" maxLength={40} />
+        </Field>
+        <Field label="Email" htmlFor="cust-email">
+          <Input id="cust-email" name="email" type="email" maxLength={200} />
+        </Field>
+      </div>
     </ActionDialog>
   );
 }

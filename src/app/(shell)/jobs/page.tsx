@@ -6,7 +6,7 @@ import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY, listJobs } from "@/server/capab
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
-import { NewJobButton } from "./JobForms";
+import { NewCustomerButton, NewJobButton } from "./JobForms";
 import { PRIORITY_LABEL, dateText, inr } from "./format";
 
 export const dynamic = "force-dynamic";
@@ -15,11 +15,16 @@ async function JobsPage() {
   installCapabilities();
   const actor = await requireActor();
 
-  const rows = await withTenant(actor.tenantId, async (tx) => {
+  const data = await withTenant(actor.tenantId, async (tx) => {
     if (!(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PROJECT_JOB))) return null;
-    return listJobs(tx);
+    const [rows, customers] = await Promise.all([
+      listJobs(tx),
+      tx.tradingCustomer.findMany({ where: { active: true }, orderBy: { displayName: "asc" }, select: { id: true, displayName: true } }),
+    ]);
+    return { rows, customers: customers.map((c) => ({ id: c.id, name: c.displayName })) };
   });
-  if (!rows) return <PermissionDenied what="reading jobs" />;
+  if (!data) return <PermissionDenied what="reading jobs" />;
+  const { rows, customers } = data;
 
   const open = rows.filter((r) => r.category !== "Completed" && r.category !== "Cancelled");
   const table = rows.map((r) => ({
@@ -40,7 +45,12 @@ async function JobsPage() {
       <PageHeader
         title="Jobs"
         description="Every customer order from enquiry to delivery: quote, production, test, cost and margin in one place."
-        actions={<NewJobButton />}
+        actions={
+          <>
+            <NewCustomerButton />
+            <NewJobButton customers={customers} />
+          </>
+        }
       />
 
       <StatRow cols={4} className="mb-6">

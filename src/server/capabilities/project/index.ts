@@ -26,6 +26,7 @@ import {
   voidCostEntry,
   voidTimeEntry,
 } from "./work";
+import { ENTITY_CUSTOMER } from "@/server/capabilities/trading/keys";
 import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY } from "./shared";
 
 /**
@@ -44,9 +45,9 @@ import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY } from "./shared";
  *  - Other cost: non-void cost entries.
  *  - Margin: quoted value minus the three costs. Derived on every read, never stored.
  *
- * Customer is a snapshot name and contact on the job for now. NOT YET BUILT: a link to the
- * unified Party record (INV-003) and to HR employees for time entries; invoicing and
- * payments, which belong to accounting and trading, not here.
+ * Customer: a job points at the trading customer master (`customerId`); the name on the job is
+ * a snapshot taken when it was opened. NOT YET BUILT: HR employees for time entries; invoicing
+ * and payments from a job, which belong to accounting and trading, not here.
  */
 
 export {
@@ -83,6 +84,15 @@ export function registerProjectCapability(): void {
         order: 1,
         icon: "overview",
         requiresEntity: ENTITY_PROJECT_JOB,
+        shells: ["platform", "operations"],
+      },
+      {
+        href: "/customers",
+        label: "Customers",
+        group: "Production",
+        order: 19,
+        icon: "parties",
+        requiresEntity: ENTITY_CUSTOMER,
         shells: ["platform", "operations"],
       },
       {

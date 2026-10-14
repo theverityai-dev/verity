@@ -58,7 +58,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       <Panel title="Job">
         <DefinitionList
           items={[
-            { term: "Customer", value: job.customerName },
+            { term: "Customer", value: job.customerId ? <a href={`/customers/${job.customerId}`}>{job.customerName}</a> : job.customerName },
             { term: "Contact", value: job.customerContact ?? "—" },
             { term: "Priority", value: PRIORITY_LABEL[job.priority] ?? job.priority },
             { term: "Promised by", value: dateText(job.dueDate) },

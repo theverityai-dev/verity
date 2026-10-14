@@ -45,6 +45,8 @@ describeDb("capability: Project (Jobs)", () => {
   let copperId: string;
   let transformerId: string;
   let reasonId: string;
+  let customerId: string;
+  let inactiveCustomerId: string;
 
   beforeAll(async () => {
     await assertRlsEnforceable();
@@ -65,7 +67,7 @@ describeDb("capability: Project (Jobs)", () => {
 
     await withTenant(tenantId, async (tx) => {
       await tx.tenant.create({ data: { id: tenantId, name: "Job Test Works", timeZone: "Asia/Kolkata" } });
-      for (const key of [location.LOCATION_CAPABILITY, inventory.INVENTORY_CAPABILITY, manufacturing.MANUFACTURING_CAPABILITY, project.PROJECT_CAPABILITY]) {
+      for (const key of ["verity.capability.trading", location.LOCATION_CAPABILITY, inventory.INVENTORY_CAPABILITY, manufacturing.MANUFACTURING_CAPABILITY, project.PROJECT_CAPABILITY]) {
         await activateCapability(tx, tenantId, key);
       }
       const organizationId = (await tx.organization.create({ data: { tenantId, name: "Works" } })).id;
@@ -81,6 +83,8 @@ describeDb("capability: Project (Jobs)", () => {
       created.parties.push(identity.partyId);
       await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: role.id } });
       actor = { tenantId, userId: identity.userId, membershipId: identity.membershipId, organizationId, roleId: role.id };
+      customerId = (await tx.tradingCustomer.create({ data: { tenantId, displayName: "IIT Indore" } })).id;
+      inactiveCustomerId = (await tx.tradingCustomer.create({ data: { tenantId, displayName: "Closed Co", active: false } })).id;
       reasonId = (await tx.projectLostReason.create({ data: { tenantId, key: "price", label: "Price" } })).id;
     });
     invalidateCapabilityCache();
@@ -110,10 +114,24 @@ describeDb("capability: Project (Jobs)", () => {
   });
 
   const newJob = async (title = "500 kVA cast resin transformer") =>
-    executeCommand(actor, project.createJob, { title, customerName: "IIT Indore", dueDate: "2026-12-01" });
+    executeCommand(actor, project.createJob, { title, customerId, dueDate: "2026-12-01" });
   const quote = (jobId: string, unit = 1_000_000) =>
     executeCommand(actor, project.addQuoteRevision, { jobId, lines: [{ description: "Transformer", qty: 2, unitPriceMinor: unit }] });
   const stateOf = (jobId: string) => withTenant(tenantId, (tx) => tx.projectJob.findUniqueOrThrow({ where: { id: jobId } }));
+
+  it("points a job at its customer, snapshots the name, and refuses an unknown or inactive customer", async () => {
+    const job = await newJob("Linked");
+    const row = await stateOf(job.id);
+    expect(row.customerId).toBe(customerId);
+    expect(row.customerName).toBe("IIT Indore");
+    // Renaming the customer later does not rewrite what the job was opened for.
+    await withTenant(tenantId, (tx) => tx.tradingCustomer.update({ where: { id: customerId }, data: { displayName: "IIT Indore (renamed)" } }));
+    expect((await stateOf(job.id)).customerName).toBe("IIT Indore");
+    await withTenant(tenantId, (tx) => tx.tradingCustomer.update({ where: { id: customerId }, data: { displayName: "IIT Indore" } }));
+
+    await expect(executeCommand(actor, project.createJob, { title: "Ghost customer", customerId: randomUUID() })).rejects.toThrow(/customer not found/);
+    await expect(executeCommand(actor, project.createJob, { title: "Closed customer", customerId: inactiveCustomerId })).rejects.toThrow(/inactive/);
+  });
 
   it("numbers jobs in sequence per tenant", async () => {
     const a = await newJob("First");

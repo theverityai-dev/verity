@@ -3662,6 +3662,7 @@ model TradingCustomer {
   tradingInvoices      TradingInvoice[]
   tradingLedgerEntries TradingLedgerEntry[]
   tradingPayments      TradingPayment[]
+  projectJobs          ProjectJob[]
 
   @@unique([tenantId, id], name: "trading_customer_tenant_scoped_id")
   @@index([tenantId, displayName])
@@ -6756,6 +6757,9 @@ model ProjectJob {
   /// Per-tenant running number; shown as the job reference.
   number           Int
   title            String
+  /// The customer master (trading). `customerName` below is the snapshot taken when the job
+  /// was opened, so renaming the customer later never rewrites what a job was quoted to.
+  customerId       String?   @map("customer_id") @db.Uuid
   customerName     String    @map("customer_name")
   customerContact  String?   @map("customer_contact")
   description      String?
@@ -6775,6 +6779,7 @@ model ProjectJob {
   customFields     Json      @default("{}") @map("custom_fields")
 
   tenant      Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    TradingCustomer?    @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "project_job_customer_fkey")
   lostReason  ProjectLostReason?  @relation(fields: [lostReasonId], references: [id], onDelete: Restrict)
   quotes      ProjectQuote[]
   milestones  ProjectMilestone[]
@@ -6785,6 +6790,7 @@ model ProjectJob {
 
   @@unique([tenantId, number])
   @@index([tenantId, state])
+  @@index([tenantId, customerId])
   @@map("project_job")
 }
 

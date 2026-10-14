@@ -21,6 +21,8 @@ import * as location from "../src/server/capabilities/location";
 import * as hr from "../src/server/capabilities/hr";
 import * as accounting from "../src/server/capabilities/accounting";
 import * as project from "../src/server/capabilities/project";
+import * as trading from "../src/server/capabilities/trading/orders";
+import { ENTITY_CUSTOMER, TRADING_CAPABILITY, gstinCheckDigit } from "../src/server/capabilities/trading/keys";
 import { createBom, createOrderFromBom } from "../src/server/capabilities/manufacturing/bom";
 import {
   completeOperation,
@@ -69,7 +71,9 @@ function entitiesOf(...modules: Array<Record<string, unknown>>): string[] {
   return [...keys];
 }
 
+// Trading first: Jobs depend on it for the customer master.
 const CAPABILITIES = [
+  TRADING_CAPABILITY,
   location.LOCATION_CAPABILITY,
   inventory.INVENTORY_CAPABILITY,
   manufacturing.MANUFACTURING_CAPABILITY,
@@ -156,6 +160,14 @@ async function main() {
     // The generic landing page ("/") reads this; without it the owner lands on "no access".
     await tx.permission.create({
       data: { tenantId, roleId: role.id, verb: "Read", entity: "verity.platform.overview", scope: "Tenant" },
+    });
+
+    // Trading is active for its customer master only; its sales, purchase and stock screens stay
+    // out of this tenant's sidebar because the owner is granted just the customer entity.
+    await tx.permission.createMany({
+      data: (["Read", "Create", "Edit", "ActionExecute"] as const).map((verb) => ({
+        tenantId, roleId: role.id, verb, entity: ENTITY_CUSTOMER, scope: "Tenant" as const,
+      })),
     });
 
     const identity = await provisionIdentity(tx, {
@@ -282,6 +294,30 @@ async function main() {
   const line = (description: string, qty: number, rupees: number) => ({ description, qty, unitPriceMinor: rupees * 100 });
   const RATE = { winder: 45_000, engineer: 60_000, helper: 35_000 };
 
+  /** A valid GSTIN built from a PAN-shaped body and the real check digit, so the platform's own validation accepts it. */
+  const gstin = (state: string, pan: string) => {
+    const body = `${state}${pan}1Z`;
+    return body + gstinCheckDigit(body);
+  };
+  const CUSTOMERS: Array<{ name: string; gstin: string; phone: string; email: string }> = [
+    { name: "Dept of Physics, IIT Indore", gstin: gstin("23", "AAAGI1234A"), phone: "98270 11122", email: "physics.stores@iiti.example" },
+    { name: "Rau Textiles Ltd", gstin: gstin("23", "AABCR2345B"), phone: "94250 33445", email: "purchase@rautextiles.example" },
+    { name: "Indore Metrology Lab", gstin: gstin("23", "AAATI3456C"), phone: "99810 22334", email: "lab@indoremetrology.example" },
+    { name: "Pithampur Auto Components", gstin: gstin("23", "AABCP4567D"), phone: "97550 66778", email: "stores@pithampurauto.example" },
+    { name: "MP Power Transmission Co", gstin: gstin("23", "AAACM5678E"), phone: "98930 88990", email: "aux.supply@mppower.example" },
+    { name: "NIT Bhopal Electrical Dept", gstin: gstin("23", "AAAGN6789F"), phone: "98260 55667", email: "eee@nitbhopal.example" },
+    { name: "Central University Lab, Sagar", gstin: gstin("23", "AAAGC7890G"), phone: "98273 44556", email: "lab@cusagar.example" },
+    { name: "Ujjain Switchgear Works", gstin: gstin("23", "AABCU8901H"), phone: "94250 77889", email: "sales@ujjainswitchgear.example" },
+    { name: "Sunrise Telecom Pvt Ltd", gstin: gstin("27", "AACCS9012J"), phone: "98270 99001", email: "infra@sunrisetelecom.example" },
+  ];
+  const customerIds = new Map<string, string>();
+  for (const c of CUSTOMERS) {
+    const created = await executeCommand(owner, trading.createCustomer, {
+      displayName: c.name, gstin: c.gstin, phone: c.phone, email: c.email, stateCode: c.gstin.slice(0, 2),
+    });
+    customerIds.set(c.name, created.id);
+  }
+
   type Seed = {
     title: string; customer: string; contact: string; priority: "low" | "normal" | "high" | "urgent"; due: number; notes: string;
     quotes: Array<Array<ReturnType<typeof line>>>;
@@ -345,7 +381,7 @@ async function main() {
   const jobIds: string[] = [];
   for (const spec of specs) {
     const job = await executeCommand(owner, project.createJob, {
-      title: spec.title, customerName: spec.customer, customerContact: spec.contact, description: spec.notes,
+      title: spec.title, customerId: customerIds.get(spec.customer)!, customerContact: spec.contact, description: spec.notes,
       priority: spec.priority, dueDate: day(spec.due),
     });
     jobIds.push(job.id);

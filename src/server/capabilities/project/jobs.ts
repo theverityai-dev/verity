@@ -29,7 +29,7 @@ async function logState(ctx: CommandContext, jobId: string, from: string, to: st
 export const createJob: CommandDefinition<
   {
     title: string;
-    customerName: string;
+    customerId: string;
     customerContact?: string;
     description?: string;
     priority?: (typeof JOB_PRIORITIES)[number];
@@ -43,20 +43,28 @@ export const createJob: CommandDefinition<
   description: "Open a new job from a customer enquiry.",
   input: z.object({
     title: z.string().trim().min(3).max(200),
-    customerName: z.string().trim().min(2).max(200),
+    customerId: z.string().uuid(),
     customerContact: z.string().trim().max(200).optional(),
     description: z.string().trim().max(4000).optional(),
     priority: z.enum(JOB_PRIORITIES).optional(),
     dueDate: isoDate.optional(),
   }),
+  preconditions: async (ctx, input) => {
+    const customer = await ctx.tx.tradingCustomer.findUnique({ where: { id: input.customerId } });
+    if (!customer) throw new ValidationError("E_VALIDATION: customer not found in this tenant");
+    if (!customer.active) throw new ValidationError("E_VALIDATION: this customer is inactive; restore it or choose another");
+  },
   handler: async (ctx, input) => {
+    const customer = await ctx.tx.tradingCustomer.findUniqueOrThrow({ where: { id: input.customerId } });
     const number = await nextJobNumber(ctx.tx, ctx.actor.tenantId);
     const job = await ctx.tx.projectJob.create({
       data: {
         tenantId: ctx.actor.tenantId,
         number,
         title: input.title,
-        customerName: input.customerName,
+        customerId: customer.id,
+        // Snapshot: what this job was quoted to, whatever the customer is later renamed.
+        customerName: customer.displayName,
         customerContact: input.customerContact ?? null,
         description: input.description ?? null,
         priority: input.priority ?? "normal",
