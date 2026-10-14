@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ValidationError, type CommandDefinition } from "@/server/platform/command";
+import { ValidationError, type CommandContext, type CommandDefinition } from "@/server/platform/command";
 import { assertMutable, transition } from "@/server/platform/state";
 import { diffFields, recordActivity } from "@/server/platform/audit";
 import {
@@ -20,6 +20,11 @@ import {
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD");
 const asDate = (d: string) => new Date(`${d}T00:00:00.000Z`);
+
+/** Writes a state move to the job's history, so the page can show who moved it, when, and from where. */
+async function logState(ctx: CommandContext, jobId: string, from: string, to: string, commandKey: string): Promise<void> {
+  await recordActivity(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: jobId, commandKey, changes: diffFields({ status: from }, { status: to }) });
+}
 
 export const createJob: CommandDefinition<
   {
@@ -181,6 +186,7 @@ export const addQuoteRevision: CommandDefinition<
     ];
     if (job.state === "enquiry") {
       const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: "enquiry", toKey: "quoted" });
+      await logState(ctx, job.id, "enquiry", "quoted", "verity.project.add_quote_revision");
       await ctx.tx.projectJob.update({ where: { id: job.id }, data: { state: "quoted", version: { increment: 1 } } });
       events.push(moved.event);
     }
@@ -206,6 +212,7 @@ export const approveQuote: CommandDefinition<{ quoteId: string }, { id: string; 
     }
     const job = await ctx.tx.projectJob.findUniqueOrThrow({ where: { id: quote.jobId } });
     const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: job.state, toKey: "approved" });
+    await logState(ctx, job.id, job.state, "approved", "verity.project.approve_quote");
     await ctx.tx.projectQuote.update({ where: { id: quote.id }, data: { status: "approved" } });
     await ctx.tx.projectJob.update({
       where: { id: job.id },
@@ -233,6 +240,7 @@ export const markJobLost: CommandDefinition<{ jobId: string; reasonId: string; n
   handler: async (ctx, input) => {
     const job = await ctx.tx.projectJob.findUniqueOrThrow({ where: { id: input.jobId } });
     const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: job.state, toKey: "lost" });
+    await logState(ctx, job.id, job.state, "lost", "verity.project.mark_job_lost");
     await ctx.tx.projectQuote.updateMany({ where: { jobId: job.id, status: "open" }, data: { status: "lost" } });
     await ctx.tx.projectJob.update({
       where: { id: job.id },
@@ -263,6 +271,7 @@ function move(
         throw new ValidationError(`E_VALIDATION: a job that is ${job.state.replace(/_/g, " ")} cannot be moved to ${toKey.replace(/_/g, " ")}`);
       }
       const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: job.state, toKey });
+      await logState(ctx, job.id, job.state, toKey, key);
       await ctx.tx.projectJob.update({
         where: { id: job.id },
         data: { state: toKey, version: { increment: 1 }, ...(extra?.() ?? {}) },
@@ -299,6 +308,7 @@ export const completeJob: CommandDefinition<{ jobId: string }, { id: string }> =
     if (openTasks > 0) throw new ValidationError(`E_VALIDATION: ${openTasks} task(s) are not done yet`);
 
     const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: job.state, toKey: "completed" });
+    await logState(ctx, job.id, job.state, "completed", "verity.project.complete_job");
     await ctx.tx.projectJob.update({
       where: { id: job.id },
       data: { state: "completed", finishedAt: new Date(), version: { increment: 1 } },
@@ -317,6 +327,7 @@ export const cancelJob: CommandDefinition<{ jobId: string; reason: string }, { i
   handler: async (ctx, input) => {
     const job = await ctx.tx.projectJob.findUniqueOrThrow({ where: { id: input.jobId } });
     const moved = await transition(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: job.id, fromKey: job.state, toKey: "cancelled" });
+    await logState(ctx, job.id, job.state, "cancelled", "verity.project.cancel_job");
     await ctx.tx.projectQuote.updateMany({ where: { jobId: job.id, status: "open" }, data: { status: "lost" } });
     await ctx.tx.projectJob.update({
       where: { id: job.id },

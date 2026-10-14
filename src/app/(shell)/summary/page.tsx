@@ -71,13 +71,16 @@ async function SummaryPage() {
 
         <Panel title="On the shop floor now">
           {data.shop.length === 0 ? (
-            <EmptyState title="No stage running" description="Stages that are in progress show here, with how many orders are in each." />
+            <EmptyState title="Nothing in production" description="Production orders that are running show here, with the stage each one is at." />
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {data.shop.map((s) => (
-                <li key={s.label} className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0">
-                  <span>{s.label}</span>
-                  <strong className="tabular">{s.count}</strong>
+                <li key={s.orderId} className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0">
+                  <span className="min-w-0">
+                    <a href={`/manufacturing/${s.orderId}`}>{s.jobReference ?? s.order}</a>
+                    <span className="text-text-secondary"> · {s.stage}{s.stageState === "in_progress" ? "" : " (next)"}</span>
+                  </span>
+                  <span className="tabular text-text-secondary">{s.done} of {s.total}</span>
                 </li>
               ))}
             </ul>
@@ -97,7 +100,9 @@ async function SummaryPage() {
                   <span>
                     {m.name} · <a href={`/jobs/${m.jobId}`}>{m.jobReference}</a>
                   </span>
-                  <span className="text-text-secondary">{dateText(m.dueDate)}</span>
+                  <span className={m.dueDate < new Date().toISOString().slice(0, 10) ? "text-danger" : "text-text-secondary"}>
+                    {dateText(m.dueDate)}{m.dueDate < new Date().toISOString().slice(0, 10) ? " (late)" : ""}
+                  </span>
                 </li>
               ))}
             </ul>

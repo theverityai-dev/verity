@@ -195,7 +195,16 @@ export async function summaryData(tx: TenantScopedClient) {
       take: 6,
       include: { job: { select: { id: true, number: true, title: true } } },
     }),
-    tx.manufacturingOperation.groupBy({ by: ["label"], where: { state: "in_progress" }, _count: { _all: true } }),
+    tx.manufacturingOrder.findMany({
+      where: { state: "in_progress" },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        reference: true,
+        operations: { orderBy: { sequence: "asc" }, select: { label: true, state: true } },
+        projectLink: { select: { job: { select: { id: true, number: true } } } },
+      },
+    }),
   ]);
   const onHand = new Map(balances.map((b) => [b.itemId, b._sum.qty ?? 0]));
   const low = items
@@ -217,7 +226,23 @@ export async function summaryData(tx: TenantScopedClient) {
     orderBookMinor: working.reduce((s, r) => s + (r.quotedValueMinor ?? 0), 0),
     working,
     low,
-    shop: openOps.map((o) => ({ label: o.label, count: o._count._all })),
+    // Where each running order is now: its first stage that is not finished. An order sitting
+    // between stages (the last one done, the next not started) still shows its next stage.
+    shop: openOps.flatMap((o) => {
+      const stages = o.operations.filter((op) => op.state !== "cancelled");
+      const current = stages.find((op) => op.state !== "completed");
+      if (!current) return [];
+      return [{
+        orderId: o.id,
+        order: o.reference ?? `Order ${o.id.slice(0, 8)}`,
+        jobId: o.projectLink?.job.id ?? null,
+        jobReference: o.projectLink ? jobReference(o.projectLink.job.number) : null,
+        stage: current.label,
+        stageState: current.state,
+        done: stages.filter((op) => op.state === "completed").length,
+        total: stages.length,
+      }];
+    }),
     milestones: milestones.map((m) => ({
       id: m.id,
       name: m.name,

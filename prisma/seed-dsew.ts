@@ -80,7 +80,7 @@ const CAPABILITIES = [
 
 /** Opening unit costs in paise, so material cost on a job is real rather than zero. */
 const UNIT_COST: Record<string, number> = {
-  "CRGO-M4": 12_000, "CU-STRIP": 78_000, "CU-WIRE": 82_000, "EPOXY-RES": 45_000,
+  "CRGO-M4": 25_000, "CU-STRIP": 78_000, "CU-WIRE": 82_000, "EPOXY-RES": 45_000,
   "INS-NOMEX": 9_000, "TERM-SET": 350_000, "ENCL-IP21": 1_800_000, "COOL-COIL": 2_500_000,
 };
 
@@ -292,37 +292,37 @@ async function main() {
     {
       title: "500 kVA cast resin transformer, 11 kV / 433 V", customer: "Dept of Physics, IIT Indore", contact: "Prof. Mehta, 98270 11122",
       priority: "high", due: 34, notes: "Vector group Dyn11, IP21 enclosure, with winding temperature indicator. Type test report required.",
-      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_640_000), line("Type test at external lab", 1, 90_000)], [line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_580_000), line("Type test at external lab", 1, 90_000)]],
+      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_120_000), line("Type test at external lab", 1, 90_000)], [line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_060_000), line("Type test at external lab", 1, 90_000)]],
       stage: "in_progress", order: { bom: bom500.id, qty: 1, ref: "DSEW 500 kVA | IIT Indore", route: trafoRoute.id, done: 6, run: true },
     },
     {
       title: "100 kVA dry-type transformers, 2 units", customer: "Rau Textiles Ltd", contact: "Mr. Jain, 94250 33445",
       priority: "normal", due: 21, notes: "Two identical units for the new spinning line. 415 V secondary.",
-      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 2, 410_000)]],
+      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 2, 300_000)]],
       stage: "in_progress", order: { bom: bom100.id, qty: 2, ref: "DSEW 100 kVA x2 | Rau Textiles", route: trafoRoute.id, done: 3, run: true },
     },
     {
       title: "0.5 T lab electromagnet system with field mapping", customer: "Indore Metrology Lab", contact: "Dr. Rao, 99810 22334",
       priority: "urgent", due: 12, notes: "Field uniformity better than 0.1% over a 20 mm sphere. 3-axis mapping certificate with the unit.",
-      quotes: [[line("0.5 T electromagnet with water-cooled coils", 1, 1_150_000), line("3-axis field mapping and certificate", 1, 120_000)]],
+      quotes: [[line("0.5 T electromagnet with water-cooled coils", 1, 560_000), line("3-axis field mapping and certificate", 1, 80_000)]],
       stage: "in_progress", order: { bom: bomMagnet.id, qty: 1, ref: "DSEW 0.5 T magnet | Metrology Lab", route: magnetRoute.id, done: 2, run: true },
     },
     {
       title: "100 kVA dry-type transformer", customer: "Pithampur Auto Components", contact: "Mr. Verma, 97550 66778",
       priority: "normal", due: 40, notes: "Replacement for a failed oil-type unit. Same footprint required.",
-      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 1, 425_000)]],
+      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 1, 310_000)]],
       stage: "in_progress", order: { bom: bom100.id, qty: 1, ref: "DSEW 100 kVA | Pithampur Auto", route: trafoRoute.id, done: 0, run: true },
     },
     {
       title: "500 kVA cast resin transformer (quote approved)", customer: "MP Power Transmission Co", contact: "Er. Sharma, 98930 88990",
       priority: "normal", due: 60, notes: "Substation auxiliary supply. Awaiting purchase order copy.",
-      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_620_000)]],
+      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_080_000)]],
       stage: "approved", order: { bom: bom500.id, qty: 1, ref: "DSEW 500 kVA | MP Power", route: trafoRoute.id, done: 0, run: false },
     },
     {
       title: "50 kV HV step-up test transformer", customer: "NIT Bhopal Electrical Dept", contact: "Prof. Iyer, 98260 55667",
       priority: "normal", due: 75, notes: "Teaching lab test set. Oil-free, portable on castors.",
-      quotes: [[line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 685_000)], [line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 655_000), line("Protective discharge rod set", 1, 18_000)]],
+      quotes: [[line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 480_000)], [line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 455_000), line("Protective discharge rod set", 1, 12_000)]],
       stage: "quoted",
     },
     {
@@ -338,7 +338,7 @@ async function main() {
     {
       title: "250 kVA isolation transformer", customer: "Sunrise Telecom Pvt Ltd", contact: "Ms. Kulkarni, 98270 99001",
       priority: "normal", due: -9, notes: "Delivered and commissioned.",
-      quotes: [[line("250 kVA ultra-isolation transformer", 1, 485_000)]], stage: "completed",
+      quotes: [[line("250 kVA ultra-isolation transformer", 1, 320_000)]], stage: "completed",
     },
   ];
 
@@ -439,7 +439,7 @@ async function main() {
   await time(sunrise!, "S. Yadav (winder)", 34, 8, RATE.winder, "Winding", sBuild.id);
   await time(sunrise!, "S. Yadav (winder)", 33, 8, RATE.winder, "Winding", sBuild.id);
   await time(sunrise!, "K. Chouhan (helper)", 30, 8, RATE.helper, "Assembly", sBuild.id);
-  await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "outsourced", description: "Core and sheet-metal work", supplierName: "Mehta Tooling, Pithampur", amountMinor: 9_200_000, incurredOn: day(-36) });
+  await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "outsourced", description: "Core and sheet-metal work", supplierName: "Mehta Tooling, Pithampur", amountMinor: 14_000_000, incurredOn: day(-36) });
   await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "testing", description: "Routine test report", supplierName: "ERDA Vadodara", amountMinor: 2_500_000, incurredOn: day(-20) });
   await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "freight", description: "Delivery to Pune", supplierName: "Malwa Transport", amountMinor: 3_200_000, incurredOn: day(-12) });
   await executeCommand(owner, project.completeJob, { jobId: sunrise! });
