@@ -19,10 +19,8 @@ import {
   LinkOrderButton,
   LogTimeButton,
   QuoteButton,
-  ReachMilestoneButton,
-  TaskMoves,
-  VoidEntryButton,
 } from "../JobForms";
+import { ActionTable } from "../JobTables";
 import { PRIORITY_LABEL, dateText, hoursText, inr } from "../format";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +78,8 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             from: h.oldValue,
             to: h.newValue,
             at: h.occurredAt.toISOString(),
-            command: h.commandKey,
+            // Command keys are implementation detail, never product copy.
+            command: null,
           }))}
         />
       </Panel>
@@ -129,7 +128,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       {job.tasks.length === 0 ? (
         <EmptyState title="No tasks yet" description="Break the job into steps. A task can wait for another to finish." />
       ) : (
-        <DataTable
+        <ActionTable
+          kind="task"
+          working={working}
           caption="Tasks"
           rows={job.tasks.map((t) => ({
             id: t.id,
@@ -139,7 +140,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             after: t.dependsOn.length === 0 ? "—" : t.dependsOn.map((d) => d.dependsOn.title).join(", "),
             state: TASK_LABEL[t.state] ?? t.state,
             category: detail.taskCategories.get(t.state) ?? "Pending",
-            actions: t.state,
+            rawState: t.state,
           }))}
           columns={[
             { key: "task", header: "Task" },
@@ -148,9 +149,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             { key: "after", header: "Starts after" },
             { key: "state", header: "Status", variant: "state", categoryKey: "category" },
           ]}
-          rowActions={(row) => (working ? <TaskMoves taskId={String(row.id)} state={String(row.actions)} /> : null)}
           emptyTitle="No tasks"
-          emptyDescription=""
         />
       )}
     </div>
@@ -160,7 +159,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     job.milestones.length === 0 ? (
       <EmptyState title="No milestones yet" description="Dated checkpoints the customer can follow, such as coils cast or test report issued." />
     ) : (
-      <DataTable
+      <ActionTable
+        kind="milestone"
+        working={working}
         caption="Milestones"
         rows={job.milestones.map((m) => {
           const due = iso(m.dueDate);
@@ -178,9 +179,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
           { key: "due", header: "Due" },
           { key: "state", header: "Status", variant: "state", categoryKey: "category" },
         ]}
-        rowActions={(row) => (working && row.reached === "no" ? <ReachMilestoneButton milestoneId={String(row.id)} /> : null)}
         emptyTitle="No milestones"
-        emptyDescription=""
       />
     );
 
@@ -188,7 +187,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     job.timeEntries.length === 0 ? (
       <EmptyState title="No time logged" description="Log hours against the job to see labour cost." />
     ) : (
-      <DataTable
+      <ActionTable
+        kind="time"
+        working={working}
         caption="Time entries"
         rows={job.timeEntries.map((t) => ({
           id: t.id,
@@ -206,9 +207,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
           { key: "hours", header: "Hours", numeric: true },
           { key: "cost", header: "Cost", numeric: true },
         ]}
-        rowActions={(row) => (working && row.void === "no" ? <VoidEntryButton kind="time" entryId={String(row.id)} /> : null)}
         emptyTitle="No time"
-        emptyDescription=""
       />
     );
 
@@ -230,7 +229,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       {job.costEntries.length === 0 ? (
         <EmptyState title="No other costs" description="Record outsourced work, external testing or freight." />
       ) : (
-        <DataTable
+        <ActionTable
+          kind="cost"
+          working={working}
           caption="Other costs"
           rows={job.costEntries.map((c) => ({
             id: c.id,
@@ -248,9 +249,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             { key: "supplier", header: "Supplier" },
             { key: "amount", header: "Amount", numeric: true },
           ]}
-          rowActions={(row) => (working && row.void === "no" ? <VoidEntryButton kind="cost" entryId={String(row.id)} /> : null)}
           emptyTitle="No costs"
-          emptyDescription=""
         />
       )}
     </div>
