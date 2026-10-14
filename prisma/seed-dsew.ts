@@ -14,12 +14,13 @@ import { PrismaClient } from "@prisma/client";
 import { installCapabilities } from "../src/server/capabilities/registry";
 import { provisionIdentity } from "../src/server/platform/identity";
 import { activateCapability, invalidateCapabilityCache } from "../src/server/platform/capability";
-import { executeCommand, type ActorContext } from "../src/server/platform/command";
+import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import * as inventory from "../src/server/capabilities/inventory";
 import * as manufacturing from "../src/server/capabilities/manufacturing";
 import * as location from "../src/server/capabilities/location";
 import * as hr from "../src/server/capabilities/hr";
 import * as accounting from "../src/server/capabilities/accounting";
+import * as project from "../src/server/capabilities/project";
 import { createBom, createOrderFromBom } from "../src/server/capabilities/manufacturing/bom";
 import {
   completeOperation,
@@ -33,6 +34,22 @@ const OWNER_SUB = process.env.DSEW_OWNER_SUB;
 if (!OWNER_SUB) throw new Error("DSEW_OWNER_SUB must be the IdP subject (a UUID) of the owner login");
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
+
+/**
+ * The platform rate-limits commands per actor (a database-backed guard). A seed makes
+ * hundreds of them, so it waits out the quota the way any client would rather than bypassing it.
+ */
+const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
+  for (;;) {
+    try {
+      return await rawExecute(...args);
+    } catch (error) {
+      const e = error as { code?: string; retryAfterSeconds?: number };
+      if (e.code !== "E_RATE_LIMIT") throw error;
+      await new Promise((resolve) => setTimeout(resolve, ((e.retryAfterSeconds ?? 5) + 1) * 1000));
+    }
+  }
+}) as typeof rawExecute;
 
 async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
   return admin.$transaction(async (tx) => {
@@ -58,7 +75,14 @@ const CAPABILITIES = [
   manufacturing.MANUFACTURING_CAPABILITY,
   hr.HR_CAPABILITY,
   accounting.ACCOUNTING_CAPABILITY,
+  project.PROJECT_CAPABILITY,
 ];
+
+/** Opening unit costs in paise, so material cost on a job is real rather than zero. */
+const UNIT_COST: Record<string, number> = {
+  "CRGO-M4": 12_000, "CU-STRIP": 78_000, "CU-WIRE": 82_000, "EPOXY-RES": 45_000,
+  "INS-NOMEX": 9_000, "TERM-SET": 350_000, "ENCL-IP21": 1_800_000, "COOL-COIL": 2_500_000,
+};
 
 const ITEMS = [
   { sku: "CRGO-M4", name: "CRGO silicon steel, M4 grade", unit: "kg", group: "Raw material", opening: 4000 },
@@ -116,7 +140,7 @@ async function main() {
     const loc = await tx.location.create({ data: { tenantId, organizationId: org.id, name: "Rau Works, Indore" } });
     const role = await tx.role.create({ data: { tenantId, name: "Owner" } });
 
-    const entities = entitiesOf(inventory, manufacturing, location, hr, accounting);
+    const entities = entitiesOf(inventory, manufacturing, location, hr, accounting, project);
     await tx.permission.createMany({
       data: entities.flatMap((entity) =>
         (["Read", "Create", "Edit", "ActionExecute"] as const).map((verb) => ({
@@ -176,6 +200,7 @@ async function main() {
         kind: "Receipt",
         qty: i.opening,
         reference: "Opening stock",
+        unitCostPaise: UNIT_COST[i.sku],
       });
     }
   }
@@ -224,43 +249,205 @@ async function main() {
     ],
   });
 
-  // Orders as the jobs the business runs. References carry the customer, since the project
-  // capability (clients/dsew/phase-plan.md, Phase 2) is what will own that link.
-  const jobs = [
-    { bom: bom500.id, qty: 1, ref: "DSEW-J-0412 | Dept of Physics, IIT Indore | 500 kVA step-down", route: trafoRoute.id, done: 6, run: true },
-    { bom: bom100.id, qty: 2, ref: "DSEW-J-0415 | Rau Textiles Ltd | 100 kVA, 2 units", route: trafoRoute.id, done: 3, run: true },
-    { bom: bomMagnet.id, qty: 1, ref: "DSEW-J-0418 | RRCAT-style calibration lab | 0.5 T electromagnet", route: magnetRoute.id, done: 2, run: true },
-    { bom: bom100.id, qty: 1, ref: "DSEW-J-0421 | Pithampur Auto Components | 100 kVA", route: trafoRoute.id, done: 0, run: true },
-    { bom: bom500.id, qty: 1, ref: "DSEW-J-0424 | MP Power Transmission Co | 500 kVA (quote approved)", route: trafoRoute.id, done: 0, run: false },
+  // Production orders first; each approved job below links to one of them.
+  async function production(bomId: string, qty: number, ref: string, routeId: string, done: number, run: boolean) {
+    const order = await executeCommand(owner, createOrderFromBom, { bomId, locationId, outputQty: qty, reference: ref });
+    await executeCommand(owner, planOperations, { orderId: order.id, routeId });
+    if (!run) return order.id;
+    await executeCommand(owner, manufacturing.startManufacturingOrder, { orderId: order.id });
+    const ops = await withTenant(tenantId, (tx) =>
+      tx.manufacturingOperation.findMany({ where: { orderId: order.id }, orderBy: { sequence: "asc" } }),
+    );
+    for (const op of ops.slice(0, done)) {
+      // A stage with QC checkpoints cannot be completed without findings; leave those open.
+      if (Array.isArray(op.checkpoints) && op.checkpoints.length > 0) break;
+      await executeCommand(owner, startOperation, { operationId: op.id });
+      await executeCommand(owner, completeOperation, { operationId: op.id });
+    }
+    return order.id;
+  }
+
+  const reasons = new Map<string, string>();
+  for (const [key, label] of [
+    ["price", "Price too high"],
+    ["lead_time", "Delivery time too long"],
+    ["spec_mismatch", "Could not meet the specification"],
+    ["competitor", "Went with another maker"],
+    ["project_dropped", "Customer dropped the project"],
+  ] as const) {
+    reasons.set(key, (await executeCommand(owner, project.defineLostReason, { key, label })).id);
+  }
+
+  const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+  const line = (description: string, qty: number, rupees: number) => ({ description, qty, unitPriceMinor: rupees * 100 });
+  const RATE = { winder: 45_000, engineer: 60_000, helper: 35_000 };
+
+  type Seed = {
+    title: string; customer: string; contact: string; priority: "low" | "normal" | "high" | "urgent"; due: number; notes: string;
+    quotes: Array<Array<ReturnType<typeof line>>>;
+    stage: "enquiry" | "quoted" | "approved" | "in_progress" | "lost" | "completed";
+    order?: { bom: string; qty: number; ref: string; route: string; done: number; run: boolean };
+  };
+  const specs: Seed[] = [
+    {
+      title: "500 kVA cast resin transformer, 11 kV / 433 V", customer: "Dept of Physics, IIT Indore", contact: "Prof. Mehta, 98270 11122",
+      priority: "high", due: 34, notes: "Vector group Dyn11, IP21 enclosure, with winding temperature indicator. Type test report required.",
+      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_640_000), line("Type test at external lab", 1, 90_000)], [line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_580_000), line("Type test at external lab", 1, 90_000)]],
+      stage: "in_progress", order: { bom: bom500.id, qty: 1, ref: "DSEW 500 kVA | IIT Indore", route: trafoRoute.id, done: 6, run: true },
+    },
+    {
+      title: "100 kVA dry-type transformers, 2 units", customer: "Rau Textiles Ltd", contact: "Mr. Jain, 94250 33445",
+      priority: "normal", due: 21, notes: "Two identical units for the new spinning line. 415 V secondary.",
+      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 2, 410_000)]],
+      stage: "in_progress", order: { bom: bom100.id, qty: 2, ref: "DSEW 100 kVA x2 | Rau Textiles", route: trafoRoute.id, done: 3, run: true },
+    },
+    {
+      title: "0.5 T lab electromagnet system with field mapping", customer: "Indore Metrology Lab", contact: "Dr. Rao, 99810 22334",
+      priority: "urgent", due: 12, notes: "Field uniformity better than 0.1% over a 20 mm sphere. 3-axis mapping certificate with the unit.",
+      quotes: [[line("0.5 T electromagnet with water-cooled coils", 1, 1_150_000), line("3-axis field mapping and certificate", 1, 120_000)]],
+      stage: "in_progress", order: { bom: bomMagnet.id, qty: 1, ref: "DSEW 0.5 T magnet | Metrology Lab", route: magnetRoute.id, done: 2, run: true },
+    },
+    {
+      title: "100 kVA dry-type transformer", customer: "Pithampur Auto Components", contact: "Mr. Verma, 97550 66778",
+      priority: "normal", due: 40, notes: "Replacement for a failed oil-type unit. Same footprint required.",
+      quotes: [[line("100 kVA dry-type transformer, 11 kV / 415 V", 1, 425_000)]],
+      stage: "in_progress", order: { bom: bom100.id, qty: 1, ref: "DSEW 100 kVA | Pithampur Auto", route: trafoRoute.id, done: 0, run: true },
+    },
+    {
+      title: "500 kVA cast resin transformer (quote approved)", customer: "MP Power Transmission Co", contact: "Er. Sharma, 98930 88990",
+      priority: "normal", due: 60, notes: "Substation auxiliary supply. Awaiting purchase order copy.",
+      quotes: [[line("500 kVA cast resin dry-type transformer, 11 kV / 433 V", 1, 1_620_000)]],
+      stage: "approved", order: { bom: bom500.id, qty: 1, ref: "DSEW 500 kVA | MP Power", route: trafoRoute.id, done: 0, run: false },
+    },
+    {
+      title: "50 kV HV step-up test transformer", customer: "NIT Bhopal Electrical Dept", contact: "Prof. Iyer, 98260 55667",
+      priority: "normal", due: 75, notes: "Teaching lab test set. Oil-free, portable on castors.",
+      quotes: [[line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 685_000)], [line("HV step-up transformer, 230 V to 50 kV, 5 kVA", 1, 655_000), line("Protective discharge rod set", 1, 18_000)]],
+      stage: "quoted",
+    },
+    {
+      title: "Power supply for superconducting magnet", customer: "Central University Lab, Sagar", contact: "Dr. Khan, 98273 44556",
+      priority: "low", due: 120, notes: "Enquiry by email. Wants 200 A, low ripple. Needs a technical call first.",
+      quotes: [], stage: "enquiry",
+    },
+    {
+      title: "Control panel for transformer test bay", customer: "Ujjain Switchgear Works", contact: "Mr. Patel, 94250 77889",
+      priority: "normal", due: -5, notes: "Panel with metering and interlocks.",
+      quotes: [[line("Control and metering panel", 1, 385_000)]], stage: "lost",
+    },
+    {
+      title: "250 kVA isolation transformer", customer: "Sunrise Telecom Pvt Ltd", contact: "Ms. Kulkarni, 98270 99001",
+      priority: "normal", due: -9, notes: "Delivered and commissioned.",
+      quotes: [[line("250 kVA ultra-isolation transformer", 1, 485_000)]], stage: "completed",
+    },
   ];
 
-  for (const job of jobs) {
-    const order = await executeCommand(owner, createOrderFromBom, {
-      bomId: job.bom,
-      locationId,
-      outputQty: job.qty,
-      reference: job.ref,
+  const jobIds: string[] = [];
+  for (const spec of specs) {
+    const job = await executeCommand(owner, project.createJob, {
+      title: spec.title, customerName: spec.customer, customerContact: spec.contact, description: spec.notes,
+      priority: spec.priority, dueDate: day(spec.due),
     });
-    await executeCommand(owner, planOperations, { orderId: order.id, routeId: job.route });
-    if (!job.run) continue;
-    await executeCommand(owner, manufacturing.startManufacturingOrder, { orderId: order.id });
-    if (job.done > 0) {
-      const ops = await withTenant(tenantId, (tx) =>
-        tx.manufacturingOperation.findMany({ where: { orderId: order.id }, orderBy: { sequence: "asc" } }),
-      );
-      for (const op of ops.slice(0, job.done)) {
-        // A stage with QC checkpoints cannot be completed without findings; leave those open.
-        if (Array.isArray(op.checkpoints) && op.checkpoints.length > 0) break;
-        await executeCommand(owner, startOperation, { operationId: op.id });
-        await executeCommand(owner, completeOperation, { operationId: op.id });
-      }
+    jobIds.push(job.id);
+    let lastQuote: { id: string } | null = null;
+    for (const lines of spec.quotes) {
+      lastQuote = await executeCommand(owner, project.addQuoteRevision, { jobId: job.id, lines, validUntil: day(30), scopeNote: "Ex-works Rau, Indore. 12 months warranty. 50% advance, balance before dispatch. GST extra." });
     }
+    if (spec.stage === "lost") {
+      await executeCommand(owner, project.markJobLost, { jobId: job.id, reasonId: reasons.get("price")!, note: "Customer found a lower price from a panel builder." });
+      continue;
+    }
+    if (spec.stage === "enquiry" || spec.stage === "quoted") continue;
+
+    await executeCommand(owner, project.approveQuote, { quoteId: lastQuote!.id });
+    if (spec.order) {
+      const orderId = await production(spec.order.bom, spec.order.qty, spec.order.ref, spec.order.route, spec.order.done, spec.order.run);
+      await executeCommand(owner, project.linkOrder, { jobId: job.id, orderId });
+    }
+    if (spec.stage === "approved") continue;
+    await executeCommand(owner, project.startJob, { jobId: job.id });
   }
+
+  // Work on the running jobs: tasks, milestones, time and costs.
+  const [iit, rau, magnet, pithampur, , , , , sunrise] = jobIds;
+  const task = (jobId: string, title: string, extra: Record<string, unknown> = {}) =>
+    executeCommand(owner, project.createTask, { jobId, title, ...extra });
+  const finish = async (taskId: string) => {
+    await executeCommand(owner, project.setTaskState, { taskId, toState: "in_progress" });
+    await executeCommand(owner, project.setTaskState, { taskId, toState: "done" });
+  };
+  const time = (jobId: string, worker: string, ago: number, hours: number, rate: number, note?: string, taskId?: string) =>
+    executeCommand(owner, project.logTime, { jobId, workerLabel: worker, workDate: day(-ago), minutes: Math.round(hours * 60), hourlyRateMinor: rate, note, taskId });
+
+  // IIT Indore: design and winding done, testing ahead.
+  const iitDesign = await task(iit!, "Design review and drawings approved", { assigneeLabel: "Engineering", weight: 2, expectedMinutes: 960 });
+  const iitProc = await task(iit!, "Procure CRGO and copper", { assigneeLabel: "Stores", weight: 1, dependsOnIds: [iitDesign.id] });
+  const iitCore = await task(iit!, "Core stacking and coil winding", { assigneeLabel: "Shop floor", weight: 4, dueDate: day(8), dependsOnIds: [iitProc.id] });
+  const iitTest = await task(iit!, "Type test at external lab", { assigneeLabel: "Quality", weight: 3, dueDate: day(20), dependsOnIds: [iitCore.id] });
+  await task(iit!, "Packing and dispatch to IIT Indore", { assigneeLabel: "Dispatch", weight: 1, dueDate: day(30), dependsOnIds: [iitTest.id] });
+  await finish(iitDesign.id);
+  await finish(iitProc.id);
+  await executeCommand(owner, project.setTaskState, { taskId: iitCore.id, toState: "in_progress" });
+  const iitM1 = await executeCommand(owner, project.addMilestone, { jobId: iit!, name: "Drawings approved by customer", dueDate: day(-12) });
+  await executeCommand(owner, project.reachMilestone, { milestoneId: iitM1.id });
+  await executeCommand(owner, project.addMilestone, { jobId: iit!, name: "Coils cast and cured", dueDate: day(6) });
+  await executeCommand(owner, project.addMilestone, { jobId: iit!, name: "Test report issued", dueDate: day(22) });
+  await executeCommand(owner, project.addMilestone, { jobId: iit!, name: "Delivered at IIT Indore", dueDate: day(32) });
+  await time(iit!, "R. Verma (engineer)", 14, 6, RATE.engineer, "Drawings", iitDesign.id);
+  await time(iit!, "R. Verma (engineer)", 13, 5.5, RATE.engineer, "Drawings", iitDesign.id);
+  await time(iit!, "S. Yadav (winder)", 6, 8, RATE.winder, "LV coil", iitCore.id);
+  await time(iit!, "S. Yadav (winder)", 5, 8, RATE.winder, "HV coil", iitCore.id);
+  await time(iit!, "K. Chouhan (helper)", 5, 7.5, RATE.helper, "Core stacking", iitCore.id);
+  await executeCommand(owner, project.addCost, { jobId: iit!, kind: "outsourced", description: "Epoxy mould fabrication", supplierName: "Mehta Tooling, Pithampur", amountMinor: 8_500_000, incurredOn: day(-16) });
+  await executeCommand(owner, project.addCost, { jobId: iit!, kind: "testing", description: "Type test slot booking, advance", supplierName: "ERDA Vadodara", amountMinor: 4_000_000, incurredOn: day(-3) });
+
+  // Rau Textiles: two units in assembly.
+  const rauDesign = await task(rau!, "Confirm winding data with customer", { assigneeLabel: "Engineering", weight: 1 });
+  const rauBuild = await task(rau!, "Build two units", { assigneeLabel: "Shop floor", weight: 5, dependsOnIds: [rauDesign.id] });
+  await task(rau!, "Routine tests and report", { assigneeLabel: "Quality", weight: 2, dueDate: day(14), dependsOnIds: [rauBuild.id] });
+  await finish(rauDesign.id);
+  await executeCommand(owner, project.setTaskState, { taskId: rauBuild.id, toState: "in_progress" });
+  await executeCommand(owner, project.addMilestone, { jobId: rau!, name: "Units assembled", dueDate: day(9) });
+  await executeCommand(owner, project.addMilestone, { jobId: rau!, name: "Dispatch to Rau", dueDate: day(20) });
+  await time(rau!, "S. Yadav (winder)", 9, 8, RATE.winder, "Coils unit 1", rauBuild.id);
+  await time(rau!, "S. Yadav (winder)", 8, 8, RATE.winder, "Coils unit 2", rauBuild.id);
+  await time(rau!, "K. Chouhan (helper)", 7, 6, RATE.helper, "Assembly", rauBuild.id);
+  await executeCommand(owner, project.addCost, { jobId: rau!, kind: "freight", description: "Inward freight, enclosure sheets", supplierName: "Malwa Transport", amountMinor: 1_850_000, incurredOn: day(-10) });
+
+  // Metrology lab magnet: urgent, field mapping still to come.
+  const emDesign = await task(magnet!, "Pole shape and field simulation", { assigneeLabel: "Engineering", weight: 3 });
+  await task(magnet!, "3-axis field mapping and certificate", { assigneeLabel: "Quality", weight: 3, dueDate: day(10), dependsOnIds: [emDesign.id] });
+  await finish(emDesign.id);
+  await executeCommand(owner, project.addMilestone, { jobId: magnet!, name: "Field mapping complete", dueDate: day(-1) });
+  await executeCommand(owner, project.addMilestone, { jobId: magnet!, name: "Calibration certificate issued", dueDate: day(10) });
+  await time(magnet!, "R. Verma (engineer)", 11, 7, RATE.engineer, "Simulation", emDesign.id);
+  await time(magnet!, "R. Verma (engineer)", 10, 7, RATE.engineer, "Simulation", emDesign.id);
+  await executeCommand(owner, project.addCost, { jobId: magnet!, kind: "outsourced", description: "Precision pole machining", supplierName: "Anand Precision, Indore", amountMinor: 11_000_000, incurredOn: day(-8) });
+
+  // Pithampur: just started.
+  const pDesign = await task(pithampur!, "Match footprint to the failed unit", { assigneeLabel: "Engineering", weight: 1 });
+  await task(pithampur!, "Build and test", { assigneeLabel: "Shop floor", weight: 4, dependsOnIds: [pDesign.id] });
+  await executeCommand(owner, project.addMilestone, { jobId: pithampur!, name: "Dispatch", dueDate: day(38) });
+  await time(pithampur!, "R. Verma (engineer)", 2, 3, RATE.engineer, "Site measurements", pDesign.id);
+
+  // Sunrise Telecom: delivered job with its full cost, so a finished margin is visible.
+  const sDesign = await task(sunrise!, "Design and winding data", { assigneeLabel: "Engineering", weight: 1 });
+  const sBuild = await task(sunrise!, "Build, test and dispatch", { assigneeLabel: "Shop floor", weight: 4, dependsOnIds: [sDesign.id] });
+  await finish(sDesign.id);
+  await finish(sBuild.id);
+  await time(sunrise!, "R. Verma (engineer)", 40, 8, RATE.engineer, "Design", sDesign.id);
+  await time(sunrise!, "S. Yadav (winder)", 34, 8, RATE.winder, "Winding", sBuild.id);
+  await time(sunrise!, "S. Yadav (winder)", 33, 8, RATE.winder, "Winding", sBuild.id);
+  await time(sunrise!, "K. Chouhan (helper)", 30, 8, RATE.helper, "Assembly", sBuild.id);
+  await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "outsourced", description: "Core and sheet-metal work", supplierName: "Mehta Tooling, Pithampur", amountMinor: 9_200_000, incurredOn: day(-36) });
+  await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "testing", description: "Routine test report", supplierName: "ERDA Vadodara", amountMinor: 2_500_000, incurredOn: day(-20) });
+  await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "freight", description: "Delivery to Pune", supplierName: "Malwa Transport", amountMinor: 3_200_000, incurredOn: day(-12) });
+  await executeCommand(owner, project.completeJob, { jobId: sunrise! });
 
   console.log("\nD & S Electric Works demo tenant is ready.\n");
   console.log(`Tenant:   ${tenantId}`);
   console.log(`Owner:    ${OWNER_EMAIL} (IdP sub ${OWNER_SUB})`);
-  console.log(`Items:    ${ITEMS.length}, routes: 2, BOMs: 3, jobs: ${jobs.length}`);
+  console.log(`Items:    ${ITEMS.length}, routes: 2, BOMs: 3, jobs: ${specs.length}`);
 }
 
 main()
