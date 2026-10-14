@@ -205,7 +205,12 @@ export function Stat({
       <span
         className={
           "tabular text-[28px] font-bold leading-[34px] tracking-[0.01em] " +
-          (tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-text transition-colors group-hover:text-accent-ink")
+          (tone === "danger"
+            ? "text-danger"
+            : tone === "warning"
+              ? "text-warning"
+              : // A zero is a fact but not a call to action; stepping it back lets the figures that need a look stand out.
+                (value === 0 || value === "0" ? "text-text-tertiary" : "text-text") + " transition-colors group-hover:text-accent-ink")
         }
       >
         {value}
