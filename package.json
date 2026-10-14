@@ -29,6 +29,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "seed:plywood": "node prisma/run-seed.cjs seed-plywood-demo.ts",
+    "seed:dsew": "node prisma/run-seed.cjs seed-dsew.ts",
     "seed:audit-tenant": "node prisma/run-seed.cjs seed-audit-tenant-b.ts",
     "seed:scale": "node prisma/run-seed.cjs seed-scale.ts",
     "bootstrap:operator": "tsx prisma/bootstrap-operator.ts",

@@ -47,6 +47,7 @@ export type NavigationGroup =
   // Business groups, in the order the sidebar renders them.
   | "Overview"
   | "Trade"
+  | "Production"
   | "Inventory"
   | "Money"
   | "Insights";

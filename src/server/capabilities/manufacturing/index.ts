@@ -480,7 +480,7 @@ export function registerManufacturingCapability(): void {
       {
         href: "/manufacturing",
         label: "Manufacturing",
-        group: "Capabilities",
+        group: "Production",
         order: 25,
         icon: "manufacturing",
         requiresEntity: ENTITY_MANUFACTURING_ORDER,
@@ -489,7 +489,7 @@ export function registerManufacturingCapability(): void {
       {
         href: "/manufacturing/boms",
         label: "Bills of materials",
-        group: "Capabilities",
+        group: "Production",
         order: 26,
         icon: "manufacturing",
         requiresEntity: ENTITY_MANUFACTURING_BOM,
@@ -498,7 +498,7 @@ export function registerManufacturingCapability(): void {
       {
         href: "/manufacturing/floor",
         label: "Production floor",
-        group: "Capabilities",
+        group: "Production",
         order: 27,
         icon: "manufacturing",
         requiresEntity: ENTITY_MANUFACTURING_OPERATION,
@@ -507,7 +507,7 @@ export function registerManufacturingCapability(): void {
       {
         href: "/manufacturing/batches",
         label: "Production batches",
-        group: "Capabilities",
+        group: "Production",
         order: 29,
         icon: "manufacturing",
         requiresEntity: ENTITY_MANUFACTURING_BATCH,
@@ -516,7 +516,7 @@ export function registerManufacturingCapability(): void {
       {
         href: "/manufacturing/routes",
         label: "Production routes",
-        group: "Capabilities",
+        group: "Production",
         order: 28,
         icon: "manufacturing",
         requiresEntity: ENTITY_MANUFACTURING_ROUTE,

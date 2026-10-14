@@ -149,6 +149,7 @@ export default async function ShellLayout({
   const BUSINESS_GROUPS = [
     "Overview",
     "Trade",
+    "Production",
     "Inventory",
     "Money",
     "Insights",
