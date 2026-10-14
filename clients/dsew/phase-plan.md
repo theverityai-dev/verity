@@ -17,3 +17,15 @@ Rule 2026-10-05: the reference-parity document (Phase 0) comes before building m
 
 Each phase ends with BUILT / PROVEN / NOT YET BUILT stated separately. Nothing is called complete
 before Phase 7.
+
+## Status, 2026-10-14 (see `demo-guide.md` for detail)
+
+- Phase 0: project module parity written; quotation, quality and manager.io sections still to read.
+- Phase 1: **BUILT** (`prisma/seed-dsew.ts`, `npm run seed:dsew`), local database only.
+- Phase 2: **BUILT and PROVEN** (migration `20261014100000_capability_project`, 6 database tests, live click-through).
+- Phase 3: **BUILT in part**: quote revisions with approval snapshot and structured lost reason. Quote approval
+  workflow and customer link are NOT YET BUILT.
+- Phase 4: **NOT YET BUILT** as a separate record; test checkpoints live on the manufacturing testing stage.
+- Phase 5: **BUILT in part**: Summary home and a Production group. Show/hide/reorder of tabs is NOT YET BUILT.
+- Phase 6: **NOT YET BUILT.**
+- Phase 7: **NOT RUN.** No obvious-basics pass and no Odoo/ERPNext cross-check yet.
