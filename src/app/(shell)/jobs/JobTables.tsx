@@ -1,7 +1,7 @@
 "use client";
 
 import { DataTable, type Column } from "@/components/ui/DataTable";
-import { ReachMilestoneButton, TaskMoves, VoidEntryButton } from "./JobForms";
+import { LostReasonToggle, ReachMilestoneButton, TaskMoves, VoidEntryButton } from "./JobForms";
 
 /**
  * `DataTable` takes row actions as a function, which only a client component may pass. The
@@ -16,7 +16,7 @@ export function ActionTable({
   columns,
   emptyTitle,
 }: {
-  kind: "task" | "milestone" | "time" | "cost";
+  kind: "task" | "milestone" | "time" | "cost" | "reason";
   /** False once the job is finished: no row action is offered, and the server would refuse it anyway. */
   working: boolean;
   caption: string;
@@ -33,8 +33,21 @@ export function ActionTable({
       rowActions={(row) => {
         if (!working) return null;
         const id = String(row.id);
-        if (kind === "task") return <TaskMoves taskId={id} state={String(row.rawState)} />;
-        if (kind === "milestone") return row.reached === "no" ? <ReachMilestoneButton milestoneId={id} /> : null;
+        if (kind === "task") {
+          return (
+            <TaskMoves
+              taskId={id}
+              state={String(row.rawState)}
+              task={{ id, title: String(row.rawTitle), assignee: String(row.rawAssignee ?? ""), due: String(row.rawDue ?? ""), hours: String(row.rawHours ?? ""), weight: Number(row.rawWeight ?? 1) }}
+            />
+          );
+        }
+        if (kind === "milestone") {
+          return row.reached === "no" ? (
+            <ReachMilestoneButton milestoneId={id} milestone={{ id, name: String(row.rawName), due: String(row.rawDue ?? ""), visible: row.rawVisible === "yes" }} />
+          ) : null;
+        }
+        if (kind === "reason") return <LostReasonToggle reasonId={id} active={row.active === "yes"} />;
         if (kind === "time") return row.void === "no" ? <VoidEntryButton kind="time" entryId={id} /> : null;
         return row.void === "no" ? <VoidEntryButton kind="cost" entryId={id} /> : null;
       }}

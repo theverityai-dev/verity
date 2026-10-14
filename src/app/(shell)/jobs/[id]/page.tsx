@@ -19,6 +19,7 @@ import {
   LinkOrderButton,
   LogTimeButton,
   QuoteButton,
+  TaskMoves,
 } from "../JobForms";
 import { ActionTable } from "../JobTables";
 import { PRIORITY_LABEL, dateText, hoursText, inr } from "../format";
@@ -50,6 +51,10 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const taskOptions = job.tasks.filter((t) => t.state !== "cancelled").map((t) => ({ id: t.id, title: t.title }));
   const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
   const today = new Date().toISOString().slice(0, 10);
+  // The task to do now: one already under way, else the first that is not waiting on anything unfinished.
+  const finished = ["done", "cancelled"];
+  const ready = job.tasks.filter((t) => !finished.includes(t.state) && t.state !== "blocked" && t.dependsOn.every((d) => finished.includes(d.dependsOn.state)));
+  const nextTask = working ? (ready.find((t) => t.state === "in_progress") ?? ready[0] ?? null) : null;
 
   /* ------------------------------- tabs ------------------------------- */
 
@@ -147,6 +152,11 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             state: TASK_LABEL[t.state] ?? t.state,
             category: detail.taskCategories.get(t.state) ?? "Pending",
             rawState: t.state,
+            rawTitle: t.title,
+            rawAssignee: t.assigneeLabel ?? "",
+            rawDue: iso(t.dueDate) ?? "",
+            rawHours: t.expectedMinutes ? t.expectedMinutes / 60 : "",
+            rawWeight: t.weight,
           }))}
           columns={[
             { key: "task", header: "Task" },
@@ -178,6 +188,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             state: m.reachedAt ? `Reached ${dateText(m.reachedAt)}` : due && due < today ? "Late" : "Pending",
             category: m.reachedAt ? "Completed" : due && due < today ? "Blocked" : "Pending",
             reached: m.reachedAt ? "yes" : "no",
+            rawName: m.name,
+            rawDue: due ?? "",
+            rawVisible: m.customerVisible ? "yes" : "no",
           };
         })}
         columns={[
@@ -313,9 +326,34 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       <StatRow cols={4} className="mb-6">
         <Stat label="Order value" value={inr(costing.quotedValueMinor ?? openQuote?.amountMinor ?? job.quotes[0]?.amountMinor ?? null)} hint={costing.quotedValueMinor !== null ? "From the approved quote" : openQuote ? "From the open quote" : job.quotes[0] ? "Last quote, not accepted" : "No quote yet"} />
         <Stat label="Actual cost to date" value={inr(costing.totalMinor)} hint={`Material, labour and other costs; ${hoursText(costing.loggedMinutes)} logged`} />
-        <Stat label="Margin so far" value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)} hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the order value, before costs still to come`} />
+        <Stat tone={costing.marginMinor !== null && costing.marginMinor < 0 ? "danger" : "default"} label="Margin so far" value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)} hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the order value, before costs still to come`} />
         <Stat label={job.tasks.length > 0 ? "Tasks done" : "Stages done"} value={detail.progress === null ? "—" : `${detail.progress}%`} hint={job.tasks.length > 0 ? "Bigger tasks count more" : "Production stages finished"} />
       </StatRow>
+
+      {nextTask && (
+        <div className="mb-6">
+          <Panel title="Next up">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="m-0 text-[17px] font-semibold">{nextTask.title}</p>
+                <p className="m-0 mt-0.5 text-[13px] text-text-secondary">
+                  {nextTask.assigneeLabel ?? "Not assigned"}
+                  {nextTask.dueDate ? ` · due ${dateText(nextTask.dueDate)}` : ""}
+                  {nextTask.state === "in_progress" ? " · in progress" : " · ready to start"}
+                </p>
+              </div>
+              <TaskMoves taskId={nextTask.id} state={nextTask.state} />
+            </div>
+          </Panel>
+        </div>
+      )}
+      {working && !nextTask && job.tasks.length > 0 && (
+        <div className="mb-6">
+          <Panel title="Next up">
+            <p className="m-0 text-[15px] text-text-secondary">Every task is done, cancelled or waiting. Finish the job once production and testing are complete.</p>
+          </Panel>
+        </div>
+      )}
 
       <Tabs
         scroll

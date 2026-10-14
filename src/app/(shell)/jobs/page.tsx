@@ -6,13 +6,17 @@ import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY, listJobs } from "@/server/capab
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import Link from "next/link";
 import { NewCustomerButton, NewJobButton } from "./JobForms";
+import { JobFilters } from "./JobFilters";
+import { JOB_FILTERS, type JobFilterKey } from "./filters";
 import { PRIORITY_LABEL, dateText, inr } from "./format";
 
 export const dynamic = "force-dynamic";
 
-async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: string }> }) {
-  const { customer: customerFilter } = await searchParams;
+async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: string; status?: string }> }) {
+  const { customer: customerFilter, status } = await searchParams;
+  const active: JobFilterKey = JOB_FILTERS.some(([k]) => k === status) ? (status as JobFilterKey) : "all";
   const onlyCustomer = customerFilter && /^[0-9a-f-]{36}$/i.test(customerFilter) ? customerFilter : undefined;
   installCapabilities();
   const actor = await requireActor();
@@ -28,10 +32,22 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
   if (!data) return <PermissionDenied what="reading jobs" />;
   const { rows, customers } = data;
 
+  const inGroup: Record<JobFilterKey, (r: (typeof rows)[number]) => boolean> = {
+    all: () => true,
+    open: (r) => r.category !== "Completed" && r.category !== "Cancelled",
+    enquiries: (r) => r.state === "enquiry" || r.state === "quoted",
+    working: (r) => ["approved", "in progress", "on hold"].includes(r.state),
+    finished: (r) => r.state === "completed",
+    lost: (r) => r.state === "lost" || r.state === "cancelled",
+  };
+  const counts = Object.fromEntries(JOB_FILTERS.map(([k]) => [k, rows.filter(inGroup[k]).length])) as Record<JobFilterKey, number>;
+  const shown = rows.filter(inGroup[active]);
+
   const open = rows.filter((r) => r.category !== "Completed" && r.category !== "Cancelled");
-  const table = rows.map((r) => ({
+  const table = shown.map((r) => ({
     id: r.id,
-    reference: r.reference,
+    // A non-breaking hyphen keeps J-0005 on one line however narrow the column gets.
+    reference: r.reference.replace("-", "‑"),
     title: r.title,
     customer: r.customerName,
     state: r.state,
@@ -49,6 +65,7 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         description={onlyCustomer ? `Jobs for ${customers.find((c) => c.id === onlyCustomer)?.name ?? "this customer"}. Open Jobs from the menu to see all.` : "Every customer order from enquiry to delivery: quote, production, test, cost and margin in one place."}
         actions={
           <>
+            <Link href="/jobs/lost-reasons" className="text-[15px] text-accent-ink">Lost reasons</Link>
             <NewCustomerButton />
             <NewJobButton customers={customers} />
           </>
@@ -59,8 +76,10 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         <Stat label="Open jobs" value={open.length} />
         <Stat label="Enquiries and quotes" value={rows.filter((r) => r.state === "enquiry" || r.state === "quoted").length} />
         <Stat label="In work" value={rows.filter((r) => ["approved", "in progress", "on hold"].includes(r.state)).length} />
-        <Stat label="Late deliveries" value={rows.filter((r) => r.overdue).length} />
+        <Stat tone={rows.some((r) => r.overdue) ? "danger" : "default"} label="Late deliveries" value={rows.filter((r) => r.overdue).length} />
       </StatRow>
+
+      <JobFilters active={active} counts={counts} customer={onlyCustomer} />
 
       <DataTable
         caption="Jobs"
@@ -75,8 +94,8 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
           { key: "value", header: "Order value", numeric: true },
           { key: "progress", header: "Progress", numeric: true },
         ]}
-        emptyTitle="No jobs yet"
-        emptyDescription="A job starts as a customer enquiry. Use New job to open the first one."
+        emptyTitle={active === "all" ? "No jobs yet" : "No jobs in this view"}
+        emptyDescription={active === "all" ? "A job starts as a customer enquiry. Use New job to open the first one." : "Choose All to see every job."}
       />
     </>
   );

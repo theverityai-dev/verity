@@ -99,8 +99,12 @@ customer and to "All jobs for this customer".
 
 **NOT YET BUILT:**
 - Time entries linked to HR employees; the worker is a label.
-- Edit a task or a milestone after creating it; a screen to define lost reasons (five are seeded).
-- A job owner or salesperson, a calendar view, a status filter on the Jobs list, notifications.
+- A job owner or salesperson (needs a schema change), a calendar view, notifications (ADR-039 outbox, not built).
+- The customer-facing status page: a public read surface is a new security boundary and needs its own ADR before code.
+- A first-class test report record (needs a schema change and design); testing today is the manufacturing QC checkpoints.
+
+Built 2026-10-15: edit a task or milestone (until it is done or reached), a Lost reasons screen (add, retire, restore, with a count
+of jobs lost for each), a status filter on the Jobs list, and a "Next up" strip on every job.
 - A first-class test report document. Today test results are the manufacturing QC checkpoints on the testing stage.
 - The customer-facing job status page (the ADR-030 passport pattern could carry it).
 - Invoicing and payments for a job (accounting and trading own those).

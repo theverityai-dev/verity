@@ -48,11 +48,11 @@ async function SummaryPage() {
         <Stat label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
         <Stat label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs" />
         <Stat label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs" />
-        <Stat label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
+        <Stat tone={counts.overdue > 0 ? "danger" : "default"} label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
       </StatRow>
 
-      <div className="mb-4">
-        <Panel title="Needs attention">
+      <div className="mb-6">
+        <Panel title={data.attention.length > 0 ? `Needs attention (${data.attention.length})` : "Needs attention"}>
           {data.attention.length === 0 ? (
             <EmptyState title="Nothing needs attention" description="Late deliveries, overdue milestones and tasks, blocked work, expired quotes and low stock show here, most urgent first." />
           ) : (
@@ -60,13 +60,17 @@ async function SummaryPage() {
               {data.attention.map((a, i) => {
                 const w = wording(a);
                 return (
-                  <li key={`${a.kind}-${i}`} className="border-b border-line py-3 last:border-b-0">
-                    <p className="m-0 text-[15px] font-medium">
-                      {a.jobId && a.jobReference ? <Link href={`/jobs/${a.jobId}`} className="text-accent-ink">{a.jobReference}</Link> : null}
-                      {a.jobId ? " · " : ""}
-                      {w.problem}
-                    </p>
-                    <p className="m-0 mt-0.5 text-[13px] text-text-secondary">{w.action}</p>
+                  <li key={`${a.kind}-${i}`} className="flex gap-3 border-b border-line py-3.5 last:border-b-0">
+                    {/* Severity by semantic colour: red is wrong now, orange is slipping. The words say it too, so colour is never the only signal. */}
+                    <span aria-hidden="true" className={`mt-[7px] size-2.5 shrink-0 rounded-full ${a.kind === "task_late" || a.kind === "stock_low" ? "bg-warning" : "bg-danger"}`} />
+                    <div className="min-w-0">
+                      <p className="m-0 text-[15px] font-medium">
+                        {a.jobId && a.jobReference ? <Link href={`/jobs/${a.jobId}`} className="text-accent-ink">{a.jobReference}</Link> : null}
+                        {a.jobId ? " · " : ""}
+                        {w.problem}
+                      </p>
+                      <p className="m-0 mt-0.5 text-[13px] text-text-secondary">{w.action}</p>
+                    </div>
                   </li>
                 );
               })}
@@ -75,14 +79,15 @@ async function SummaryPage() {
         </Panel>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-2">
           <Panel title="Jobs in work" flush>
             <DataTable
               caption="Jobs in work"
               rows={data.working.map((r) => ({
                 id: r.id,
-                reference: r.reference,
+                // A non-breaking hyphen keeps J-0005 on one line however narrow the column gets.
+    reference: r.reference.replace("-", "‑"),
                 title: r.title,
                 customer: r.customerName,
                 state: r.state,

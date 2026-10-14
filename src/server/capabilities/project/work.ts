@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { ValidationError, type CommandDefinition } from "@/server/platform/command";
-import { transition } from "@/server/platform/state";
+import { assertMutable, transition } from "@/server/platform/state";
+import { diffFields, recordActivity } from "@/server/platform/audit";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
 import {
   COST_KINDS,
@@ -93,6 +94,59 @@ export const createTask: CommandDefinition<
   },
 };
 
+export const editTask: CommandDefinition<
+  {
+    taskId: string;
+    title?: string;
+    assigneeLabel?: string | null;
+    dueDate?: string | null;
+    expectedMinutes?: number | null;
+    weight?: number;
+  },
+  { id: string }
+> = {
+  key: "verity.project.edit_task",
+  entity: ENTITY_PROJECT_TASK,
+  verb: "Edit",
+  description: "Change a task's title, who it is assigned to, due date, expected hours or weight.",
+  input: z.object({
+    taskId: z.string().uuid(),
+    title: z.string().trim().min(2).max(200).optional(),
+    assigneeLabel: z.string().trim().max(100).nullable().optional(),
+    dueDate: isoDate.nullable().optional(),
+    expectedMinutes: z.number().int().positive().max(100_000).nullable().optional(),
+    weight: z.number().int().min(1).max(100).optional(),
+  }),
+  handler: async (ctx, input) => {
+    const before = await ctx.tx.projectTask.findUniqueOrThrow({ where: { id: input.taskId } });
+    await loadWorkingJob(ctx.tx, before.jobId, "editing a task");
+    // A done or cancelled task is a finished fact (INV-002 posture); it is not edited, a new task is added instead.
+    await assertMutable(ctx.tx, ENTITY_PROJECT_TASK, before.state);
+    const after = await ctx.tx.projectTask.update({
+      where: { id: before.id },
+      data: {
+        title: input.title,
+        assigneeLabel: input.assigneeLabel,
+        dueDate: input.dueDate === undefined ? undefined : input.dueDate === null ? null : asDate(input.dueDate),
+        expectedMinutes: input.expectedMinutes,
+        weight: input.weight,
+        version: { increment: 1 },
+      },
+    });
+    const day = (d: Date | null) => d?.toISOString().slice(0, 10) ?? null;
+    await recordActivity(ctx, {
+      entityKey: ENTITY_PROJECT_TASK,
+      entityId: after.id,
+      commandKey: "verity.project.edit_task",
+      changes: diffFields(
+        { title: before.title, assignedTo: before.assigneeLabel, due: day(before.dueDate), weight: before.weight },
+        { title: after.title, assignedTo: after.assigneeLabel, due: day(after.dueDate), weight: after.weight },
+      ),
+    });
+    return { result: { id: after.id }, events: [{ name: "verity.project.task_edited", entityId: after.id }] };
+  },
+};
+
 export const addTaskDependency: CommandDefinition<{ taskId: string; dependsOnId: string }, { id: string }> = {
   key: "verity.project.add_task_dependency",
   entity: ENTITY_PROJECT_TASK,
@@ -170,6 +224,36 @@ export const addMilestone: CommandDefinition<{ jobId: string; name: string; dueD
       },
     });
     return { result: { id: row.id }, events: [{ name: "verity.project.milestone_added", entityId: row.id }] };
+  },
+};
+
+export const editMilestone: CommandDefinition<
+  { milestoneId: string; name?: string; dueDate?: string | null; customerVisible?: boolean },
+  { id: string }
+> = {
+  key: "verity.project.edit_milestone",
+  entity: ENTITY_PROJECT_MILESTONE,
+  verb: "Edit",
+  description: "Change a milestone's name, due date, or whether the customer sees it.",
+  input: z.object({
+    milestoneId: z.string().uuid(),
+    name: z.string().trim().min(2).max(120).optional(),
+    dueDate: isoDate.nullable().optional(),
+    customerVisible: z.boolean().optional(),
+  }),
+  handler: async (ctx, input) => {
+    const row = await ctx.tx.projectMilestone.findUniqueOrThrow({ where: { id: input.milestoneId } });
+    await loadWorkingJob(ctx.tx, row.jobId, "editing a milestone");
+    if (row.reachedAt) throw new ValidationError("E_VALIDATION: a milestone that was reached is a fact and cannot be changed");
+    await ctx.tx.projectMilestone.update({
+      where: { id: row.id },
+      data: {
+        name: input.name,
+        dueDate: input.dueDate === undefined ? undefined : input.dueDate === null ? null : asDate(input.dueDate),
+        customerVisible: input.customerVisible,
+      },
+    });
+    return { result: { id: row.id }, events: [{ name: "verity.project.milestone_edited", entityId: row.id }] };
   },
 };
 

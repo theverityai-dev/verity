@@ -34,6 +34,7 @@ function ActionDialog({
   submitLabel,
   variant = "secondary",
   size,
+  className,
   destructive = false,
   build,
   children,
@@ -45,6 +46,7 @@ function ActionDialog({
   submitLabel: string;
   variant?: "primary" | "secondary" | "ghost" | "danger";
   size?: "sm" | "md";
+  className?: string;
   destructive?: boolean;
   build: (form: FormData) => unknown;
   children: ReactNode;
@@ -57,6 +59,7 @@ function ActionDialog({
         commands={command}
         variant={variant}
         size={size}
+        className={className}
         onClick={() => {
           clear();
           setOpen(true);
@@ -294,7 +297,8 @@ export function JobActions({
           title="Cancel job"
           description="The job and its history stay on record but become read-only. This cannot be undone."
           submitLabel="Cancel job"
-          variant="danger"
+          variant="ghost"
+          className="text-danger"
           destructive
           build={(f) => ({ jobId, reason: formText(f, "reason") })}
         >
@@ -416,10 +420,13 @@ const TASK_MOVES: Record<string, Array<{ to: string; label: string; variant?: "p
 };
 const CANCELLABLE = ["todo", "in_progress", "blocked"];
 
-export function TaskMoves({ taskId, state }: { taskId: string; state: string }) {
+export type TaskFields = { id: string; title: string; assignee: string; due: string; hours: string; weight: number };
+
+export function TaskMoves({ taskId, state, task }: { taskId: string; state: string; task?: TaskFields }) {
   const moves = TASK_MOVES[state] ?? [];
   return (
     <span className="flex flex-nowrap items-center justify-end gap-1.5 whitespace-nowrap">
+      {task && CANCELLABLE.includes(state) && <EditTaskButton task={task} />}
       {moves.map((m) => (
         <QuickAction key={m.to} command="verity.project.set_task_state" input={{ taskId, toState: m.to }} label={m.label} variant={m.variant ?? "secondary"} size="sm" />
       ))}
@@ -437,6 +444,47 @@ export function TaskMoves({ taskId, state }: { taskId: string; state: string }) 
         />
       )}
     </span>
+  );
+}
+
+function EditTaskButton({ task }: { task: TaskFields }) {
+  const k = `edit-task-${task.id}`;
+  return (
+    <ActionDialog
+      command="verity.project.edit_task"
+      label="Edit"
+      title="Edit task"
+      description="Change who it is assigned to, when it is due, or how much it counts toward progress."
+      submitLabel="Save"
+      variant="ghost"
+      size="sm"
+      build={(f) => ({
+        taskId: task.id,
+        title: formText(f, "title"),
+        assigneeLabel: formOptional(f, "assignee") ?? null,
+        dueDate: formOptional(f, "dueDate") ?? null,
+        expectedMinutes: formText(f, "hours") ? Math.round(Number(formText(f, "hours")) * 60) : null,
+        weight: Number(formText(f, "weight") || 1),
+      })}
+    >
+      <Field label="Task" htmlFor={`${k}-title`} required>
+        <Input id={`${k}-title`} name="title" defaultValue={task.title} required minLength={2} maxLength={200} />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Assigned to" htmlFor={`${k}-assignee`}>
+          <Input id={`${k}-assignee`} name="assignee" defaultValue={task.assignee} maxLength={100} />
+        </Field>
+        <Field label="Due" htmlFor={`${k}-due`}>
+          <FormDateField name="dueDate" id={`${k}-due`} defaultValue={task.due} />
+        </Field>
+        <Field label="Expected hours" htmlFor={`${k}-hours`}>
+          <Input id={`${k}-hours`} name="hours" type="number" min={0.5} step={0.5} defaultValue={task.hours} />
+        </Field>
+        <Field label="Weight" htmlFor={`${k}-weight`} hint="Bigger tasks count more toward progress.">
+          <Input id={`${k}-weight`} name="weight" type="number" min={1} max={100} step={1} defaultValue={task.weight} />
+        </Field>
+      </div>
+    </ActionDialog>
   );
 }
 
@@ -469,8 +517,40 @@ function VisibleToCustomer() {
   return <Checkbox name="customerVisible" checked={on} onChange={(e) => setOn(e.target.checked)} label="Show to the customer" />;
 }
 
-export function ReachMilestoneButton({ milestoneId }: { milestoneId: string }) {
-  return <QuickAction command="verity.project.reach_milestone" input={{ milestoneId }} label="Mark reached" variant="primary" size="sm" />;
+export type MilestoneFields = { id: string; name: string; due: string; visible: boolean };
+
+export function ReachMilestoneButton({ milestoneId, milestone }: { milestoneId: string; milestone?: MilestoneFields }) {
+  return (
+    <span className="flex flex-nowrap items-center justify-end gap-1.5 whitespace-nowrap">
+      {milestone && <EditMilestoneButton milestone={milestone} />}
+      <QuickAction command="verity.project.reach_milestone" input={{ milestoneId }} label="Mark reached" variant="primary" size="sm" />
+    </span>
+  );
+}
+
+function EditMilestoneButton({ milestone }: { milestone: MilestoneFields }) {
+  const [visible, setVisible] = useState(milestone.visible);
+  const k = `edit-ms-${milestone.id}`;
+  return (
+    <ActionDialog
+      command="verity.project.edit_milestone"
+      label="Edit"
+      title="Edit milestone"
+      description="Change the name or due date, or whether the customer sees it."
+      submitLabel="Save"
+      variant="ghost"
+      size="sm"
+      build={(f) => ({ milestoneId: milestone.id, name: formText(f, "name"), dueDate: formOptional(f, "dueDate") ?? null, customerVisible: visible })}
+    >
+      <Field label="Milestone" htmlFor={`${k}-name`} required>
+        <Input id={`${k}-name`} name="name" defaultValue={milestone.name} required minLength={2} maxLength={120} />
+      </Field>
+      <Field label="Due" htmlFor={`${k}-due`}>
+        <FormDateField name="dueDate" id={`${k}-due`} defaultValue={milestone.due} />
+      </Field>
+      <Checkbox name="customerVisible" checked={visible} onChange={(e) => setVisible(e.target.checked)} label="Show to the customer" />
+    </ActionDialog>
+  );
 }
 
 /* ============================== time and cost ============================== */
@@ -648,4 +728,34 @@ export function NewCustomerButton() {
       </div>
     </ActionDialog>
   );
+}
+
+/* ============================== lost reasons ============================== */
+
+/** A readable key from the label: lowercase words joined by underscores, starting with a letter. */
+function reasonKey(label: string): string {
+  const base = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 38);
+  return /^[a-z]/.test(base) ? base : `r_${base}`.slice(0, 40);
+}
+
+export function NewLostReasonButton() {
+  return (
+    <ActionDialog
+      command="verity.project.define_lost_reason"
+      label="New reason"
+      title="New lost reason"
+      description="Something a customer might say when they do not go ahead."
+      submitLabel="Add reason"
+      variant="primary"
+      build={(f) => ({ key: reasonKey(formText(f, "label")), label: formText(f, "label") })}
+    >
+      <Field label="Reason" htmlFor="reason-label" required hint="For example: Needed it sooner than we could deliver">
+        <Input id="reason-label" name="label" required minLength={2} maxLength={100} />
+      </Field>
+    </ActionDialog>
+  );
+}
+
+export function LostReasonToggle({ reasonId, active }: { reasonId: string; active: boolean }) {
+  return <QuickAction command="verity.project.set_lost_reason_active" input={{ reasonId, active: !active }} label={active ? "Retire" : "Restore"} variant="ghost" size="sm" />;
 }

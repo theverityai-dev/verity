@@ -210,6 +210,35 @@ describeDb("capability: Project (Jobs)", () => {
     await expect(executeCommand(actor, project.createTask, { jobId: job.id, title: "Late" })).rejects.toThrow(/approved job/);
   });
 
+  it("edits an open task and milestone, and refuses to edit finished ones", async () => {
+    const job = await newJob("Editable");
+    const q = await quote(job.id);
+    await executeCommand(actor, project.approveQuote, { quoteId: q.id });
+    await executeCommand(actor, project.startJob, { jobId: job.id });
+
+    const task = await executeCommand(actor, project.createTask, { jobId: job.id, title: "Wind LV coil", weight: 1 });
+    await executeCommand(actor, project.editTask, { taskId: task.id, title: "Wind LV and HV coils", assigneeLabel: "Shop floor", dueDate: "2026-11-05", weight: 4 });
+    const edited = await withTenant(tenantId, (tx) => tx.projectTask.findUniqueOrThrow({ where: { id: task.id } }));
+    expect(edited).toMatchObject({ title: "Wind LV and HV coils", assigneeLabel: "Shop floor", weight: 4 });
+    expect(edited.dueDate?.toISOString().slice(0, 10)).toBe("2026-11-05");
+    // Clearing the assignee and due date is a real edit, not "leave unchanged".
+    await executeCommand(actor, project.editTask, { taskId: task.id, assigneeLabel: null, dueDate: null });
+    const cleared = await withTenant(tenantId, (tx) => tx.projectTask.findUniqueOrThrow({ where: { id: task.id } }));
+    expect(cleared.assigneeLabel).toBeNull();
+    expect(cleared.dueDate).toBeNull();
+
+    await executeCommand(actor, project.setTaskState, { taskId: task.id, toState: "in_progress" });
+    await executeCommand(actor, project.setTaskState, { taskId: task.id, toState: "done" });
+    await expect(executeCommand(actor, project.editTask, { taskId: task.id, title: "Too late" })).rejects.toThrow();
+
+    const ms = await executeCommand(actor, project.addMilestone, { jobId: job.id, name: "Coils cast", dueDate: "2026-11-10" });
+    await executeCommand(actor, project.editMilestone, { milestoneId: ms.id, name: "Coils cast and cured", dueDate: null, customerVisible: false });
+    const m = await withTenant(tenantId, (tx) => tx.projectMilestone.findUniqueOrThrow({ where: { id: ms.id } }));
+    expect(m).toMatchObject({ name: "Coils cast and cured", dueDate: null, customerVisible: false });
+    await executeCommand(actor, project.reachMilestone, { milestoneId: ms.id });
+    await expect(executeCommand(actor, project.editMilestone, { milestoneId: ms.id, name: "Changed after reached" })).rejects.toThrow(/reached/);
+  });
+
   it("derives cost and margin from consumed material, logged time and recorded costs", async () => {
     const job = await newJob("Costed");
     const q = await quote(job.id, 1_000_000); // 2 x 10,000.00 = 2,000,000 minor

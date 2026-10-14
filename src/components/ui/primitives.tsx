@@ -179,18 +179,21 @@ export function Stat({
   value,
   hint,
   href,
+  tone = "default",
 }: {
   label: string;
   value: number | string;
   hint?: string;
   href?: string;
+  /** Colours the figure when the number itself is a problem (late, negative). Semantic colours only, never the tint. */
+  tone?: "default" | "danger" | "warning";
 }) {
   const body = (
     <>
       <span
         className={
           "tabular text-[28px] font-bold leading-[34px] tracking-[0.01em] " +
-          "text-text transition-colors group-hover:text-accent-ink"
+          (tone === "danger" ? "text-danger" : tone === "warning" ? "text-warning" : "text-text transition-colors group-hover:text-accent-ink")
         }
       >
         {value}

@@ -111,7 +111,7 @@ salesperson (**Deferred**: a job records who opened it, not who owns it).
 | Entity | Category | Status | Evidence | Fix |
 |---|---|---|---|---|
 | Job | Data completeness | Done | create and edit forms cover title, customer, contact, priority, due date, notes | none |
-| Job | List view | Partial | search, sort, paging from `DataTable`; no status filter chips, no bulk actions | needs design |
+| Job | List view | Partial | search, sort, paging from `DataTable`; status filter chips added 2026-10-15 (URL-backed, with counts); no bulk actions | needs design |
 | Job | Per-row quick action | Partial | drill-in link on the reference; state moves live on the job page, not the row | needs design |
 | Job | Detail and history | Done | history shows who moved it and when; related quote, orders, tasks, time, costs on tabs | none |
 | Job | Numbering and status | Done | `J-0001` per-tenant sequence, status badge by category | none |
@@ -122,9 +122,9 @@ salesperson (**Deferred**: a job records who opened it, not who owns it).
 | Quote | Lifecycle | Done | open, approved, replaced, lost; replaced revisions stay on file | none |
 | Task | Data completeness | Partial | parent task is in the schema and command but has no form field | quick, deferred with sub-tasks |
 | Task | Lifecycle from the row | Done | Start, Done, Block, Resume, Cancel on the row; Cancel confirms (added 2026-10-14) | none |
-| Task | Edit after creation | Missing | no edit-task command or screen | needs design |
+| Task | Edit after creation | Done | `edit_task` command and an Edit dialog on the row (2026-10-15); a done or cancelled task is not editable | none |
 | Milestone | Data completeness | Done | customer-visible checkbox added 2026-10-14 (the field existed with no way to set it) | none |
-| Milestone | Edit or delete | Missing | reach is the only change after creation | needs design |
+| Milestone | Edit or delete | Done | `edit_milestone` and an Edit dialog (2026-10-15); a reached milestone is a fact and is refused; no delete by design | none |
 | Time entry, Cost entry | Void not delete | Done | void with reason, kept on record, drops out of totals | none |
 | Time entry | Data completeness | Partial | worker is a text label, not an HR employee | needs design |
 | Customer (trading record) | Party basics | Partial | contact, GSTIN, state code, credit limit exist; the running statement needs invoices from a job, not built | needs design |
@@ -132,7 +132,7 @@ salesperson (**Deferred**: a job records who opened it, not who owns it).
 | All | Accessibility | Done | shared primitives; forms show field-level errors; no icon-only buttons added | none |
 | All | Overflow | Done | checked at 390 px on Jobs and the job tabs; no horizontal scroll | none |
 | All | Internal identifiers | Fixed | history showed `in_progress`; now reads "in progress"; command keys are never shown | none |
-| All | Defining lost reasons | Missing | `define_lost_reason` command has no screen; five reasons are seeded | quick, deferred |
+| All | Defining lost reasons | Done | `/jobs/lost-reasons`: add, retire, restore, with a count of jobs per reason (2026-10-15) | none |
 
 ### 7.3 Proof
 

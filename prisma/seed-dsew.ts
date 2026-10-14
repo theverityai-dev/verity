@@ -444,6 +444,9 @@ async function main() {
     await executeCommand(owner, project.startJob, { jobId: job.id });
   }
 
+  // A draft order not yet tied to any job, so "Link production order" has something to link.
+  await production(bom100.id, 1, "DSEW 100 kVA | stock build, not yet sold", trafoRoute.id, 0, false);
+
   // Work on the running jobs: tasks, milestones, time and costs.
   const [iit, rau, magnet, pithampur, , , , , sunrise] = jobIds;
   const task = (jobId: string, title: string, extra: Record<string, unknown> = {}) =>
