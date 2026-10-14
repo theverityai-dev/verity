@@ -189,7 +189,7 @@ export function NewJobButton({ customers }: { customers: Array<{ id: string; nam
             ))}
           </Select>
         </Field>
-        <Field label="Promised by" htmlFor="job-due">
+        <Field label="Delivery promised" htmlFor="job-due">
           <FormDateField name="dueDate" id="job-due" />
         </Field>
       </div>
@@ -231,7 +231,7 @@ export function EditJobButton({ job }: { job: { id: string; title: string; custo
             ))}
           </Select>
         </Field>
-        <Field label="Promised by" htmlFor="edit-due">
+        <Field label="Delivery promised" htmlFor="edit-due">
           <FormDateField name="dueDate" id="edit-due" defaultValue={job.dueDate ?? ""} />
         </Field>
       </div>
@@ -396,9 +396,9 @@ export function AddTaskButton({ jobId, tasks }: { jobId: string; tasks: Array<{ 
         </Field>
       </div>
       {tasks.length > 0 && (
-        <Field label="Starts after" htmlFor="task-after">
+        <Field label="Waits for" htmlFor="task-after">
           <Select id="task-after" name="after" defaultValue="">
-            <option value="">Nothing, can start any time</option>
+            <option value="">Nothing, can start at any time</option>
             {tasks.map((t) => (
               <option key={t.id} value={t.id}>{t.title}</option>
             ))}
@@ -419,7 +419,7 @@ const CANCELLABLE = ["todo", "in_progress", "blocked"];
 export function TaskMoves({ taskId, state }: { taskId: string; state: string }) {
   const moves = TASK_MOVES[state] ?? [];
   return (
-    <span className="flex flex-wrap items-start justify-end gap-2">
+    <span className="flex flex-nowrap items-center justify-end gap-1.5 whitespace-nowrap">
       {moves.map((m) => (
         <QuickAction key={m.to} command="verity.project.set_task_state" input={{ taskId, toState: m.to }} label={m.label} variant={m.variant ?? "secondary"} size="sm" />
       ))}

@@ -59,7 +59,7 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         <Stat label="Open jobs" value={open.length} />
         <Stat label="Enquiries and quotes" value={rows.filter((r) => r.state === "enquiry" || r.state === "quoted").length} />
         <Stat label="In work" value={rows.filter((r) => ["approved", "in progress", "on hold"].includes(r.state)).length} />
-        <Stat label="Past promised date" value={rows.filter((r) => r.overdue).length} />
+        <Stat label="Late deliveries" value={rows.filter((r) => r.overdue).length} />
       </StatRow>
 
       <DataTable
@@ -71,9 +71,9 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
           { key: "customer", header: "Customer" },
           { key: "state", header: "Status", variant: "state", categoryKey: "category" },
           { key: "priority", header: "Priority" },
-          { key: "due", header: "Promised by" },
-          { key: "value", header: "Value", numeric: true },
-          { key: "progress", header: "Done", numeric: true },
+          { key: "due", header: "Delivery promised" },
+          { key: "value", header: "Order value", numeric: true },
+          { key: "progress", header: "Progress", numeric: true },
         ]}
         emptyTitle="No jobs yet"
         emptyDescription="A job starts as a customer enquiry. Use New job to open the first one."

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type TabDef = {
   id: string;
@@ -18,11 +18,16 @@ export type TabDef = {
  * for a URL param to preserve across a reload that server data doesn't
  * already restore identically.
  */
-export function Tabs({ tabs, defaultTab }: { tabs: TabDef[]; defaultTab?: string }) {
+export function Tabs({ tabs, defaultTab, scroll = false }: { tabs: TabDef[]; defaultTab?: string; scroll?: boolean }) {
   const [active, setActive] = useState(defaultTab ?? tabs[0]?.id ?? "");
   const activeTab = tabs.find((t) => t.id === active) ?? tabs[0];
   const activeIndex = tabs.findIndex((t) => t.id === activeTab?.id);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  // A scrolling strip must keep the selected tab in view, or a tab picked by keyboard can sit off screen.
+  useEffect(() => {
+    if (scroll) buttonRefs.current[activeIndex]?.scrollIntoView({ inline: "nearest", block: "nearest" });
+  }, [scroll, activeIndex]);
 
   // APPLE-P1-01: Arrow/Home/End move BOTH focus and selection (the standard
   // "automatic activation" tab pattern) — every tab's content is already
@@ -56,7 +61,10 @@ export function Tabs({ tabs, defaultTab }: { tabs: TabDef[]; defaultTab?: string
       <div
         role="tablist"
         onKeyDown={onKeyDown}
-        className="mb-5 flex flex-wrap gap-1 border-b border-line"
+        className={
+          "mb-5 flex gap-1 border-b border-line " +
+          (scroll ? "flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "flex-wrap")
+        }
       >
         {tabs.map((t, i) => (
           <button
@@ -73,6 +81,7 @@ export function Tabs({ tabs, defaultTab }: { tabs: TabDef[]; defaultTab?: string
             onClick={() => setActive(t.id)}
             className={
               "relative -mb-px flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13.5px] font-medium transition-colors " +
+              (scroll ? "shrink-0 whitespace-nowrap " : "") +
               (t.id === active
                 ? "border-accent text-text"
                 : "border-transparent text-text-tertiary hover:text-text-secondary")

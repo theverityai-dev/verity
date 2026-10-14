@@ -118,15 +118,18 @@ export function PageHeader({
   title,
   description,
   actions,
+  wrapTitle = false,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** Let a long title wrap instead of being cut with an ellipsis (a record title that carries meaning, such as a job). */
+  wrapTitle?: boolean;
 }) {
   return (
     <header className="mb-6">
       <div className="min-w-0">
-        <h1 className="truncate">{title}</h1>
+        <h1 className={wrapTitle ? "break-words" : "truncate"}>{title}</h1>
         {description && (
           <p className="mb-0 mt-1.5 max-w-[62ch] text-[15px] leading-[20px] text-text-secondary">
             {description}

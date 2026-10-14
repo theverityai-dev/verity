@@ -185,7 +185,10 @@ export async function jobDetail(tx: TenantScopedClient, jobId: string) {
 
 /** Everything the Summary home shows, in one read. */
 export async function summaryData(tx: TenantScopedClient) {
-  const [rows, orders, balances, items, milestones, openOps] = await Promise.all([
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const today = new Date(`${todayIso}T00:00:00.000Z`);
+  const workingJob = { state: { in: ["approved", "in_progress", "on_hold"] } };
+  const [rows, orders, balances, items, milestones, openOps, lateMilestones, lateTasks, blockedTasks, expiredQuotes] = await Promise.all([
     listJobs(tx),
     tx.manufacturingOrder.count({ where: { state: "in_progress" } }),
     tx.inventoryStockBalance.groupBy({ by: ["itemId"], _sum: { qty: true } }),
@@ -206,6 +209,30 @@ export async function summaryData(tx: TenantScopedClient) {
         projectLink: { select: { job: { select: { id: true, number: true } } } },
       },
     }),
+    tx.projectMilestone.findMany({
+      where: { reachedAt: null, dueDate: { lt: today }, job: workingJob },
+      orderBy: { dueDate: "asc" },
+      take: 5,
+      include: { job: { select: { id: true, number: true } } },
+    }),
+    tx.projectTask.findMany({
+      where: { dueDate: { lt: today }, state: { in: ["todo", "in_progress"] }, job: workingJob },
+      orderBy: { dueDate: "asc" },
+      take: 5,
+      include: { job: { select: { id: true, number: true } } },
+    }),
+    tx.projectTask.findMany({
+      where: { state: "blocked", job: workingJob },
+      orderBy: { updatedAt: "asc" },
+      take: 5,
+      include: { job: { select: { id: true, number: true } } },
+    }),
+    tx.projectQuote.findMany({
+      where: { status: "open", validUntil: { lt: today }, job: { state: "quoted" } },
+      orderBy: { validUntil: "asc" },
+      take: 5,
+      include: { job: { select: { id: true, number: true } } },
+    }),
   ]);
   const onHand = new Map(balances.map((b) => [b.itemId, b._sum.qty ?? 0]));
   const low = items
@@ -214,7 +241,22 @@ export async function summaryData(tx: TenantScopedClient) {
     .sort((a, b) => a.onHand / a.reorderLevel - b.onHand / b.reorderLevel);
 
   const working = rows.filter((r) => ["approved", "in progress", "on hold"].includes(r.state));
+
+  // Most damaging first. Each item names the job (when it has one), what is wrong, and the date it concerns;
+  // the page words the next action. Everything here is a fact over stored records, nothing is predicted.
+  type Attention = { kind: "job_late" | "milestone_late" | "task_blocked" | "task_late" | "quote_expired" | "stock_low"; jobId: string | null; jobReference: string | null; subject: string; date: string | null; extra: string | null };
+  const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
+  const attention: Attention[] = [
+    ...rows.filter((r) => r.overdue).map((r): Attention => ({ kind: "job_late", jobId: r.id, jobReference: r.reference, subject: r.title, date: r.dueDate, extra: r.state })),
+    ...lateMilestones.map((m): Attention => ({ kind: "milestone_late", jobId: m.job.id, jobReference: jobReference(m.job.number), subject: m.name, date: iso(m.dueDate), extra: null })),
+    ...blockedTasks.map((t): Attention => ({ kind: "task_blocked", jobId: t.job.id, jobReference: jobReference(t.job.number), subject: t.title, date: null, extra: t.assigneeLabel })),
+    ...lateTasks.map((t): Attention => ({ kind: "task_late", jobId: t.job.id, jobReference: jobReference(t.job.number), subject: t.title, date: iso(t.dueDate), extra: t.assigneeLabel })),
+    ...expiredQuotes.map((q): Attention => ({ kind: "quote_expired", jobId: q.job.id, jobReference: jobReference(q.job.number), subject: `revision ${q.revision}`, date: iso(q.validUntil), extra: null })),
+    ...low.slice(0, 3).map((i): Attention => ({ kind: "stock_low", jobId: null, jobReference: null, subject: i.name, date: null, extra: `${i.onHand} ${i.unitLabel} left, reorder at ${i.reorderLevel}` })),
+  ].slice(0, 8);
+
   return {
+    attention,
     counts: {
       enquiries: rows.filter((r) => r.state === "enquiry").length,
       quoted: rows.filter((r) => r.state === "quoted").length,

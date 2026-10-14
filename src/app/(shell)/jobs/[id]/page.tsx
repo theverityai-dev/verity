@@ -62,7 +62,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             ...(job.customerId ? [{ term: "Other jobs", value: <a href={`/jobs?customer=${job.customerId}`}>All jobs for this customer</a> }] : []),
             { term: "Contact", value: job.customerContact ?? "—" },
             { term: "Priority", value: PRIORITY_LABEL[job.priority] ?? job.priority },
-            { term: "Promised by", value: dateText(job.dueDate) },
+            { term: "Delivery promised", value: dateText(job.dueDate) },
             { term: "Started", value: dateText(job.startedAt) },
             { term: "Finished", value: dateText(job.finishedAt) },
             ...(job.lostReason ? [{ term: "Lost because", value: job.lostReason.label }] : []),
@@ -152,7 +152,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             { key: "task", header: "Task" },
             { key: "who", header: "Assigned to" },
             { key: "due", header: "Due" },
-            { key: "after", header: "Starts after" },
+            { key: "after", header: "Waits for" },
             { key: "state", header: "Status", variant: "state", categoryKey: "category" },
           ]}
           emptyTitle="No tasks"
@@ -296,6 +296,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <PageHeader
+        wrapTitle
         title={`${detail.reference} · ${job.title}`}
         description={`${job.customerName}${job.dueDate ? ` · promised by ${dateText(job.dueDate)}` : ""}`}
         actions={
@@ -310,13 +311,14 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       />
 
       <StatRow cols={4} className="mb-6">
-        <Stat label="Agreed value" value={inr(costing.quotedValueMinor ?? openQuote?.amountMinor ?? job.quotes[0]?.amountMinor ?? null)} hint={costing.quotedValueMinor !== null ? "From the approved quote" : openQuote ? "From the open quote" : job.quotes[0] ? "Last quote, not accepted" : "No quote yet"} />
-        <Stat label="Cost so far" value={inr(costing.totalMinor)} hint={`${hoursText(costing.loggedMinutes)} logged`} />
-        <Stat label="Margin" value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)} hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the agreed value`} />
-        <Stat label="Progress" value={detail.progress === null ? "—" : `${detail.progress}%`} hint={job.tasks.length > 0 ? "From tasks" : "From production stages"} />
+        <Stat label="Order value" value={inr(costing.quotedValueMinor ?? openQuote?.amountMinor ?? job.quotes[0]?.amountMinor ?? null)} hint={costing.quotedValueMinor !== null ? "From the approved quote" : openQuote ? "From the open quote" : job.quotes[0] ? "Last quote, not accepted" : "No quote yet"} />
+        <Stat label="Actual cost to date" value={inr(costing.totalMinor)} hint={`Material, labour and other costs; ${hoursText(costing.loggedMinutes)} logged`} />
+        <Stat label="Margin so far" value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)} hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the order value, before costs still to come`} />
+        <Stat label={job.tasks.length > 0 ? "Tasks done" : "Stages done"} value={detail.progress === null ? "—" : `${detail.progress}%`} hint={job.tasks.length > 0 ? "Bigger tasks count more" : "Production stages finished"} />
       </StatRow>
 
       <Tabs
+        scroll
         tabs={[
           { id: "overview", label: "Overview", content: overview },
           {

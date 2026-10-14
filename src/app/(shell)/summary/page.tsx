@@ -28,16 +28,52 @@ async function SummaryPage() {
 
   const { counts } = data;
 
+  const wording = (a: (typeof data.attention)[number]): { problem: string; action: string } => {
+    const d = dateText(a.date);
+    switch (a.kind) {
+      case "job_late": return { problem: `${a.subject} was promised for ${d} and is still ${a.extra}`, action: "Call the customer, or agree a new delivery date and update the job." };
+      case "milestone_late": return { problem: `Milestone "${a.subject}" was due ${d}`, action: "Mark it reached if it is done, otherwise find out what is holding it." };
+      case "task_blocked": return { problem: `Task "${a.subject}" is blocked`, action: `Find what is blocking it${a.extra ? ` and ask ${a.extra}` : ""}, then resume or reassign it.` };
+      case "task_late": return { problem: `Task "${a.subject}" was due ${d}`, action: `Check progress with ${a.extra ?? "the team"}.` };
+      case "quote_expired": return { problem: `Quote ${a.subject} expired on ${d}, no reply`, action: "Follow up with the customer, or send a revised quote." };
+      default: return { problem: `${a.subject}: ${a.extra}`, action: "Raise a purchase order before it stops production." };
+    }
+  };
+
   return (
     <>
       <PageHeader title="Summary" description="Where every job stands today, what is on the shop floor, and what needs attention." />
 
       <StatRow cols={4} className="mb-6">
-        <Stat label="Order book" value={inr(data.orderBookMinor, { compact: true })} hint={`${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
-        <Stat label="Quotes out" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} awaiting the customer`} href="/jobs" />
+        <Stat label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
+        <Stat label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs" />
         <Stat label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs" />
-        <Stat label="Past promised date" value={counts.overdue} hint={counts.overdue === 0 ? "Nothing late" : "Needs a call"} href="/jobs" />
+        <Stat label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
       </StatRow>
+
+      <div className="mb-4">
+        <Panel title="Needs attention">
+          {data.attention.length === 0 ? (
+            <EmptyState title="Nothing needs attention" description="Late deliveries, overdue milestones and tasks, blocked work, expired quotes and low stock show here, most urgent first." />
+          ) : (
+            <ul className="m-0 flex list-none flex-col p-0">
+              {data.attention.map((a, i) => {
+                const w = wording(a);
+                return (
+                  <li key={`${a.kind}-${i}`} className="border-b border-line py-3 last:border-b-0">
+                    <p className="m-0 text-[15px] font-medium">
+                      {a.jobId && a.jobReference ? <Link href={`/jobs/${a.jobId}`} className="text-accent-ink">{a.jobReference}</Link> : null}
+                      {a.jobId ? " · " : ""}
+                      {w.problem}
+                    </p>
+                    <p className="m-0 mt-0.5 text-[13px] text-text-secondary">{w.action}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Panel>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="lg:col-span-2">
@@ -60,9 +96,9 @@ async function SummaryPage() {
                 { key: "title", header: "What" },
                 { key: "customer", header: "Customer" },
                 { key: "state", header: "Status", variant: "state", categoryKey: "category" },
-                { key: "due", header: "Promised by" },
-                { key: "value", header: "Value", numeric: true },
-                { key: "progress", header: "Done", numeric: true },
+                { key: "due", header: "Delivery promised" },
+                { key: "value", header: "Order value", numeric: true },
+                { key: "progress", header: "Progress", numeric: true },
               ]}
               emptyTitle="Nothing in work"
               emptyDescription="Approve a quote and start the job to see it here."

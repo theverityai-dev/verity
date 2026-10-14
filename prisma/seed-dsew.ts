@@ -426,7 +426,8 @@ async function main() {
     jobIds.push(job.id);
     let lastQuote: { id: string } | null = null;
     for (const lines of spec.quotes) {
-      lastQuote = await executeCommand(owner, project.addQuoteRevision, { jobId: job.id, lines, validUntil: day(30), scopeNote: "Ex-works Rau, Indore. 12 months warranty. 50% advance, balance before dispatch. GST extra." });
+      // A quote still waiting for a reply has run past its validity, so a follow-up shows on the Summary.
+      lastQuote = await executeCommand(owner, project.addQuoteRevision, { jobId: job.id, lines, validUntil: day(spec.stage === "quoted" ? -2 : 30), scopeNote: "Ex-works Rau, Indore. 12 months warranty. 50% advance, balance before dispatch. GST extra." });
     }
     if (spec.stage === "lost") {
       await executeCommand(owner, project.markJobLost, { jobId: job.id, reasonId: reasons.get("price")!, note: "Customer found a lower price from a panel builder." });
@@ -480,6 +481,9 @@ async function main() {
   const rauDesign = await task(rau!, "Confirm winding data with customer", { assigneeLabel: "Engineering", weight: 1 });
   const rauBuild = await task(rau!, "Build two units", { assigneeLabel: "Shop floor", weight: 5, dependsOnIds: [rauDesign.id] });
   await task(rau!, "Routine tests and report", { assigneeLabel: "Quality", weight: 2, dueDate: day(14), dependsOnIds: [rauBuild.id] });
+  // A task stuck on a supplier delivery: blocked work shows under Needs attention on the Summary.
+  const rauTerminals = await task(rau!, "Receive HV terminal sets from supplier", { assigneeLabel: "Stores", weight: 1, dueDate: day(-2) });
+  await executeCommand(owner, project.setTaskState, { taskId: rauTerminals.id, toState: "blocked" });
   await finish(rauDesign.id);
   await executeCommand(owner, project.setTaskState, { taskId: rauBuild.id, toState: "in_progress" });
   await executeCommand(owner, project.addMilestone, { jobId: rau!, name: "Units assembled", dueDate: day(9) });
@@ -502,6 +506,7 @@ async function main() {
   // Pithampur: just started.
   const pDesign = await task(pithampur!, "Match footprint to the failed unit", { assigneeLabel: "Engineering", weight: 1 });
   await task(pithampur!, "Build and test", { assigneeLabel: "Shop floor", weight: 4, dependsOnIds: [pDesign.id] });
+  await task(pithampur!, "Customer sign-off on footprint drawing", { assigneeLabel: "Engineering", weight: 1, dueDate: day(-1) });
   await executeCommand(owner, project.addMilestone, { jobId: pithampur!, name: "Dispatch", dueDate: day(38) });
   await time(pithampur!, "R. Verma (engineer)", 2, 3, RATE.engineer, "Site measurements", pDesign.id);
 
