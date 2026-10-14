@@ -2,15 +2,20 @@
  * Seeds the D & S Electric Works demo tenant (clients/dsew/prd.md): a transformer and electromagnet
  * maker in Rau, Indore. Synthetic data only, safe to show a prospect.
  *
- * Identity is OIDC (ADR-020): the owner's `authUserId` is the IdP `sub`, passed as DSEW_OWNER_SUB.
- * Nothing here talks to Supabase. Run against a throwaway database only:
+ * Two identity modes, chosen by the environment:
  *
- *   DSEW_OWNER_SUB=<uuid> npm run seed:dsew
+ *   - Supabase (how every Verity deployment runs): with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set and no
+ *     DSEW_OWNER_SUB, a real owner login is created through Supabase Auth with a generated password, printed once.
+ *   - OIDC (ADR-020, the on-premise profile): DSEW_OWNER_SUB is the IdP `sub` of an existing login.
  *
- * Idempotency: NONE. A second run creates a second tenant (same posture as seed-colonel-kebabz.ts).
+ * The tenant is flagged `customFields.demo = true`, which is what `reset-demo.ts` requires before it will delete one.
+ *
+ * Idempotency: NONE. A second run creates a second tenant (same posture as seed-colonel-kebabz.ts); run
+ * `npm run reset:demo` first to replace the demo.
  */
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 import { installCapabilities } from "../src/server/capabilities/registry";
 import { provisionIdentity } from "../src/server/platform/identity";
 import { activateCapability, invalidateCapabilityCache } from "../src/server/platform/capability";
@@ -32,8 +37,39 @@ import {
 } from "../src/server/capabilities/manufacturing/stages";
 
 const OWNER_EMAIL = process.env.DSEW_OWNER_EMAIL ?? "owner@dsew.demo";
-const OWNER_SUB = process.env.DSEW_OWNER_SUB;
-if (!OWNER_SUB) throw new Error("DSEW_OWNER_SUB must be the IdP subject (a UUID) of the owner login");
+let OWNER_SUB = process.env.DSEW_OWNER_SUB;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!OWNER_SUB && !(SUPABASE_URL && SERVICE_ROLE_KEY)) {
+  throw new Error("Set DSEW_OWNER_SUB (OIDC), or SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to create a Supabase login");
+}
+
+function suggestPassword(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomUUID().replace(/-/g, "") + randomUUID().replace(/-/g, "");
+  let out = "";
+  for (let i = 0; i < 14; i += 1) out += alphabet[parseInt(bytes.slice(i * 2, i * 2 + 2), 16) % alphabet.length];
+  return out;
+}
+
+/** Set once when this run created the Supabase login, so a failed seed can remove it again. */
+let createdAuthUserId: string | null = null;
+let generatedPassword: string | null = null;
+
+async function ensureOwnerLogin(): Promise<void> {
+  if (OWNER_SUB) return;
+  const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  generatedPassword = suggestPassword();
+  const created = await supabaseAdmin.auth.admin.createUser({
+    email: OWNER_EMAIL,
+    password: generatedPassword,
+    email_confirm: true,
+    user_metadata: { display_name: "D & S Owner" },
+  });
+  if (created.error || !created.data.user) throw new Error(`could not create the owner login: ${created.error?.message}`);
+  createdAuthUserId = created.data.user.id;
+  OWNER_SUB = createdAuthUserId;
+}
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
@@ -136,10 +172,13 @@ const MAGNET_ROUTE = [
 
 async function main() {
   installCapabilities();
+  await ensureOwnerLogin();
   const tenantId = randomUUID();
 
   const ids = await withTenant(tenantId, async (tx) => {
-    await tx.tenant.create({ data: { id: tenantId, name: "D & S Electric Works", timeZone: "Asia/Kolkata" } });
+    await tx.tenant.create({
+      data: { id: tenantId, name: "D & S Electric Works", timeZone: "Asia/Kolkata", customFields: { demo: true, demoFor: "dsew" } },
+    });
     const org = await tx.organization.create({ data: { tenantId, name: "D & S Electric Works", parentId: null } });
     const loc = await tx.location.create({ data: { tenantId, organizationId: org.id, name: "Rau Works, Indore" } });
     const role = await tx.role.create({ data: { tenantId, name: "Owner" } });
@@ -482,14 +521,20 @@ async function main() {
 
   console.log("\nD & S Electric Works demo tenant is ready.\n");
   console.log(`Tenant:   ${tenantId}`);
-  console.log(`Owner:    ${OWNER_EMAIL} (IdP sub ${OWNER_SUB})`);
+  console.log(`Owner:    ${OWNER_EMAIL} (${generatedPassword ? `Supabase login, password ${generatedPassword}` : `IdP sub ${OWNER_SUB}`})`);
   console.log(`Items:    ${ITEMS.length}, routes: 2, BOMs: 3, jobs: ${specs.length}`);
 }
 
 main()
-  .catch((error) => {
+  .catch(async (error) => {
     console.error(error);
     process.exitCode = 1;
+    if (createdAuthUserId && SUPABASE_URL && SERVICE_ROLE_KEY) {
+      // Same posture as seed-colonel-kebabz.ts: do not leave a login behind for a tenant that was never completed.
+      const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+      await supabaseAdmin.auth.admin.deleteUser(createdAuthUserId).catch(() => {});
+      console.error("Removed the Supabase login created by this run. Run reset:demo to clear any partial tenant.");
+    }
   })
   .finally(async () => {
     await admin.$disconnect();
