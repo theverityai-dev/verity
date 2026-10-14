@@ -59,7 +59,8 @@ let generatedPassword: string | null = null;
 async function ensureOwnerLogin(): Promise<void> {
   if (OWNER_SUB) return;
   const supabaseAdmin = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-  generatedPassword = suggestPassword();
+  // A reset keeps the same login when DSEW_OWNER_PASSWORD is given, so credentials already shared stay valid.
+  generatedPassword = process.env.DSEW_OWNER_PASSWORD ?? suggestPassword();
   const created = await supabaseAdmin.auth.admin.createUser({
     email: OWNER_EMAIL,
     password: generatedPassword,
