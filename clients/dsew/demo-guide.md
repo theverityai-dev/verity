@@ -32,7 +32,26 @@ eleven stock items with opening cost.
 7. **J-0007 (enquiry)** shows a job with no quote yet. **New job** opens one.
 8. Phone: open the same pages at 390 px; the sidebar becomes a tab bar and tables become cards.
 
-## 3. Running it
+## 3a. On production (Vercel and Supabase), as of 2026-10-14
+
+Demos live on the same stack as every Verity client: the Vercel app at `https://app.theverityai.xyz` and the Supabase
+project, as their own tenant with their own Supabase login. They are synthetic and disposable.
+
+- **Isolation:** the demo is a tenant like any other, walled off by row-level security. It cannot see or change another
+  tenant's data. It does share the project's database connection pool and appears in HQ tenant lists, so it is flagged
+  `customFields.demo = true` to be recognisable.
+- **Create:** `NODE_OPTIONS="-r dotenv/config" npm run seed:dsew` with production env loaded. It creates the Supabase login
+  `owner@dsew.demo` with a generated password, printed once. Share the password through a private channel; it is not stored
+  in the repository.
+- **Reset to clean:** `npm run reset:demo` is a dry run; add `-- --yes` to delete. It removes only a tenant flagged `demo` with the
+  exact name `D & S Electric Works`, and its login if it belongs to no other tenant. Then run the seed again.
+- **Migrations:** `20261014100000_capability_project` and `20261014110000_project_job_customer` are applied to production
+  (additive; RLS enabled and forced on all ten new tables, checked).
+- **Side effect on live clients:** manufacturing screens moved to a new "Production" sidebar group, so a live client with
+  manufacturing active and read access now sees them (they were in a platform-only group before).
+- A later demo for another prospect follows the same pattern: its own seed, its own flagged tenant, its own login.
+
+## 3. Running it locally
 
 Needs Docker, Node, and the repo. Database: a disposable Postgres 16 on port 55432 with every migration applied
 (`npx prisma migrate deploy`). Identity: Keycloak 26 with a realm `dsew` that has a client `verity-web`
