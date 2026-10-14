@@ -11,14 +11,16 @@ import { PRIORITY_LABEL, dateText, inr } from "./format";
 
 export const dynamic = "force-dynamic";
 
-async function JobsPage() {
+async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: string }> }) {
+  const { customer: customerFilter } = await searchParams;
+  const onlyCustomer = customerFilter && /^[0-9a-f-]{36}$/i.test(customerFilter) ? customerFilter : undefined;
   installCapabilities();
   const actor = await requireActor();
 
   const data = await withTenant(actor.tenantId, async (tx) => {
     if (!(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PROJECT_JOB))) return null;
     const [rows, customers] = await Promise.all([
-      listJobs(tx),
+      listJobs(tx, { customerId: onlyCustomer }),
       tx.tradingCustomer.findMany({ where: { active: true }, orderBy: { displayName: "asc" }, select: { id: true, displayName: true } }),
     ]);
     return { rows, customers: customers.map((c) => ({ id: c.id, name: c.displayName })) };
@@ -44,7 +46,7 @@ async function JobsPage() {
     <>
       <PageHeader
         title="Jobs"
-        description="Every customer order from enquiry to delivery: quote, production, test, cost and margin in one place."
+        description={onlyCustomer ? `Jobs for ${customers.find((c) => c.id === onlyCustomer)?.name ?? "this customer"}. Open Jobs from the menu to see all.` : "Every customer order from enquiry to delivery: quote, production, test, cost and margin in one place."}
         actions={
           <>
             <NewCustomerButton />

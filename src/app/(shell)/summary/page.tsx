@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
@@ -86,7 +87,7 @@ async function SummaryPage() {
             </ul>
           )}
           <p className="mb-0 mt-3 text-[13px] text-text-tertiary">
-            {counts.productionOrders} production order{counts.productionOrders === 1 ? "" : "s"} running · <a href="/manufacturing/floor">Open production floor</a>
+            {counts.productionOrders} production order{counts.productionOrders === 1 ? "" : "s"} running · <Link href="/manufacturing/floor">Open production floor</Link>
           </p>
         </Panel>
 

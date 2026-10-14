@@ -74,6 +74,69 @@ Odoo Milestone: name, project, deadline, is_reached, task counts, `is_deadline_e
 - manager.io: a real session with the owner, to list the exact tabs, the Summary tiles, and the
   Customize behaviour he likes. Without it the "manager.io structure" is an assumption.
 
-## 7. V1 completeness (filled at Phase 7)
+## 7. V1 completeness gate (run 2026-10-14)
 
-Not yet run. `obvious-basics-checklist` and the Odoo cross-check are required before any DONE claim.
+Scope: the Jobs capability and its screens (`/summary`, `/jobs`, `/jobs/{id}`, quote document). Method: the
+`obvious-basics-checklist` categories against each entity, grounded in the code, then every Odoo `project/views/`
+file. "Deferred" always names who decides; here that is the product owner unless stated.
+
+### 7.1 Odoo `project/views/` cross-check
+
+| Odoo file | Concept | Decision |
+|---|---|---|
+| `project_project_views.xml` | Project list and form, header status, buttons | **Included**: Jobs list and job page, state-driven buttons |
+| `project_project_views.xml` | Kanban by stage | **Deferred**: product owner, after demo feedback |
+| `project_task_views.xml` | Tasks with assignee, deadline, dependencies, states incl. cancelled | **Included**; Cancel added today |
+| `project_task_views.xml` | Sub-tasks, task kanban, task calendar, Gantt | **Deferred**: the command accepts a parent task, the screen has no sub-task entry yet |
+| `project_milestone_views.xml` | Milestones with deadline and reached | **Included**, with a customer-visible flag |
+| `project_update_views.xml`, `project_portal_*`, `project_sharing_*` | Status updates and customer-facing view | **Deferred**: customer job-status page (ADR-030 passport pattern), Phase 6 |
+| `project_project_stage_views.xml`, `project_task_type_views.xml` | Tenant-defined stages | **Not applicable**: states are the closed ADR-009 categories; labels are tenant-renamable (MET-STA-004) |
+| `project_tags_views.xml` | Tags | **Deferred** |
+| `project_role_views.xml` | Project roles | **Not applicable**: platform Role and Permission already do this |
+| `rating_rating_views.xml` | Customer ratings | **Not applicable**: B2B engineered jobs, not tickets |
+| `digest_digest_views.xml` | Periodic summary email | **Deferred**: needs the notification outbox (ADR-039, authorised, not built) |
+| `mail_activity_*_views.xml` | Activity types and plans | **Deferred** |
+| `account_analytic_account_views.xml` | Cost and revenue per project | **Included** as derived costing and margin, never stored |
+| `res_partner_views.xml` | Customer form shows its projects | **Included** (2026-10-14): job links to the customer; "All jobs for this customer" filters the list |
+| `res_config_settings_views.xml` | Settings | **Not applicable** |
+
+Gate items from the skill: role/admin surface over every role-scoped surface (**Included**, platform People and Roles);
+dashboard shaped for the signed-in role (**Deferred**: Summary is the owner's view, a shop-floor or sales view is not built);
+calendar of dated events (**Deferred**: Summary "Coming up" lists milestones, no calendar grid); lost reason as a
+structured field (**Included**, from a tenant registry); source and campaign attribution (**Deferred**); job owner or
+salesperson (**Deferred**: a job records who opened it, not who owns it).
+
+### 7.2 Obvious basics, per entity
+
+| Entity | Category | Status | Evidence | Fix |
+|---|---|---|---|---|
+| Job | Data completeness | Done | create and edit forms cover title, customer, contact, priority, due date, notes | none |
+| Job | List view | Partial | search, sort, paging from `DataTable`; no status filter chips, no bulk actions | needs design |
+| Job | Per-row quick action | Partial | drill-in link on the reference; state moves live on the job page, not the row | needs design |
+| Job | Detail and history | Done | history shows who moved it and when; related quote, orders, tasks, time, costs on tabs | none |
+| Job | Numbering and status | Done | `J-0001` per-tenant sequence, status badge by category | none |
+| Job | Void not delete | Done | lost, cancelled and completed are states; nothing is deleted | none |
+| Job | Confirmation | Done | approve, finish, lost and cancel each ask first (added 2026-10-14) | none |
+| Quote | Print or PDF | Done | `/jobs/{id}/quote/{id}` printable document, same pattern as the PO and invoice (added 2026-10-14) | none |
+| Quote | Numbering | Done | job reference plus revision number | none |
+| Quote | Lifecycle | Done | open, approved, replaced, lost; replaced revisions stay on file | none |
+| Task | Data completeness | Partial | parent task is in the schema and command but has no form field | quick, deferred with sub-tasks |
+| Task | Lifecycle from the row | Done | Start, Done, Block, Resume, Cancel on the row; Cancel confirms (added 2026-10-14) | none |
+| Task | Edit after creation | Missing | no edit-task command or screen | needs design |
+| Milestone | Data completeness | Done | customer-visible checkbox added 2026-10-14 (the field existed with no way to set it) | none |
+| Milestone | Edit or delete | Missing | reach is the only change after creation | needs design |
+| Time entry, Cost entry | Void not delete | Done | void with reason, kept on record, drops out of totals | none |
+| Time entry | Data completeness | Partial | worker is a text label, not an HR employee | needs design |
+| Customer (trading record) | Party basics | Partial | contact, GSTIN, state code, credit limit exist; the running statement needs invoices from a job, not built | needs design |
+| All | Notifications | Missing | no notice when a quote is approved or a milestone is late | needs the notification outbox (ADR-039) |
+| All | Accessibility | Done | shared primitives; forms show field-level errors; no icon-only buttons added | none |
+| All | Overflow | Done | checked at 390 px on Jobs and the job tabs; no horizontal scroll | none |
+| All | Internal identifiers | Fixed | history showed `in_progress`; now reads "in progress"; command keys are never shown | none |
+| All | Defining lost reasons | Missing | `define_lost_reason` command has no screen; five reasons are seeded | quick, deferred |
+
+### 7.3 Proof
+
+Database tests: `src/test/capability-project.test.ts`, 7 pass. Live in the browser: new job, quote, approve, start, hold,
+resume, finish, task add and moves, task cancel, milestone add and reach, time log and void, cost add and void, edit job,
+mark lost, cancel job, customer list, quote document, dark theme, 390 px width. Not live: link production order (tested in
+the database tests only, no free order existed in the seed).

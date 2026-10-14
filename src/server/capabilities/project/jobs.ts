@@ -23,7 +23,7 @@ const asDate = (d: string) => new Date(`${d}T00:00:00.000Z`);
 
 /** Writes a state move to the job's history, so the page can show who moved it, when, and from where. */
 async function logState(ctx: CommandContext, jobId: string, from: string, to: string, commandKey: string): Promise<void> {
-  await recordActivity(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: jobId, commandKey, changes: diffFields({ status: from }, { status: to }) });
+  await recordActivity(ctx, { entityKey: ENTITY_PROJECT_JOB, entityId: jobId, commandKey, changes: diffFields({ status: from.replace(/_/g, " ") }, { status: to.replace(/_/g, " ") }) });
 }
 
 export const createJob: CommandDefinition<

@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
 import { FormDateField } from "@/components/ui/DateTimePicker";
-import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
+import { Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 
 /**
  * Every job action is a registered command run through `runCommand`: validation,
@@ -104,6 +104,46 @@ function QuickAction({
       </CommandButton>
       <CommandFailure failure={failure} title={`Could not ${label.toLowerCase()}`} />
     </span>
+  );
+}
+
+/** A one-click command that changes something hard to take back, so it asks first and says what follows. */
+function ConfirmAction({
+  command,
+  input,
+  label,
+  confirmLabel,
+  title,
+  description,
+  variant = "secondary",
+  size,
+  destructive = false,
+}: {
+  command: string;
+  input: unknown;
+  label: string;
+  /** The button inside the dialog, when it must read differently from the one that opened it. */
+  confirmLabel?: string;
+  title: string;
+  description: string;
+  variant?: "primary" | "secondary" | "ghost" | "danger";
+  size?: "sm" | "md";
+  destructive?: boolean;
+}) {
+  return (
+    <ActionDialog
+      command={command}
+      label={label}
+      title={title}
+      description="Please confirm."
+      submitLabel={confirmLabel ?? label}
+      variant={variant}
+      size={size}
+      destructive={destructive}
+      build={() => input}
+    >
+      <p className="m-0 text-[15px] text-text-secondary">{description}</p>
+    </ActionDialog>
   );
 }
 
@@ -218,10 +258,10 @@ export function JobActions({
   return (
     <>
       {state === "quoted" && openQuoteId && (
-        <QuickAction command="verity.project.approve_quote" input={{ quoteId: openQuoteId }} label="Customer approved the quote" variant="primary" />
+        <ConfirmAction command="verity.project.approve_quote" input={{ quoteId: openQuoteId }} label="Customer approved the quote" title="Customer approved the quote" description="The quoted price is frozen as the agreed value and the job opens for work. Later revisions are no longer possible." variant="primary" />
       )}
       {state === "approved" && <QuickAction command="verity.project.start_job" input={{ jobId }} label="Start work" variant="primary" />}
-      {state === "in_progress" && <QuickAction command="verity.project.complete_job" input={{ jobId }} label="Finish job" variant="primary" />}
+      {state === "in_progress" && <ConfirmAction command="verity.project.complete_job" input={{ jobId }} label="Finish job" title="Finish job" description="The job becomes read-only: no more tasks, time or costs can be added. It will refuse if a production order or task is still open." variant="primary" />}
       {state === "in_progress" && <QuickAction command="verity.project.hold_job" input={{ jobId }} label="Put on hold" />}
       {state === "on_hold" && <QuickAction command="verity.project.resume_job" input={{ jobId }} label="Resume" variant="primary" />}
       {(state === "enquiry" || state === "quoted") && (
@@ -374,6 +414,7 @@ const TASK_MOVES: Record<string, Array<{ to: string; label: string; variant?: "p
   in_progress: [{ to: "done", label: "Done", variant: "primary" }, { to: "blocked", label: "Block", variant: "ghost" }],
   blocked: [{ to: "in_progress", label: "Resume", variant: "primary" }, { to: "todo", label: "Back to list", variant: "ghost" }],
 };
+const CANCELLABLE = ["todo", "in_progress", "blocked"];
 
 export function TaskMoves({ taskId, state }: { taskId: string; state: string }) {
   const moves = TASK_MOVES[state] ?? [];
@@ -382,6 +423,19 @@ export function TaskMoves({ taskId, state }: { taskId: string; state: string }) 
       {moves.map((m) => (
         <QuickAction key={m.to} command="verity.project.set_task_state" input={{ taskId, toState: m.to }} label={m.label} variant={m.variant ?? "secondary"} size="sm" />
       ))}
+      {CANCELLABLE.includes(state) && (
+        <ConfirmAction
+          command="verity.project.set_task_state"
+          input={{ taskId, toState: "cancelled" }}
+          label="Cancel"
+          confirmLabel="Cancel task"
+          title="Cancel task"
+          description="The task stays on record as cancelled and no longer counts toward progress or blocks the job from finishing."
+          variant="ghost"
+          size="sm"
+          destructive
+        />
+      )}
     </span>
   );
 }
@@ -396,7 +450,7 @@ export function AddMilestoneButton({ jobId }: { jobId: string }) {
       title="Add milestone"
       description="A dated checkpoint, such as core ready, coils cast or test report issued."
       submitLabel="Add milestone"
-      build={(f) => ({ jobId, name: formText(f, "name"), dueDate: formOptional(f, "dueDate") })}
+      build={(f) => ({ jobId, name: formText(f, "name"), dueDate: formOptional(f, "dueDate"), customerVisible: f.get("customerVisible") === "on" })}
     >
       <Field label="Milestone" htmlFor="ms-name" required>
         <Input id="ms-name" name="name" required minLength={2} maxLength={120} />
@@ -404,8 +458,15 @@ export function AddMilestoneButton({ jobId }: { jobId: string }) {
       <Field label="Due" htmlFor="ms-due">
         <FormDateField name="dueDate" id="ms-due" />
       </Field>
+      <VisibleToCustomer />
     </ActionDialog>
   );
+}
+
+/** Whether the customer's job-status view may show this checkpoint. Controlled so the tick paints. */
+function VisibleToCustomer() {
+  const [on, setOn] = useState(true);
+  return <Checkbox name="customerVisible" checked={on} onChange={(e) => setOn(e.target.checked)} label="Show to the customer" />;
 }
 
 export function ReachMilestoneButton({ milestoneId }: { milestoneId: string }) {

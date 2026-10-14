@@ -66,12 +66,22 @@ margin checked against hand-worked figures, void-not-delete for time and cost, t
 approve quote, start, hold, resume, finish, add task, task start and done, add milestone, log time, add cost, void a cost.
 Summary also checked at 390 px.
 
-**BUILT, not clicked through:** edit job, mark lost, cancel job, link production order, reach a milestone, void a time
-entry, dark theme on the new screens. Mark lost, link order and the milestone/void rules are covered by the database tests.
+Added and clicked through on 2026-10-14: edit job, mark lost (reason from the list), cancel job, reach a milestone, void a
+time entry, cancel a task, the customer list, a printable quote document, dark theme, 390 px width, and a confirmation step
+before approving a quote, finishing a job or cancelling a task.
+
+**Customer:** every job points at a customer record (the trading customer master, with GSTIN, phone and email); the name on
+the job is a snapshot taken when it was opened. New job picks from the list, and New customer adds one. The job page links to the
+customer and to "All jobs for this customer".
+
+**BUILT, not clicked through:** link production order (database tests only; the seed leaves no free order).
+
+**Completeness gate:** run, see `reference-parity/README.md` section 7.
 
 **NOT YET BUILT:**
-- Customer as a linked Party record (INV-003); the customer is a name and contact snapshot on the job.
 - Time entries linked to HR employees; the worker is a label.
+- Edit a task or a milestone after creating it; a screen to define lost reasons (five are seeded).
+- A job owner or salesperson, a calendar view, a status filter on the Jobs list, notifications.
 - A first-class test report document. Today test results are the manufacturing QC checkpoints on the testing stage.
 - The customer-facing job status page (the ADR-030 passport pattern could carry it).
 - Invoicing and payments for a job (accounting and trading own those).

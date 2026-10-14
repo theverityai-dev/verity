@@ -106,9 +106,10 @@ export type JobRow = {
   progress: number | null;
 };
 
-export async function listJobs(tx: TenantScopedClient): Promise<JobRow[]> {
+export async function listJobs(tx: TenantScopedClient, filter: { customerId?: string } = {}): Promise<JobRow[]> {
   const [jobs, categories] = await Promise.all([
     tx.projectJob.findMany({
+      where: filter.customerId ? { customerId: filter.customerId } : undefined,
       orderBy: { number: "desc" },
       include: { tasks: { select: { state: true, weight: true } }, quotes: { where: { status: "open" }, select: { amountMinor: true } } },
     }),
