@@ -91,7 +91,7 @@ export function registerProjectCapability(): void {
       {
         href: "/customers",
         label: "Customers",
-        group: "Production",
+        group: "Trade",
         order: 19,
         icon: "parties",
         requiresEntity: ENTITY_CUSTOMER,
@@ -100,7 +100,7 @@ export function registerProjectCapability(): void {
       {
         href: "/jobs",
         label: "Jobs",
-        group: "Production",
+        group: "Trade",
         order: 20,
         icon: "workspace",
         requiresEntity: ENTITY_PROJECT_JOB,

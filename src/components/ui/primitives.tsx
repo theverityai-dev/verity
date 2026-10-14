@@ -119,15 +119,27 @@ export function PageHeader({
   description,
   actions,
   wrapTitle = false,
+  back,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** Where the list this record belongs to lives, shown as an iOS-style back link above the title. */
+  back?: { href: string; label: string };
   /** Let a long title wrap instead of being cut with an ellipsis (a record title that carries meaning, such as a job). */
   wrapTitle?: boolean;
 }) {
   return (
     <header className="mb-6">
+      {back && (
+        <Link
+          href={back.href}
+          className="mb-1 inline-flex min-h-8 items-center gap-0.5 text-[15px] text-accent-ink no-underline hover:underline"
+        >
+          <Icon name="chevronRight" size={16} className="rotate-180" />
+          {back.label}
+        </Link>
+      )}
       <div className="min-w-0">
         <h1 className={wrapTitle ? "break-words" : "truncate"}>{title}</h1>
         {description && (
@@ -740,8 +752,10 @@ const HEALTH_PRESENTATION: Record<string, { label: string; color: string }> = {
 export function HealthBadge({ health }: { health: string }) {
   const preset = HEALTH_PRESENTATION[health] ?? { label: health, color: "bg-[var(--color-text-tertiary)]" };
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap text-[13px] text-text">
-      <span aria-hidden="true" className={cx("size-[7px] shrink-0 rounded-full", preset.color)} />
+    // A solid system-fill pill (ADR-033: no translucency on badges) so a status reads as
+    // a status at a glance, not as a stray dot beside text.
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-control)] py-0.5 pl-2 pr-2.5 text-[13px] font-medium text-text">
+      <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", preset.color)} />
       {preset.label}
     </span>
   );

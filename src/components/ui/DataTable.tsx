@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { EmptyState, HealthBadge, StateBadge, Surface } from "./primitives";
 import { Icon } from "./icons";
@@ -111,7 +112,7 @@ export function Cell({
     column.variant === "link" && column.href ? (
       <Link
         href={fillTemplate(column.href, row)}
-        className="text-text no-underline hover:text-accent-ink hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:min-w-11 max-sm:items-center"
+        className="font-medium text-accent-ink no-underline hover:underline max-sm:inline-flex max-sm:min-h-11 max-sm:min-w-11 max-sm:items-center"
       >
         {value}
       </Link>
@@ -185,6 +186,18 @@ export function DataTable({
   const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const router = useRouter();
+
+  // A table whose rows lead somewhere should let the whole row do it: the link
+  // in the first cell stays the keyboard and screen-reader path, and the row is
+  // the mouse and touch target. Controls inside a row keep their own behaviour.
+  const linkColumn = columns.find((c) => c.variant === "link" && c.href);
+  const openRow = (row: Record<string, unknown>) => (event: React.MouseEvent) => {
+    if (!linkColumn?.href) return;
+    if ((event.target as HTMLElement).closest("a,button,input,select,textarea,label")) return;
+    if (window.getSelection()?.toString()) return;
+    router.push(fillTemplate(linkColumn.href, row));
+  };
   // Selection exists to feed bulk actions. Without any, a checkbox per row is a
   // control that does nothing (iOS shows selection circles only in edit mode).
   const selectable = Boolean(bulkActions);
@@ -377,7 +390,11 @@ export function DataTable({
                   <tr
                     key={key}
                     data-selected={selected.has(key) || undefined}
-                    className="border-b border-line transition-colors last:border-b-0 hover:bg-[var(--color-control)] data-selected:bg-accent-subtle"
+                    onClick={openRow(row)}
+                    className={
+                      "border-b border-line transition-colors last:border-b-0 hover:bg-[var(--color-control)] data-selected:bg-accent-subtle" +
+                      (linkColumn ? " cursor-pointer" : "")
+                    }
                   >
                     {selectable && (
                     <td className="w-11 py-1 pl-0 pr-1 align-middle">
@@ -421,15 +438,17 @@ export function DataTable({
             {shown.map((row) => {
               const [lead, ...rest] = columns;
               return (
-                <li key={String(row[rowKey])} className="flex flex-col gap-2 py-4">
+                <li key={String(row[rowKey])} onClick={openRow(row)} className={"flex flex-col gap-2 py-4" + (linkColumn ? " cursor-pointer" : "")}>
                   <div className="text-[15px]">
                     <Cell column={lead!} row={row} lead />
                   </div>
-                  <div className="flex flex-col gap-1">
+                  {/* Two columns, label over value: five or six short facts used to run
+                      to a full screen per record, so a list of five jobs was one scroll. */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                     {rest.map((c) => (
-                      <div key={c.key} className="flex items-baseline justify-between gap-4">
-                        <span className="shrink-0 text-[12px] text-text-tertiary">{c.header}</span>
-                        <span className={"min-w-0 text-right text-[13px] " + (c.numeric ? "tabular" : "")}>
+                      <div key={c.key} className="flex min-w-0 flex-col">
+                        <span className="text-[12px] text-text-tertiary">{c.header}</span>
+                        <span className={"min-w-0 text-[13px] " + (c.numeric ? "tabular" : "")}>
                           <Cell column={c} row={row} lead={false} />
                         </span>
                       </div>

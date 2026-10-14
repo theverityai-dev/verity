@@ -41,7 +41,7 @@ async function RoutesPage() {
   return (
     <>
       <PageHeader
-        title="Production routes"
+        title="Routes"
         description="The ordered stages an order passes through. Each factory defines its own chain; an order can also use its own stages."
         actions={<CreateRouteForm />}
       />

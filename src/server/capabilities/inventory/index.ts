@@ -731,7 +731,7 @@ export function registerInventoryCapability(): void {
         label: "Purchase orders",
         group: "Inventory",
         order: 32,
-        icon: "stock",
+        icon: "purchases",
         requiresEntity: ENTITY_INVENTORY_PURCHASE_ORDER,
         shells: ["platform", "operations"],
       },

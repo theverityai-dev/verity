@@ -54,24 +54,24 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
   }));
 
   const chip = (active: boolean) =>
-    "rounded-full border px-3 py-1 text-[13px] no-underline transition-colors " +
+    "shrink-0 whitespace-nowrap rounded-full border px-3 py-1 text-[13px] no-underline transition-colors " +
     (active ? "border-accent bg-accent-subtle text-text" : "border-line text-text-secondary hover:border-line-strong");
 
   return (
     <>
       <PageHeader
-        title="Production floor"
+        title="Shop floor"
         description="Open stages of running orders. Work can only start when everything before it is done."
       />
 
       <StatRow cols={4} className="mb-6">
         <Stat label="Open stages" value={all.length} />
         <Stat label="Ready to start" value={all.filter((r) => r.actionable).length} />
-        <Stat label="On hold" value={all.filter((r) => r.state === "on_hold").length} />
-        <Stat label="Rework" value={all.filter((r) => r.reworkOfId).length} />
+        <Stat tone={all.some((r) => r.state === "on_hold") ? "warning" : "default"} label="On hold" value={all.filter((r) => r.state === "on_hold").length} />
+        <Stat tone={all.some((r) => r.reworkOfId) ? "warning" : "default"} label="Rework" value={all.filter((r) => r.reworkOfId).length} />
       </StatRow>
 
-      <nav aria-label="Filter by stage" className="mb-4 flex flex-wrap gap-2">
+      <nav aria-label="Filter by stage" className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1">
         <Link href="/manufacturing/floor" className={chip(!stage)}>All stages ({all.length})</Link>
         {stages.map((s) => (
           <Link key={s.stageKey} href={`/manufacturing/floor?stage=${s.stageKey}`} className={chip(stage === s.stageKey)}>

@@ -434,7 +434,7 @@ export function TaskMoves({ taskId, state, task }: { taskId: string; state: stri
         <ConfirmAction
           command="verity.project.set_task_state"
           input={{ taskId, toState: "cancelled" }}
-          label="Cancel"
+          label="Cancel task"
           confirmLabel="Cancel task"
           title="Cancel task"
           description="The task stays on record as cancelled and no longer counts toward progress or blocks the job from finishing."

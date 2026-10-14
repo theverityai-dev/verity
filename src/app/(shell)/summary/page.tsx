@@ -44,13 +44,6 @@ async function SummaryPage() {
     <>
       <PageHeader title="Summary" description="Where every job stands today, what is on the shop floor, and what needs attention." />
 
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
-        <Stat label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs" />
-        <Stat label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs" />
-        <Stat tone={counts.overdue > 0 ? "danger" : "default"} label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
-      </StatRow>
-
       <div className="mb-6">
         <Panel title={data.attention.length > 0 ? `Needs attention (${data.attention.length})` : "Needs attention"}>
           {data.attention.length === 0 ? (
@@ -78,6 +71,13 @@ async function SummaryPage() {
           )}
         </Panel>
       </div>
+
+      <StatRow cols={4} className="mb-6">
+        <Stat label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
+        <Stat label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs" />
+        <Stat label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs" />
+        <Stat tone={counts.overdue > 0 ? "danger" : "default"} label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
+      </StatRow>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-2">
@@ -128,7 +128,7 @@ async function SummaryPage() {
             </ul>
           )}
           <p className="mb-0 mt-3 text-[13px] text-text-tertiary">
-            {counts.productionOrders} production order{counts.productionOrders === 1 ? "" : "s"} running · <Link href="/manufacturing/floor">Open production floor</Link>
+            {counts.productionOrders} production order{counts.productionOrders === 1 ? "" : "s"} running · <Link href="/manufacturing/floor">Open shop floor</Link>
           </p>
         </Panel>
 

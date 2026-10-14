@@ -310,8 +310,9 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
     <>
       <PageHeader
         wrapTitle
-        title={`${detail.reference} · ${job.title}`}
-        description={`${job.customerName}${job.dueDate ? ` · promised by ${dateText(job.dueDate)}` : ""}`}
+        back={{ href: "/jobs", label: "Jobs" }}
+        title={job.title}
+        description={`${detail.reference} · ${job.customerName}${job.dueDate ? ` · promised by ${dateText(job.dueDate)}` : ""}`}
         actions={
           <>
             <StateBadge category={detail.category} label={job.state.replace(/_/g, " ")} />

@@ -24,9 +24,9 @@ export function AuthShell({ title, lead, children }: { title: string; lead: stri
               <div className="mt-9">{children}</div>
             </div>
           </div>
-          <div className="flex flex-col items-center gap-2 pb-2 pt-10">
-            <VerityLockup size={20} className="text-text" />
-            <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">Operate. Optimize. Outperform.</p>
+          {/* The left panel carries the lockup on wide screens; below that it is hidden, so the mark is shown here instead. */}
+          <div className="flex justify-center pb-2 pt-10 lg:hidden">
+            <VerityLockup size={22} className="text-text" />
           </div>
         </div>
     </main>

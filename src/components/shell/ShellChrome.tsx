@@ -161,15 +161,16 @@ export function ShellChrome({
    * being given strictly less structure than a screen-reader user, which is a
    * strange way round.
    *
-   * A single-item group still gets no heading: a heading over one link is
-   * noise, and "Overview" sits alone at the top.
+   * Every group after the first gets its heading, even with one link: without
+   * it a lone item such as Accounting reads as a member of the group above.
+   * The first group, "Overview", sits alone at the top with no heading.
    */
   function navList(rail = false) {
     return (
       <nav aria-label="Platform" className="flex flex-col gap-1">
-        {areas.map((area) => (
+        {areas.map((area, areaIndex) => (
           <ul key={area.group} className="m-0 flex list-none flex-col gap-1 p-0">
-            {area.items.length > 1 && !rail ? (
+            {areaIndex > 0 && area.items.length > 0 && !rail ? (
               <li
                 aria-hidden="true"
                 className="px-3 pt-5 pb-1 text-[13px] font-semibold text-text-secondary"
@@ -379,6 +380,15 @@ export function ShellChrome({
             {/* Everyone has notifications (their own rows only), so the bell is
                 not gated on any permission. It used to open Audit for those who
                 could read it; Audit stays in the sidebar. */}
+            <button
+              type="button"
+              title="Assistant"
+              onClick={() => window.dispatchEvent(new Event("verity:toggle-assistant"))}
+              className="glass-control relative grid size-11 cursor-pointer place-items-center rounded-full text-text-secondary transition-colors hover:text-text active:opacity-70"
+            >
+              <Icon name="assistant" size={19} />
+              <span className="sr-only">Assistant</span>
+            </button>
             <Link
               href="/notifications"
               title="Notifications"

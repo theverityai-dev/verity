@@ -65,6 +65,10 @@ export type IconName =
   | "clock"
   | "flag"
   | "manufacturing"
+  | "bom"
+  | "route"
+  | "floor"
+  | "batch"
   | "tag"
   | "user"
   | "wallet";
@@ -169,6 +173,14 @@ const PATHS: Record<IconName, string> = {
   flag: "M6 21V4M6 5h11l-2 4 2 4H6",
   // manufacturing: a sawtooth-roof works.
   manufacturing: "M4 20V11l5 3v-3l5 3V5h4v15zM4 20h16",
+  // bom: a ruled parts list. What goes into the thing being built.
+  bom: "M6 4h12v16H6zM9 8h6M9 12h6M9 16h3",
+  // route: two stations joined by the path work takes between them.
+  route: "M4 6a2 2 0 1 0 4 0 2 2 0 1 0-4 0zM16 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0zM8 6h6a3 3 0 0 1 0 6h-4a3 3 0 0 0 0 6h6",
+  // floor: a live pulse line. What is running on the shop floor right now.
+  floor: "M3 12h4l2-6 4 12 2-6h6",
+  // batch: four lots side by side.
+  batch: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
   // tag: a coupon, notched ticket with a tear line.
   tag: "M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10",
   // user: one guest — head and shoulders in a rounded frame.

@@ -63,7 +63,7 @@ async function ManufacturingPage() {
   return (
     <>
       <PageHeader
-        title="Manufacturing"
+        title="Manufacturing orders"
         description="Turn components into finished goods. Starting an order consumes stock; completing it receives the output."
         actions={<CreateOrderForm locations={data.locations} items={data.items} />}
       />
