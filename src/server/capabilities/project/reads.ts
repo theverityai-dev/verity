@@ -53,6 +53,38 @@ export async function jobCosting(tx: TenantScopedClient, jobId: string): Promise
   };
 }
 
+/**
+ * What has been billed and collected for a job, from the invoice and receipt records. Nothing is stored:
+ * outstanding is billed minus received, and "still to bill" is the agreed order value minus the amount
+ * billed before tax. Voided entries are kept on the lists but never counted.
+ */
+export async function jobBilling(tx: TenantScopedClient, jobId: string) {
+  const [job, invoices, receipts] = await Promise.all([
+    tx.projectJob.findUniqueOrThrow({ where: { id: jobId } }),
+    tx.projectInvoice.findMany({ where: { jobId }, orderBy: [{ issuedOn: "desc" }, { createdAt: "desc" }] }),
+    tx.projectReceipt.findMany({ where: { jobId }, orderBy: [{ receivedOn: "desc" }, { createdAt: "desc" }], include: { invoice: { select: { number: true } } } }),
+  ]);
+  const liveInvoices = invoices.filter((i) => !i.voidedAt);
+  const liveReceipts = receipts.filter((r) => !r.voidedAt);
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+  const billedExclMinor = sum(liveInvoices.map((i) => i.amountMinor));
+  const taxMinor = sum(liveInvoices.map((i) => i.taxMinor));
+  const billedTotalMinor = billedExclMinor + taxMinor;
+  const receivedMinor = sum(liveReceipts.map((r) => r.amountMinor));
+  const receivedBy = new Map<string, number>();
+  for (const r of liveReceipts) if (r.invoiceId) receivedBy.set(r.invoiceId, (receivedBy.get(r.invoiceId) ?? 0) + r.amountMinor);
+  return {
+    invoices: invoices.map((i) => ({ ...i, totalMinor: i.amountMinor + i.taxMinor, receivedMinor: receivedBy.get(i.id) ?? 0 })),
+    receipts,
+    billedExclMinor,
+    taxMinor,
+    billedTotalMinor,
+    receivedMinor,
+    outstandingMinor: billedTotalMinor - receivedMinor,
+    toBillMinor: job.quotedValueMinor === null ? null : Math.max(0, job.quotedValueMinor - billedExclMinor),
+  };
+}
+
 type TaskLite = { state: string; weight: number };
 
 /** Weighted share of tasks done, ignoring cancelled ones. Null when there are no tasks to measure. */
@@ -160,8 +192,9 @@ export async function jobDetail(tx: TenantScopedClient, jobId: string) {
     },
   });
   if (!job) return null;
-  const [costing, jobCategories, taskCategories, lostReasons, freeOrders] = await Promise.all([
+  const [costing, billing, jobCategories, taskCategories, lostReasons, freeOrders] = await Promise.all([
     jobCosting(tx, jobId),
+    jobBilling(tx, jobId),
     categoryMap(tx, ENTITY_PROJECT_JOB),
     categoryMap(tx, ENTITY_PROJECT_TASK),
     tx.projectLostReason.findMany({ where: { active: true }, orderBy: { label: "asc" }, select: { id: true, label: true } }),
@@ -177,6 +210,7 @@ export async function jobDetail(tx: TenantScopedClient, jobId: string) {
     category: jobCategories.get(job.state) ?? "Draft",
     taskCategories,
     costing,
+    billing,
     lostReasons,
     freeOrders,
     progress: taskProgress(job.tasks) ?? (await stageProgress(tx, [job.id])).get(job.id) ?? null,
@@ -242,6 +276,25 @@ export async function summaryData(tx: TenantScopedClient) {
 
   const working = rows.filter((r) => ["approved", "in progress", "on hold"].includes(r.state));
 
+  // Money to collect: what has been invoiced and not yet received, per job. Derived, never stored.
+  const [liveInvoices, liveReceipts] = await Promise.all([
+    tx.projectInvoice.findMany({ where: { voidedAt: null }, include: { job: { select: { id: true, number: true, customerName: true } } } }),
+    tx.projectReceipt.findMany({ where: { voidedAt: null }, select: { jobId: true, amountMinor: true } }),
+  ]);
+  const owed = new Map<string, { jobId: string; jobReference: string; customer: string; outstandingMinor: number }>();
+  for (const i of liveInvoices) {
+    const e = owed.get(i.jobId) ?? { jobId: i.jobId, jobReference: jobReference(i.job.number), customer: i.job.customerName, outstandingMinor: 0 };
+    e.outstandingMinor += i.amountMinor + i.taxMinor;
+    owed.set(i.jobId, e);
+  }
+  for (const r of liveReceipts) {
+    const e = owed.get(r.jobId);
+    if (e) e.outstandingMinor -= r.amountMinor;
+  }
+  const collectAll = [...owed.values()].filter((e) => e.outstandingMinor > 0).sort((a, b) => b.outstandingMinor - a.outstandingMinor);
+  const receivableMinor = collectAll.reduce((s, e) => s + e.outstandingMinor, 0);
+  const collect = collectAll.slice(0, 6);
+
   // Most damaging first. Each item names the job (when it has one), what is wrong, and the date it concerns;
   // the page words the next action. Everything here is a fact over stored records, nothing is predicted.
   type Attention = { kind: "job_late" | "milestone_late" | "task_blocked" | "task_late" | "quote_expired" | "stock_low"; jobId: string | null; jobReference: string | null; subject: string; date: string | null; extra: string | null };
@@ -256,6 +309,8 @@ export async function summaryData(tx: TenantScopedClient) {
   ].slice(0, 8);
 
   return {
+    receivableMinor,
+    collect,
     attention,
     counts: {
       enquiries: rows.filter((r) => r.state === "enquiry").length,

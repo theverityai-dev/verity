@@ -215,6 +215,8 @@ model Tenant {
   projectTimeEntries ProjectTimeEntry[]
   projectCostEntries ProjectCostEntry[]
   projectJobOrders   ProjectJobOrder[]
+  projectInvoices    ProjectInvoice[]
+  projectReceipts    ProjectReceipt[]
 
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
@@ -6787,6 +6789,8 @@ model ProjectJob {
   timeEntries ProjectTimeEntry[]
   costEntries ProjectCostEntry[]
   orders      ProjectJobOrder[]
+  invoices    ProjectInvoice[]
+  receipts    ProjectReceipt[]
 
   @@unique([tenantId, number])
   @@index([tenantId, state])
@@ -6968,4 +6972,56 @@ model ProjectJobOrder {
 
   @@index([tenantId, jobId])
   @@map("project_job_order")
+}
+
+/// An invoice the business raised for a job, recorded as entered. Not a GST invoice generator: tax is the
+/// figure the business typed, never computed here. Voided with a reason, never edited or deleted.
+model ProjectInvoice {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  jobId       String    @map("job_id") @db.Uuid
+  /// advance | progress | final
+  kind        String
+  number      String
+  issuedOn    DateTime  @map("issued_on") @db.Date
+  /// Amount before tax, in minor units.
+  amountMinor Int       @map("amount_minor")
+  taxMinor    Int       @default(0) @map("tax_minor")
+  note        String?
+  voidedAt    DateTime? @map("voided_at")
+  voidReason  String?   @map("void_reason")
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job      ProjectJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  receipts ProjectReceipt[]
+
+  @@unique([tenantId, jobId, id], map: "project_invoice_tenant_job_id_key")
+  @@index([tenantId, jobId])
+  @@map("project_invoice")
+}
+
+/// Money received against one invoice of a job.
+model ProjectReceipt {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  jobId       String    @map("job_id") @db.Uuid
+  invoiceId   String?   @map("invoice_id") @db.Uuid
+  receivedOn  DateTime  @map("received_on") @db.Date
+  amountMinor Int       @map("amount_minor")
+  /// bank | cheque | cash | upi | other
+  method      String
+  reference   String?
+  voidedAt    DateTime? @map("voided_at")
+  voidReason  String?   @map("void_reason")
+  createdById String?   @map("created_by_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  job     ProjectJob      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  invoice ProjectInvoice? @relation(fields: [tenantId, jobId, invoiceId], references: [tenantId, jobId, id], onDelete: Restrict, onUpdate: NoAction, map: "project_receipt_invoice_fkey")
+
+  @@index([tenantId, jobId])
+  @@map("project_receipt")
 }

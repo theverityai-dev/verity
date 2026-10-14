@@ -28,6 +28,7 @@ import {
   voidCostEntry,
   voidTimeEntry,
 } from "./work";
+import { recordInvoice, recordReceipt, voidInvoice, voidReceipt } from "./billing";
 import { ENTITY_CUSTOMER } from "@/server/capabilities/trading/keys";
 import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY } from "./shared";
 
@@ -48,8 +49,12 @@ import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY } from "./shared";
  *  - Margin: quoted value minus the three costs. Derived on every read, never stored.
  *
  * Customer: a job points at the trading customer master (`customerId`); the name on the job is
- * a snapshot taken when it was opened. NOT YET BUILT: HR employees for time entries; invoicing
- * and payments from a job, which belong to accounting and trading, not here.
+ * a snapshot taken when it was opened.
+ *
+ * Billing: invoices the business raised and money received are RECORDED against the job as entered
+ * (billing.ts); nothing is computed. Generating a GST invoice from a job is NOT built, because trading's
+ * invoice engine bills stocked catalogue products issued from a godown and a made-to-order job is not that.
+ * NOT YET BUILT: HR employees for time entries.
  */
 
 export {
@@ -61,11 +66,14 @@ export {
   ENTITY_PROJECT_TIME_ENTRY,
   ENTITY_PROJECT_COST_ENTRY,
   ENTITY_PROJECT_LOST_REASON,
+  ENTITY_PROJECT_INVOICE,
+  ENTITY_PROJECT_RECEIPT,
   jobReference,
 } from "./shared";
 export * from "./jobs";
 export * from "./work";
-export { jobCosting, jobDetail, listJobs, summaryData, taskProgress } from "./reads";
+export * from "./billing";
+export { jobBilling, jobCosting, jobDetail, listJobs, summaryData, taskProgress } from "./reads";
 
 /**
  * Where a person who can read jobs lands. The generic Overview is platform vocabulary, so a
@@ -133,6 +141,10 @@ export function registerProjectCapability(): void {
     voidTimeEntry,
     addCost,
     voidCostEntry,
+    recordInvoice,
+    voidInvoice,
+    recordReceipt,
+    voidReceipt,
   ]) {
     registerCommand(command as never);
   }

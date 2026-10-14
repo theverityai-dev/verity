@@ -9,9 +9,13 @@ export const ENTITY_PROJECT_TASK = "verity.project.task";
 export const ENTITY_PROJECT_TIME_ENTRY = "verity.project.time_entry";
 export const ENTITY_PROJECT_COST_ENTRY = "verity.project.cost_entry";
 export const ENTITY_PROJECT_LOST_REASON = "verity.project.lost_reason";
+export const ENTITY_PROJECT_INVOICE = "verity.project.invoice";
+export const ENTITY_PROJECT_RECEIPT = "verity.project.receipt";
 
 export const JOB_PRIORITIES = ["low", "normal", "high", "urgent"] as const;
 export const COST_KINDS = ["outsourced", "testing", "freight", "other"] as const;
+export const INVOICE_KINDS = ["advance", "progress", "final"] as const;
+export const RECEIPT_METHODS = ["bank", "cheque", "cash", "upi", "other"] as const;
 
 /** Job states that still accept work, time and cost. Terminal states are read-only (INV-002). */
 export const WORKING_JOB_STATES = ["approved", "in_progress", "on_hold"];

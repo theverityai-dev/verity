@@ -16,7 +16,7 @@ export function ActionTable({
   columns,
   emptyTitle,
 }: {
-  kind: "task" | "milestone" | "time" | "cost" | "reason";
+  kind: "task" | "milestone" | "time" | "cost" | "reason" | "invoice" | "receipt";
   /** False once the job is finished: no row action is offered, and the server would refuse it anyway. */
   working: boolean;
   caption: string;
@@ -48,6 +48,8 @@ export function ActionTable({
           ) : null;
         }
         if (kind === "reason") return <LostReasonToggle reasonId={id} active={row.active === "yes"} />;
+        if (kind === "invoice") return row.void === "no" ? <VoidEntryButton kind="invoice" entryId={id} /> : null;
+        if (kind === "receipt") return row.void === "no" ? <VoidEntryButton kind="receipt" entryId={id} /> : null;
         if (kind === "time") return row.void === "no" ? <VoidEntryButton kind="time" entryId={id} /> : null;
         return row.void === "no" ? <VoidEntryButton kind="cost" entryId={id} /> : null;
       }}

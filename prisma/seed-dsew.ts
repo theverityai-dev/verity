@@ -528,6 +528,25 @@ async function main() {
   await executeCommand(owner, project.addCost, { jobId: sunrise!, kind: "freight", description: "Delivery to Pune", supplierName: "Malwa Transport", amountMinor: 3_200_000, incurredOn: day(-12) });
   await executeCommand(owner, project.completeJob, { jobId: sunrise! });
 
+  // Billing, recorded as the business raised it (tax as printed on each invoice). Billing continues after a job
+  // is finished, so the completed job carries its final invoice and receipts too.
+  const invoice = async (jobId: string, kind: "advance" | "progress" | "final", no: number, ago: number, rupees: number, taxRupees: number) =>
+    executeCommand(owner, project.recordInvoice, { jobId, kind, number: `DSEW/26-27/${String(no).padStart(3, "0")}`, issuedOn: day(-ago), amountMinor: rupees * 100, taxMinor: taxRupees * 100 });
+  const receive = async (jobId: string, invoiceId: string, ago: number, rupees: number, method: "bank" | "cheque" | "upi", reference: string) =>
+    executeCommand(owner, project.recordReceipt, { jobId, invoiceId, receivedOn: day(-ago), amountMinor: rupees * 100, method, reference });
+
+  const iitAdvance = await invoice(iit!, "advance", 41, 22, 575_000, 103_500);
+  await receive(iit!, iitAdvance.id, 18, 678_500, "bank", "NEFT IITI/0910");
+  const rauAdvance = await invoice(rau!, "advance", 44, 12, 300_000, 54_000);
+  await receive(rau!, rauAdvance.id, 8, 200_000, "bank", "NEFT RAU/4471");
+  const emAdvance = await invoice(magnet!, "advance", 46, 14, 256_000, 46_080);
+  await receive(magnet!, emAdvance.id, 11, 302_080, "cheque", "Cheque 004512");
+  await invoice(pithampur!, "advance", 49, 3, 155_000, 27_900);
+  const sunAdvance = await invoice(sunrise!, "advance", 33, 38, 160_000, 28_800);
+  await receive(sunrise!, sunAdvance.id, 35, 188_800, "bank", "NEFT SUN/2210");
+  const sunFinal = await invoice(sunrise!, "final", 38, 10, 160_000, 28_800);
+  await receive(sunrise!, sunFinal.id, 4, 188_800, "upi", "UPI 5821993");
+
   console.log("\nD & S Electric Works demo tenant is ready.\n");
   console.log(`Tenant:   ${tenantId}`);
   console.log(`Owner:    ${OWNER_EMAIL} (${generatedPassword ? `Supabase login, password ${generatedPassword}` : `IdP sub ${OWNER_SUB}`})`);

@@ -19,6 +19,8 @@ import {
   LinkOrderButton,
   LogTimeButton,
   QuoteButton,
+  RecordInvoiceButton,
+  RecordReceiptButton,
   TaskMoves,
 } from "../JobForms";
 import { ActionTable } from "../JobTables";
@@ -28,6 +30,8 @@ export const dynamic = "force-dynamic";
 
 const COST_KIND_LABEL: Record<string, string> = { outsourced: "Outsourced work", testing: "External testing", freight: "Freight", other: "Other" };
 const TASK_LABEL: Record<string, string> = { todo: "To do", in_progress: "In progress", blocked: "Blocked", done: "Done", cancelled: "Cancelled" };
+const INVOICE_KIND_LABEL: Record<string, string> = { advance: "Advance", progress: "Progress", final: "Final" };
+const METHOD_LABEL: Record<string, string> = { bank: "Bank transfer", cheque: "Cheque", upi: "UPI", cash: "Cash", other: "Other" };
 const QUOTE_LABEL: Record<string, string> = { open: "Open", approved: "Approved", superseded: "Replaced", lost: "Lost" };
 
 async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -304,6 +308,89 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
       </div>
     );
 
+  /* ------------------------------- billing ------------------------------- */
+
+  const billing = detail.billing;
+  const billable = ["approved", "in_progress", "on_hold", "completed"].includes(job.state);
+  const openInvoices = billing.invoices.filter((i) => !i.voidedAt && i.totalMinor - i.receivedMinor > 0).map((i) => ({ id: i.id, label: `${i.number} · ${inr(i.totalMinor - i.receivedMinor)} due` }));
+
+  const billingTab = (
+    <div className="flex flex-col gap-6">
+      <Panel title="Billing and collection">
+        <DefinitionList
+          items={[
+            { term: "Agreed order value (before tax)", value: inr(job.quotedValueMinor) },
+            { term: "Invoiced so far (before tax)", value: inr(billing.billedExclMinor) },
+            { term: "Tax on those invoices", value: inr(billing.taxMinor) },
+            { term: "Invoiced in total", value: inr(billing.billedTotalMinor) },
+            { term: "Received", value: inr(billing.receivedMinor) },
+            { term: "Still to collect", value: <strong className={billing.outstandingMinor > 0 ? "text-warning" : ""}>{inr(billing.outstandingMinor)}</strong> },
+            { term: "Still to invoice (before tax)", value: inr(billing.toBillMinor) },
+          ]}
+        />
+        <p className="mb-0 mt-3 text-[13px] text-text-tertiary">
+          Invoices are recorded here as you raise them in your billing system, with the tax as printed. Verity does not work out GST.
+        </p>
+      </Panel>
+
+      {billing.invoices.length === 0 ? (
+        <EmptyState title="No invoices recorded" description="Record the advance invoice once it is raised, then the payments against it." />
+      ) : (
+        <ActionTable
+          kind="invoice"
+          working={billable}
+          caption="Invoices"
+          emptyTitle="No invoices"
+          rows={billing.invoices.map((i) => ({
+            id: i.id,
+            number: i.number,
+            kind: INVOICE_KIND_LABEL[i.kind] ?? i.kind,
+            date: dateText(i.issuedOn),
+            amount: inr(i.amountMinor),
+            tax: inr(i.taxMinor),
+            total: inr(i.totalMinor),
+            due: i.voidedAt ? `Void: ${i.voidReason}` : inr(i.totalMinor - i.receivedMinor),
+            void: i.voidedAt ? "yes" : "no",
+          }))}
+          columns={[
+            { key: "number", header: "Invoice" },
+            { key: "kind", header: "Kind" },
+            { key: "date", header: "Date" },
+            { key: "amount", header: "Before tax", numeric: true },
+            { key: "tax", header: "Tax", numeric: true },
+            { key: "total", header: "Total", numeric: true },
+            { key: "due", header: "Still due", numeric: true },
+          ]}
+        />
+      )}
+
+      {billing.receipts.length > 0 && (
+        <ActionTable
+          kind="receipt"
+          working={billable}
+          caption="Payments received"
+          emptyTitle="No payments"
+          rows={billing.receipts.map((r) => ({
+            id: r.id,
+            date: dateText(r.receivedOn),
+            invoice: r.invoice?.number ?? "—",
+            method: METHOD_LABEL[r.method] ?? r.method,
+            reference: r.reference ?? "—",
+            amount: r.voidedAt ? `Void: ${r.voidReason}` : inr(r.amountMinor),
+            void: r.voidedAt ? "yes" : "no",
+          }))}
+          columns={[
+            { key: "date", header: "Received" },
+            { key: "invoice", header: "Against invoice" },
+            { key: "method", header: "How" },
+            { key: "reference", header: "Reference" },
+            { key: "amount", header: "Amount", numeric: true },
+          ]}
+        />
+      )}
+    </div>
+  );
+
   const toolbar = (buttons: React.ReactNode) => <div className="mb-4 flex flex-wrap items-center gap-2">{buttons}</div>;
 
   return (
@@ -412,6 +499,23 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
               <>
                 {working && toolbar(<LogTimeButton jobId={job.id} tasks={taskOptions} />)}
                 {timeTab}
+              </>
+            ),
+          },
+          {
+            id: "billing",
+            label: "Billing",
+            count: billing.invoices.length,
+            content: (
+              <>
+                {billable &&
+                  toolbar(
+                    <>
+                      <RecordInvoiceButton jobId={job.id} />
+                      {openInvoices.length > 0 && <RecordReceiptButton jobId={job.id} invoices={openInvoices} />}
+                    </>,
+                  )}
+                {billingTab}
               </>
             ),
           },

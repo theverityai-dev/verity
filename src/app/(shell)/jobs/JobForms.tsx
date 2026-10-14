@@ -652,10 +652,10 @@ export function AddCostButton({ jobId }: { jobId: string }) {
 }
 
 /** Void a time or cost entry: kept on record, marked, and dropped from the totals. */
-export function VoidEntryButton({ kind, entryId }: { kind: "time" | "cost"; entryId: string }) {
+export function VoidEntryButton({ kind, entryId }: { kind: "time" | "cost" | "invoice" | "receipt"; entryId: string }) {
   return (
     <ActionDialog
-      command={kind === "time" ? "verity.project.void_time_entry" : "verity.project.void_cost_entry"}
+      command={{ time: "verity.project.void_time_entry", cost: "verity.project.void_cost_entry", invoice: "verity.project.void_invoice", receipt: "verity.project.void_receipt" }[kind]}
       label="Void"
       title="Void entry"
       description="The entry stays on record, marked void, and no longer counts toward the job's cost."
@@ -663,7 +663,7 @@ export function VoidEntryButton({ kind, entryId }: { kind: "time" | "cost"; entr
       variant="ghost"
       size="sm"
       destructive
-      build={(f) => ({ entryId, reason: formText(f, "reason") })}
+      build={(f) => ({ [kind === "invoice" ? "invoiceId" : kind === "receipt" ? "receiptId" : "entryId"]: entryId, reason: formText(f, "reason") })}
     >
       <Field label="Why is it wrong" htmlFor={`void-${entryId}`} required>
         <Input id={`void-${entryId}`} name="reason" required minLength={3} maxLength={300} />
@@ -758,4 +758,110 @@ export function NewLostReasonButton() {
 
 export function LostReasonToggle({ reasonId, active }: { reasonId: string; active: boolean }) {
   return <QuickAction command="verity.project.set_lost_reason_active" input={{ reasonId, active: !active }} label={active ? "Retire" : "Restore"} variant="ghost" size="sm" />;
+}
+
+/* ================================= billing ================================= */
+
+const INVOICE_KIND_OPTIONS = [
+  { value: "advance", label: "Advance" },
+  { value: "progress", label: "Progress" },
+  { value: "final", label: "Final" },
+];
+
+export function RecordInvoiceButton({ jobId }: { jobId: string }) {
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <ActionDialog
+      command="verity.project.record_invoice"
+      label="Record invoice"
+      title="Record an invoice"
+      description="Enter an invoice you raised for this job, exactly as it reads. Verity does not work out the tax; it records the figure you give it."
+      submitLabel="Record invoice"
+      variant="primary"
+      build={(f) => ({
+        jobId,
+        kind: formText(f, "kind") || "advance",
+        number: formText(f, "number"),
+        issuedOn: formText(f, "issuedOn") || today,
+        amountMinor: rupeesToMinor(formText(f, "amount")),
+        taxMinor: formText(f, "tax") ? rupeesToMinor(formText(f, "tax")) : undefined,
+        note: formOptional(f, "note"),
+      })}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Kind" htmlFor="inv-kind" required>
+          <Select id="inv-kind" name="kind" defaultValue="advance">
+            {INVOICE_KIND_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Invoice number" htmlFor="inv-number" required>
+          <Input id="inv-number" name="number" required maxLength={40} />
+        </Field>
+        <Field label="Invoice date" htmlFor="inv-date" required>
+          <FormDateField name="issuedOn" id="inv-date" defaultValue={today} />
+        </Field>
+        <Field label="Amount before tax ₹" htmlFor="inv-amount" required>
+          <Input id="inv-amount" name="amount" inputMode="decimal" required />
+        </Field>
+        <Field label="Tax on it ₹" htmlFor="inv-tax" hint="GST as printed on the invoice.">
+          <Input id="inv-tax" name="tax" inputMode="decimal" />
+        </Field>
+      </div>
+      <Field label="Note" htmlFor="inv-note">
+        <Input id="inv-note" name="note" maxLength={400} />
+      </Field>
+    </ActionDialog>
+  );
+}
+
+export function RecordReceiptButton({ jobId, invoices }: { jobId: string; invoices: Array<{ id: string; label: string }> }) {
+  const today = new Date().toISOString().slice(0, 10);
+  return (
+    <ActionDialog
+      command="verity.project.record_receipt"
+      label="Record payment"
+      title="Record a payment"
+      description="Money received against one of this job's invoices."
+      submitLabel="Record payment"
+      build={(f) => ({
+        jobId,
+        invoiceId: formText(f, "invoiceId"),
+        receivedOn: formText(f, "receivedOn") || today,
+        amountMinor: rupeesToMinor(formText(f, "amount")),
+        method: formText(f, "method") || "bank",
+        reference: formOptional(f, "reference"),
+      })}
+    >
+      <Field label="Against invoice" htmlFor="rec-invoice" required>
+        <Select id="rec-invoice" name="invoiceId" required defaultValue="">
+          <option value="" disabled>{invoices.length === 0 ? "Record an invoice first" : "Choose an invoice"}</option>
+          {invoices.map((i) => (
+            <option key={i.id} value={i.id}>{i.label}</option>
+          ))}
+        </Select>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Date received" htmlFor="rec-date" required>
+          <FormDateField name="receivedOn" id="rec-date" defaultValue={today} />
+        </Field>
+        <Field label="Amount ₹" htmlFor="rec-amount" required>
+          <Input id="rec-amount" name="amount" inputMode="decimal" required />
+        </Field>
+        <Field label="How" htmlFor="rec-method" required>
+          <Select id="rec-method" name="method" defaultValue="bank">
+            <option value="bank">Bank transfer</option>
+            <option value="cheque">Cheque</option>
+            <option value="upi">UPI</option>
+            <option value="cash">Cash</option>
+            <option value="other">Other</option>
+          </Select>
+        </Field>
+        <Field label="Reference" htmlFor="rec-ref" hint="UTR, cheque number">
+          <Input id="rec-ref" name="reference" maxLength={120} />
+        </Field>
+      </div>
+    </ActionDialog>
+  );
 }

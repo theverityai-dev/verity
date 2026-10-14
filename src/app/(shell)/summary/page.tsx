@@ -111,6 +111,26 @@ async function SummaryPage() {
           </Panel>
         </div>
 
+        <div className="lg:col-span-2">
+          <Panel title={data.receivableMinor > 0 ? `Money to collect · ${inr(data.receivableMinor)}` : "Money to collect"}>
+            {data.collect.length === 0 ? (
+              <EmptyState title="Nothing outstanding" description="Invoices recorded against a job and not yet paid show here, largest first." />
+            ) : (
+              <ul className="m-0 flex list-none flex-col p-0">
+                {data.collect.map((c) => (
+                  <li key={c.jobId} className="flex items-baseline justify-between gap-4 border-b border-line py-2.5 last:border-b-0">
+                    <span className="min-w-0">
+                      <Link href={`/jobs/${c.jobId}`} className="text-accent-ink">{c.jobReference}</Link>
+                      <span className="text-text-secondary"> · {c.customer}</span>
+                    </span>
+                    <strong className="tabular text-warning">{inr(c.outstandingMinor)}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
+        </div>
+
         <Panel title="On the shop floor now">
           {data.shop.length === 0 ? (
             <EmptyState title="Nothing in production" description="Production orders that are running show here, with the stage each one is at." />

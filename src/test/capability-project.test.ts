@@ -239,6 +239,51 @@ describeDb("capability: Project (Jobs)", () => {
     await expect(executeCommand(actor, project.editMilestone, { milestoneId: ms.id, name: "Changed after reached" })).rejects.toThrow(/reached/);
   });
 
+  it("records invoices and receipts against a job and derives billed, received and outstanding", async () => {
+    // Billing needs an approved job: an enquiry has nothing agreed to bill.
+    const enquiry = await newJob("Not yet approved");
+    await expect(executeCommand(actor, project.recordInvoice, { jobId: enquiry.id, kind: "advance", number: "X-0", issuedOn: "2026-10-01", amountMinor: 100 })).rejects.toThrow(/approved job/);
+
+    const job = await newJob("Billed");
+    const q = await quote(job.id); // order value 2,000,000
+    await executeCommand(actor, project.approveQuote, { quoteId: q.id });
+    await executeCommand(actor, project.startJob, { jobId: job.id });
+
+    const inv = await executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "advance", number: "INV-1", issuedOn: "2026-10-01", amountMinor: 1_000_000, taxMinor: 180_000 });
+    // A number is used once while live, tax cannot exceed what it is charged on, and the agreed price is a ceiling.
+    await expect(executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "progress", number: "INV-1", issuedOn: "2026-10-02", amountMinor: 1000 })).rejects.toThrow(/already recorded/);
+    await expect(executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "progress", number: "INV-T", issuedOn: "2026-10-02", amountMinor: 1000, taxMinor: 2000 })).rejects.toThrow(/tax/);
+    await expect(executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "final", number: "INV-BIG", issuedOn: "2026-10-02", amountMinor: 1_500_000 })).rejects.toThrow(/more than the agreed/);
+
+    // A receipt cannot exceed what is still due on its invoice (1,180,000 in all).
+    await executeCommand(actor, project.recordReceipt, { jobId: job.id, invoiceId: inv.id, receivedOn: "2026-10-03", amountMinor: 500_000, method: "bank", reference: "NEFT 1" });
+    await expect(executeCommand(actor, project.recordReceipt, { jobId: job.id, invoiceId: inv.id, receivedOn: "2026-10-03", amountMinor: 700_000, method: "bank" })).rejects.toThrow(/more than is still due/);
+    const r2 = await executeCommand(actor, project.recordReceipt, { jobId: job.id, invoiceId: inv.id, receivedOn: "2026-10-04", amountMinor: 680_000, method: "cheque" });
+
+    let b = await withTenant(tenantId, (tx) => project.jobBilling(tx, job.id));
+    expect(b).toMatchObject({ billedExclMinor: 1_000_000, taxMinor: 180_000, billedTotalMinor: 1_180_000, receivedMinor: 1_180_000, outstandingMinor: 0, toBillMinor: 1_000_000 });
+
+    // Voiding is the correction path: an invoice with live payments cannot be voided; a void payment stops counting.
+    await expect(executeCommand(actor, project.voidInvoice, { invoiceId: inv.id, reason: "Wrong job" })).rejects.toThrow(/payments are recorded/);
+    await executeCommand(actor, project.voidReceipt, { receiptId: r2.id, reason: "Cheque bounced" });
+    b = await withTenant(tenantId, (tx) => project.jobBilling(tx, job.id));
+    expect(b.receivedMinor).toBe(500_000);
+    expect(b.outstandingMinor).toBe(680_000);
+    expect(b.receipts).toHaveLength(2); // the void one is kept on record
+
+    // After the last payment is voided the invoice can be voided, and its number may be used again.
+    const first = b.receipts.find((r) => !r.voidedAt)!;
+    await executeCommand(actor, project.voidReceipt, { receiptId: first.id, reason: "Entered twice" });
+    await executeCommand(actor, project.voidInvoice, { invoiceId: inv.id, reason: "Raised against the wrong job" });
+    await executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "advance", number: "INV-1", issuedOn: "2026-10-05", amountMinor: 1_000_000, taxMinor: 180_000 });
+
+    // A finished job is still being paid for: billing continues after completion.
+    await executeCommand(actor, project.completeJob, { jobId: job.id });
+    await executeCommand(actor, project.recordInvoice, { jobId: job.id, kind: "final", number: "INV-2", issuedOn: "2026-10-06", amountMinor: 1_000_000, taxMinor: 180_000 });
+    b = await withTenant(tenantId, (tx) => project.jobBilling(tx, job.id));
+    expect(b).toMatchObject({ billedExclMinor: 2_000_000, billedTotalMinor: 2_360_000, toBillMinor: 0 });
+  });
+
   it("derives cost and margin from consumed material, logged time and recorded costs", async () => {
     const job = await newJob("Costed");
     const q = await quote(job.id, 1_000_000); // 2 x 10,000.00 = 2,000,000 minor
