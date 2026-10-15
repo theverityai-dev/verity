@@ -208,6 +208,7 @@ export function EditJobButton({ job }: { job: { id: string; title: string; custo
     <ActionDialog
       command="verity.project.edit_job"
       label="Edit"
+      variant="ghost"
       title="Edit job"
       description="Change the title, contact, priority, promised date or notes."
       submitLabel="Save"
@@ -265,7 +266,7 @@ export function JobActions({
       )}
       {state === "approved" && <QuickAction command="verity.project.start_job" input={{ jobId }} label="Start work" variant="primary" />}
       {state === "in_progress" && <ConfirmAction command="verity.project.complete_job" input={{ jobId }} label="Finish job" title="Finish job" description="The job becomes read-only: no more tasks, time or costs can be added. It will refuse if a production order or task is still open." variant="primary" />}
-      {state === "in_progress" && <QuickAction command="verity.project.hold_job" input={{ jobId }} label="Put on hold" />}
+      {state === "in_progress" && <QuickAction command="verity.project.hold_job" input={{ jobId }} label="Put on hold" variant="ghost" />}
       {state === "on_hold" && <QuickAction command="verity.project.resume_job" input={{ jobId }} label="Resume" variant="primary" />}
       {(state === "enquiry" || state === "quoted") && (
         <ActionDialog
