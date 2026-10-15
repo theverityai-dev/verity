@@ -124,7 +124,7 @@
   --color-info-subtle: light-dark(rgb(0 122 255 / 0.12), rgb(10 132 255 / 0.18));
 
   --color-state-draft: light-dark(#6c6c70, #aeaeb2);
-  --color-state-pending: light-dark(#c93400, #ffb340);
+  --color-state-pending: light-dark(#a86000, #ffb340);
   --color-state-active: light-dark(#0040dd, #409cff);
   --color-state-blocked: light-dark(#d70015, #ff6961);
   --color-state-completed: light-dark(#1f7a36, #30db5b);

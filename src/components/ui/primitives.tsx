@@ -397,8 +397,9 @@ export function FilterChipRow({
   chips: Array<{ label: string; count?: number; active: boolean; onClick: () => void }>;
   className?: string;
 }) {
+  // One scrolling row on a phone (wrapping made three rows of chips above the list); wraps on wider screens.
   return (
-    <div className={cx("flex flex-wrap gap-1.5", className)}>
+    <div className={cx("-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible", className)}>
       {chips.map((chip) => (
         <button
           key={chip.label}
@@ -406,7 +407,7 @@ export function FilterChipRow({
           onClick={chip.onClick}
           aria-pressed={chip.active}
           className={cx(
-            "rounded-pill px-3.5 py-1.5 text-[14px] font-medium transition-colors",
+            "shrink-0 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[14px] font-medium transition-colors max-sm:min-h-11",
             chip.active
               ? "bg-accent text-accent-on"
               : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]",
@@ -759,7 +760,7 @@ export function HealthBadge({ health }: { health: string }) {
   return (
     // A solid system-fill pill (ADR-033: no translucency on badges) so a status reads as
     // a status at a glance, not as a stray dot beside text.
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-control)] py-0.5 pl-2 pr-2.5 text-[13px] font-medium text-text">
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-control-strong)] py-0.5 pl-2 pr-2.5 text-[13px] font-medium text-text">
       <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", preset.color)} />
       {preset.label}
     </span>
@@ -773,8 +774,8 @@ export function StateBadge({ category, label }: { category: string; label?: stri
   };
 
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap text-[13px] text-text">
-      <span aria-hidden="true" className={cx("size-[7px] shrink-0 rounded-full", preset.color)} />
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-control-strong)] py-0.5 pl-2 pr-2.5 text-[13px] font-medium text-text">
+      <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", preset.color)} />
       {/* The tenant's own label when there is one, the category otherwise. */}
       {label ?? preset.label}
     </span>
