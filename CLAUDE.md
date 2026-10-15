@@ -4,7 +4,10 @@
 always-current index of what's actively being worked on and in what order —
 kept updated on every change to active work. `taskplans/00_STATUS_INDEX.md`
 is the full historical register (every taskplan ever written); the handoffs
-folder is the live work order.
+folder is the live work order, and `taskplans/handoffs/FINISHER.md` is its
+priority-ordered list of unfinished work. When you finish, start, block or find
+work, update `FINISHER.md` in the same commit (delete finished items; its own
+"Keeping this file true" section has the rules).
 
 ## What this is
 

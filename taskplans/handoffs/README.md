@@ -13,6 +13,10 @@ already states for itself.
 
 **Last updated: 2026-10-10 (Task 126 URY gap closure built, Waves 0 to 5, ADR-040 to ADR-043 accepted; Task 125 progress log added: section 2 decisions done, desktop walk of Colonel Kebabz done, phone-width pass waiting on a signed-in session; earlier sections last refreshed 2026-09-30 against `taskplans/122_...`)**
 
+**The priority-ordered list of everything not yet finished, with how to finish each item, is
+[`FINISHER.md`](./FINISHER.md).** It is deleted-from as work completes, so read it before starting
+anything and update it in the same commit as the code.
+
 ## How to use this folder
 
 - Each file here is a **file-level, concrete continuation checklist** for
