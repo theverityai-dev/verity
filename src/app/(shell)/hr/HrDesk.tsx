@@ -37,7 +37,7 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
   const add = useCommand("/hr");
   const toggle = useCommand("/hr");
 
-  const rows = employees.map((e) => ({ ...e, status: e.active ? "Active" : "Inactive" }));
+  const rows = employees.map((e) => ({ ...e, status: e.active ? "Active" : "Inactive", statusCategory: e.active ? "Completed" : "Cancelled", kind: "people" }));
 
   return (
     <>
@@ -47,10 +47,10 @@ function EmployeesTab({ employees, departments, parties }: { employees: Employee
         emptyDescription="Add the first person from your existing contacts."
         emptyAction={parties.length > 0 ? <Button variant="primary" onClick={() => setOpen(true)}>Add employee</Button> : undefined}
         columns={[
-          { key: "name", header: "Name", sortable: true, subKey: "designation", variant: "link", href: "/hr/{id}" },
+          { key: "name", header: "Name", sortable: true, subKey: "designation", variant: "link", href: "/hr/{id}", kindKey: "kind" },
           { key: "department", header: "Department", sortable: true },
           { key: "joined", header: "Joined", sortable: true },
-          { key: "status", header: "Status", sortable: true },
+          { key: "status", header: "Status", sortable: true, variant: "state", categoryKey: "statusCategory" },
         ]}
         rows={rows}
         toolbar={

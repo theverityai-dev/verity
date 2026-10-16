@@ -3,7 +3,7 @@ import { HR_CAPABILITY } from "@/server/capabilities/hr";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
-import { PageHeader, Stat, StatRow, ErrorState } from "@/components/ui/primitives";
+import { PageHeader, StatTile, StatTileRow, ErrorState } from "@/components/ui/primitives";
 import { HrDesk, type DepartmentRow, type EmployeeRow, type LeaveRow, type LeaveTypeRow, type PartyOption } from "./HrDesk";
 
 export const dynamic = "force-dynamic";
@@ -79,12 +79,12 @@ async function HrPage() {
   return (
     <>
       <PageHeader title="People operations" description="Employees, departments and leave in one place." />
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Active employees" value={active} />
-        <Stat label="Departments" value={departments.length} />
-        <Stat label="Leave awaiting a decision" value={pending} />
-        <Stat label="Away today" value={away} />
-      </StatRow>
+      <StatTileRow className="mb-6">
+        <StatTile kind="people" label="Active employees" value={active} />
+        <StatTile kind="location" label="Departments" value={departments.length} />
+        <StatTile state={pending > 0 ? "pending" : "completed"} icon={pending > 0 ? "clock" : "check"} label="Leave awaiting a decision" value={pending} hint={pending > 0 ? "Needs a decision" : "None waiting"} />
+        <StatTile kind="schedule" label="Away today" value={away} />
+      </StatTileRow>
       <HrDesk
         employees={employeeRows}
         departments={departmentRows}
