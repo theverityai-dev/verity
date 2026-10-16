@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
+import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -61,9 +62,9 @@ export function BomActions({
         </CommandButton>
       </div>
 
-      {ordering && (
+      <Modal open={ordering} onClose={() => setOrdering(false)} title="Make an order" description="Create a draft order from this bill of materials." width="sm">
         <form
-          className="flex w-full flex-col gap-3 rounded-lg bg-surface p-4 sm:w-96"
+          className="flex flex-col gap-3"
           action={(formData) => {
             setFailure(null);
             startTransition(async () => {
@@ -112,7 +113,7 @@ export function BomActions({
             </Button>
           </div>
         </form>
-      )}
+      </Modal>
 
       {failure && (
         <div className="w-full sm:w-96">

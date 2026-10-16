@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
+import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -21,17 +22,14 @@ export function CreateBatchForm({ orders }: { orders: BatchableOrder[] }) {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
-      <CommandButton commands="verity.manufacturing.create_batch" size="sm" variant="primary" onClick={() => setOpen(true)}>
-        New batch
-      </CommandButton>
-    );
-  }
-
   return (
+    <>
+    <CommandButton commands="verity.manufacturing.create_batch" size="sm" variant="primary" onClick={() => setOpen(true)}>
+      New batch
+    </CommandButton>
+    <Modal open={open} onClose={() => setOpen(false)} title="New batch" description="Produce several draft orders together as one run.">
     <form
-      className="flex w-full flex-col gap-3 rounded-lg bg-surface p-4 sm:w-[28rem]"
+      className="flex flex-col gap-3"
       action={(fd) => {
         setFailure(null);
         startTransition(async () => {
@@ -71,6 +69,8 @@ export function CreateBatchForm({ orders }: { orders: BatchableOrder[] }) {
         </Button>
       </div>
     </form>
+    </Modal>
+    </>
   );
 }
 

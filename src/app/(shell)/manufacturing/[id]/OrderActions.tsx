@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
+import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -75,9 +76,9 @@ export function OrderActions({ orderId, state }: { orderId: string; state: strin
         )}
       </div>
 
-      {cancelling && (
+      <Modal open={cancelling} onClose={() => setCancelling(false)} title="Cancel order" description="Cancelling cannot be undone." width="sm">
         <form
-          className="flex w-full flex-col gap-3 rounded-lg bg-surface p-4 sm:w-96"
+          className="flex flex-col gap-3"
           action={(formData) =>
             run("verity.manufacturing.cancel_order", { reason: String(formData.get("reason") ?? "") }, () =>
               setCancelling(false),
@@ -101,7 +102,7 @@ export function OrderActions({ orderId, state }: { orderId: string; state: strin
             </Button>
           </div>
         </form>
-      )}
+      </Modal>
 
       {failure && (
         <div className="w-full sm:w-96">

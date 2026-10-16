@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
+import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { assignLineItem } from "@/lib/line-list";
@@ -28,20 +29,17 @@ export function CreateOrderForm({ locations, items }: { locations: Option[]; ite
   const [nextKey, setNextKey] = useState(1);
   const [lines, setLines] = useState<Line[]>([{ key: 0, componentItemId: "", qtyRequired: "1" }]);
 
-  if (!open) {
-    return (
-      <CommandButton commands={COMMAND} variant="primary" onClick={() => setOpen(true)}>
-        New order
-      </CommandButton>
-    );
-  }
-
   const update = (key: number, patch: Partial<Line>) =>
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
   return (
+    <>
+    <CommandButton commands={COMMAND} variant="primary" onClick={() => setOpen(true)}>
+      New order
+    </CommandButton>
+    <Modal open={open} onClose={() => setOpen(false)} title="New manufacturing order" description="What to make, how many, and the components it consumes.">
     <form
-      className="flex w-full flex-col gap-4 rounded-lg bg-surface p-4 sm:w-[28rem]"
+      className="flex flex-col gap-4"
       action={(formData) => {
         setFailure(null);
         startTransition(async () => {
@@ -167,5 +165,7 @@ export function CreateOrderForm({ locations, items }: { locations: Option[]; ite
         </Button>
       </div>
     </form>
+    </Modal>
+    </>
   );
 }
