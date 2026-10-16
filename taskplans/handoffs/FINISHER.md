@@ -297,7 +297,7 @@ phase 7.
 - **How:** `taskplans/127_visual_language_every_screen_redesign.md`. Phase 0: ADR-046 and the library study are written (owner signs off ADR-046; finish library study sections 2.4 and 3); Phase 1: tokens, components, in-house glyphs; Phase 2: build `/manufacturing/routes/[id]` and rebuild `/manufacturing/floor` (neither mockup exists today); then section 5 order.
 - **Done when:** Phase 9 sweep is clean and the Task 116 matrix is filled.
 - **Source:** Task 127.
-- **Status:** IN PROGRESS. ADR-046 accepted; Phases 1 to 3 built and browser-checked on DSEW (tokens, shared components, 86 glyphs, shop floor, route detail, order, jobs, summary). Next: Phase 4 restaurant (Colonel Kebabz), then 5 to 9; redraw four look-alike glyphs; owner signs off hue values from `docs/reference/visual-language/swatches.html`.
+- **Status:** IN PROGRESS. ADR-046 accepted; Phases 1 to 3 built and browser-checked on DSEW (tokens, shared components, 86 glyphs, shop floor, route detail, order, jobs, summary). Reachability baseline and pure-suite registration of `viz-geometry.test.ts` fixed. Manufacturing DB tests still unrun (no test database). Next: Phase 4 restaurant (Colonel Kebabz), then 5 to 9; redraw four look-alike glyphs; owner signs off hue values from `docs/reference/visual-language/swatches.html`.
 
 ## P3: verification, coverage, housekeeping
 

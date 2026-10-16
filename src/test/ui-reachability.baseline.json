@@ -28,6 +28,7 @@
   "verity.outreach.team_weekly_member_breakdown": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.outreach.team_weekly_rollup": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.outreach.weekly_report_due_sweep": "Scheduled job (POST /api/scheduled), not a person's action.",
+  "verity.project.add_task_dependency": "Task dependencies belong to the undecided project-management scope (Gantt/Kanban/dependencies); no screen until the product owner authorizes it.",
   "verity.trading.ensure_brand": "Internal find-or-create called by product import (plywood importProducts via runCommandBatch), not a user-facing action.",
   "verity.trading.goods_receipt_detail": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.trading.list_business_activities": "Read query, not referenced by a screen; serves the API and agent channel.",
