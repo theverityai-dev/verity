@@ -5,6 +5,7 @@ import {
   isValidElement,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -48,6 +49,9 @@ export function PolishedSelect({ children, className, containerClassName, id, na
   const [activeIndex, setActiveIndex] = useState(() => Math.max(0, options.findIndex((option) => option.value === initialValue)));
   const rootRef = useRef<HTMLDivElement | null>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const [place, setPlace] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number } | null>(null);
 
   const currentValue = value == null ? selectedValue : String(value);
   const selected = options.find((option) => option.value === currentValue) ?? options[0];
@@ -62,6 +66,36 @@ export function PolishedSelect({ children, className, containerClassName, id, na
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [open, currentValue, options]);
+
+  // The list lives in the browser's top layer (Popover API), positioned from the button. An absolutely
+  // positioned list is clipped by any scrolling ancestor, which a dialog body is, and a transformed
+  // ancestor breaks fixed positioning; the top layer escapes both and sits above the dialog.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!open || !list) return;
+    if (typeof list.showPopover === "function" && !list.matches(":popover-open")) list.showPopover();
+    const reposition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const gap = 6;
+      const below = window.innerHeight - rect.bottom - gap - 8;
+      const above = rect.top - gap - 8;
+      const openUp = below < 180 && above > below;
+      setPlace(
+        openUp
+          ? { bottom: window.innerHeight - rect.top + gap, left: rect.left, width: rect.width, maxHeight: Math.min(256, above) }
+          : { top: rect.bottom + gap, left: rect.left, width: rect.width, maxHeight: Math.min(256, below) },
+      );
+    };
+    reposition();
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+      if (typeof list.hidePopover === "function" && list.matches(":popover-open")) list.hidePopover();
+    };
+  }, [open]);
 
   useEffect(() => {
     if (open) optionRefs.current[activeIndex]?.focus();
@@ -90,6 +124,7 @@ export function PolishedSelect({ children, className, containerClassName, id, na
   return (
     <div ref={rootRef} className={`relative min-w-0 w-full ${containerClassName ?? ""}`}>
       <button
+        ref={buttonRef}
         id={controlId}
         type="button"
         disabled={disabled}
@@ -133,7 +168,14 @@ export function PolishedSelect({ children, className, containerClassName, id, na
       </select>
 
       {open && options.length > 0 && (
-        <div role="listbox" aria-labelledby={controlId} className="glass-overlay absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-64 overflow-y-auto rounded-xl p-1.5 shadow-[var(--shadow-lg)]">
+        <div
+          ref={listRef}
+          popover="manual"
+          role="listbox"
+          aria-labelledby={controlId}
+          className="glass-overlay m-0 overflow-y-auto rounded-xl border-0 p-1.5 text-text shadow-[var(--shadow-lg)]"
+          style={{ position: "fixed", inset: "auto", top: place?.top, bottom: place?.bottom, left: place?.left ?? 0, width: place?.width, maxHeight: place?.maxHeight ?? 256, visibility: place ? "visible" : "hidden" }}
+        >
           {options.map((option, index) => {
             const isSelected = option.value === currentValue;
             return (
