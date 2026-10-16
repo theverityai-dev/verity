@@ -402,6 +402,11 @@
   .glass-overlay { background: var(--color-surface-elevated); }
 }
 
+/* Public passport: the pass card rises into place once. Reduced motion collapses it below. */
+@keyframes passport-rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
+.passport-rise { animation: passport-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.passport-rise-2 { animation: passport-rise 0.7s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
