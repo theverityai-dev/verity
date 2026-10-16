@@ -8,7 +8,7 @@ import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState, PageHeader, Panel, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { IconDisc, IconTile } from "@/components/ui/IconTile";
-import { ProgressBar } from "@/components/ui/viz";
+import { ProgressBar, StackedBar } from "@/components/ui/viz";
 import { equipmentKindFor, stageKindFor } from "@/components/ui/business/domains";
 import { dateText, inr } from "../jobs/format";
 
@@ -95,6 +95,19 @@ async function SummaryPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-2">
+          <Panel title="Order pipeline">
+            <StackedBar
+              label="Jobs by stage"
+              segments={[
+                { label: "New enquiries", value: counts.enquiries },
+                { label: "Quotes sent", value: counts.quoted },
+                { label: "In work", value: counts.working },
+              ]}
+            />
+          </Panel>
+        </div>
+
+        <div className="lg:col-span-2">
           <Panel title="Jobs in work" flush>
             <DataTable
               caption="Jobs in work"
@@ -109,7 +122,10 @@ async function SummaryPage() {
                 category: r.category,
                 due: r.overdue ? `${dateText(r.dueDate)} (late)` : dateText(r.dueDate),
                 value: inr(r.quotedValueMinor),
-                progress: r.progress === null ? "—" : `${r.progress}%`,
+                progress:
+                  r.progress === null
+                    ? null
+                    : { value: r.progress, total: 100, tone: r.overdue ? "blocked" : r.progress >= 100 ? "completed" : "active", figures: `${r.progress}%` },
               }))}
               columns={[
                 { key: "reference", header: "Job", variant: "link", href: "/jobs/{id}" },
@@ -118,7 +134,7 @@ async function SummaryPage() {
                 { key: "state", header: "Status", variant: "state", categoryKey: "category" },
                 { key: "due", header: "Delivery promised" },
                 { key: "value", header: "Order value", numeric: true },
-                { key: "progress", header: "Progress", numeric: true },
+                { key: "progress", header: "Progress", variant: "meter" },
               ]}
               emptyTitle="Nothing in work"
               emptyDescription="Approve a quote and start the job to see it here."
@@ -133,12 +149,21 @@ async function SummaryPage() {
             ) : (
               <ul className="m-0 flex list-none flex-col p-0">
                 {data.collect.map((c) => (
-                  <li key={c.jobId} className="flex items-baseline justify-between gap-4 border-b border-line py-2.5 last:border-b-0">
+                  <li key={c.jobId} className="grid grid-cols-[minmax(0,1fr)_minmax(6rem,16rem)_auto] items-center gap-4 border-b border-line py-2.5 last:border-b-0 max-sm:grid-cols-[minmax(0,1fr)_auto]">
                     <span className="min-w-0">
                       <Link href={`/jobs/${c.jobId}`} className="text-accent-ink">{c.jobReference}</Link>
                       <span className="text-text-secondary"> · {c.customer}</span>
                     </span>
-                    <strong className="tabular text-warning">{inr(c.outstandingMinor)}</strong>
+                    <span className="max-sm:hidden">
+                      <ProgressBar
+                        value={c.outstandingMinor}
+                        total={Math.max(...data.collect.map((x) => x.outstandingMinor))}
+                        tone="pending"
+                        showFigures={false}
+                        label={`${c.jobReference} outstanding compared with the largest`}
+                      />
+                    </span>
+                    <strong className="tabular text-right">{inr(c.outstandingMinor)}</strong>
                   </li>
                 ))}
               </ul>
@@ -192,6 +217,7 @@ async function SummaryPage() {
           )}
         </Panel>
 
+        {data.low.length > 0 && (
         <div className="lg:col-span-2">
           <Panel title="Running short" flush>
             <DataTable
@@ -208,6 +234,7 @@ async function SummaryPage() {
             />
           </Panel>
         </div>
+        )}
       </div>
     </>
   );
