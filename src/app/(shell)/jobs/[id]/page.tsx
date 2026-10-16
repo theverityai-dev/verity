@@ -357,6 +357,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             total: inr(i.totalMinor),
             due: i.voidedAt ? `Void: ${i.voidReason}` : inr(i.totalMinor - i.receivedMinor),
             void: i.voidedAt ? "yes" : "no",
+            open: "Print",
           }))}
           columns={[
             { key: "number", header: "Invoice" },
@@ -366,6 +367,7 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
             { key: "tax", header: "Tax", numeric: true },
             { key: "total", header: "Total", numeric: true },
             { key: "due", header: "Still due", numeric: true },
+            { key: "open", header: "Document", variant: "link", href: `/jobs/${job.id}/invoice/{id}` },
           ]}
         />
       )}

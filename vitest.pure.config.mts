@@ -28,6 +28,7 @@ export default defineConfig({
       "src/components/ui/viz-geometry.test.ts",
       "src/test/generic-wording.test.ts",
       "src/test/worker-access.test.ts",
+      "src/lib/amount-words.test.ts",
       "src/lib/roster-week.test.ts",
       "src/lib/financial-statements.test.ts",
       "src/lib/leave-calendar.test.ts",
