@@ -332,9 +332,9 @@ export function StatTile({
         {viz && !menu && <div className="min-w-0 shrink">{viz}</div>}
       </div>
       <div>
-        <p className="tabular m-0 text-[28px] font-bold leading-[34px] text-text">{value}</p>
-        <p className="m-0 mt-0.5 text-[15px] text-text-secondary">{label}</p>
-        {hint && <p className="m-0 mt-1 text-[13px] text-text-tertiary">{hint}</p>}
+        <p className="tabular m-0 text-[28px] font-bold leading-[34px] text-text max-sm:text-[22px] max-sm:leading-[28px]">{value}</p>
+        <p className="m-0 mt-0.5 text-[15px] text-text-secondary max-sm:text-[13px]">{label}</p>
+        {hint && <p className="m-0 mt-1 text-[13px] text-text-tertiary max-sm:text-[12px]">{hint}</p>}
       </div>
       {delta && (
         <p
@@ -355,7 +355,7 @@ export function StatTile({
       <Link
         href={href}
         className={cx(
-          "glass-card flex flex-col gap-3 p-5 no-underline transition-colors",
+          "glass-card flex flex-col gap-3 p-5 no-underline transition-colors max-sm:gap-2 max-sm:p-3.5",
           "hover:bg-accent-subtle focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--color-accent-line)]",
           className,
         )}
@@ -364,13 +364,13 @@ export function StatTile({
       </Link>
     );
   }
-  return <Surface className={cx("flex flex-col gap-3 p-5", className)}>{body}</Surface>;
+  return <Surface className={cx("flex flex-col gap-3 p-5 max-sm:gap-2 max-sm:p-3.5", className)}>{body}</Surface>;
 }
 
 /** A responsive row of `StatTile`s — 1 col on phone, up to 4 on desktop. */
 export function StatTileRow({ children, className, cols = 4 }: { children: ReactNode; className?: string; cols?: 3 | 4 }) {
   return (
-    <div className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", cols === 3 ? "lg:grid-cols-3" : "xl:grid-cols-4", className)}>
+    <div className={cx("grid grid-cols-2 gap-3 sm:gap-4", cols === 3 ? "lg:grid-cols-3" : "xl:grid-cols-4", className)}>
       {children}
     </div>
   );

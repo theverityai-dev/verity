@@ -28,9 +28,12 @@ export function OperationActions({
   checklist,
   revalidate,
   layout = "row",
+  large = false,
 }: {
   /** `row`: compact, in a table row. `bar`: the detail pane's sticky outcome bar (ADR-046 ActionBar). */
   layout?: "row" | "bar";
+  /** A full-width, thumb-sized Start for the phone work card. */
+  large?: boolean;
   operationId: string;
   state: string;
   actionable: boolean;
@@ -63,13 +66,14 @@ export function OperationActions({
   if (!open) return null;
 
   const bar = layout === "bar";
-  const size = bar ? "md" : "sm";
+  const size = bar || large ? "md" : "sm";
   const buttons = (
     <>
         {state === "pending" && actionable && (
           <CommandButton commands="verity.manufacturing.start_operation" size={size} variant="primary" disabled={pending}
+            className={large ? "min-h-12 w-full text-[17px]" : undefined}
             onClick={() => run("verity.manufacturing.start_operation", {})}>
-            {bar ? "Start stage" : "Start"}
+            {bar || large ? "Start stage" : "Start"}
           </CommandButton>
         )}
         {state === "in_progress" && (
