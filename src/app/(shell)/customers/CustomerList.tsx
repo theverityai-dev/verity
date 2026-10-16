@@ -12,9 +12,13 @@ import {
   Panel,
   Row,
   RowList,
-  Stat,
-  StatRow,
+  StateBadge,
+  StatTile,
+  StatTileRow,
 } from "@/components/ui/primitives";
+import { Avatar } from "@/components/ui/Avatar";
+import { OverflowMenu, OverflowMenuItem } from "@/components/ui/OverflowMenu";
+import { ProgressBar } from "@/components/ui/viz";
 import {
   NewCustomerModal,
   type CustomerDraft,
@@ -52,12 +56,16 @@ export function CustomerList({ customers, canCreate = false, canEdit = false, ca
 
   const shown = useMemo(() => {
     const needle = filter.trim().toLowerCase();
-    if (!needle) return customers;
-    return customers.filter(
-      (customer) =>
-        customer.displayName.toLowerCase().includes(needle) ||
-        (customer.gstin ?? "").toLowerCase().includes(needle),
-    );
+    const matching = !needle
+      ? customers
+      : customers.filter(
+          (customer) =>
+            customer.displayName.toLowerCase().includes(needle) ||
+            (customer.gstin ?? "").toLowerCase().includes(needle),
+        );
+    // Those past their limit need a decision, so they lead; the rest keep the server's order.
+    const pastLimit = (c: Customer) => (c.exposurePaise > c.creditLimitPaise ? 0 : 1);
+    return [...matching].sort((a, b) => pastLimit(a) - pastLimit(b));
   }, [customers, filter]);
 
   const totals = useMemo(
@@ -66,7 +74,9 @@ export function CustomerList({ customers, canCreate = false, canEdit = false, ca
       // Customers over their limit are the working list for a sales manager;
       // everyone else needs no decision.
       overLimit: customers.filter((c) => c.exposurePaise > c.creditLimitPaise).length,
-      headroom: customers.reduce((sum, c) => sum + c.availableCreditPaise, 0),
+      // Only customers with a limit have headroom; "no limit" is not zero headroom.
+      headroom: customers.reduce((sum, c) => sum + (c.creditLimitPaise > 0 ? c.availableCreditPaise : 0), 0),
+      limited: customers.filter((c) => c.creditLimitPaise > 0).length,
     }),
     [customers],
   );
@@ -201,16 +211,23 @@ export function CustomerList({ customers, canCreate = false, canEdit = false, ca
           retryable={failure.retryable}
         />
       )}
-      <StatRow cols={4}>
-        <Stat label="Customers" value={customers.length} />
-        <Stat label="Exposure" value={rupeesShort(totals.exposure)} hint="Owed plus committed" />
-        <Stat label="Headroom" value={rupeesShort(totals.headroom)} hint="Credit still available" />
-        <Stat
+      <StatTileRow cols={4}>
+        <StatTile kind="party" label="Customers" value={customers.length} />
+        <StatTile kind="money" label="Exposure" value={rupeesShort(totals.exposure)} hint="Owed plus committed" />
+        <StatTile
+          kind="sales"
+          label="Headroom"
+          value={totals.limited === 0 ? "—" : rupeesShort(totals.headroom)}
+          hint={totals.limited === 0 ? "No customer has a credit limit" : `Across ${totals.limited} with a limit`}
+        />
+        <StatTile
+          state={totals.overLimit === 0 ? "completed" : "blocked"}
+          icon={totals.overLimit === 0 ? "check" : "hold"}
           label="Over limit"
           value={totals.overLimit}
           hint={totals.overLimit === 0 ? "Nobody" : "Need a decision"}
         />
-      </StatRow>
+      </StatTileRow>
 
       <Panel
         flush
@@ -239,57 +256,62 @@ export function CustomerList({ customers, canCreate = false, canEdit = false, ca
           <RowList>
             {shown.map((customer) => {
               const over = customer.exposurePaise > customer.creditLimitPaise;
+              const near = !over && customer.creditLimitPaise > 0 && customer.exposurePaise >= customer.creditLimitPaise * 0.8;
               return (
                 <Row key={customer.id}>
-                  <div className="min-w-0">
-                    <Link
-                      href={`/customers/${customer.id}`}
-                      className="text-[14px] text-text no-underline hover:underline"
-                    >
-                      {customer.displayName}
-                    </Link>
-                    <p className="m-0 mt-0.5 text-[12px] text-text-tertiary">
-                      {customer.gstin ?? "No GSTIN recorded"}
-                      {customer.phone ? ` · ${customer.phone}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-8 text-right">
-                    <div>
-                      <p className="tabular m-0 text-[14px] text-text">
-                        {rupees(customer.exposurePaise)}
-                      </p>
-                      <p className="m-0 text-[12px] text-text-tertiary">
-                        of {rupees(customer.creditLimitPaise)}
-                      </p>
-                    </div>
-                    <div className="w-32">
-                      {/* Stated in words rather than by a minus sign or by
-                          colour alone. A leading "−" against a headroom figure
-                          reads as negative money, which it is not — it is how
-                          far past the limit they are — and colour is not
-                          information to a reader who cannot see it. */}
-                      <p
-                        className={
-                          "tabular m-0 text-[14px] " + (over ? "text-danger" : "text-text")
-                        }
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <Avatar name={customer.displayName} size={40} />
+                    <div className="min-w-0">
+                      <Link
+                        href={`/customers/${customer.id}`}
+                        className="text-[15px] font-medium text-text no-underline hover:underline"
                       >
-                        {over
-                          ? rupees(customer.exposurePaise - customer.creditLimitPaise)
-                          : rupees(customer.availableCreditPaise)}
+                        {customer.displayName}
+                      </Link>
+                      <p className="m-0 mt-0.5 text-[13px] text-text-secondary">
+                        {customer.gstin ?? "No GSTIN recorded"}
+                        {customer.phone ? ` · ${customer.phone}` : ""}
                       </p>
-                      <p className="m-0 text-[12px] text-text-tertiary">
-                        {over ? "Past their limit" : "Still available"}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2">
-                      {canEdit && <CommandButton commands={"verity.trading.edit_customer"} size="sm" onClick={() => setEditing(customer)}>
-                        Edit
-                      </CommandButton>}
-                      {canDelete && <CommandButton commands={"verity.trading.remove_customer"} size="sm" onClick={() => setRemoving(customer)}>
-                        Remove
-                      </CommandButton>}
                     </div>
                   </div>
+                  <div className="flex shrink-0 items-center gap-6 text-right max-md:hidden">
+                    <div className="w-52 shrink-0 text-left">
+                      {customer.creditLimitPaise > 0 ? (
+                        <ProgressBar
+                          value={customer.exposurePaise}
+                          total={Math.max(customer.creditLimitPaise, customer.exposurePaise)}
+                          marker={customer.creditLimitPaise}
+                          tone={over ? "blocked" : near ? "pending" : "completed"}
+                          figures={`${rupeesShort(customer.exposurePaise)} of ${rupeesShort(customer.creditLimitPaise)}`}
+                          label={`Credit used by ${customer.displayName}`}
+                        />
+                      ) : null}
+                      {/* Stated in words rather than by a minus sign or by
+                          colour alone: a leading "−" against headroom reads as
+                          negative money, and colour is not information to a
+                          reader who cannot see it. */}
+                      {customer.creditLimitPaise > 0 && (
+                        <p className="tabular m-0 mt-1 text-[13px] text-text-secondary">
+                          {over
+                            ? `${rupees(customer.exposurePaise - customer.creditLimitPaise)} past their limit`
+                            : `${rupees(customer.availableCreditPaise)} still available`}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-28 shrink-0 text-left">
+                      {customer.creditLimitPaise > 0 ? (
+                        <StateBadge category={over ? "Blocked" : near ? "Pending" : "Completed"} label={over ? "Over limit" : near ? "Near limit" : "Within limit"} />
+                      ) : (
+                        <StateBadge category="Draft" label="No limit" />
+                      )}
+                    </div>
+                  </div>
+                  {(canEdit || canDelete) && (
+                    <OverflowMenu label={`More actions for ${customer.displayName}`}>
+                      {canEdit && <OverflowMenuItem onClick={() => setEditing(customer)}>Edit</OverflowMenuItem>}
+                      {canDelete && <OverflowMenuItem danger onClick={() => setRemoving(customer)}>Remove</OverflowMenuItem>}
+                    </OverflowMenu>
+                  )}
                 </Row>
               );
             })}
