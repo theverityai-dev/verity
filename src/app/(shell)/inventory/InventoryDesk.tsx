@@ -4,6 +4,7 @@ import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type MeterValue } from "@/components/ui/DataTable";
+import { OverflowMenu, OverflowMenuItem } from "@/components/ui/OverflowMenu";
 import { Tabs } from "@/components/ui/Tabs";
 import { RequestsTab, VarianceTab, type StockRequestRow, type VarianceRowView } from "./RequestsAndVariance";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
@@ -19,7 +20,7 @@ export type StockRow = {
   unit: string;
   reorderLevel: string;
   value: string;
-  status: "In stock" | "Low stock" | "Inactive";
+  status: "In stock" | "Low stock" | "Out of stock" | "Inactive";
   /** StateCategory for the status pill (ADR-009): Low stock is Blocked, In stock Completed. */
   statusCategory: "Completed" | "Blocked" | "Cancelled";
   /** On hand against twice the reorder level, with the reorder level as the tick; absent when none is set. */
@@ -284,14 +285,16 @@ function StockTab({
             );
           }
           return (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center justify-end gap-1">
               <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "receive", item })}>Receive</Button>
-              <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "use", item })}>Use</Button>
-              <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "count", item })}>Count</Button>
-              <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "waste", item })}>Waste</Button>
-              {outlets.length > 1 && item.onHandQty > 0 && (
-                <Button size="sm" variant="secondary" onClick={() => setAction({ kind: "transfer", item })}>Send</Button>
-              )}
+              <OverflowMenu label={`More actions for ${item.name}`}>
+                <OverflowMenuItem onClick={() => setAction({ kind: "use", item })}>Use</OverflowMenuItem>
+                <OverflowMenuItem onClick={() => setAction({ kind: "count", item })}>Count</OverflowMenuItem>
+                <OverflowMenuItem onClick={() => setAction({ kind: "waste", item })}>Waste</OverflowMenuItem>
+                {outlets.length > 1 && item.onHandQty > 0 && (
+                  <OverflowMenuItem onClick={() => setAction({ kind: "transfer", item })}>Send to another outlet</OverflowMenuItem>
+                )}
+              </OverflowMenu>
             </div>
           );
         }}

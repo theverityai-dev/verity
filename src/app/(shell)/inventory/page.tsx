@@ -95,8 +95,8 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
       unit: item.unitLabel,
       reorderLevel: item.reorderLevel > 0 ? `${item.reorderLevel.toLocaleString("en-IN")} ${item.unitLabel}` : "Not set",
       value: item.avgUnitCostPaise === null ? "No cost yet" : rupees(qty * item.avgUnitCostPaise),
-      status: !item.active ? "Inactive" : low ? "Low stock" : "In stock",
-      statusCategory: !item.active ? "Cancelled" : low ? "Blocked" : "Completed",
+      status: !item.active ? "Inactive" : qty <= 0 ? "Out of stock" : low ? "Low stock" : "In stock",
+      statusCategory: !item.active ? "Cancelled" : qty <= 0 || low ? "Blocked" : "Completed",
       level:
         item.reorderLevel > 0
           ? {
