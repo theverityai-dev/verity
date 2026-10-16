@@ -16,6 +16,9 @@ export type AccountRow = {
   balance: string;
   active: boolean;
   status: string;
+  /** Kind tile by account type (domains.ts family) and the StateCategory of the status pill. */
+  kind: string;
+  statusCategory: "Completed" | "Cancelled";
 };
 export type EntryRow = {
   id: string;
@@ -25,6 +28,7 @@ export type EntryRow = {
   amount: string;
   postedBy: string;
   status: "Posted" | "Reversed" | "Reversal";
+  statusCategory: "Completed" | "Cancelled" | "Pending";
   canReverse: boolean;
 };
 
@@ -46,12 +50,12 @@ function AccountsTab({ accounts, accountTypes }: { accounts: AccountRow[]; accou
         emptyAction={<Button variant="primary" onClick={() => setOpen(true)}>Add account</Button>}
         columns={[
           { key: "code", header: "Code", sortable: true },
-          { key: "name", header: "Account", sortable: true, variant: "link", href: "/accounting/{id}" },
+          { key: "name", header: "Account", sortable: true, variant: "link", href: "/accounting/{id}", kindKey: "kind" },
           { key: "type", header: "Type", sortable: true },
           { key: "debit", header: "Debits", numeric: true },
           { key: "credit", header: "Credits", numeric: true },
           { key: "balance", header: "Balance", numeric: true },
-          { key: "status", header: "Status", sortable: true },
+          { key: "status", header: "Status", sortable: true, variant: "state", categoryKey: "statusCategory" },
         ]}
         rows={accounts}
         toolbar={<Button variant="primary" onClick={() => setOpen(true)}>Add account</Button>}
@@ -251,7 +255,7 @@ function JournalTab({ entries, accounts }: { entries: EntryRow[]; accounts: Acco
           { key: "memo", header: "Memo", subKey: "accounts" },
           { key: "amount", header: "Amount", numeric: true },
           { key: "postedBy", header: "Posted by", sortable: true },
-          { key: "status", header: "Status", sortable: true },
+          { key: "status", header: "Status", sortable: true, variant: "state", categoryKey: "statusCategory" },
         ]}
         rows={entries}
         toolbar={

@@ -4,11 +4,14 @@ import { ACCOUNTING_CAPABILITY, ACCOUNT_TYPES } from "@/server/capabilities/acco
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
-import { ErrorState, PageHeader, Stat, StatRow } from "@/components/ui/primitives";
+import { ErrorState, PageHeader, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { day, rupees } from "@/components/ui/business/format";
 import { AccountingDesk, type AccountRow, type EntryRow } from "./AccountingDesk";
 
 export const dynamic = "force-dynamic";
+
+/** The kind tile each account type takes (presentation only; see domains.ts). */
+const ACCOUNT_KIND: Record<string, string> = { Asset: "money", Liability: "buying", Equity: "party", Income: "sales", Expense: "location" };
 
 type TrialRow = { accountId: string; code: string; name: string; type: string; debitMinor: number; creditMinor: number };
 
@@ -66,6 +69,8 @@ async function AccountingPage() {
       balance: rupees(balance),
       active: a.active,
       status: a.active ? "Active" : "Inactive",
+      kind: ACCOUNT_KIND[a.type] ?? "ledger",
+      statusCategory: a.active ? "Completed" : "Cancelled",
     };
   });
 
@@ -79,6 +84,7 @@ async function AccountingPage() {
       amount: rupees(amount),
       postedBy: posterName.get(e.postedById) ?? "Unknown",
       status: e.reversalOfId ? "Reversal" : e.reversedBy.length > 0 ? "Reversed" : "Posted",
+      statusCategory: e.reversalOfId ? "Pending" : e.reversedBy.length > 0 ? "Cancelled" : "Completed",
       canReverse: !e.reversalOfId && e.reversedBy.length === 0,
     };
   });
@@ -100,15 +106,18 @@ async function AccountingPage() {
           </Link>
         }
       />
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Active accounts" value={accounts.filter((a) => a.active).length} />
-        <Stat label="Journal entries" value={entries.length} />
-        <Stat label="Total debits" value={rupees(totalDebit)} />
-        <Stat
+      <StatTileRow cols={4} className="mb-6">
+        <StatTile kind="ledger" label="Active accounts" value={accounts.filter((a) => a.active).length} />
+        <StatTile kind="ledger" hue="indigo" icon="book" label="Journal entries" value={entries.length} />
+        <StatTile kind="money" label="Total debits" value={rupees(totalDebit)} />
+        <StatTile
+          state={totalDebit === totalCredit ? "completed" : "blocked"}
+          icon={totalDebit === totalCredit ? "check" : "hold"}
           label={totalDebit === totalCredit ? "Books balance" : "Out of balance by"}
           value={totalDebit === totalCredit ? "Yes" : rupees(Math.abs(totalDebit - totalCredit))}
+          hint={totalDebit === totalCredit ? "Debits equal credits" : "Find the unbalanced entry"}
         />
-      </StatRow>
+      </StatTileRow>
       <AccountingDesk accounts={accountRows} entries={entryRows} accountTypes={[...ACCOUNT_TYPES]} />
     </>
   );
