@@ -306,6 +306,13 @@ phase 7.
 - **How:** A per-tenant configurable reason list (default set per industry pack). Needs a decision on where it lives (config, not an enum) before code.
 - **Status:** NOT STARTED
 
+### P2-11. Worker experience: assignment, evidence and offline (phone and tablet)
+
+- **What:** DSEW now has Floor worker and Supervisor roles (grants only, `prisma/seed-dsew-roles.ts`) and phone work cards on the Shop floor. Still missing: (1) a worker sees every open stage, not only theirs, because permissions have no `own` scope and stages have no assignee (own scope needs an ADR, see CLAUDE.md "Open"); (2) photo evidence capture from the phone camera inside the checklist; (3) offline tolerance for a workshop with weak signal; (4) a tablet layout check.
+- **Why:** Workers use phones and tablets; the office uses PCs.
+- **How:** Decide assignment first (ADR for `own` scope or a stage assignee field), then build the checklist camera capture.
+- **Status:** NOT STARTED
+
 ## P3: verification, coverage, housekeeping
 
 ### P3-1. Load test: take one real measurement (Task 123, 125 §7.8)

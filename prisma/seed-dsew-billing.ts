@@ -69,7 +69,7 @@ async function main() {
 
   const { owner, jobs, invoices } = await withTenant(tenantId, async (tx) => {
     const membership = await tx.tenantMembership.findFirst({
-      where: { role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
+      where: { tenantId, role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
       include: { role: true },
     });
     if (!membership || !membership.role) throw new Error("no Owner membership in the DSEW tenant");

@@ -77,7 +77,7 @@ async function main() {
     // More than one "Owner" role can exist in a tenant; the right one is the one a member holds
     // and that carries the accounting grant.
     const membership = await tx.tenantMembership.findFirst({
-      where: { role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
+      where: { tenantId, role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
       include: { role: true },
     });
     if (!membership || !membership.role) throw new Error("no Owner membership with accounting access in the DSEW tenant");

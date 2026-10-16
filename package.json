@@ -31,6 +31,7 @@
     "seed:plywood": "node prisma/run-seed.cjs seed-plywood-demo.ts",
     "seed:dsew": "node prisma/run-seed.cjs seed-dsew.ts",
     "seed:dsew-billing": "node --env-file=.env prisma/run-seed.cjs seed-dsew-billing.ts",
+    "seed:dsew-roles": "node --env-file=.env prisma/run-seed.cjs seed-dsew-roles.ts",
     "seed:dsew-ledger": "node --env-file=.env prisma/run-seed.cjs seed-dsew-ledger.ts",
     "reset:demo": "node prisma/run-seed.cjs reset-demo.ts",
     "seed:audit-tenant": "node prisma/run-seed.cjs seed-audit-tenant-b.ts",

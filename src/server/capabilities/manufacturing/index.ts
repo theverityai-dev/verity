@@ -473,6 +473,15 @@ export const manufacturingOrderDetail: QueryDefinition<
   },
 };
 
+/**
+ * Where a person who works the floor lands: a role that can read stages but not jobs (a worker, not the
+ * office) opens on its work list, not on an overview it has no use for. Derived from what the role can
+ * do, never from its name.
+ */
+export function manufacturingLandingRouteFor(resolved: Array<{ verb: string; entity: string }>): string | null {
+  return resolved.some((p) => p.verb === "Read" && p.entity === ENTITY_MANUFACTURING_OPERATION) ? "/manufacturing/floor" : null;
+}
+
 export function registerManufacturingCapability(): void {
   registerContribution({
     capabilityId: MANUFACTURING_CAPABILITY,
