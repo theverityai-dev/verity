@@ -370,7 +370,7 @@ export function StatTile({
 /** A responsive row of `StatTile`s — 1 col on phone, up to 4 on desktop. */
 export function StatTileRow({ children, className, cols = 4 }: { children: ReactNode; className?: string; cols?: 3 | 4 }) {
   return (
-    <div className={cx("grid grid-cols-2 gap-3 sm:gap-4", cols === 3 ? "lg:grid-cols-3" : "xl:grid-cols-4", className)}>
+    <div className={cx("grid grid-cols-2 gap-3 sm:gap-4", cols === 3 ? "md:grid-cols-3" : "md:grid-cols-4", className)}>
       {children}
     </div>
   );
@@ -439,12 +439,12 @@ export function FilterChipRow({
   chips: Array<{ label: string; count?: number; icon?: IconName; active: boolean; onClick?: () => void; href?: string }>;
   className?: string;
 }) {
-  // One scrolling row on a phone (wrapping made three rows of chips above the list); wraps on wider screens.
+  // One scrolling row on a phone or tablet (wrapping made three rows of chips above the list); wraps on desktop.
   return (
-    <div className={cx("-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible", className)}>
+    <div className={cx("-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible", className)}>
       {chips.map((chip) => {
         const className = cx(
-          "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[14px] font-medium no-underline transition-colors max-sm:min-h-11",
+          "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[14px] font-medium no-underline transition-colors max-lg:min-h-11",
           chip.active
             ? "bg-accent text-accent-on"
             : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]",

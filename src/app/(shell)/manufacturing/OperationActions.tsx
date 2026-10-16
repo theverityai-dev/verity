@@ -71,7 +71,7 @@ export function OperationActions({
     <>
         {state === "pending" && actionable && (
           <CommandButton commands="verity.manufacturing.start_operation" size={size} variant="primary" disabled={pending}
-            className={large ? "min-h-12 w-full text-[17px]" : undefined}
+            className={large ? "min-h-12 w-full text-[17px]" : "max-lg:min-h-11"}
             onClick={() => run("verity.manufacturing.start_operation", {})}>
             {bar || large ? "Start stage" : "Start"}
           </CommandButton>

@@ -308,7 +308,7 @@ phase 7.
 
 ### P2-11. Worker experience: assignment, evidence and offline (phone and tablet)
 
-- **What:** DSEW now has Floor worker and Supervisor roles (grants only, `prisma/seed-dsew-roles.ts`) and phone work cards on the Shop floor. Still missing: (1) a worker sees every open stage, not only theirs, because permissions have no `own` scope and stages have no assignee (own scope needs an ADR, see CLAUDE.md "Open"); (2) photo evidence capture from the phone camera inside the checklist; (3) offline tolerance for a workshop with weak signal; (4) a tablet layout check.
+- **What:** DSEW now has Floor worker and Supervisor roles (grants only, `prisma/seed-dsew-roles.ts`) and phone work cards on the Shop floor. Still missing: (1) a worker sees every open stage, not only theirs, because permissions have no `own` scope and stages have no assignee (own scope needs an ADR, see CLAUDE.md "Open"); (2) photo evidence capture from the phone camera inside the checklist; (3) offline tolerance for a workshop with weak signal; (4) tablet landscape not yet checked (portrait done 2026-10-17: four-up tiles, one scrolling chip row, 44px targets).
 - **Why:** Workers use phones and tablets; the office uses PCs.
 - **How:** Decide assignment first (ADR for `own` scope or a stage assignee field), then build the checklist camera capture.
 - **Status:** NOT STARTED
