@@ -55,6 +55,12 @@ export function ShellChrome({
   children: ReactNode;
 }) {
   const [navOpen, setNavOpen] = useState(false);
+  // The search shortcut is Cmd+K on Apple devices and Ctrl+K everywhere else. The server cannot know which, so
+  // it renders the Mac form and the client corrects it after mount.
+  const [shortcut, setShortcut] = useState("⌘K");
+  useEffect(() => {
+    if (!/Mac|iPhone|iPad/i.test(navigator.userAgent)) setShortcut("Ctrl K");
+  }, []);
   const pathname = usePathname();
 
   // Escape closes the mobile sheet — a sheet you can only leave by finding its
@@ -371,11 +377,11 @@ export function ShellChrome({
             />
             <span className="truncate">Search</span>
             <kbd className="pointer-events-none absolute right-3 rounded px-1.5 py-0.5 text-[12px] text-text-tertiary">
-              ⌘K
+              {shortcut}
             </kbd>
           </button>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-3">
             <ThemeToggle />
             {/* Everyone has notifications (their own rows only), so the bell is
                 not gated on any permission. It used to open Audit for those who
@@ -392,7 +398,7 @@ export function ShellChrome({
             <Link
               href="/notifications"
               title="Notifications"
-              className="glass-control relative grid size-11 place-items-center rounded-full text-accent-ink no-underline transition-opacity duration-200 active:opacity-70"
+              className="glass-control relative grid size-11 place-items-center rounded-full text-text-secondary no-underline transition-colors hover:text-text active:opacity-70"
             >
               <Icon name="bell" size={19} />
               {unreadCount > 0 && (

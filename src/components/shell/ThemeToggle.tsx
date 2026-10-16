@@ -65,7 +65,7 @@ export function ThemeToggle() {
 
   // Placeholder holds the exact footprint so the header does not reflow when
   // the real control appears.
-  if (!mounted) return <div className="size-11 lg:size-9" aria-hidden="true" />;
+  if (!mounted) return <div className="size-11" aria-hidden="true" />;
 
   const next = ORDER[(ORDER.indexOf(preference) + 1) % ORDER.length]!;
 
@@ -74,9 +74,9 @@ export function ThemeToggle() {
       type="button"
       onClick={() => choose(next)}
       title={`Theme: ${LABEL[preference]}. Switch to ${LABEL[next]}.`}
-      className="grid size-11 cursor-pointer place-items-center rounded-md bg-surface text-text-secondary transition-colors hover:bg-surface-sunken hover:text-text lg:size-9"
+      className="glass-control grid size-11 cursor-pointer place-items-center rounded-full text-text-secondary transition-colors hover:text-text active:opacity-70"
     >
-      <Icon name={ICON[preference]} size={17} />
+      <Icon name={ICON[preference]} size={19} />
       {/* The state is carried as text as well as an icon, for assistive
           technology. */}
       <span className="sr-only">
