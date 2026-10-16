@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Input } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 export function RenameTeamForm({
   teamId,
@@ -22,8 +23,9 @@ export function RenameTeamForm({
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!editing) {
-    return (
+
+  return (
+    <>
       <button
         type="button"
         onClick={() => setEditing(true)}
@@ -31,10 +33,7 @@ export function RenameTeamForm({
       >
         Rename team
       </button>
-    );
-  }
-
-  return (
+      <Modal open={editing} onClose={() => setEditing(false)} title="Rename team">
     <form
       className="flex items-center gap-2"
       onSubmit={(e) => {
@@ -61,5 +60,7 @@ export function RenameTeamForm({
       </Button>
       {failure && <ErrorState title="Could not rename" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
     </form>
+      </Modal>
+    </>
   );
 }

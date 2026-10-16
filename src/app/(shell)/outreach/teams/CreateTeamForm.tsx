@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Core-only: `/outreach/teams` had no way to create a team at all —
@@ -21,17 +22,15 @@ export function CreateTeamForm({ candidates }: { candidates: Array<{ id: string;
 
   if (candidates.length === 0) return null;
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button size="sm" onClick={() => setOpen(true)}>
         + New team
       </Button>
-    );
-  }
-
-  return (
+      <Modal open={open} onClose={() => setOpen(false)} title="New team">
     <form
-      className="glass-card mb-4 grid gap-3 rounded-[12px] p-4 sm:grid-cols-[1fr_1fr_auto_auto]"
+      className="glass-card grid gap-3 rounded-[12px] sm:grid-cols-[1fr_1fr_auto_auto]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -77,5 +76,7 @@ export function CreateTeamForm({ candidates }: { candidates: Array<{ id: string;
         </div>
       )}
     </form>
+      </Modal>
+    </>
   );
 }

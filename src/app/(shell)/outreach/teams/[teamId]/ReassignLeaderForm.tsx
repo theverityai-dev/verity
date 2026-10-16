@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Core-only: reassigns a team's primary leader (`verity.outreach.set_team_leader`).
@@ -25,15 +26,13 @@ export function ReassignLeaderForm({
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         Reassign leader ({currentLeaderName})
       </Button>
-    );
-  }
-
-  return (
+      <Modal open={open} onClose={() => setOpen(false)} title="Reassign leader">
     <form
       className="flex items-center gap-2"
       onSubmit={(e) => {
@@ -70,5 +69,7 @@ export function ReassignLeaderForm({
       </Button>
       {failure && <ErrorState title="Could not reassign leader" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
     </form>
+      </Modal>
+    </>
   );
 }

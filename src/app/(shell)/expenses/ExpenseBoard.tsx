@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, ErrorState, Field, Input, Panel, RowList, Row, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 const CATEGORIES = ["Rent", "Electricity", "Gas", "Water", "Maintenance", "Cleaning", "Packaging", "Transport", "Marketing", "Repairs", "Salaries", "Miscellaneous"] as const;
 const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Wallet", "BankTransfer", "DeliveryPlatform", "Other"] as const;
@@ -21,12 +22,12 @@ function RecordExpenseForm({ locations }: { locations: Array<{ id: string; name:
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return <div className="mb-6"><Button size="sm" onClick={() => setOpen(true)}>+ Record expense</Button></div>;
-  }
 
   return (
-    <Panel title="Record expense" className="mb-6">
+    <>
+      <div className="mb-6"><Button size="sm" onClick={() => setOpen(true)}>+ Record expense</Button></div>
+      <Modal open={open} onClose={() => setOpen(false)} title="Record expense">
+    <div>
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -88,7 +89,9 @@ function RecordExpenseForm({ locations }: { locations: Array<{ id: string; name:
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         </div>
       </form>
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }
 

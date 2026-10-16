@@ -5,6 +5,7 @@ import { trailingDaysRange } from "@/lib/date-range";
 import { Button, DefinitionList, ErrorState, Field, Input, Panel, RowList, Row, Select } from "@/components/ui/primitives";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 type PayrollInputs = { daysWorked: number; hoursWorked: number; lateCount: number; absentCount: number; leaveCount: number };
 type Shift = { id: string; employeeId: string; date: string; label: string; startTime: string; endTime: string };
@@ -75,11 +76,13 @@ function DefineShiftForm({ employees, locations }: { employees: Array<{ id: stri
 
   if (employees.length === 0 || locations.length === 0) return null;
 
-  if (!open) return <div className="mb-4"><Button size="sm" onClick={() => setOpen(true)}>+ Define shift</Button></div>;
 
   return (
+    <>
+      <div className="mb-4"><Button size="sm" onClick={() => setOpen(true)}>+ Define shift</Button></div>
+      <Modal open={open} onClose={() => setOpen(false)} title="Define shift">
     <form
-      className="mb-4 grid gap-3 sm:grid-cols-3"
+      className="grid gap-3 sm:grid-cols-3"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -129,6 +132,8 @@ function DefineShiftForm({ employees, locations }: { employees: Array<{ id: stri
         <Button type="button" size="sm" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
       </div>
     </form>
+      </Modal>
+    </>
   );
 }
 

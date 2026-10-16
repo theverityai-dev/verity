@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 const TRACKS = ["Undetermined", "Agency", "Verity", "Both"] as const;
 
@@ -19,17 +20,15 @@ export function DirectionForm() {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         Post new direction
       </Button>
-    );
-  }
-
-  return (
+      <Modal open={open} onClose={() => setOpen(false)} title="Post new direction">
     <form
-      className="grid min-w-0 w-full grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+      className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
@@ -115,5 +114,7 @@ export function DirectionForm() {
         </Button>
       </div>
     </form>
+      </Modal>
+    </>
   );
 }

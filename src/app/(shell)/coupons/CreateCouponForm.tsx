@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Panel, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 export function CreateCouponForm() {
   const router = useRouter();
@@ -12,16 +13,14 @@ export function CreateCouponForm() {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <div className="mb-6">
         <Button size="sm" onClick={() => setOpen(true)}>+ Create coupon</Button>
       </div>
-    );
-  }
-
-  return (
-    <Panel title="Create coupon" className="mb-6">
+      <Modal open={open} onClose={() => setOpen(false)} title="Create coupon">
+    <div>
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -78,6 +77,8 @@ export function CreateCouponForm() {
           <Button type="button" variant="secondary" onClick={() => setOpen(false)}>Cancel</Button>
         </div>
       </form>
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }

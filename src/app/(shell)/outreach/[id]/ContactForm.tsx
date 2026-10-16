@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Panel, Select, Textarea } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 const CLASSIFICATIONS = ["Unknown", "DecisionMaker", "Influencer", "Champion", "Gatekeeper"] as const;
 
@@ -19,16 +20,14 @@ export function ContactForm({ leadId }: { leadId: string }) {
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         + Add contact
       </Button>
-    );
-  }
-
-  return (
-    <Panel title="Add contact" className="mt-4">
+      <Modal open={open} onClose={() => setOpen(false)} title="Add contact">
+    <div>
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -110,6 +109,8 @@ export function ContactForm({ leadId }: { leadId: string }) {
           </Button>
         </div>
       </form>
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }

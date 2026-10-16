@@ -6,6 +6,7 @@ import { Button, ErrorState, Field, Input, Panel, Select, Textarea } from "@/com
 import { FormCombobox } from "@/components/ui/Combobox";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 const TRACKS = ["Undetermined", "Agency", "Verity", "Both"] as const;
 
@@ -81,15 +82,6 @@ export function NewLeadForm({
   if (teams.length === 0) return null;
   const teamMembers = members.filter((m) => m.teamId === teamId);
 
-  if (!open) {
-    return (
-      <div className="mb-6">
-        <Button size="sm" onClick={() => setOpen(true)}>
-          + Add prospect
-        </Button>
-      </div>
-    );
-  }
 
   if (step === 2 && createdLead) {
     return (
@@ -209,7 +201,14 @@ export function NewLeadForm({
   }
 
   return (
-    <Panel title="Add prospect — step 1 of 2" className="mb-6">
+    <>
+      <div className="mb-6">
+        <Button size="sm" onClick={() => setOpen(true)}>
+          + Add prospect
+        </Button>
+      </div>
+      <Modal open={open} onClose={() => setOpen(false)} title="Add prospect">
+    <div>
       <form
         className="grid gap-4 sm:grid-cols-2"
         onSubmit={(e) => {
@@ -350,6 +349,8 @@ export function NewLeadForm({
           </Button>
         </div>
       </form>
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }

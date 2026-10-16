@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Field, Input, Panel, Select, Textarea } from "@/components/ui/primitives";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 const FILE_TYPES = ["Pdf", "Docx", "Spreadsheet", "Presentation", "Image", "Screenshot", "Other"] as const;
 
@@ -30,13 +31,6 @@ export function ResearchForm({ leadId }: { leadId: string }) {
   const [pending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!open) {
-    return (
-      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
-        + Add research
-      </Button>
-    );
-  }
 
   async function handleFileUpload(form: FormData) {
     const file = fileInputRef.current?.files?.[0];
@@ -110,7 +104,12 @@ export function ResearchForm({ leadId }: { leadId: string }) {
   }
 
   return (
-    <Panel title="Add research" className="mt-4">
+    <>
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        + Add research
+      </Button>
+      <Modal open={open} onClose={() => setOpen(false)} title="Add research">
+    <div>
       <div className="mb-4 flex gap-2">
         {(["Note", "Url", "File"] as const).map((m) => (
           <Button key={m} size="sm" variant={mode === m ? "primary" : "secondary"} type="button" onClick={() => setMode(m)}>
@@ -212,7 +211,9 @@ export function ResearchForm({ leadId }: { leadId: string }) {
           </div>
         </form>
       )}
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }
 

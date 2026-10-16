@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, ErrorState, Select } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Only ever picks from people already reachable in the tenant with no
@@ -30,15 +31,13 @@ export function AddMemberForm({
 
   if (candidates.length === 0) return null;
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
         + Add member
       </Button>
-    );
-  }
-
-  return (
+      <Modal open={open} onClose={() => setOpen(false)} title="Add member">
     <form
       className="flex items-center gap-2"
       onSubmit={(e) => {
@@ -75,5 +74,7 @@ export function AddMemberForm({
       </Button>
       {failure && <ErrorState title="Could not add member" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
     </form>
+      </Modal>
+    </>
   );
 }

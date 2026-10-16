@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, Input, Panel } from "@/components/ui/primitives";
 import { createClientAction } from "@/server/actions/hq";
+import { Modal } from "@/components/ui/Modal";
 
 /**
  * Creates a client.
@@ -23,16 +24,14 @@ export function CreateClientForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  if (!open) {
-    return (
+
+  return (
+    <>
       <Button variant="primary" onClick={() => setOpen(true)}>
         New client
       </Button>
-    );
-  }
-
-  return (
-    <Panel title="New client">
+      <Modal open={open} onClose={() => setOpen(false)} title="New client">
+    <div>
       <form
         className="flex flex-col gap-4 sm:max-w-md"
         action={(formData) => {
@@ -75,6 +74,8 @@ export function CreateClientForm() {
           </Button>
         </div>
       </form>
-    </Panel>
+    </div>
+      </Modal>
+    </>
   );
 }
