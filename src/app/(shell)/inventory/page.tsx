@@ -3,7 +3,7 @@ import { INVENTORY_CAPABILITY, WASTAGE_REASONS } from "@/server/capabilities/inv
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
-import { EmptyState, ErrorState, PageHeader, Stat, StatRow } from "@/components/ui/primitives";
+import { EmptyState, ErrorState, PageHeader, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { day, rupees } from "@/components/ui/business/format";
 import { trailingDaysRange } from "@/lib/date-range";
 import { InventoryDesk, type CategoryRow, type StockRow, type WastageRow } from "./InventoryDesk";
@@ -96,6 +96,18 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
       reorderLevel: item.reorderLevel > 0 ? `${item.reorderLevel.toLocaleString("en-IN")} ${item.unitLabel}` : "Not set",
       value: item.avgUnitCostPaise === null ? "No cost yet" : rupees(qty * item.avgUnitCostPaise),
       status: !item.active ? "Inactive" : low ? "Low stock" : "In stock",
+      statusCategory: !item.active ? "Cancelled" : low ? "Blocked" : "Completed",
+      level:
+        item.reorderLevel > 0
+          ? {
+              value: qty,
+              total: Math.max(qty, item.reorderLevel * 2),
+              marker: item.reorderLevel,
+              tone: low ? "blocked" : "completed",
+              figures: `${qty.toLocaleString("en-IN")} ${item.unitLabel}`,
+            }
+          : null,
+      kind: "stock",
       active: item.active,
     };
   });
@@ -128,12 +140,18 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
         title="Inventory"
         description={`Stock on hand at ${current.name}. Receive deliveries, record usage and wastage, and correct counts here.`}
       />
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Active items" value={activeRows.length} />
-        <Stat label="At or below reorder level" value={lowCount} />
-        <Stat label="Stock value" value={rupees(stockValue)} />
-        <Stat label={`Wastage, last ${WASTAGE_WINDOW_DAYS} days`} value={rupees(wastageValue)} />
-      </StatRow>
+      <StatTileRow cols={4} className="mb-6">
+        <StatTile kind="stock" label="Active items" value={activeRows.length} />
+        <StatTile
+          state={lowCount > 0 ? "blocked" : "completed"}
+          icon={lowCount > 0 ? "hold" : "check"}
+          label="At or below reorder level"
+          value={lowCount}
+          hint={lowCount > 0 ? "Reorder these first" : "Nothing to reorder"}
+        />
+        <StatTile kind="money" label="Stock value" value={rupees(stockValue)} />
+        <StatTile kind="stock" hue="brown" icon="rework" label={`Wastage, last ${WASTAGE_WINDOW_DAYS} days`} value={rupees(wastageValue)} />
+      </StatTileRow>
       <InventoryDesk
         outlets={locations}
         outletId={current.id}

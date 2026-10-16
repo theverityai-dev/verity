@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { EmptyState, HealthBadge, StateBadge, Surface } from "./primitives";
 import { Icon } from "./icons";
 import { IconTile } from "./IconTile";
+import { ProgressBar } from "./viz";
+import type { StateTone } from "./business/domains";
 
 /**
  * The platform data table.
@@ -75,7 +77,10 @@ export function pageNumbers(current: number, total: number): Array<number | null
   return out;
 }
 
-export type ColumnVariant = "text" | "link" | "state" | "health";
+export type ColumnVariant = "text" | "link" | "state" | "health" | "meter";
+
+/** The row field a `meter` column reads: a real measured value against its scale, optionally a threshold. */
+export type MeterValue = { value: number; total: number; tone?: StateTone; marker?: number; figures?: string };
 
 export type Column = {
   key: string;
@@ -110,6 +115,7 @@ export function Cell({
   const raw = row[column.key];
   const value = raw === null || raw === undefined || raw === "" ? "—" : String(raw);
   const sub = column.subKey ? row[column.subKey] : undefined;
+  const meter = column.variant === "meter" ? (raw as MeterValue | null | undefined) : undefined;
 
   const body =
     column.variant === "link" && column.href ? (
@@ -123,6 +129,19 @@ export function Cell({
       <StateBadge category={String(row[column.categoryKey ?? "category"] ?? "Draft")} label={value} />
     ) : column.variant === "health" ? (
       <HealthBadge health={value} />
+    ) : column.variant === "meter" ? (
+      meter ? (
+        <ProgressBar
+          value={meter.value}
+          total={meter.total}
+          tone={meter.tone}
+          marker={meter.marker}
+          figures={meter.figures}
+          label={`${column.header}: ${meter.figures ?? `${meter.value} of ${meter.total}`}`}
+        />
+      ) : (
+        <span className="text-text-tertiary">—</span>
+      )
     ) : (
       // The identity column keeps full-strength ink; everything else steps back
       // so the first column reads as the row's subject rather than as data.

@@ -5,7 +5,7 @@ import { requireActor } from "@/server/platform/auth";
 import { hasPermission } from "@/server/platform/authorization";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
-import { ErrorState, PageHeader, Stat, StatRow } from "@/components/ui/primitives";
+import { ErrorState, PageHeader, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { paiseToRupeesText } from "./format";
 import { day } from "@/components/ui/business/format";
 import { PurchaseOrdersDesk, type OrderListRow, type PriceRow, type VendorRow } from "./PurchaseOrdersDesk";
@@ -58,6 +58,16 @@ async function PurchaseOrdersPage() {
     outlet: o.locationName,
     total: paiseToRupeesText(o.totalPaise),
     progress: o.status === "Draft" || o.status === "Cancelled" ? "" : `${o.receivedQty.toLocaleString("en-IN")} of ${o.orderedQty.toLocaleString("en-IN")} received`,
+    receipt:
+      o.status === "Draft" || o.status === "Cancelled" || o.orderedQty <= 0
+        ? null
+        : {
+            value: o.receivedQty,
+            total: o.orderedQty,
+            tone: o.status === "Received" ? "completed" : o.status === "PartiallyReceived" ? "active" : "pending",
+            figures: `${o.receivedQty.toLocaleString("en-IN")} of ${o.orderedQty.toLocaleString("en-IN")}`,
+          },
+    kind: "buying",
     expected: o.expectedDate ?? "",
   }));
   const vendorRows: VendorRow[] = vendors.ok
@@ -81,11 +91,11 @@ async function PurchaseOrdersPage() {
   return (
     <>
       <PageHeader title="Purchase orders" description="Order from vendors for each outlet and record what arrives. Accepted goods go straight into stock." />
-      <StatRow cols={3} className="mb-6">
-        <Stat label="Waiting for approval" value={waiting} />
-        <Stat label="On order, not yet received" value={open.length} />
-        <Stat label="Value on order" value={paiseToRupeesText(openValue)} />
-      </StatRow>
+      <StatTileRow cols={3} className="mb-6">
+        <StatTile state="pending" icon="approvals" label="Waiting for approval" value={waiting} hint={waiting > 0 ? "Needs a manager's decision" : "None waiting"} />
+        <StatTile state="active" icon="truck" label="On order, not yet received" value={open.length} />
+        <StatTile kind="money" label="Value on order" value={paiseToRupeesText(openValue)} />
+      </StatTileRow>
       <PurchaseOrdersDesk
         orders={orderRows}
         vendors={vendorRows}

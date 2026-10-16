@@ -3,7 +3,7 @@
 import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable, type MeterValue } from "@/components/ui/DataTable";
 import { Tabs } from "@/components/ui/Tabs";
 import { RequestsTab, VarianceTab, type StockRequestRow, type VarianceRowView } from "./RequestsAndVariance";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
@@ -20,6 +20,11 @@ export type StockRow = {
   reorderLevel: string;
   value: string;
   status: "In stock" | "Low stock" | "Inactive";
+  /** StateCategory for the status pill (ADR-009): Low stock is Blocked, In stock Completed. */
+  statusCategory: "Completed" | "Blocked" | "Cancelled";
+  /** On hand against twice the reorder level, with the reorder level as the tick; absent when none is set. */
+  level: MeterValue | null;
+  kind: string;
   active: boolean;
 };
 export type WastageRow = {
@@ -238,12 +243,13 @@ function StockTab({
         emptyDescription="Add the ingredients and supplies you stock, then receive the first delivery."
         emptyAction={<Button variant="primary" onClick={() => setAdding(true)}>Add item</Button>}
         columns={[
-          { key: "name", header: "Item", sortable: true, variant: "link", href: "/inventory/{id}", subKey: "sku" },
+          { key: "name", header: "Item", sortable: true, variant: "link", href: "/inventory/{id}", subKey: "sku", kindKey: "kind" },
           { key: "category", header: "Category", sortable: true },
+          { key: "level", header: "Stock level", variant: "meter" },
           { key: "onHand", header: "On hand", numeric: true },
           { key: "reorderLevel", header: "Reorder at", numeric: true },
           { key: "value", header: "Value", numeric: true },
-          { key: "status", header: "Status", sortable: true },
+          { key: "status", header: "Status", sortable: true, variant: "state", categoryKey: "statusCategory" },
         ]}
         rows={stock}
         toolbar={

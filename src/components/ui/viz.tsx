@@ -80,14 +80,21 @@ export function ProgressBar({
   label,
   tone = "active",
   showFigures = true,
+  marker,
+  figures,
 }: {
   value: number;
   total: number;
   label: string;
   tone?: StateTone;
   showFigures?: boolean;
+  /** A threshold on the same scale as `total` (a reorder level): drawn as a tick across the bar. */
+  marker?: number;
+  /** Replaces the default "value/total" text ("12 kg", "3 of 5 received"). */
+  figures?: string;
 }) {
   const pct = Math.round(fraction(value, total) * 100);
+  const markerPct = marker === undefined ? null : Math.round(fraction(marker, total) * 100);
   return (
     <div className="flex min-w-0 items-center gap-2">
       <div
@@ -96,14 +103,15 @@ export function ProgressBar({
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuenow={value}
-        className="h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-[var(--color-control-strong)]"
+        className="relative h-1.5 min-w-12 flex-1 overflow-hidden rounded-full bg-[var(--color-control-strong)]"
       >
         <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: stateVar(tone) }} />
+        {markerPct !== null && (
+          <span aria-hidden="true" className="absolute inset-y-0 w-0.5 bg-text" style={{ left: `${markerPct}%` }} />
+        )}
       </div>
       {showFigures && (
-        <span className="tabular shrink-0 text-[13px] text-text-secondary">
-          {value}/{total}
-        </span>
+        <span className="tabular shrink-0 text-[13px] text-text-secondary">{figures ?? `${value}/${total}`}</span>
       )}
     </div>
   );

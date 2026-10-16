@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable, type MeterValue } from "@/components/ui/DataTable";
 import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Tabs } from "@/components/ui/Tabs";
 import { Button, Field, Input, Select } from "@/components/ui/primitives";
@@ -18,6 +18,9 @@ export type OrderListRow = {
   outlet: string;
   total: string;
   progress: string;
+  /** Received against ordered; absent until the order is approved. */
+  receipt: MeterValue | null;
+  kind: string;
   expected: string;
 };
 export type VendorRow = {
@@ -233,10 +236,10 @@ function OrdersTab({
         emptyDescription="Raise one when an outlet needs stock. You will approve, receive and track it from here."
         emptyAction={newButton}
         columns={[
-          { key: "number", header: "Order", sortable: true, variant: "link", href: `${ROUTE}/{id}`, subKey: "vendor" },
+          { key: "number", header: "Order", sortable: true, variant: "link", href: `${ROUTE}/{id}`, subKey: "vendor", kindKey: "kind" },
           { key: "outlet", header: "Deliver to", sortable: true },
           { key: "label", header: "Status", variant: "state", categoryKey: "category" },
-          { key: "progress", header: "Received" },
+          { key: "receipt", header: "Received", variant: "meter" },
           { key: "expected", header: "Expected" },
           { key: "total", header: "Total", numeric: true },
         ]}
