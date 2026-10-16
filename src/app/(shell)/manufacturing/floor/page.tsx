@@ -26,9 +26,9 @@ const when = (d: Date | null) =>
  * never offered work that would be refused. Selecting a row opens its checklist, details and stages in
  * a pane with the stage's outcomes always in view.
  */
-async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: string; op?: string }> }) {
+async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: string; op?: string; all?: string }> }) {
   installCapabilities();
-  const { stage, op } = await searchParams;
+  const { stage, op, all: showAllParam } = await searchParams;
   const actor = await requireActor();
 
   const allowed = await withTenant(actor.tenantId, (tx) =>
@@ -36,7 +36,20 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
   );
   if (!allowed) return <PermissionDenied what="reading the production floor" />;
 
-  const all = await executeQuery(actor, operationQueue, {});
+  const everything = await executeQuery(actor, operationQueue, {});
+
+  // A worker can be given a focus: the kinds of stage they work (winding, testing, ...), kept on their
+  // membership. It narrows what the list opens with; it is a view, not a permission, so "Show all stages"
+  // is always one tap away and the commands are still authorized as before.
+  const focusKinds = await withTenant(actor.tenantId, async (tx) => {
+    const m = await tx.tenantMembership.findFirst({ where: { id: actor.membershipId, tenantId: actor.tenantId }, select: { customFields: true } });
+    const raw = (m?.customFields as { stageKinds?: unknown } | null)?.stageKinds;
+    return Array.isArray(raw) ? raw.filter((k): k is string => typeof k === "string") : [];
+  });
+  const showAll = showAllParam === "1";
+  const focused = focusKinds.length > 0 && !showAll;
+  const all = focused ? everything.filter((r) => focusKinds.includes(stageKindFor(r.stageKey, r.label))) : everything;
+  const keep = showAll && focusKinds.length > 0 ? "all=1" : "";
 
   // Stage chips come from the work that exists, in the order it first appears.
   const stages: Array<{ stageKey: string; label: string; count: number }> = [];
@@ -64,9 +77,9 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
     checklist: r.checklist,
   }));
 
-  const baseQuery = stage ? `stage=${encodeURIComponent(stage)}` : "";
+  const baseQuery = [stage ? `stage=${encodeURIComponent(stage)}` : "", keep].filter(Boolean).join("&");
   const listHref = `/manufacturing/floor${baseQuery ? `?${baseQuery}` : ""}`;
-  const selected = op ? all.find((r) => r.id === op) : undefined;
+  const selected = op ? everything.find((r) => r.id === op) : undefined;
   const orderStages = selected ? await executeQuery(actor, orderOperations, { orderId: selected.orderId }) : [];
 
   const onHold = all.filter((r) => r.state === "on_hold").length;
@@ -158,6 +171,15 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
         description="Open stages of running orders. Work can only start when everything before it is done."
       />
 
+      {focusKinds.length > 0 && (
+        <p className="mb-4 mt-0 flex flex-wrap items-center gap-x-2 text-[15px] text-text-secondary">
+          {focused ? "Showing the stages you work." : "Showing every stage."}
+          <a href={focused ? "/manufacturing/floor?all=1" : "/manufacturing/floor"} className="font-medium text-accent-ink">
+            {focused ? "Show all stages" : "Back to my stages"}
+          </a>
+        </p>
+      )}
+
       <StatTileRow className="mb-5">
         <StatTile state="active" icon="stage" label="Open stages" value={all.length} />
         <StatTile state="completed" icon="check" label="Ready to start" value={all.filter((r) => r.actionable).length} />
@@ -168,13 +190,13 @@ async function FloorPage({ searchParams }: { searchParams: Promise<{ stage?: str
       <nav aria-label="Filter by stage" className="mb-4">
         <FilterChipRow
           chips={[
-            { label: "All stages", count: all.length, active: !stage, href: "/manufacturing/floor" },
+            { label: focused ? "My stages" : "All stages", count: all.length, active: !stage, href: `/manufacturing/floor${keep ? `?${keep}` : ""}` },
             ...stages.map((s) => ({
               label: s.label,
               count: s.count,
               icon: kindPresentation(stageKindFor(s.stageKey, s.label)).icon,
               active: stage === s.stageKey,
-              href: `/manufacturing/floor?stage=${encodeURIComponent(s.stageKey)}`,
+              href: `/manufacturing/floor?stage=${encodeURIComponent(s.stageKey)}${keep ? `&${keep}` : ""}`,
             })),
           ]}
         />

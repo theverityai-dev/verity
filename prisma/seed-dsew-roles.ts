@@ -27,11 +27,13 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 type Verb = "Read" | "Create" | "Edit" | "ActionExecute";
-const ROLES: Array<{ name: string; email: string; person: string; grants: Array<[string, Verb[]]> }> = [
+const ROLES: Array<{ name: string; email: string; person: string; stageKinds?: string[]; grants: Array<[string, Verb[]]> }> = [
   {
     name: "Floor worker",
     email: "worker@dsew.demo",
     person: "Floor Worker",
+    // The kinds of stage this person works (see stageKindFor in domains.ts). A view focus, not a permission.
+    stageKinds: ["stage-winding"],
     grants: [[manufacturing.ENTITY_MANUFACTURING_OPERATION, ["Read", "ActionExecute"]]],
   },
   {
@@ -93,6 +95,7 @@ async function main() {
 
     const have = await withTenant(tenantId, (tx) => tx.tenantMembership.count({ where: { tenantId, roleId } }));
     if (have > 0) {
+      if (spec.stageKinds) await withTenant(tenantId, (tx) => tx.tenantMembership.updateMany({ where: { tenantId, roleId }, data: { customFields: { stageKinds: spec.stageKinds } } }));
       console.log(`${spec.name}: role and login already exist.`);
       generated = false;
       continue;
@@ -107,7 +110,7 @@ async function main() {
     try {
       await withTenant(tenantId, async (tx) => {
         const identity = await provisionIdentity(tx, { organizationId, authUserId: created.data.user!.id, displayName: spec.person, email: spec.email });
-        await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId } });
+        await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId, ...(spec.stageKinds ? { customFields: { stageKinds: spec.stageKinds } } : {}) } });
       });
     } catch (error) {
       await supabase.auth.admin.deleteUser(created.data.user.id).catch(() => {});
