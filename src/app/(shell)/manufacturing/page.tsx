@@ -4,7 +4,7 @@ import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_ORDER, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { DataTable } from "@/components/ui/DataTable";
+import { DataTable, type MeterValue } from "@/components/ui/DataTable";
 import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { equipmentKindFor } from "@/components/ui/business/domains";
 import { CreateOrderForm } from "./CreateOrderForm";
@@ -20,7 +20,7 @@ type Row = Record<string, unknown> & {
   state: string;
   category: string;
   kind: string;
-  progress: string;
+  stages: MeterValue | null;
 };
 
 async function ManufacturingPage() {
@@ -69,9 +69,9 @@ async function ManufacturingPage() {
         state: o.state.replace(/_/g, " "),
         category: category.get(o.state) ?? "Draft",
         kind: equipmentKindFor(o.outputItem.name),
-        progress: (() => {
+        stages: (() => {
           const p = progress.get(o.id);
-          return p ? `${p.done} of ${p.total} stages done` : "No stages planned";
+          return p ? { value: p.done, total: p.total, tone: p.done >= p.total ? "completed" : p.done > 0 ? "active" : "draft", figures: `${p.done} of ${p.total} stages` } : null;
         })(),
       })),
     };
@@ -105,7 +105,8 @@ async function ManufacturingPage() {
           { key: "output", header: "Produces", kindKey: "kind" },
           { key: "qty", header: "Quantity", numeric: true, sortable: true },
           { key: "location", header: "Location" },
-          { key: "state", header: "State", variant: "state", categoryKey: "category", subKey: "progress" },
+          { key: "state", header: "State", variant: "state", categoryKey: "category" },
+          { key: "stages", header: "Stages", variant: "meter" },
         ]}
         emptyTitle="No manufacturing orders"
         emptyDescription="An order lists the components it consumes and the item it produces. Create one to begin."
