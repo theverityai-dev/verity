@@ -61,6 +61,14 @@ export function PassportPanel({
           >
             {copied ? "Copied" : "Copy link"}
           </Button>
+          <a
+            href={`${issued.url}/label`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-8 items-center rounded-[10px] bg-[var(--color-control)] px-3 text-[14px] font-semibold text-accent-ink no-underline"
+          >
+            Print nameplate
+          </a>
           <Button type="button" size="sm" variant="ghost" onClick={() => { setIssued(null); router.refresh(); }}>
             I have saved it
           </Button>
