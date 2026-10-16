@@ -7,6 +7,7 @@ import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
 import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { equipmentKindFor } from "@/components/ui/business/domains";
+import { StackedBar } from "@/components/ui/viz";
 import Link from "next/link";
 import { NewCustomerButton, NewJobButton } from "./JobForms";
 import { JobFilters } from "./JobFilters";
@@ -57,7 +58,10 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
     priority: PRIORITY_LABEL[r.priority] ?? r.priority,
     due: r.overdue ? `${dateText(r.dueDate)} (late)` : dateText(r.dueDate),
     value: inr(r.quotedValueMinor ?? r.openQuoteMinor),
-    progress: r.progress === null ? "—" : `${r.progress}%`,
+    progress:
+      r.progress === null
+        ? null
+        : { value: r.progress, total: 100, tone: r.overdue ? "blocked" : r.progress >= 100 ? "completed" : "active", figures: `${r.progress}%` },
   }));
 
   return (
@@ -87,6 +91,21 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         />
       </StatTileRow>
 
+      {rows.length > 0 && (
+        <div className="glass-card mb-4 p-5">
+          <p className="m-0 mb-3 text-[15px] font-semibold">All jobs by stage</p>
+          <StackedBar
+            label="Jobs by stage"
+            segments={[
+              { label: "Enquiries and quotes", value: counts.enquiries },
+              { label: "In work", value: counts.working },
+              { label: "Finished", value: counts.finished },
+              { label: "Lost", value: counts.lost },
+            ]}
+          />
+        </div>
+      )}
+
       <JobFilters active={active} counts={counts} customer={onlyCustomer} />
 
       <DataTable
@@ -100,7 +119,7 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
           { key: "priority", header: "Priority" },
           { key: "due", header: "Delivery promised" },
           { key: "value", header: "Order value", numeric: true },
-          { key: "progress", header: "Progress", numeric: true },
+          { key: "progress", header: "Progress", variant: "meter" },
         ]}
         emptyTitle={active === "all" ? "No jobs yet" : "No jobs in this view"}
         emptyDescription={active === "all" ? "A job starts as a customer enquiry. Use New job to open the first one." : "Choose All to see every job."}
