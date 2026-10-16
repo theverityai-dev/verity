@@ -101,7 +101,7 @@ function DefineShiftForm({ employees, locations }: { employees: Array<{ id: stri
         });
       }}
     >
-      <Field label="Outlet" htmlFor="shift-locationId" required>
+      <Field label="Location" htmlFor="shift-locationId" required>
         <Select id="shift-locationId" name="locationId" required defaultValue={locations[0]?.id}>
           {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
         </Select>

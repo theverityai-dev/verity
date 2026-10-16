@@ -3,6 +3,8 @@ import { INVENTORY_CAPABILITY, WASTAGE_REASONS } from "@/server/capabilities/inv
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { runQuery } from "@/server/actions/platform";
+import { isCapabilityActive } from "@/server/platform/capability";
+import { RECIPE_CAPABILITY } from "@/server/capabilities/recipe";
 import { EmptyState, ErrorState, PageHeader, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { day, rupees } from "@/components/ui/business/format";
 import { trailingDaysRange } from "@/lib/date-range";
@@ -37,7 +39,7 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
   if (locations.length === 0) {
     return (
       <>
-        <PageHeader title="Inventory" description="Stock on hand, receipts, usage and wastage for each outlet." />
+        <PageHeader title="Inventory" description="Stock on hand, receipts, usage and wastage for each location." />
         <EmptyState title="No outlets yet" description="Add an outlet under Locations, then return here to record its stock." />
       </>
     );
@@ -53,9 +55,14 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
 
   const range = trailingDaysRange(WASTAGE_WINDOW_DAYS);
   const since = new Date(`${range.fromDate}T00:00:00.000Z`);
+  // Variance is recipe usage against sales: it exists only where the recipe capability is on, so a
+  // factory never sees a restaurant's food-cost tab.
+  const showVariance = await withTenant(actor.tenantId, (tx) => isCapabilityActive(tx, actor.tenantId, RECIPE_CAPABILITY));
   const [requests, variance] = await Promise.all([
     runQuery<Array<Omit<StockRequestRow, "createdAt"> & { createdAt: string | Date }>>("verity.inventory.list_stock_requests", {}),
-    runQuery<VarianceRow[]>("verity.inventory.food_cost_variance", { locationId: current.id, fromDate: range.fromDate, toDate: range.toDate }),
+    showVariance
+      ? runQuery<VarianceRow[]>("verity.inventory.food_cost_variance", { locationId: current.id, fromDate: range.fromDate, toDate: range.toDate })
+      : Promise.resolve({ ok: false as const, message: "", issues: [], retryable: false }),
   ]);
   const [items, groups, wastage] = await Promise.all([
     withTenant(actor.tenantId, (tx) =>
@@ -95,8 +102,10 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
       unit: item.unitLabel,
       reorderLevel: item.reorderLevel > 0 ? `${item.reorderLevel.toLocaleString("en-IN")} ${item.unitLabel}` : "Not set",
       value: item.avgUnitCostPaise === null ? "No cost yet" : rupees(qty * item.avgUnitCostPaise),
-      status: !item.active ? "Inactive" : qty <= 0 ? "Out of stock" : low ? "Low stock" : "In stock",
-      statusCategory: !item.active ? "Cancelled" : qty <= 0 || low ? "Blocked" : "Completed",
+      // An item with no reorder level is not being kept in stock (made to order), so nothing on hand is
+      // a fact, not an alarm.
+      status: !item.active ? "Inactive" : qty <= 0 ? (item.reorderLevel > 0 ? "Out of stock" : "None on hand") : low ? "Low stock" : "In stock",
+      statusCategory: !item.active ? "Cancelled" : qty <= 0 ? (item.reorderLevel > 0 ? "Blocked" : "Draft") : low ? "Blocked" : "Completed",
       level:
         item.reorderLevel > 0
           ? {
@@ -166,6 +175,7 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
             : []
         }
         varianceDays={WASTAGE_WINDOW_DAYS}
+        showVariance={showVariance}
       />
     </>
   );

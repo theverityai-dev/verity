@@ -20,9 +20,9 @@ export type StockRow = {
   unit: string;
   reorderLevel: string;
   value: string;
-  status: "In stock" | "Low stock" | "Out of stock" | "Inactive";
+  status: "In stock" | "Low stock" | "Out of stock" | "None on hand" | "Inactive";
   /** StateCategory for the status pill (ADR-009): Low stock is Blocked, In stock Completed. */
-  statusCategory: "Completed" | "Blocked" | "Cancelled";
+  statusCategory: "Completed" | "Blocked" | "Cancelled" | "Draft";
   /** On hand against twice the reorder level, with the reorder level as the tick; absent when none is set. */
   level: MeterValue | null;
   kind: string;
@@ -58,7 +58,7 @@ const ACTION_COPY: Record<StockAction, { title: string; submit: string; failure:
   use: { title: "Record usage", submit: "Record usage", failure: "Could not record usage" },
   count: { title: "Correct the count", submit: "Save count", failure: "Could not save the count" },
   waste: { title: "Record wastage", submit: "Record wastage", failure: "Could not record wastage" },
-  transfer: { title: "Send to another outlet", submit: "Send stock", failure: "Could not send the stock" },
+  transfer: { title: "Send to another location", submit: "Send stock", failure: "Could not send the stock" },
 };
 
 function StockActionModal({
@@ -166,7 +166,7 @@ function StockActionModal({
       {action === "transfer" && (
         <Field label="Send to" htmlFor="inv-to" required>
           <Select id="inv-to" name="toOutlet" required defaultValue="">
-            <option value="" disabled>Choose an outlet</option>
+            <option value="" disabled>Choose a location</option>
             {outlets
               .filter((o) => o.id !== outletId)
               .map((o) => (
@@ -177,7 +177,7 @@ function StockActionModal({
       )}
 
       {action === "receive" && (
-        <Field label={`Cost per ${item.unit} (₹)`} htmlFor="inv-cost" hint="Updates the item's average cost, which recipes use.">
+        <Field label={`Cost per ${item.unit} (₹)`} htmlFor="inv-cost" hint="Updates the item's average cost.">
           <Input id="inv-cost" name="unitCost" type="number" min={0} step="0.01" inputMode="decimal" placeholder="Leave blank if not known" />
         </Field>
       )}
@@ -257,7 +257,7 @@ function StockTab({
           <>
             {outlets.length > 1 && (
               <Select
-                aria-label="Outlet"
+                aria-label="Location"
                 value={outletId}
                 onChange={(e) => router.push(`/inventory?outlet=${e.target.value}`)}
               >
@@ -292,7 +292,7 @@ function StockTab({
                 <OverflowMenuItem onClick={() => setAction({ kind: "count", item })}>Count</OverflowMenuItem>
                 <OverflowMenuItem onClick={() => setAction({ kind: "waste", item })}>Waste</OverflowMenuItem>
                 {outlets.length > 1 && item.onHandQty > 0 && (
-                  <OverflowMenuItem onClick={() => setAction({ kind: "transfer", item })}>Send to another outlet</OverflowMenuItem>
+                  <OverflowMenuItem onClick={() => setAction({ kind: "transfer", item })}>Send to another location</OverflowMenuItem>
                 )}
               </OverflowMenu>
             </div>
@@ -313,7 +313,7 @@ function StockTab({
 
       <FormModal
         title="Add item"
-        description="Items are shared by every outlet; each outlet keeps its own quantity."
+        description="Items are shared by every location; each location keeps its own quantity."
         open={adding}
         onClose={() => {
           setAdding(false);
@@ -374,7 +374,7 @@ function WastageTab({ wastage }: { wastage: WastageRow[] }) {
     <DataTable
       caption="Wastage, last 30 days"
       emptyTitle="No wastage recorded"
-      emptyDescription="Use Waste on an item to record spoilage, burnt food or damage with a reason."
+      emptyDescription="Use Waste on an item to record spoilage, scrap or damage with a reason."
       columns={[
         { key: "date", header: "Date", sortable: true },
         { key: "item", header: "Item", sortable: true, subKey: "notes" },
@@ -443,6 +443,7 @@ export function InventoryDesk({
   requests,
   variance,
   varianceDays,
+  showVariance,
 }: {
   outlets: Outlet[];
   outletId: string;
@@ -453,6 +454,8 @@ export function InventoryDesk({
   requests: StockRequestRow[];
   variance: VarianceRowView[];
   varianceDays: number;
+  /** Recipe usage exists only where the recipe capability is active. */
+  showVariance: boolean;
 }) {
   // The badge marks what needs attention, so Stock counts low items only.
   const low = stock.filter((s) => s.status === "Low stock").length;
@@ -479,7 +482,7 @@ export function InventoryDesk({
           ),
         },
         { id: "wastage", label: "Wastage", count: wastage.length, content: <WastageTab wastage={wastage} /> },
-        { id: "variance", label: "Variance", content: <VarianceTab rows={variance} days={varianceDays} /> },
+        ...(showVariance ? [{ id: "variance", label: "Variance", content: <VarianceTab rows={variance} days={varianceDays} /> }] : []),
         { id: "categories", label: "Categories", count: categories.length, content: <CategoriesTab categories={categories} /> },
       ]}
     />

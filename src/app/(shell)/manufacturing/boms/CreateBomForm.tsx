@@ -79,7 +79,7 @@ export function CreateBomForm({ items, fields }: { items: Option[]; fields: Cust
       )}
 
       <div className="grid grid-cols-[8rem_1fr] gap-3">
-        <Field label="Code" htmlFor="bom-code" required hint="Unique. A changed recipe takes a new code.">
+        <Field label="Code" htmlFor="bom-code" required hint="Unique. A changed list takes a new code.">
           <Input id="bom-code" name="code" required maxLength={60} autoFocus />
         </Field>
         <Field label="Name" htmlFor="bom-name" required>

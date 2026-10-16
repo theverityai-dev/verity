@@ -92,7 +92,7 @@ async function InventoryItemPage({
       id: m.id,
       locationId: m.locationId,
       date: day(m.movedAt),
-      outlet: locationName.get(m.locationId) ?? "Unknown outlet",
+      outlet: locationName.get(m.locationId) ?? "Unknown location",
       what: describe(m.kind, m.reference, m.wastageRecord?.reason ?? null),
       note: m.wastageRecord?.notes ?? typedNote,
       change: signed(m.qty),
@@ -121,21 +121,21 @@ async function InventoryItemPage({
         }
       />
       <StatRow cols={4} className="mb-6">
-        <Stat label="On hand, all outlets" value={qty(totalOnHand)} />
+        <Stat label="On hand, all locations" value={qty(totalOnHand)} />
         <Stat label="Average cost" value={item.avgUnitCostPaise === null ? "No cost yet" : `${rupees(item.avgUnitCostPaise)} per ${unit}`} />
         <Stat label="Reorder level" value={item.reorderLevel > 0 ? qty(item.reorderLevel) : "Not set"} />
         <Stat label="Wasted to date" value={rupees(wastedValue)} />
       </StatRow>
       <DataTable
-        caption={outletFilter ? `Movements at ${locationName.get(outletFilter) ?? "this outlet"}, newest first` : "Movements, newest first"}
+        caption={outletFilter ? `Movements at ${locationName.get(outletFilter) ?? "this location"}, newest first` : "Movements, newest first"}
         emptyTitle="No movements yet"
         emptyDescription="Receive the first delivery from the inventory list to start this ledger."
         columns={[
           { key: "date", header: "Date" },
           { key: "what", header: "Movement", subKey: "note" },
-          { key: "outlet", header: "Outlet", sortable: true },
+          { key: "outlet", header: "Location", sortable: true },
           { key: "change", header: "Change", numeric: true },
-          { key: "balance", header: "Balance at outlet", numeric: true },
+          { key: "balance", header: "Balance at location", numeric: true },
           { key: "cost", header: "Cost" },
           { key: "by", header: "Recorded by", sortable: true },
         ]}

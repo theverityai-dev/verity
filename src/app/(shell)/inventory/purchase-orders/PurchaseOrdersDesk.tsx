@@ -233,7 +233,7 @@ function OrdersTab({
       <DataTable
         caption="Purchase orders, newest first"
         emptyTitle="No purchase orders yet"
-        emptyDescription="Raise one when an outlet needs stock. You will approve, receive and track it from here."
+        emptyDescription="Raise one when a location needs stock. You will approve, receive and track it from here."
         emptyAction={newButton}
         columns={[
           { key: "number", header: "Order", sortable: true, variant: "link", href: `${ROUTE}/{id}`, subKey: "vendor", kindKey: "kind" },
@@ -277,7 +277,7 @@ function OrdersTab({
             ))}
           </Select>
         </Field>
-        <Field label="Outlet" htmlFor="low-outlet" required>
+        <Field label="Location" htmlFor="low-outlet" required>
           <Select id="low-outlet" name="locationId" required>
             {outlets.map((o) => (
               <option key={o.id} value={o.id}>{o.name}</option>

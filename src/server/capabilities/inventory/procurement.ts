@@ -150,7 +150,7 @@ export const createPurchaseOrder: CommandDefinition<CreateOrderInput, { id: stri
     if (!vendor) throw new ValidationError("E_VALIDATION: vendor not found in this tenant");
     if (!vendor.active) throw new ValidationError("E_VALIDATION: vendor is deactivated");
     if (!(await ctx.tx.location.findUnique({ where: { id: input.locationId }, select: { id: true } }))) {
-      throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+      throw new ValidationError("E_VALIDATION: location not found in this tenant");
     }
     const ids = input.lines.map((l) => l.itemId);
     if (new Set(ids).size !== ids.length) throw new ValidationError("E_VALIDATION: an item appears twice on the order");
@@ -240,10 +240,10 @@ export const draftOrderFromLowStock: CommandDefinition<
     if (!vendor) throw new ValidationError("E_VALIDATION: vendor not found in this tenant");
     if (!vendor.active) throw new ValidationError("E_VALIDATION: vendor is deactivated");
     if (!(await ctx.tx.location.findUnique({ where: { id: input.locationId }, select: { id: true } }))) {
-      throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+      throw new ValidationError("E_VALIDATION: location not found in this tenant");
     }
     if ((await lowStockLines(ctx.tx, input.locationId)).length === 0) {
-      throw new ValidationError("E_VALIDATION: nothing at this outlet is at or below its reorder level");
+      throw new ValidationError("E_VALIDATION: nothing at this location is at or below its reorder level");
     }
   },
   handler: async (ctx, input) => {

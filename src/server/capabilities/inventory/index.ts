@@ -251,7 +251,7 @@ export const transferStock: CommandDefinition<
   }),
   preconditions: async (ctx, input) => {
     if (input.fromLocationId === input.toLocationId) {
-      throw new ValidationError("E_VALIDATION: choose a different outlet to send the stock to");
+      throw new ValidationError("E_VALIDATION: choose a different location to send the stock to");
     }
     const item = await ctx.tx.inventoryItem.findUnique({ where: { id: input.itemId } });
     if (!item) throw new ValidationError("E_VALIDATION: item not found in this tenant");
@@ -260,12 +260,12 @@ export const transferStock: CommandDefinition<
       where: { id: { in: [input.fromLocationId, input.toLocationId] } },
       select: { id: true },
     });
-    if (outlets.length !== 2) throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+    if (outlets.length !== 2) throw new ValidationError("E_VALIDATION: location not found in this tenant");
     const balance = await ctx.tx.inventoryStockBalance.findUnique({
       where: { tenantId_itemId_locationId: { tenantId: ctx.actor.tenantId, itemId: input.itemId, locationId: input.fromLocationId } },
     });
     if ((balance?.qty ?? 0) < input.qty) {
-      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} ${item.unitLabel} is at the sending outlet`);
+      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} ${item.unitLabel} is at the sending location`);
     }
   },
   handler: async (ctx, input) => {
@@ -318,7 +318,7 @@ export const requestStock: CommandDefinition<{ itemId: string; toLocationId: str
     const item = await ctx.tx.inventoryItem.findUnique({ where: { id: input.itemId } });
     if (!item || !item.active) throw new ValidationError("E_VALIDATION: item not found or deactivated");
     if (!(await ctx.tx.location.findUnique({ where: { id: input.toLocationId }, select: { id: true } }))) {
-      throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+      throw new ValidationError("E_VALIDATION: location not found in this tenant");
     }
   },
   handler: async (ctx, input) => {
@@ -363,13 +363,13 @@ export const decideStockRequest: CommandDefinition<
       if (!input.note) throw new ValidationError("E_VALIDATION: say why the request is rejected");
       return;
     }
-    if (!input.fromLocationId) throw new ValidationError("E_VALIDATION: choose the outlet to send from");
-    if (input.fromLocationId === request.toLocationId) throw new ValidationError("E_VALIDATION: choose a different outlet to send from");
+    if (!input.fromLocationId) throw new ValidationError("E_VALIDATION: choose the location to send from");
+    if (input.fromLocationId === request.toLocationId) throw new ValidationError("E_VALIDATION: choose a different location to send from");
     const balance = await ctx.tx.inventoryStockBalance.findUnique({
       where: { tenantId_itemId_locationId: { tenantId: ctx.actor.tenantId, itemId: request.itemId, locationId: input.fromLocationId } },
     });
     if ((balance?.qty ?? 0) < request.qty) {
-      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} is at the sending outlet`);
+      throw new ValidationError(`E_VALIDATION: only ${balance?.qty ?? 0} is at the sending location`);
     }
   },
   handler: async (ctx, input) => {
@@ -523,7 +523,7 @@ export const applyStockCount: CommandDefinition<
     if (found.length !== ids.length) throw new ValidationError("E_VALIDATION: an item is not in this tenant");
     if (found.some((i) => !i.active)) throw new ValidationError("E_VALIDATION: a deactivated item cannot be counted");
     const location = await ctx.tx.location.findUnique({ where: { id: input.locationId }, select: { id: true } });
-    if (!location) throw new ValidationError("E_VALIDATION: outlet not found in this tenant");
+    if (!location) throw new ValidationError("E_VALIDATION: location not found in this tenant");
   },
   handler: async (ctx, input) => {
     const balances = await ctx.tx.inventoryStockBalance.findMany({

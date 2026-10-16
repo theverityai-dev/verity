@@ -90,7 +90,7 @@ async function PurchaseOrdersPage() {
 
   return (
     <>
-      <PageHeader title="Purchase orders" description="Order from vendors for each outlet and record what arrives. Accepted goods go straight into stock." />
+      <PageHeader title="Purchase orders" description="Order from vendors for each location and record what arrives. Accepted goods go straight into stock." />
       <StatTileRow cols={3} className="mb-6">
         <StatTile state="pending" icon="approvals" label="Waiting for approval" value={waiting} hint={waiting > 0 ? "Needs a manager's decision" : "None waiting"} />
         <StatTile state="active" icon="truck" label="On order, not yet received" value={open.length} />

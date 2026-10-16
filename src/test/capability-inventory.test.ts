@@ -199,7 +199,7 @@ describeDb("capability: Inventory stock count", () => {
     ).rejects.toThrow(/not in this tenant/);
     await expect(
       executeCommand(manager, applyStockCount, { locationId: randomUUID(), lines: [{ itemId: oil, countedQty: 1 }] }),
-    ).rejects.toThrow(/outlet not found/);
+    ).rejects.toThrow(/location not found/);
   });
 
   it("is refused for a role that can only read stock", async () => {
@@ -226,7 +226,7 @@ describeDb("capability: Inventory stock count", () => {
   it("refuses a transfer to the same outlet, beyond what is there, or by a reader", async () => {
     await expect(
       executeCommand(manager, transferStock, { itemId: chicken, fromLocationId: outletA, toLocationId: outletA, qty: 1 }),
-    ).rejects.toThrow(/different outlet/);
+    ).rejects.toThrow(/different location/);
     await expect(
       executeCommand(manager, transferStock, { itemId: chicken, fromLocationId: outletB, toLocationId: outletA, qty: 10_000 }),
     ).rejects.toThrow(/only/);
@@ -244,7 +244,7 @@ describeDb("capability: Inventory stock count", () => {
     await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true })).rejects.toThrow(/outlet to send from/);
     await expect(
       executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletB }),
-    ).rejects.toThrow(/different outlet/);
+    ).rejects.toThrow(/different location/);
     await expect(
       executeCommand(reader, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletA }),
     ).rejects.toBeInstanceOf(ForbiddenError);

@@ -57,7 +57,7 @@ async function BomsPage() {
     <>
       <PageHeader
         title="Bills of materials"
-        description="A reusable recipe for one unit of a finished item. An order made from it scales every line by the quantity."
+        description="A reusable list of components for one unit of a finished item. An order made from it scales every line by the quantity."
         actions={<CreateBomForm items={data.items} fields={data.fields} />}
       />
 

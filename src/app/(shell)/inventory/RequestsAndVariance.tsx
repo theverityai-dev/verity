@@ -57,11 +57,11 @@ export function RequestsTab({
       <DataTable
         caption={`Stock requests · ${open} waiting`}
         emptyTitle="No stock requests"
-        emptyDescription="An outlet running short can ask for stock here; another outlet sends it once approved."
+        emptyDescription="A location running short can ask for stock here; another location sends it once approved."
         emptyAction={<Button variant="primary" onClick={() => setAsking(true)}>Request stock</Button>}
         columns={[
           { key: "itemName", header: "Item", sortable: true, subKey: "reason" },
-          { key: "toLocation", header: "For outlet", sortable: true },
+          { key: "toLocation", header: "For location", sortable: true },
           { key: "quantity", header: "Quantity", numeric: true },
           { key: "status", header: "Status", sortable: true, subKey: "decisionNote" },
           { key: "createdAt", header: "Asked on" },
@@ -80,7 +80,7 @@ export function RequestsTab({
 
       <FormModal
         title="Request stock"
-        description="Ask for an item for this outlet. Someone who manages stock sends it from another outlet."
+        description="Ask for an item for this location. Someone who manages stock sends it from another location."
         open={asking}
         onClose={() => {
           setAsking(false);
@@ -110,7 +110,7 @@ export function RequestsTab({
             ))}
           </Select>
         </Field>
-        <Field label="For outlet" htmlFor="req-to" required>
+        <Field label="For location" htmlFor="req-to" required>
           <Select id="req-to" name="toLocationId" required defaultValue={outletId}>
             {outlets.map((o) => (
               <option key={o.id} value={o.id}>{o.name}</option>
@@ -185,7 +185,7 @@ export function VarianceTab({ rows, days }: { rows: VarianceRowView[]; days: num
     <DataTable
       caption={`Food-cost variance, last ${days} days`}
       emptyTitle="Nothing to compare yet"
-      emptyDescription="Recipe usage, wastage and count corrections appear here once the outlet has sales and a stock count."
+      emptyDescription="Recipe usage, wastage and count corrections appear here once the location has sales and a stock count."
       columns={[
         { key: "itemName", header: "Item", sortable: true },
         { key: "used", header: "Used by recipes", numeric: true },
