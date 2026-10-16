@@ -200,6 +200,20 @@ phase 7.
 
 ## P2: planned build work, unblocked
 
+### P2-0. Client-owned Vercel and Supabase deployments: decide, then pilot
+
+- **What:** Research is done (`docs/deployment/client-owned-vercel-supabase.md`, 2026-10-16). It is
+  feasible but needs a new deployment mode (proposed ADR-045, "Mode D") and has seven blockers, the top
+  three being: `verity_app` is created by no migration, the first operator and tenant on a fresh cloud
+  database have no scripted procedure, and the HQ operator model assumes one shared database.
+- **Why:** Small clients may want their data in their own accounts. Vercel Hobby is non-commercial and a
+  Hobby team cannot deploy a private organisation repository, so a client needs Vercel Pro and Supabase Pro.
+- **How:** After the product owner decides (see "Blocked on a person"): write ADR-045; script the role
+  and first-operator steps with tests; run the pilot in the doc's section 10 on throwaway Pro accounts;
+  pass the section 11 gate before any real client data.
+- **Done when:** the gate passes and the mode is named in every claim (ADR-031 constraint 1).
+- **Status:** BLOCKED on a person (offer it or not, price, pilot client, support model).
+
 ### P2-1. Remaining export datasets (ADR-037, 125 §7.5)
 
 - **What:** The client data export covers CRM only. Finance, inventory, HR, attendance, coupons,
@@ -345,6 +359,8 @@ Each line names who must act and what they must do. Move the item back to its pr
 - **Approve ADR-044 (documents post to the ledger)** before accounting posting is built (P1-1h), and
   **a session with the D&S owner** to confirm manager.io's tab list and Summary tiles (P1-1b).
   Product owner.
+- **Offer client-owned cloud accounts or not** (P2-0): price, pilot client, whether a named operator login
+  inside each client's instance is an acceptable support model. Product owner.
 - **API key and migration for Task 119** (P1-3). Product owner.
 - **Per-tenant data volumes and a disposable database** for the load test (P3-1). Product owner.
 - **Name the manufacturing design partner** (P2-8): is D & S Electric Works it? Product owner.
