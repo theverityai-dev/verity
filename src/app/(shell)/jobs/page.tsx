@@ -5,7 +5,8 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY, listJobs } from "@/server/capabilities/project";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
+import { equipmentKindFor } from "@/components/ui/business/domains";
 import Link from "next/link";
 import { NewCustomerButton, NewJobButton } from "./JobForms";
 import { JobFilters } from "./JobFilters";
@@ -49,6 +50,7 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
     // A non-breaking hyphen keeps J-0005 on one line however narrow the column gets.
     reference: r.reference.replace("-", "‑"),
     title: r.title,
+    kind: equipmentKindFor(r.title),
     customer: r.customerName,
     state: r.state,
     category: r.category,
@@ -72,12 +74,18 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         }
       />
 
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Open jobs" value={open.length} />
-        <Stat label="Enquiries and quotes" value={rows.filter((r) => r.state === "enquiry" || r.state === "quoted").length} />
-        <Stat label="In work" value={rows.filter((r) => ["approved", "in progress", "on hold"].includes(r.state)).length} />
-        <Stat tone={rows.some((r) => r.overdue) ? "danger" : "default"} label="Late deliveries" value={rows.filter((r) => r.overdue).length} />
-      </StatRow>
+      <StatTileRow className="mb-6">
+        <StatTile kind="job" label="Open jobs" value={open.length} href="/jobs?status=open" />
+        <StatTile kind="enquiry" label="Enquiries and quotes" value={counts.enquiries} href="/jobs?status=enquiries" />
+        <StatTile state="active" icon="stage" label="In work" value={counts.working} href="/jobs?status=working" />
+        {/* Late is a count of one condition, so it takes the blocked state's colours, never a kind hue. */}
+        <StatTile
+          state={rows.some((r) => r.overdue) ? "blocked" : "draft"}
+          icon="milestone"
+          label="Late deliveries"
+          value={rows.filter((r) => r.overdue).length}
+        />
+      </StatTileRow>
 
       <JobFilters active={active} counts={counts} customer={onlyCustomer} />
 
@@ -86,7 +94,7 @@ async function JobsPage({ searchParams }: { searchParams: Promise<{ customer?: s
         rows={table}
         columns={[
           { key: "reference", header: "Job", variant: "link", href: "/jobs/{id}" },
-          { key: "title", header: "What" },
+          { key: "title", header: "What", kindKey: "kind" },
           { key: "customer", header: "Customer" },
           { key: "state", header: "Status", variant: "state", categoryKey: "category" },
           { key: "priority", header: "Priority" },

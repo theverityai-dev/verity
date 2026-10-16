@@ -5,7 +5,8 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_ORDER, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
+import { equipmentKindFor } from "@/components/ui/business/domains";
 import { CreateOrderForm } from "./CreateOrderForm";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,8 @@ type Row = Record<string, unknown> & {
   location: string;
   state: string;
   category: string;
+  kind: string;
+  progress: string;
 };
 
 async function ManufacturingPage() {
@@ -41,6 +44,18 @@ async function ManufacturingPage() {
       }),
     ]);
     const category = new Map(states.map((s) => [s.key, s.category]));
+    // Stage progress per order: live stages only (a send-back cancels and appends, so cancelled rows are history).
+    const ops = await tx.manufacturingOperation.findMany({
+      where: { orderId: { in: orders.map((o) => o.id) }, state: { not: "cancelled" } },
+      select: { orderId: true, state: true },
+    });
+    const progress = new Map<string, { done: number; total: number }>();
+    for (const op of ops) {
+      const p = progress.get(op.orderId) ?? { done: 0, total: 0 };
+      p.total++;
+      if (op.state === "completed") p.done++;
+      progress.set(op.orderId, p);
+    }
 
     return {
       locations,
@@ -53,6 +68,11 @@ async function ManufacturingPage() {
         location: o.location.name,
         state: o.state.replace(/_/g, " "),
         category: category.get(o.state) ?? "Draft",
+        kind: equipmentKindFor(o.outputItem.name),
+        progress: (() => {
+          const p = progress.get(o.id);
+          return p ? `${p.done} of ${p.total} stages done` : "No stages planned";
+        })(),
       })),
     };
   });
@@ -70,22 +90,22 @@ async function ManufacturingPage() {
 
       {/* Counted by canonical StateCategory (ADR-009), not state key, so a
           tenant that renames its own labels still gets correct figures. */}
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Orders" value={rows.length} />
-        <Stat label="Draft" value={rows.filter((r) => r.category === "Draft").length} />
-        <Stat label="In progress" value={rows.filter((r) => r.category === "Active").length} />
-        <Stat label="Completed" value={rows.filter((r) => r.category === "Completed").length} />
-      </StatRow>
+      <StatTileRow className="mb-6">
+        <StatTile kind="job" label="Orders" value={rows.length} />
+        <StatTile state="draft" icon="quote" label="Draft" value={rows.filter((r) => r.category === "Draft").length} />
+        <StatTile state="active" icon="stage" label="In progress" value={rows.filter((r) => r.category === "Active").length} />
+        <StatTile state="completed" icon="check" label="Completed" value={rows.filter((r) => r.category === "Completed").length} />
+      </StatTileRow>
 
       <DataTable
         caption="Manufacturing orders"
         rows={rows}
         columns={[
           { key: "reference", header: "Order", variant: "link", href: "/manufacturing/{id}" },
-          { key: "output", header: "Produces" },
+          { key: "output", header: "Produces", kindKey: "kind" },
           { key: "qty", header: "Quantity", numeric: true, sortable: true },
           { key: "location", header: "Location" },
-          { key: "state", header: "State", variant: "state", categoryKey: "category" },
+          { key: "state", header: "State", variant: "state", categoryKey: "category", subKey: "progress" },
         ]}
         emptyTitle="No manufacturing orders"
         emptyDescription="An order lists the components it consumes and the item it produces. Create one to begin."

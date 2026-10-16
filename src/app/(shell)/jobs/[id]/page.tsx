@@ -8,7 +8,9 @@ import { entityHistory } from "@/server/platform/audit";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
 import { Tabs } from "@/components/ui/Tabs";
-import { DefinitionList, EmptyState, PageHeader, Panel, PermissionDenied, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
+import { DefinitionList, EmptyState, Panel, PermissionDenied, StateBadge, StatTile, StatTileRow } from "@/components/ui/primitives";
+import { EntityHeader } from "@/components/ui/EntityHeader";
+import { ProgressRing, StepProgress } from "@/components/ui/viz";
 import { AuditTrail } from "@/components/shell/AuditTrail";
 import {
   AddCostButton,
@@ -27,6 +29,10 @@ import { ActionTable } from "../JobTables";
 import { PRIORITY_LABEL, dateText, hoursText, inr } from "../format";
 
 export const dynamic = "force-dynamic";
+
+/** The job's path from enquiry to delivery, and where each state sits on it. Completed means all done. */
+const LIFECYCLE = ["Enquiry", "Quoted", "Approved", "In production", "Completed"] as const;
+const LIFECYCLE_AT: Record<string, number> = { enquiry: 0, quoted: 1, approved: 2, in_progress: 3, on_hold: 3, completed: 5 };
 
 const COST_KIND_LABEL: Record<string, string> = { outsourced: "Outsourced work", testing: "External testing", freight: "Freight", other: "Other" };
 const TASK_LABEL: Record<string, string> = { todo: "To do", in_progress: "In progress", blocked: "Blocked", done: "Done", cancelled: "Cancelled" };
@@ -395,14 +401,14 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <>
-      <PageHeader
-        wrapTitle
-        back={{ href: "/jobs", label: "Jobs" }}
+      <EntityHeader
+        crumbs={[{ label: "Jobs", href: "/jobs" }, { label: detail.reference }]}
         title={job.title}
-        description={`${detail.reference} · ${job.customerName}${job.dueDate ? ` · promised by ${dateText(job.dueDate)}` : ""}`}
+        code={detail.reference}
+        state={{ category: detail.category, label: job.state.replace(/_/g, " ") }}
+        meta={[job.customerName, ...(job.dueDate ? [`promised by ${dateText(job.dueDate)}`] : [])]}
         actions={
           <>
-            <StateBadge category={detail.category} label={job.state.replace(/_/g, " ")} />
             <JobActions jobId={job.id} state={job.state} openQuoteId={openQuote?.id ?? null} lostReasons={detail.lostReasons} />
             {!["completed", "lost", "cancelled"].includes(job.state) && (
               <EditJobButton job={{ id: job.id, title: job.title, customerContact: job.customerContact, description: job.description, priority: job.priority, dueDate: iso(job.dueDate) }} />
@@ -411,12 +417,33 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
         }
       />
 
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Order value" value={inr(costing.quotedValueMinor ?? openQuote?.amountMinor ?? job.quotes[0]?.amountMinor ?? null)} hint={costing.quotedValueMinor !== null ? "From the approved quote" : openQuote ? "From the open quote" : job.quotes[0] ? "Last quote, not accepted" : "No quote yet"} />
-        <Stat label="Actual cost to date" value={inr(costing.totalMinor)} hint={`Material, labour and other costs; ${hoursText(costing.loggedMinutes)} logged`} />
-        <Stat tone={costing.marginMinor !== null && costing.marginMinor < 0 ? "danger" : "default"} label="Margin so far" value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)} hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the order value, before costs still to come`} />
-        <Stat label={job.tasks.length > 0 ? "Tasks done" : "Stages done"} value={detail.progress === null ? "—" : `${detail.progress}%`} hint={job.tasks.length > 0 ? "Bigger tasks count more" : "Production stages finished"} />
-      </StatRow>
+      {/* Where the job is in its life (Task 127 Phase 3). Lost and cancelled jobs left the path, so no stepper. */}
+      {LIFECYCLE_AT[job.state] !== undefined && (
+        <div className="glass-card mb-6 px-4 pb-3 pt-4">
+          <StepProgress steps={LIFECYCLE} current={LIFECYCLE_AT[job.state]!} label="Job progress" />
+        </div>
+      )}
+
+      <StatTileRow className="mb-6">
+        <StatTile kind="quote" label="Order value" value={inr(costing.quotedValueMinor ?? openQuote?.amountMinor ?? job.quotes[0]?.amountMinor ?? null)} hint={costing.quotedValueMinor !== null ? "From the approved quote" : openQuote ? "From the open quote" : job.quotes[0] ? "Last quote, not accepted" : "No quote yet"} />
+        <StatTile kind="money" label="Actual cost to date" value={inr(costing.totalMinor)} hint={`Material, labour and other costs; ${hoursText(costing.loggedMinutes)} logged`} />
+        {/* Margin is a condition once it is known (making or losing money), so it takes state colours. */}
+        <StatTile
+          state={costing.marginMinor === null ? "draft" : costing.marginMinor < 0 ? "blocked" : "completed"}
+          icon="wallet"
+          label="Margin so far"
+          value={costing.marginMinor === null ? "—" : inr(costing.marginMinor)}
+          hint={costing.marginPercent === null ? "Needs an approved quote" : `${costing.marginPercent}% of the order value, before costs still to come`}
+        />
+        <StatTile
+          state="active"
+          icon={job.tasks.length > 0 ? "timesheet" : "stage"}
+          label={job.tasks.length > 0 ? "Tasks done" : "Stages done"}
+          value={detail.progress === null ? "—" : `${detail.progress}%`}
+          hint={job.tasks.length > 0 ? "Bigger tasks count more" : "Production stages finished"}
+          viz={detail.progress === null ? undefined : <ProgressRing value={detail.progress} total={100} label="Progress" showValue={false} />}
+        />
+      </StatTileRow>
 
       {nextTask && (
         <div className="mb-6">

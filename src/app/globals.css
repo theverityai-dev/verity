@@ -130,6 +130,7 @@
   --color-state-completed: light-dark(#1f7a36, #30db5b);
   --color-state-cancelled: light-dark(#6c6c70, #aeaeb2);
 
+
   /* ---------------------------------------------------------------------
    * GEOMETRY, ELEVATION, MOTION — iOS.
    * ------------------------------------------------------------------- */
@@ -168,6 +169,58 @@
 :root { color-scheme: light dark; }
 :root[data-theme="light"] { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
+
+/* ADR-046 tokens are `@theme static`: Tailwind v4 drops variables no utility class references,
+   and these are read only through inline var() built from a template (IconTile, StateBadge, viz.tsx),
+   which its scanner cannot see. A plain :root rule was stripped the same way. `static` always emits.
+   Found by the 2026-10-16 browser pass: pills and tiles rendered with no fill. */
+@theme static {
+  /* STATE PILL — tinted opaque fill + AA ink per StateCategory (ADR-046 §5).
+     The dot keeps the --color-state-* colour above; ink is adjusted so text on
+     its own fill clears 4.5:1 in both themes. Never keyed off a label. */
+  /* Destructive-tinted button label (ADR-033 danger variant). #d70015 measured 4.14:1 on the
+     danger-subtle fill in the 2026-10-16 Lighthouse pass; this clears 5:1 on that fill and on the gray hover. */
+  --color-danger-ink: light-dark(#bd0010, #ff6961);
+
+  --color-state-draft-fill: light-dark(#ececec, #3c3c3f);
+  --color-state-draft-ink: light-dark(#69696d, #aeaeb2);
+  --color-state-pending-fill: light-dark(#f4eade, #4e3d25);
+  --color-state-pending-ink: light-dark(#995700, #ffb340);
+  --color-state-active-fill: light-dark(#dee6fb, #243850);
+  --color-state-active-ink: light-dark(#0040dd, #4fa4ff);
+  --color-state-blocked-fill: light-dark(#fadee1, #4e2d2d);
+  --color-state-blocked-ink: light-dark(#cd0014, #ff7870);
+  --color-state-completed-fill: light-dark(#e2eee5, #20462b);
+  --color-state-completed-ink: light-dark(#1e7634, #30db5b);
+  --color-state-cancelled-fill: light-dark(#ececec, #3c3c3f);
+  --color-state-cancelled-ink: light-dark(#69696d, #aeaeb2);
+
+  /* ---------------------------------------------------------------------
+   * KIND HUES — ADR-046 §3. Eight, closed. "What sort of thing is this."
+   * Icon tiles, icon discs, avatars and chart series ONLY — never pills,
+   * buttons, links, text, borders, cell backgrounds or status dots. Values are
+   * PROVISIONAL until the owner signs off the swatch sheet
+   * (docs/reference/visual-language/swatches.html). Ink clears 4.5:1 on its own
+   * fill; hue is >= 20deg from every semantic hue and the default tint
+   * (enforced by src/components/ui/business/domains.test.ts).
+   * ------------------------------------------------------------------- */
+  --color-hue-indigo-fill: light-dark(#e4e2f8, #3f3d50);
+  --color-hue-indigo-ink: light-dark(#3e30cf, #aca6ed);
+  --color-hue-purple-fill: light-dark(#f1e3f6, #47394e);
+  --color-hue-purple-ink: light-dark(#9c37be, #d195e4);
+  --color-hue-magenta-fill: light-dark(#f5e1ed, #4d3745);
+  --color-hue-magenta-ink: light-dark(#b62b7c, #e88cc2);
+  --color-hue-teal-fill: light-dark(#deece7, #264e43);
+  --color-hue-teal-ink: light-dark(#117456, #47ebba);
+  --color-hue-cyan-fill: light-dark(#ddebed, #254950);
+  --color-hue-cyan-ink: light-dark(#0e7181, #42d9f0);
+  --color-hue-olive-fill: light-dark(#e8ebdf, #444b2a);
+  --color-hue-olive-ink: light-dark(#5d6e17, #c4e151);
+  --color-hue-brown-fill: light-dark(#efe8e2, #443d39);
+  --color-hue-brown-ink: light-dark(#8a5b33, #c2a78e);
+  --color-hue-slate-fill: light-dark(#e8eaed, #3b3f45);
+  --color-hue-slate-ink: light-dark(#58687e, #9eadc2);
+}
 
 @custom-variant dark {
   @media (prefers-color-scheme: dark) {

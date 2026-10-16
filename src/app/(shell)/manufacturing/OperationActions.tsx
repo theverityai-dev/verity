@@ -4,8 +4,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Input, Select } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/icons";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
+import { ActionBar } from "@/components/ui/ActionBar";
 import { ChecklistPanel } from "./ChecklistPanel";
 
 type Stage = { stageKey: string; label: string };
@@ -25,7 +27,10 @@ export function OperationActions({
   sendBackTo,
   checklist,
   revalidate,
+  layout = "row",
 }: {
+  /** `row`: compact, in a table row. `bar`: the detail pane's sticky outcome bar (ADR-046 ActionBar). */
+  layout?: "row" | "bar";
   operationId: string;
   state: string;
   actionable: boolean;
@@ -57,54 +62,64 @@ export function OperationActions({
   const open = state === "pending" || state === "in_progress" || state === "on_hold";
   if (!open) return null;
 
-  return (
-    <div className="flex flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
+  const bar = layout === "bar";
+  const size = bar ? "md" : "sm";
+  const buttons = (
+    <>
         {state === "pending" && actionable && (
-          <CommandButton commands="verity.manufacturing.start_operation" size="sm" variant="primary" disabled={pending}
+          <CommandButton commands="verity.manufacturing.start_operation" size={size} variant="primary" disabled={pending}
             onClick={() => run("verity.manufacturing.start_operation", {})}>
-            Start
+            {bar ? "Start stage" : "Start"}
           </CommandButton>
         )}
         {state === "in_progress" && (
           <>
-            {checklist.total > 0 && (
+            {!bar && checklist.total > 0 && (
               <CommandButton commands="verity.manufacturing.record_checkpoint" size="sm" variant="secondary" disabled={pending}
                 onClick={() => setMode(mode === "checklist" ? null : "checklist")}>
                 Checklist {checklist.passed}/{checklist.total}
                 {checklist.failed > 0 ? ` · ${checklist.failed} failed` : ""}
               </CommandButton>
             )}
-            <CommandButton commands="verity.manufacturing.complete_operation" size="sm" variant="primary" disabled={pending || !cleared}
+            <CommandButton commands="verity.manufacturing.complete_operation" size={size} variant="primary" disabled={pending || !cleared}
               title={cleared ? undefined : "Every checkpoint must pass first"}
               onClick={() => run("verity.manufacturing.complete_operation", {})}>
-              Complete
+              {bar && <Icon name="check" size={18} />}
+              {bar ? "Mark stage complete" : "Complete"}
             </CommandButton>
-            <CommandButton commands="verity.manufacturing.hold_operation" size="sm" variant="secondary" disabled={pending}
+            <CommandButton commands="verity.manufacturing.hold_operation" size={size} variant="secondary" disabled={pending}
               onClick={() => setMode(mode === "hold" ? null : "hold")}>
-              Hold
+              {bar && <Icon name="hold" size={18} />}
+              {bar ? "Hold stage" : "Hold"}
             </CommandButton>
           </>
         )}
         {state === "on_hold" && (
-          <CommandButton commands="verity.manufacturing.resume_operation" size="sm" variant="primary" disabled={pending}
+          <CommandButton commands="verity.manufacturing.resume_operation" size={size} variant="primary" disabled={pending}
             onClick={() => run("verity.manufacturing.resume_operation", {})}>
-            Resume
+            {bar ? "Resume stage" : "Resume"}
           </CommandButton>
         )}
         {(state === "in_progress" || state === "on_hold") && sendBackTo.length > 0 && (
-          <CommandButton commands="verity.manufacturing.send_back" size="sm" variant="secondary" className="text-danger" disabled={pending}
+          <CommandButton commands="verity.manufacturing.send_back" size={size} variant="danger" disabled={pending}
             onClick={() => setMode(mode === "back" ? null : "back")}>
+            {bar && <Icon name="rework" size={18} />}
             Send back
           </CommandButton>
         )}
-      </div>
+    </>
+  );
 
-      {mode === "checklist" && <ChecklistPanel operationId={operationId} revalidate={revalidate} />}
+  const formWidth = bar ? "w-full" : "w-72";
+  return (
+    <div className={bar ? "flex flex-col gap-2" : "flex flex-col items-end gap-2"}>
+      {!bar && <div className="flex flex-wrap justify-end gap-2">{buttons}</div>}
+
+      {!bar && mode === "checklist" && <ChecklistPanel operationId={operationId} revalidate={revalidate} />}
 
       {mode === "hold" && (
         <form
-          className="flex w-72 flex-col gap-2 rounded-lg bg-surface p-3"
+          className={`flex ${formWidth} flex-col gap-2 rounded-lg bg-surface p-3`}
           action={(fd) => run("verity.manufacturing.hold_operation", { reason: String(fd.get("reason") ?? "") })}
         >
           <Input name="reason" placeholder="Why is it on hold?" required minLength={3} maxLength={400} autoFocus aria-label="Reason for hold" />
@@ -117,7 +132,7 @@ export function OperationActions({
 
       {mode === "back" && (
         <form
-          className="flex w-72 flex-col gap-2 rounded-lg bg-surface p-3"
+          className={`flex ${formWidth} flex-col gap-2 rounded-lg bg-surface p-3`}
           action={(fd) =>
             run("verity.manufacturing.send_back", {
               toStageKey: String(fd.get("toStageKey") ?? ""),
@@ -140,9 +155,14 @@ export function OperationActions({
       )}
 
       {failure && (
-        <div className="w-72">
+        <div className={formWidth}>
           <ErrorState title="Could not do that" message={failure.message} issues={failure.issues} retryable={failure.retryable} />
         </div>
+      )}
+      {bar && (
+        <ActionBar note={state === "in_progress" && !cleared ? "Every check must pass before the stage can be completed." : undefined}>
+          {buttons}
+        </ActionBar>
       )}
     </div>
   );

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { VeritySymbol } from "@/components/brand/VerityMark";
 import { RequestAccessButton } from "./RequestAccessButton";
 import { Icon, type IconName } from "./icons";
+import { IconDisc } from "./IconTile";
+import type { KindHue, StateTone } from "./business/domains";
 
 /**
  * The Verity design system primitives.
@@ -289,36 +291,55 @@ export function StatRow({
  */
 export function StatTile({
   icon,
+  kind,
+  hue,
+  state,
   label,
   value,
+  hint,
+  href,
+  viz,
   delta,
   menu,
   className,
 }: {
-  icon: IconName;
+  /** Glyph. Optional when `kind` supplies one. */
+  icon?: IconName;
+  /** ADR-046: the disc takes a kind hue (`kind`/`hue`) or, for a count of one state, that state's colours. */
+  kind?: string;
+  hue?: KindHue;
+  state?: StateTone;
   label: string;
   value: string | number;
+  /** A short supporting line: "2 due today". */
+  hint?: ReactNode;
+  /** The tile drills into the list it counts. */
+  href?: string;
+  /** A small graphic of REAL data (sparkline, ring). Omit rather than decorate. */
+  viz?: ReactNode;
   /** Positive/negative/flat phrasing is the caller's — this only picks the color. */
   delta?: { label: string; direction: "up" | "down" | "flat" };
   menu?: ReactNode;
   className?: string;
 }) {
-  return (
-    <Surface className={cx("flex flex-col gap-3 p-5", className)}>
+  // Before ADR-046 the chip was tint-coloured; the tint is for interactive things, so an
+  // unclassified tile now takes neutral slate rather than the accent.
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-2">
-        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-accent-subtle text-accent-ink">
-          <Icon name={icon} size={19} />
-        </span>
+        <IconDisc icon={icon} kind={kind} hue={hue ?? (kind || state ? undefined : "slate")} state={state} size="lg" />
         {menu}
+        {viz && !menu && <div className="min-w-0 shrink">{viz}</div>}
       </div>
       <div>
-        <p className="m-0 text-[13px] text-text-secondary">{label}</p>
-        <p className="tabular m-0 mt-1 text-[28px] font-bold leading-[34px] text-text">{value}</p>
+        <p className="tabular m-0 text-[28px] font-bold leading-[34px] text-text">{value}</p>
+        <p className="m-0 mt-0.5 text-[15px] text-text-secondary">{label}</p>
+        {hint && <p className="m-0 mt-1 text-[13px] text-text-tertiary">{hint}</p>}
       </div>
       {delta && (
         <p
           className={cx(
-            "m-0 text-[12.5px]",
+            "m-0 text-[13px]",
             delta.direction === "up" && "text-success",
             delta.direction === "down" && "text-danger",
             delta.direction === "flat" && "text-text-tertiary",
@@ -327,13 +348,32 @@ export function StatTile({
           {delta.label}
         </p>
       )}
-    </Surface>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cx(
+          "glass-card flex flex-col gap-3 p-5 no-underline transition-colors",
+          "hover:bg-accent-subtle focus-visible:outline-none focus-visible:shadow-[inset_0_0_0_2px_var(--color-accent-line)]",
+          className,
+        )}
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <Surface className={cx("flex flex-col gap-3 p-5", className)}>{body}</Surface>;
 }
 
 /** A responsive row of `StatTile`s — 1 col on phone, up to 4 on desktop. */
-export function StatTileRow({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4", className)}>{children}</div>;
+export function StatTileRow({ children, className, cols = 4 }: { children: ReactNode; className?: string; cols?: 3 | 4 }) {
+  return (
+    <div className={cx("grid grid-cols-1 gap-4 sm:grid-cols-2", cols === 3 ? "lg:grid-cols-3" : "xl:grid-cols-4", className)}>
+      {children}
+    </div>
+  );
 }
 
 /* -------------------------------- button --------------------------------- */
@@ -374,7 +414,7 @@ export function Button({ variant = "secondary", size = "md", className, ...rest 
     primary: "bg-accent text-accent-on hover:bg-accent-hover",
     secondary: "bg-[var(--color-control)] text-accent-ink hover:bg-[var(--color-control-strong)]",
     ghost: "bg-transparent text-accent-ink hover:bg-[var(--color-control)]",
-    danger: "bg-danger-subtle text-danger hover:bg-[var(--color-control-strong)]",
+    danger: "bg-danger-subtle text-[var(--color-danger-ink)] hover:bg-[var(--color-control-strong)]",
   };
 
   return <button className={cx(base, sizes[size], variants[variant], className)} {...rest} />;
@@ -394,31 +434,39 @@ export function FilterChipRow({
   chips,
   className,
 }: {
-  chips: Array<{ label: string; count?: number; active: boolean; onClick: () => void }>;
+  /** `icon` names the kind the chip filters to (a stage, a document type); ADR-046 chips carry icon and count. */
+  /** Each chip either runs `onClick` (client filter) or navigates to `href` (URL filter, works in a server page). */
+  chips: Array<{ label: string; count?: number; icon?: IconName; active: boolean; onClick?: () => void; href?: string }>;
   className?: string;
 }) {
   // One scrolling row on a phone (wrapping made three rows of chips above the list); wraps on wider screens.
   return (
     <div className={cx("-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible", className)}>
-      {chips.map((chip) => (
-        <button
-          key={chip.label}
-          type="button"
-          onClick={chip.onClick}
-          aria-pressed={chip.active}
-          className={cx(
-            "shrink-0 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[14px] font-medium transition-colors max-sm:min-h-11",
-            chip.active
-              ? "bg-accent text-accent-on"
-              : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]",
-          )}
-        >
-          {chip.label}
-          {typeof chip.count === "number" && (
-            <span className="tabular ml-1.5 opacity-70">{chip.count}</span>
-          )}
-        </button>
-      ))}
+      {chips.map((chip) => {
+        const className = cx(
+          "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pill px-3.5 py-1.5 text-[14px] font-medium no-underline transition-colors max-sm:min-h-11",
+          chip.active
+            ? "bg-accent text-accent-on"
+            : "bg-[var(--color-control)] text-text hover:bg-[var(--color-control-strong)]",
+        );
+        const inner = (
+          <>
+            {chip.icon && <Icon name={chip.icon} size={16} />}
+            {chip.label}
+            {/* Dimmed only on the gray chip: on the tint fill a dimmed count fails AA (3.65:1, 2026-10-16 audit). */}
+            {typeof chip.count === "number" && <span className={cx("tabular ml-1", !chip.active && "opacity-70")}>{chip.count}</span>}
+          </>
+        );
+        return chip.href ? (
+          <Link key={chip.label} href={chip.href} aria-current={chip.active ? "page" : undefined} className={className}>
+            {inner}
+          </Link>
+        ) : (
+          <button key={chip.label} type="button" onClick={chip.onClick} aria-pressed={chip.active} className={className}>
+            {inner}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -773,8 +821,22 @@ export function StateBadge({ category, label }: { category: string; label?: stri
     color: "bg-[var(--color-text-tertiary)]",
   };
 
+  // ADR-046 §5: a tinted opaque fill of the state colour, a dot and a word, ink >= 4.5:1 on its own
+  // fill. Colour comes from the category only (ADR-009); an unknown category stays the neutral pill.
+  const known = category in CATEGORY_PRESENTATION;
+  const key = category.toLowerCase();
   return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-control-strong)] py-0.5 pl-2 pr-2.5 text-[13px] font-medium text-text">
+    <span
+      className={cx(
+        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full py-0.5 pl-2 pr-2.5 text-[13px] font-medium",
+        !known && "bg-[var(--color-control-strong)] text-text",
+      )}
+      style={
+        known
+          ? { backgroundColor: `var(--color-state-${key}-fill)`, color: `var(--color-state-${key}-ink)` }
+          : undefined
+      }
+    >
       <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", preset.color)} />
       {/* The tenant's own label when there is one, the category otherwise. */}
       {label ?? preset.label}

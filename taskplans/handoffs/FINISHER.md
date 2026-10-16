@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-15** (against `main` at `67bfd97f`)
+**Last updated: 2026-10-16** (against `main` at `205eef45`)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -289,6 +289,15 @@ phase 7.
 - **Status:** NOT STARTED
 
 ---
+
+### P2-9. Visual language for every screen (Task 127), DSEW first
+
+- **What:** Redesign all 133 screens to the owner's mockup structure and colour system on ADR-033 iOS cards: tinted state pills, icon tiles in eight approved hues, KPI discs, journey maps, charts only where a real series exists, list plus live detail pane. First client D & S Electric Works.
+- **Why:** Product-owner request and decisions, 2026-10-16.
+- **How:** `taskplans/127_visual_language_every_screen_redesign.md`. Phase 0: ADR-046 and the library study are written (owner signs off ADR-046; finish library study sections 2.4 and 3); Phase 1: tokens, components, in-house glyphs; Phase 2: build `/manufacturing/routes/[id]` and rebuild `/manufacturing/floor` (neither mockup exists today); then section 5 order.
+- **Done when:** Phase 9 sweep is clean and the Task 116 matrix is filled.
+- **Source:** Task 127.
+- **Status:** IN PROGRESS. ADR-046 accepted; Phases 1 to 3 built and browser-checked on DSEW (tokens, shared components, 86 glyphs, shop floor, route detail, order, jobs, summary). Next: Phase 4 restaurant (Colonel Kebabz), then 5 to 9; redraw four look-alike glyphs; owner signs off hue values from `docs/reference/visual-language/swatches.html`.
 
 ## P3: verification, coverage, housekeeping
 

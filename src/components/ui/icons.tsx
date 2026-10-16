@@ -71,7 +71,43 @@ export type IconName =
   | "batch"
   | "tag"
   | "user"
-  | "wallet";
+  | "wallet"
+  // Verity Glyphs, first DSEW batch (ADR-046 §9, Task 127 §3.4). Drawn here, not traced.
+  | "stage-cutting"
+  | "stage-winding"
+  | "stage-casting"
+  | "stage-assembly"
+  | "stage-testing"
+  | "stage-dispatch"
+  | "stage-mapping"
+  | "stage"
+  | "rework"
+  | "hold"
+  | "transformer"
+  | "electromagnet"
+  | "coil"
+  | "high-voltage"
+  | "insulation"
+  | "megger"
+  | "certificate"
+  | "photo"
+  | "remarks"
+  | "enquiry"
+  | "quote"
+  | "job"
+  | "milestone"
+  | "timesheet"
+  // DSEW batch 2.
+  | "control-panel"
+  | "calibration"
+  | "bushing"
+  | "tap-changer"
+  | "cooling"
+  | "core"
+  | "temperature"
+  | "revision"
+  | "lost"
+  | "truck";
 
 const PATHS: Record<IconName, string> = {
   // Navigation — board nav geometry.
@@ -187,7 +223,91 @@ const PATHS: Record<IconName, string> = {
   user: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20a8 8 0 0 1 16 0",
   // wallet: money kept, expenses and cash counted.
   wallet: "M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4zM4 7V6a2 2 0 0 1 2-2h11M16 14h.01",
+
+  // ---- Verity Glyphs, DSEW batch 1 (ADR-046 §9). 24 grid, 2px keyline, round caps and joins. ----
+  // stage-cutting: core laminations cut and stacked, alternate sheets offset.
+  "stage-cutting": "M5 5h14M4 9h16M5 13h14M4 17h16M5 21h14",
+  // stage-winding: a bobbin with turns laid across it.
+  "stage-winding": "M7 4h10M7 20h10M8 4v16M16 4v16M8 8l8 2M8 12l8 2M8 16l8 2",
+  // stage-casting: a beaker of resin, level marked. Epoxy casting and VPI curing.
+  "stage-casting": "M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3M7.5 15h9",
+  // stage-assembly: an E-I core with a coil on each outer limb.
+  "stage-assembly": "M4 4h16M4 20h16M7 4v16M12 4v16M17 4v16M5 8h4v8H5zM15 8h4v8h-4z",
+  // stage-testing: a clipboard with a tick. Routine and type tests.
+  "stage-testing": "M9 3h6v3H9zM8 4.5H6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5.5a1 1 0 0 0-1-1h-2M9 14l2 2 4-4",
+  // stage-dispatch: a packed crate, closed.
+  "stage-dispatch": "M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9",
+  // stage-mapping: three axes from one origin. 3-axis magnetic field mapping.
+  "stage-mapping": "M12 13V4M12 13l7 4M12 13l-7 4M10 6l2-2 2 2M16.8 17.6l2.2-.6-.4-2.2M5.4 15.2L5 17.4l2.2.6",
+  // stage: a generic production stage, two layers of work.
+  stage: "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5",
+  // rework: back to an earlier stage.
+  rework: "M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3",
+  // hold: paused.
+  hold: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM10 9v6M14 9v6",
+  // transformer: two windings on one core, primary and secondary.
+  transformer: "M5 4h14M5 20h14M9 4v16M15 4v16M5 8h4M5 12h4M5 16h4M15 8h4M15 12h4M15 16h4",
+  // electromagnet: a horseshoe with its two pole faces.
+  electromagnet: "M7 4v8a5 5 0 0 0 10 0V4M4 4h6M14 4h6M4 8h6M14 8h6",
+  // coil: a helix seen from the side.
+  coil: "M6 6c0-1.5 12-1.5 12 0s-12 1.5-12 3 12 1.5 12 3-12 1.5-12 3 12 1.5 12 3",
+  // high-voltage: a bolt.
+  "high-voltage": "M13 2L5 14h6l-1 8 8-12h-6z",
+  // insulation: a shield with layered wraps.
+  insulation: "M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6zM9 10h6M9 14h6",
+  // megger: a dial meter. Insulation resistance and other measured tests.
+  megger: "M4 18a8 8 0 1 1 16 0M12 18l4-6M4 18h16",
+  // certificate: a sheet with a ribbon seal. Test report, conformity.
+  certificate: "M5 3h14v12H5zM8 7h8M8 10h5M10 15l-1 6 3-2 3 2-1-6",
+  // photo: a camera. Photo evidence required.
+  photo: "M4 7h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  // remarks: a note bubble. Remarks required.
+  remarks: "M4 5h16v11H9l-5 4zM8 9h8M8 12h5",
+  // enquiry: a question bubble. A customer's technical enquiry.
+  enquiry: "M4 5h16v11H9l-5 4zM10 8.5a2 2 0 1 1 2.5 2c-.4.2-.5.6-.5 1M12 13.5h.01",
+  // quote: a priced document with a folded corner.
+  quote: "M6 3h9l4 4v14H6zM15 3v4h4M9 12h6M9 16h6M9 8h3",
+  // job: a case. One engineered order, start to finish.
+  job: "M4 8h16v11H4zM9 8V5h6v3M4 13h16",
+  // milestone: a flag on a pole.
+  milestone: "M5 21V4M5 4h11l-2 4 2 4H5",
+  // timesheet: hours against a job.
+  timesheet: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
+
+  // ---- DSEW batch 2 ----
+  // control-panel: a cabinet with switches and rails.
+  "control-panel": "M4 3h16v18H4zM8 7h2M14 7h2M8 12h8M8 16h8",
+  // calibration: a target with ticks. Field uniformity, calibration systems.
+  calibration: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 3v3M12 18v3M3 12h3M18 12h3",
+  // bushing: a shedded insulator.
+  bushing: "M10 3h4v3h-4zM8 6h8l-1 3H9zM8 10h8l-1 3H9zM8 14h8l-1 3H9zM10 17h4v4h-4z",
+  // tap-changer: a rotary selector with its contacts.
+  "tap-changer": "M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 12l4-4M5 5l1.5 1.5M19 5l-1.5 1.5M12 2v2",
+  // cooling: a fan. Air or water cooling.
+  cooling: "M10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0M12 10c0-4 2-6 4-6s2 4-2 6M14 12c4 0 6 2 6 4s-4 2-6-2M12 14c0 4-2 6-4 6s-2-4 2-6M10 12c-4 0-6-2-6-4s4-2 6 2",
+  // core: a core with its winding window.
+  core: "M4 4h16v16H4zM9 9h6v6H9z",
+  // temperature: a thermometer. Temperature-rise test.
+  temperature: "M10 13V5a2 2 0 1 1 4 0v8a4 4 0 1 1-4 0zM12 9v6",
+  // revision: a document going round again. Quote revisions.
+  revision: "M6 3h9l4 4v6M15 3v4h4M6 3v18h6M15 21a4 4 0 1 0-4-4M11 14v3h3",
+  // lost: a crossed circle. A lost enquiry.
+  lost: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6",
+  // truck: delivery on the road.
+  truck: "M3 6h11v10H3zM14 9h4l3 3v4h-7M5 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0",
 };
+
+/**
+ * Optical stroke (ADR-046 §9; the idea is Material Symbols' optical-size axis). One stroke cannot
+ * look right at 15px and 28px: small icons get a heavier stroke in grid units so they do not thin
+ * out, large ones a lighter one so they do not look bold. Values are in 24-unit grid space.
+ */
+export function strokeFor(size: number): number {
+  if (size <= 16) return 1.6;
+  if (size <= 20) return 1.5;
+  if (size <= 26) return 1.4;
+  return 1.3;
+}
 
 export function Icon({
   name,
@@ -205,7 +325,7 @@ export function Icon({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.4}
+      strokeWidth={strokeFor(size)}
       strokeLinecap="round"
       strokeLinejoin="round"
       className={className}

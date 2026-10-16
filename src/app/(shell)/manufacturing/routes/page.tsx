@@ -4,7 +4,7 @@ import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_ROUTE, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { CreateRouteForm } from "./CreateRouteForm";
 import { RoutesTable } from "./RoutesTable";
 
@@ -46,11 +46,11 @@ async function RoutesPage() {
         actions={<CreateRouteForm />}
       />
 
-      <StatRow cols={3} className="mb-6">
-        <Stat label="Routes" value={rows.length} />
-        <Stat label="Active" value={rows.filter((r) => r.state === "active").length} />
-        <Stat label="Archived" value={rows.filter((r) => r.state === "archived").length} />
-      </StatRow>
+      <StatTileRow cols={3} className="mb-6">
+        <StatTile icon="route" hue="indigo" label="Routes" value={rows.length} />
+        <StatTile state="active" icon="check" label="Active" value={rows.filter((r) => r.state === "active").length} />
+        <StatTile state="cancelled" icon="close" label="Archived" value={rows.filter((r) => r.state === "archived").length} />
+      </StatTileRow>
 
       <RoutesTable rows={rows} />
     </>

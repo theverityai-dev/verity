@@ -6,7 +6,10 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PROJECT_JOB, PROJECT_CAPABILITY, summaryData } from "@/server/capabilities/project";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { EmptyState, PageHeader, Panel, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { EmptyState, PageHeader, Panel, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
+import { IconDisc, IconTile } from "@/components/ui/IconTile";
+import { ProgressBar } from "@/components/ui/viz";
+import { equipmentKindFor, stageKindFor } from "@/components/ui/business/domains";
 import { dateText, inr } from "../jobs/format";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +58,11 @@ async function SummaryPage() {
                 return (
                   <li key={`${a.kind}-${i}`} className="flex gap-3 border-b border-line py-3.5 last:border-b-0">
                     {/* Severity by semantic colour: red is wrong now, orange is slipping. The words say it too, so colour is never the only signal. */}
-                    <span aria-hidden="true" className={`mt-[7px] size-2.5 shrink-0 rounded-full ${a.kind === "task_late" || a.kind === "stock_low" ? "bg-warning" : "bg-danger"}`} />
+                    <IconDisc
+                      size="sm"
+                      state={a.kind === "task_late" || a.kind === "stock_low" ? "pending" : "blocked"}
+                      icon={a.kind === "stock_low" ? "stock" : a.kind === "task_late" ? "timesheet" : a.kind.startsWith("quote") ? "quote" : "milestone"}
+                    />
                     <div className="min-w-0">
                       <p className="m-0 text-[15px] font-medium">
                         {a.jobId && a.jobReference ? <Link href={`/jobs/${a.jobId}`} className="text-accent-ink">{a.jobReference}</Link> : null}
@@ -72,12 +79,19 @@ async function SummaryPage() {
         </Panel>
       </div>
 
-      <StatRow cols={4} className="mb-6">
-        <Stat label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs" />
-        <Stat label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs" />
-        <Stat label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs" />
-        <Stat tone={counts.overdue > 0 ? "danger" : "default"} label="Late deliveries" value={counts.overdue} hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"} href="/jobs" />
-      </StatRow>
+      <StatTileRow className="mb-6">
+        <StatTile kind="money" label="Confirmed orders" value={inr(data.orderBookMinor, { compact: true })} hint={`Accepted quotes, ${counts.working} job${counts.working === 1 ? "" : "s"} in work`} href="/jobs?status=working" />
+        <StatTile kind="quote" label="Quotes awaiting reply" value={inr(data.pipelineMinor, { compact: true })} hint={`${counts.quoted} sent, not yet accepted`} href="/jobs?status=enquiries" />
+        <StatTile kind="enquiry" label="New enquiries" value={counts.enquiries} hint="Not quoted yet" href="/jobs?status=enquiries" />
+        <StatTile
+          state={counts.overdue > 0 ? "blocked" : "completed"}
+          icon="milestone"
+          label="Late deliveries"
+          value={counts.overdue}
+          hint={counts.overdue === 0 ? "None past the promised date" : "Past the promised date"}
+          href="/jobs?status=open"
+        />
+      </StatTileRow>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="lg:col-span-2">
@@ -89,6 +103,7 @@ async function SummaryPage() {
                 // A non-breaking hyphen keeps J-0005 on one line however narrow the column gets.
     reference: r.reference.replace("-", "‑"),
                 title: r.title,
+                kind: equipmentKindFor(r.title),
                 customer: r.customerName,
                 state: r.state,
                 category: r.category,
@@ -98,7 +113,7 @@ async function SummaryPage() {
               }))}
               columns={[
                 { key: "reference", header: "Job", variant: "link", href: "/jobs/{id}" },
-                { key: "title", header: "What" },
+                { key: "title", header: "What", kindKey: "kind" },
                 { key: "customer", header: "Customer" },
                 { key: "state", header: "Status", variant: "state", categoryKey: "category" },
                 { key: "due", header: "Delivery promised" },
@@ -137,12 +152,15 @@ async function SummaryPage() {
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {data.shop.map((s) => (
-                <li key={s.orderId} className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0">
-                  <span className="min-w-0">
-                    <a href={`/manufacturing/${s.orderId}`}>{s.jobReference ?? s.order}</a>
-                    <span className="text-text-secondary"> · {s.stage}{s.stageState === "in_progress" ? "" : " (next)"}</span>
+                <li key={s.orderId} className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0">
+                  <IconTile kind={stageKindFor("", s.stage)} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <a href={`/manufacturing/${s.orderId}`} className="text-accent-ink">{s.jobReference ?? s.order}</a>
+                    <span className="block text-[13px] text-text-secondary">{s.stage}{s.stageState === "in_progress" ? ", in progress" : ", next"}</span>
                   </span>
-                  <span className="tabular text-text-secondary">{s.done} of {s.total}</span>
+                  <span className="w-28 shrink-0">
+                    <ProgressBar value={s.done} total={s.total} label={`${s.jobReference ?? s.order} stages done`} tone="completed" />
+                  </span>
                 </li>
               ))}
             </ul>
@@ -158,9 +176,12 @@ async function SummaryPage() {
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2 p-0">
               {data.milestones.map((m) => (
-                <li key={m.id} className="flex items-baseline justify-between gap-4 border-b border-line py-2 last:border-b-0">
-                  <span>
-                    {m.name} · <a href={`/jobs/${m.jobId}`}>{m.jobReference}</a>
+                <li key={m.id} className="flex items-center justify-between gap-4 border-b border-line py-2 last:border-b-0">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <IconTile kind="milestone" size="sm" />
+                    <span className="min-w-0">
+                      {m.name} · <a href={`/jobs/${m.jobId}`} className="text-accent-ink">{m.jobReference}</a>
+                    </span>
                   </span>
                   <span className={m.dueDate < new Date().toISOString().slice(0, 10) ? "text-danger" : "text-text-secondary"}>
                     {dateText(m.dueDate)}{m.dueDate < new Date().toISOString().slice(0, 10) ? " (late)" : ""}

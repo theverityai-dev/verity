@@ -23,7 +23,7 @@ export function RoutesTable({ rows }: { rows: RouteRow[] }) {
         caption="Production routes"
         rows={rows}
         columns={[
-          { key: "code", header: "Code", sortable: true, subKey: "name" },
+          { key: "code", header: "Code", variant: "link", href: "/manufacturing/routes/{id}", sortable: true, subKey: "name" },
           { key: "chain", header: "Stages" },
           { key: "stages", header: "Count", numeric: true },
           { key: "state", header: "State", variant: "state", categoryKey: "category" },

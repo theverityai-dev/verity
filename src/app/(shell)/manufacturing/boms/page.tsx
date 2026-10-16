@@ -3,9 +3,10 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_BOM, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
+import { equipmentKindFor } from "@/components/ui/business/domains";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { CreateBomForm } from "./CreateBomForm";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ async function BomsPage() {
         code: b.code,
         name: b.name,
         output: b.outputItem.name,
+        kind: equipmentKindFor(b.outputItem.name),
         components: b._count.lines,
         state: b.active ? "active" : "archived",
         category: b.active ? "Active" : "Cancelled",
@@ -59,18 +61,18 @@ async function BomsPage() {
         actions={<CreateBomForm items={data.items} fields={data.fields} />}
       />
 
-      <StatRow cols={3} className="mb-6">
-        <Stat label="Bills of materials" value={rows.length} />
-        <Stat label="Active" value={rows.filter((r) => r.state === "active").length} />
-        <Stat label="Archived" value={rows.filter((r) => r.state === "archived").length} />
-      </StatRow>
+      <StatTileRow cols={3} className="mb-6">
+        <StatTile icon="bom" hue="teal" label="Bills of materials" value={rows.length} />
+        <StatTile state="active" icon="check" label="Active" value={rows.filter((r) => r.state === "active").length} />
+        <StatTile state="cancelled" icon="close" label="Archived" value={rows.filter((r) => r.state === "archived").length} />
+      </StatTileRow>
 
       <DataTable
         caption="Bills of materials"
         rows={rows}
         columns={[
           { key: "code", header: "Code", variant: "link", href: "/manufacturing/boms/{id}", subKey: "name", sortable: true },
-          { key: "output", header: "Produces" },
+          { key: "output", header: "Produces", kindKey: "kind" },
           { key: "components", header: "Components", numeric: true, sortable: true },
           { key: "state", header: "State", variant: "state", categoryKey: "category" },
         ]}

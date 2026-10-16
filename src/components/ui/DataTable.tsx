@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { EmptyState, HealthBadge, StateBadge, Surface } from "./primitives";
 import { Icon } from "./icons";
+import { IconTile } from "./IconTile";
 
 /**
  * The platform data table.
@@ -89,6 +90,8 @@ export type Column = {
   categoryKey?: string;
   /** Secondary line rendered beneath the value, from another row field. */
   subKey?: string;
+  /** ADR-046: a row field holding a kind (see `domains.ts`); drawn as an icon tile before the value. */
+  kindKey?: string;
 };
 
 function fillTemplate(template: string, row: Record<string, unknown>): string {
@@ -126,15 +129,24 @@ export function Cell({
       <span className={lead ? "text-text" : "text-text-secondary"}>{value}</span>
     );
 
-  if (sub) {
+  const text = sub ? (
+    <span className="flex flex-col gap-0.5">
+      {body}
+      <span className="text-[12px] text-text-tertiary">{String(sub)}</span>
+    </span>
+  ) : (
+    body
+  );
+  const kind = column.kindKey ? row[column.kindKey] : undefined;
+  if (typeof kind === "string" && kind) {
     return (
-      <span className="flex flex-col gap-0.5">
-        {body}
-        <span className="text-[12px] text-text-tertiary">{String(sub)}</span>
+      <span className="flex items-center gap-3">
+        <IconTile kind={kind} size="md" />
+        {text}
       </span>
     );
   }
-  return body;
+  return text;
 }
 
 export function DataTable({
@@ -149,7 +161,13 @@ export function DataTable({
   toolbar,
   bulkActions,
   rowActions,
+  activeKey,
+  rowHref,
 }: {
+  /** The row open in a detail pane beside the table (ADR-046 list + pane): tint fill and inside ring. */
+  activeKey?: string;
+  /** Where clicking a row goes, when that is not the link column's href (e.g. selecting it into a pane). */
+  rowHref?: (row: Record<string, unknown>) => string;
   columns: Column[];
   rows: Array<Record<string, unknown>>;
   caption: string;
@@ -193,11 +211,12 @@ export function DataTable({
   // the mouse and touch target. Controls inside a row keep their own behaviour.
   const linkColumn = columns.find((c) => c.variant === "link" && c.href);
   const openRow = (row: Record<string, unknown>) => (event: React.MouseEvent) => {
-    if (!linkColumn?.href) return;
+    if (!rowHref && !linkColumn?.href) return;
     if ((event.target as HTMLElement).closest("a,button,input,select,textarea,label")) return;
     if (window.getSelection()?.toString()) return;
-    router.push(fillTemplate(linkColumn.href, row));
+    router.push(rowHref ? rowHref(row) : fillTemplate(linkColumn!.href!, row), { scroll: !rowHref });
   };
+  const rowClickable = Boolean(rowHref || linkColumn);
   // Selection exists to feed bulk actions. Without any, a checkbox per row is a
   // control that does nothing (iOS shows selection circles only in edit mode).
   const selectable = Boolean(bulkActions);
@@ -380,7 +399,11 @@ export function DataTable({
                       </th>
                     );
                   })}
-                  {rowActions && <th scope="col" className="w-px pb-3" />}
+                  {rowActions && (
+                    <th scope="col" className="w-px pb-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -390,10 +413,12 @@ export function DataTable({
                   <tr
                     key={key}
                     data-selected={selected.has(key) || undefined}
+                    aria-current={activeKey === key ? "true" : undefined}
                     onClick={openRow(row)}
                     className={
                       "border-b border-line transition-colors last:border-b-0 hover:bg-[var(--color-control)] data-selected:bg-accent-subtle" +
-                      (linkColumn ? " cursor-pointer" : "")
+                      (activeKey === key ? " bg-[var(--color-accent-muted)] shadow-[inset_0_0_0_2px_var(--color-accent-line)] hover:bg-[var(--color-accent-muted)]" : "") +
+                      (rowClickable ? " cursor-pointer" : "")
                     }
                   >
                     {selectable && (
@@ -438,7 +463,16 @@ export function DataTable({
             {shown.map((row) => {
               const [lead, ...rest] = columns;
               return (
-                <li key={String(row[rowKey])} onClick={openRow(row)} className={"flex flex-col gap-2 py-4" + (linkColumn ? " cursor-pointer" : "")}>
+                <li
+                  key={String(row[rowKey])}
+                  onClick={openRow(row)}
+                  aria-current={activeKey === String(row[rowKey]) ? "true" : undefined}
+                  className={
+                    "flex flex-col gap-2 py-4" +
+                    (activeKey === String(row[rowKey]) ? " -mx-3 rounded-[10px] bg-[var(--color-accent-muted)] px-3" : "") +
+                    (rowClickable ? " cursor-pointer" : "")
+                  }
+                >
                   <div className="text-[15px]">
                     <Cell column={lead!} row={row} lead />
                   </div>

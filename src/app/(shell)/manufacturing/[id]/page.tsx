@@ -14,7 +14,11 @@ import {
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { entityHistory } from "@/server/platform/audit";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, Panel, PermissionDenied, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
+import { Panel, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
+import { EntityHeader } from "@/components/ui/EntityHeader";
+import { JourneyMap, type JourneyStatus, type JourneyStep } from "@/components/ui/JourneyMap";
+import { ProgressRing } from "@/components/ui/viz";
+import { STAGE_KIND_LABEL, equipmentKindFor, kindPresentation, stageKindFor } from "@/components/ui/business/domains";
 import { AuditTrail } from "@/components/shell/AuditTrail";
 import { executeQuery } from "@/server/platform/query";
 import { listRoutes, orderOperations } from "@/server/capabilities/manufacturing/stages";
@@ -100,29 +104,79 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
   const dispatch = canSeeDispatch ? await executeQuery(actor, orderDispatch, { orderId: order.id }) : null;
   const hold = canSeeHold && order.state === "draft" ? await executeQuery(actor, orderReservations, { orderId: order.id }) : null;
 
+  // The live journey (Task 127 Phase 3): the latest attempt of each stage, coloured by its state.
+  // A send-back cancels open stages and appends fresh ones, so cancelled rows are history, not the path.
+  const live = stages.filter((s) => s.state !== "cancelled");
+  const STATUS: Record<string, JourneyStatus> = {
+    completed: "done",
+    in_progress: "active",
+    on_hold: "held",
+    pending: "pending",
+  };
+  const steps: JourneyStep[] = live.map((s) => {
+    const kind = stageKindFor(s.stageKey, s.label);
+    const open = s.state === "pending" || s.state === "in_progress" || s.state === "on_hold";
+    return {
+      key: s.id,
+      label: s.label + (s.rework ? " (rework)" : ""),
+      kind,
+      status: STATUS[s.state] ?? "pending",
+      description: s.note ?? undefined,
+      chip:
+        s.checklist.total > 0
+          ? { icon: "stage-testing", label: `${s.checklist.passed} of ${s.checklist.total} checks passed` }
+          : { icon: kindPresentation(kind).icon, label: STAGE_KIND_LABEL[kind] ?? "Production stage" },
+      // An open stage opens in the floor's pane, where its outcomes live.
+      href: open && order.state === "in_progress" ? `/manufacturing/floor?op=${s.id}` : undefined,
+    };
+  });
+  const done = live.filter((s) => s.state === "completed").length;
+  const checksTotal = live.reduce((n, s) => n + s.checklist.total, 0);
+  const checksPassed = live.reduce((n, s) => n + s.checklist.passed, 0);
+  const current = live.find((s) => s.state === "in_progress" || s.state === "on_hold") ?? live.find((s) => s.state === "pending");
+
   return (
     <>
-      <PageHeader
+      <EntityHeader
+        crumbs={[{ label: "Manufacturing orders", href: "/manufacturing" }, { label: title }]}
         title={title}
-        description={
-          `Produces ${order.outputItem.name} at ${order.location.name}.` +
-          (order.bom ? ` Made from BOM ${order.bom.code}.` : "") +
-          (data.isTerminal ? " This order is closed and permanently read-only." : "")
-        }
+        state={{ category: data.category, label: order.state.replace(/_/g, " ") }}
+        meta={[
+          `${order.outputQty} × ${order.outputItem.name}`,
+          order.location.name,
+          ...(order.bom ? [`BOM ${order.bom.code}`] : []),
+        ]}
+        description={data.isTerminal ? "This order is closed and permanently read-only." : undefined}
         actions={<OrderActions orderId={order.id} state={order.state} />}
       />
 
-      <StatRow cols={4} className="mb-6">
-        <div className="flex flex-col px-5 py-4">
-          <span className="flex h-[26px] items-center text-[15px]">
-            <StateBadge category={data.category} label={order.state.replace(/_/g, " ")} />
-          </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">State</span>
-        </div>
-        <Stat label="Produces" value={order.outputQty} hint={order.outputItem.name} />
-        <Stat label="Components" value={order.lines.length} />
-        <Stat label="Version" value={order.version} hint="Optimistic concurrency" />
-      </StatRow>
+      <StatTileRow className="mb-6">
+        <StatTile kind={equipmentKindFor(order.outputItem.name)} label="Produces" value={order.outputQty} hint={order.outputItem.name} />
+        <StatTile
+          state={done === live.length && live.length > 0 ? "completed" : "active"}
+          icon="stage"
+          label="Stages done"
+          value={live.length > 0 ? `${done} of ${live.length}` : "—"}
+          hint={current ? `Now: ${current.label}` : undefined}
+          viz={live.length > 0 ? <ProgressRing value={done} total={live.length} label="Stages done" showValue={false} /> : undefined}
+        />
+        <StatTile
+          kind="certificate"
+          label="Quality checks passed"
+          value={checksTotal > 0 ? `${checksPassed} of ${checksTotal}` : "—"}
+          viz={checksTotal > 0 ? <ProgressRing value={checksPassed} total={checksTotal} label="Quality checks passed" showValue={false} /> : undefined}
+        />
+        <StatTile kind="stock" label="Components" value={order.lines.length} />
+      </StatTileRow>
+
+      {canSeeStages && steps.length > 0 && (
+        <Panel title="Production journey" className="mb-6">
+          <p className="m-0 mb-4 text-[15px] text-text-secondary">
+            Green is done, blue is in progress, amber is on hold, grey has not started. Open a running stage to work it on the floor.
+          </p>
+          <JourneyMap steps={steps} selectedKey={current?.id} label={`${title} stages`} />
+        </Panel>
+      )}
 
       {hold && (
         <div className="mb-6">
@@ -134,7 +188,7 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
 
       {canSeeStages && (
         <div className="mb-6">
-          <Panel title="Stages" flush>
+          <Panel title={stages.length > 0 ? "Stage actions" : "Stages"} flush>
             <StagesPanel
               orderId={order.id}
               orderState={order.state}

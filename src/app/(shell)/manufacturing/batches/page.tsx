@@ -5,7 +5,7 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_MANUFACTURING_BATCH, ENTITY_MANUFACTURING_ORDER, MANUFACTURING_CAPABILITY } from "@/server/capabilities/manufacturing";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { PageHeader, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
 import { executeQuery } from "@/server/platform/query";
 import { listBatches } from "@/server/capabilities/manufacturing/batch";
 import { CreateBatchForm } from "./BatchControls";
@@ -53,10 +53,11 @@ async function BatchesPage() {
         actions={<CreateBatchForm orders={access.free} />}
       />
 
-      <StatRow cols={2} className="mb-6">
-        <Stat label="Batches" value={batches.length} />
-        <Stat label="Orders in batches" value={batches.reduce((n, b) => n + b.orders, 0)} />
-      </StatRow>
+      <StatTileRow cols={3} className="mb-6">
+        <StatTile icon="batch" hue="purple" label="Batches" value={batches.length} />
+        <StatTile kind="job" label="Orders in batches" value={batches.reduce((n, b) => n + b.orders, 0)} />
+        <StatTile kind="stock" label="Draft orders free to batch" value={access.free.length} />
+      </StatTileRow>
 
       <DataTable
         caption="Batches"

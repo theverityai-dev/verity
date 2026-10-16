@@ -162,3 +162,27 @@ targets, quiet surfaces, and one obvious next action.
 ### REQ-EXPERIENCE-DESIGNSYSTEM-024
 *   **Requirement**: A state transition on a record that another person is responsible for acting on next (an approval request, an assignment, a dispatch) raises a notification to that person at the moment of transition, through the platform's existing notification mechanism — not left as a fact only visible if the responsible person happens to reopen the record.
 *   **Status**: `[DECIDED]` — ratified 2026-09-24 (Task 122 Phase 2). First real wiring landed same-day follow-up: `trading/orders.ts` gained `notifyPermissionHolders()` (recipients = tenant members whose role holds `ActionExecute` on the entity, same resolution shape as `requestAccess` in `src/server/actions/access-request.ts`, minus the acting user) and two `notify()` calls — `submitPurchaseOrder` (next actor: whoever receives) and `reserveForOrder`'s transition to `dispatching` (next actor: whoever dispatches). `pending_credit`/`approveCredit` was considered and rejected as a wiring target: no live code path sets an order into `pending_credit` any more (credit gate removed, per that handler's own comment — "every order is approved"), so it is dead state, not a real handoff. Still not retrofitted: `receiveGoods`, `dispatchOrder`, `cancelPurchaseOrder`/`cancelSalesOrder`, and every non-trading capability's transitions — this closes the two clearest trading examples, not the whole surface.
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-025
+*   **Requirement**: Colour has three jobs that never swap (ADR-046 §2): the tint marks what is interactive or selected; state colour marks condition and comes only from `StateCategory`; one of eight kind hues marks what sort of thing is shown. Kind hues appear only on icon tiles, icon discs, avatars and chart series, never on pills, buttons, links, text, borders, cell backgrounds, focus rings or status dots. A KPI disc that counts one state may take that state's colours.
+*   **Status**: `[DECIDED]` — ADR-046, accepted 2026-10-16. Tokens in `src/app/globals.css`; map in `src/components/ui/business/domains.ts`; contrast and distinctness enforced by `src/test/kind-hue-contrast.test.ts`.
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-026
+*   **Requirement**: A kind's hue and glyph come from the one map in `domains.ts`. A page never chooses a kind colour; the same kind looks the same on every screen. An unknown kind falls back to neutral slate.
+*   **Status**: `[DECIDED]` — ADR-046 §4. `IconTile` / `IconDisc` (`src/components/ui/IconTile.tsx`) and `Avatar` read it.
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-027
+*   **Requirement**: A state is drawn as a tinted opaque pill: a soft fill of the state colour, a dot and a word, ink at least 4.5:1 on its fill in both themes. `StateBadge` is the only implementation. A roll-up of several states shows the highest-attention one.
+*   **Status**: `[DECIDED]` — ADR-046 §5. `StateBadge` changed in place 2026-10-16 (every page inherits it).
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-028
+*   **Requirement**: A graphic (ring, bar, stepper, sparkline, stacked bar, gauge, chart) is drawn only from values the page's own query returns. No sample, padded or smoothed series. A series that cannot be drawn honestly renders nothing and the figure stands alone. Every graphic has a text equivalent. Charts are server-rendered SVG with no chart library; series take kind hues in `SERIES_ORDER`; more than eight series is a table.
+*   **Status**: `[DECIDED]` — ADR-046 §7. `src/components/ui/viz.tsx`, geometry in `viz-geometry.ts` with unit tests beside it.
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-029
+*   **Requirement**: A record detail page opens with `EntityHeader`: breadcrumb to its list, title, human reference as a grey chip (REQ-023), state pill, one line of meta facts joined by a middot, one primary action and an overflow.
+*   **Status**: `[DECIDED]` — ADR-046 §8. `src/components/ui/EntityHeader.tsx`. Pages adopt it as Task 127 reaches them.
+
+### REQ-EXPERIENCE-DESIGNSYSTEM-030
+*   **Requirement**: Icons are Verity's own (Verity Glyphs): drawn in-house on a 24 grid with round caps and joins, stroke set per rendered size (optical sizing), named by meaning in Verity, decorative (`aria-hidden`) with a visible label beside them. No third-party icon package and no copied path data; Apple SF Symbols are never embedded.
+*   **Status**: `[DECIDED]` — ADR-046 §9. `strokeFor()` in `src/components/ui/icons.tsx`; first DSEW batch of 24 glyphs added 2026-10-16. Study: `docs/reference/visual-language/library-study.md`.

@@ -570,6 +570,9 @@ export type QueueRow = OperationRow & {
   outputQty: number;
   /** Stages this one may be sent back to: earlier stages of the order's route, and itself. */
   sendBackTo: Array<{ stageKey: string; label: string }>;
+  /** 1-based position of this stage in the order's route, and how many stages it has ("Stage 5 of 6"). */
+  stageIndex: number;
+  stageCount: number;
 };
 
 /** The floor's work list: open operations of RUNNING orders, optionally for one stage. */
@@ -615,6 +618,8 @@ export const operationQueue: QueryDefinition<{ stageKey?: string }, QueueRow[]> 
           outputItemName: order.outputItem.name,
           outputQty: order.outputQty,
           sendBackTo: stageOrder.slice(0, stageOrder.findIndex((x) => x.stageKey === o.stageKey) + 1),
+          stageIndex: stageOrder.findIndex((x) => x.stageKey === o.stageKey) + 1,
+          stageCount: stageOrder.length,
         });
       });
     }
