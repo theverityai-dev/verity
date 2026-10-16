@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { ACCOUNTING_CAPABILITY, ACCOUNT_TYPES } from "@/server/capabilities/accounting";
 import { requireActor } from "@/server/platform/auth";
@@ -87,7 +88,18 @@ async function AccountingPage() {
 
   return (
     <>
-      <PageHeader title="Accounting" description="Chart of accounts, journal entries and the trial balance." />
+      <PageHeader
+        title="Accounting"
+        description="Chart of accounts, journal entries and the trial balance."
+        actions={
+          <Link
+            href="/accounting/statements"
+            className="inline-flex min-h-10 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink no-underline transition-opacity active:opacity-70 max-sm:min-h-11"
+          >
+            Statements
+          </Link>
+        }
+      />
       <StatRow cols={4} className="mb-6">
         <Stat label="Active accounts" value={accounts.filter((a) => a.active).length} />
         <Stat label="Journal entries" value={entries.length} />

@@ -26,6 +26,7 @@ export default defineConfig({
       "src/test/ui-reachability.test.ts",
       "src/test/nav-icons.test.ts",
       "src/lib/roster-week.test.ts",
+      "src/lib/financial-statements.test.ts",
       "src/lib/leave-calendar.test.ts",
       "src/lib/menu-availability.test.ts",
       "src/lib/export-formats.test.ts",

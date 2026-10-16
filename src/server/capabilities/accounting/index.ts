@@ -2,6 +2,16 @@ import { z } from "zod";
 import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import type { TenantScopedClient } from "@/server/platform/tenancy";
+import {
+  balanceSheet,
+  endExclusiveUtc,
+  profitAndLoss,
+  startOfDayUtc,
+  type AccountTotals,
+  type BalanceSheet,
+  type ProfitAndLoss,
+} from "@/lib/financial-statements";
 
 /**
  * CAPABILITY: Accounting — `verity.capability.accounting` (Task 72, MVP scope)
@@ -284,6 +294,64 @@ export const accountLedger: QueryDefinition<
   },
 };
 
+/* ============================== statements ================================ */
+
+/**
+ * Per-account totals for entries posted inside a window. Inactive accounts are kept: an
+ * account retired after it carried a balance still belongs in the figures, which the trial
+ * balance above (active only) would silently drop.
+ */
+async function ledgerTotals(
+  tx: TenantScopedClient,
+  window: { from?: Date | null; toExclusive?: Date | null },
+): Promise<AccountTotals[]> {
+  const postedAt = {
+    ...(window.from ? { gte: window.from } : {}),
+    ...(window.toExclusive ? { lt: window.toExclusive } : {}),
+  };
+  const [grouped, accounts] = await Promise.all([
+    tx.journalLine.groupBy({
+      by: ["accountId"],
+      where: Object.keys(postedAt).length ? { journalEntry: { postedAt } } : {},
+      _sum: { debitMinor: true, creditMinor: true },
+    }),
+    tx.account.findMany({ orderBy: { code: "asc" } }),
+  ]);
+  const sums = new Map(grouped.map((g) => [g.accountId, g._sum]));
+  return accounts.map((a) => ({
+    accountId: a.id,
+    code: a.code,
+    name: a.name,
+    type: a.type as AccountType,
+    debitMinor: sums.get(a.id)?.debitMinor ?? 0,
+    creditMinor: sums.get(a.id)?.creditMinor ?? 0,
+  }));
+}
+
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use a date like 2026-10-16").optional();
+
+/**
+ * Profit and loss for a period (both ends inclusive, UTC days; omit either for open-ended).
+ * Reads the ledger only, so it shows what has been posted, nothing more (ADR-044).
+ */
+export const profitAndLossReport: QueryDefinition<{ from?: string; to?: string }, ProfitAndLoss> = {
+  key: "verity.accounting.profit_and_loss",
+  entity: ENTITY_ACCOUNT,
+  input: z.object({ from: dateOnly, to: dateOnly }),
+  handler: async (ctx, input) =>
+    profitAndLoss(
+      await ledgerTotals(ctx.tx, { from: startOfDayUtc(input.from), toExclusive: endExclusiveUtc(input.to) }),
+    ),
+};
+
+/** Balance sheet as at the end of a day (inclusive, UTC; omit for everything posted to date). */
+export const balanceSheetReport: QueryDefinition<{ asOf?: string }, BalanceSheet> = {
+  key: "verity.accounting.balance_sheet",
+  entity: ENTITY_ACCOUNT,
+  input: z.object({ asOf: dateOnly }),
+  handler: async (ctx, input) => balanceSheet(await ledgerTotals(ctx.tx, { toExclusive: endExclusiveUtc(input.asOf) })),
+};
+
 /* ============================== registration ============================== */
 
 /** Called by `registry.ts`'s `installCapabilities()`. */
@@ -309,4 +377,6 @@ export function registerAccountingCapability(): void {
   registerQuery(listAccounts);
   registerQuery(trialBalance);
   registerQuery(accountLedger);
+  registerQuery(profitAndLossReport);
+  registerQuery(balanceSheetReport);
 }

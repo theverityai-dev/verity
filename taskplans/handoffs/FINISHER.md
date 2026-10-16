@@ -115,14 +115,17 @@ phase 7.
   ledger, which only takes manual journals, so any balance sheet built today would exclude all real
   business. See `clients/dsew/reference-parity/accounting.md` sections 5 to 7.
 - **Why:** Both references (Odoo, Manager) make posting the core of accounting.
-- **How:** (1) Write ADR-044 "Documents post to the ledger through events" (mechanism, per-tenant account
-  mapping that refuses to post when unmapped, reversal, dependency direction, idempotency key, backfill);
-  it is a new cross-capability write path so the ADR comes before code. (2) Build posting, then
-  `profitAndLoss` and `balanceSheet` queries as pure functions with tests, then Summary tiles. (3) Ledger
-  period lock with time-limited exception, opening balances. (4) Bank accounts and CSV statement
-  reconciliation as phase 2.
+- **How:** (1) ADR-044 is written, status PROPOSED (`verity-spec/17_decisions/adr/adr-044.md`); the product
+  owner accepts or amends it. (2) **Done 2026-10-16:** `profit_and_loss` and `balance_sheet` queries,
+  pure functions in `src/lib/financial-statements.ts` (11 tests), and `/accounting/statements` with a
+  plain notice that only journal entries are covered. (3) After acceptance: build posting (account map
+  table, idempotent handlers per document kind, backfill command, setup screen for unmapped kinds), then
+  Summary tiles for the two statements. (4) Ledger period lock with time-limited exception, opening
+  balances. (5) Bank accounts and CSV statement reconciliation as phase 2.
 - **Done when:** the acceptance walk in `accounting.md` section 8 passes with real D&S data.
-- **Status:** NOT STARTED. Needs the product owner to approve ADR-044 before step 2.
+- **Status:** IN PROGRESS (statements built, not proven against a ledger with entries; posting waits for
+  ADR-044 acceptance). Still to do without the ADR: a DB test of the two queries (inactive accounts kept,
+  date window inclusive), then step 4.
 
 **P1-1c. Phase 3 remainder: quote approval workflow and customer link.**
 - **What:** Quote revisions and the approval snapshot exist. An approval workflow (who must approve a
