@@ -29,9 +29,9 @@ const WASTAGE_REVIEW_PAISE = 200_000;
  * One outlet at a time, because stock is counted, received and wasted at an
  * outlet; the item ledger (`/inventory/[itemId]`) shows every outlet together.
  */
-async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?: string }> }) {
+async function InventoryPage({ searchParams }: { searchParams: Promise<{ location?: string }> }) {
   const actor = await requireActor();
-  const { outlet } = await searchParams;
+  const { location: locationParam } = await searchParams;
 
   const locations = await withTenant(actor.tenantId, (tx) =>
     tx.location.findMany({ where: { active: true }, select: { id: true, name: true }, orderBy: { name: "asc" } }),
@@ -40,11 +40,11 @@ async function InventoryPage({ searchParams }: { searchParams: Promise<{ outlet?
     return (
       <>
         <PageHeader title="Inventory" description="Stock on hand, receipts, usage and wastage for each location." />
-        <EmptyState title="No outlets yet" description="Add an outlet under Locations, then return here to record its stock." />
+        <EmptyState title="No locations yet" description="Add a location under Locations, then return here to record its stock." />
       </>
     );
   }
-  const current = locations.find((l) => l.id === outlet) ?? locations[0];
+  const current = locations.find((l) => l.id === locationParam) ?? locations[0];
 
   // Read through the capability's own query first: it carries the stock read
   // permission, so a person without it sees the error, not a page of numbers.

@@ -299,6 +299,13 @@ phase 7.
 - **Source:** Task 127.
 - **Status:** IN PROGRESS. ADR-046 accepted; Phases 1 to 3 built and browser-checked on DSEW (tokens, shared components, 86 glyphs, shop floor, route detail, order, jobs, summary). Reachability baseline and pure-suite registration of `viz-geometry.test.ts` fixed. Manufacturing DB tests still unrun (no test database). Next: Phase 4 restaurant (Colonel Kebabz), then 5 to 9; redraw four look-alike glyphs; owner signs off hue values from `docs/reference/visual-language/swatches.html`.
 
+### P2-10. Wastage reasons are a restaurant's list (generic wording debt)
+
+- **What:** `WASTAGE_REASONS` (`src/server/capabilities/inventory/index.ts`) is a closed list that includes "Burnt" and "Preparation waste". A factory tenant sees them in the Waste form. `src/test/generic-wording.test.ts` names "Burnt" as known debt.
+- **Why:** Generic capabilities must not speak one industry's language; the guard test exists because "outlet" and the food-cost Variance tab leaked into DSEW (fixed 2026-10-17).
+- **How:** A per-tenant configurable reason list (default set per industry pack). Needs a decision on where it lives (config, not an enum) before code.
+- **Status:** NOT STARTED
+
 ## P3: verification, coverage, housekeeping
 
 ### P3-1. Load test: take one real measurement (Task 123, 125 §7.8)

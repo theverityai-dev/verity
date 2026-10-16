@@ -259,7 +259,7 @@ function StockTab({
               <Select
                 aria-label="Location"
                 value={outletId}
-                onChange={(e) => router.push(`/inventory?outlet=${e.target.value}`)}
+                onChange={(e) => router.push(`/inventory?location=${e.target.value}`)}
               >
                 {outlets.map((o) => (
                   <option key={o.id} value={o.id}>{o.name}</option>
