@@ -69,6 +69,10 @@ Odoo Milestone: name, project, deadline, is_reached, task counts, `is_deadline_e
 
 ## 6. Still to read before Phase 2 is called specified
 
+**Accounting is now covered separately in [`accounting.md`](./accounting.md)** (2026-10-16): Odoo
+`account` and the public Manager guides, with a licence note (Manager is source-available under FSL 1.1,
+no competing use, so structure only, never its code).
+
 - Odoo `sale_project`, `project_mrp`, `mrp` quality checks, `purchase_requisition` for quote flow.
 - ERPNext `selling` Quotation (versions, lost reasons), `manufacturing` Job Card, `quality_management`.
 - manager.io: a real session with the owner, to list the exact tabs, the Summary tiles, and the

@@ -99,13 +99,30 @@ phase 7.
 - **Status:** NOT STARTED
 
 **P1-1b. Phase 0: the remaining parity documents.**
-- **What:** Project-module parity is written. Quotation, quality and the manager.io page set are not.
+- **What:** Project-module parity and **accounting parity** (`clients/dsew/reference-parity/accounting.md`,
+  2026-10-16) are written. Quotation and quality are not. The manager.io tab names and Summary tiles
+  are unverified until a session with the owner (the public guides were only partly reachable).
 - **Why:** Standing rule (2026-10-05): the parity document comes before building modules for a client.
-- **How:** In `clients/dsew/reference-parity/`, audit Odoo (`sale_project`, `quality`) and the
-  manager.io page set page by page, button by button, as the existing project-module document does.
-  Mark each line built, not built, or deliberately out.
-- **Done when:** the three missing sections exist and each line has a disposition.
-- **Status:** NOT STARTED
+- **How:** In `clients/dsew/reference-parity/`, audit Odoo (`sale_project`, `quality`) page by page,
+  button by button, as the existing documents do. Mark each line built, not built, or deliberately out.
+  Never read or port Manager's source (FSL 1.1, no competing use); structure from public guides only.
+- **Done when:** the quotation and quality sections exist with a disposition per line, and the owner
+  session has confirmed the manager.io tab list.
+- **Status:** IN PROGRESS (accounting done)
+
+**P1-1h. Accounting: documents must post to the ledger (found 2026-10-16).**
+- **What:** Invoices, payments and credit notes in `trading` and `project` never reach the `accounting`
+  ledger, which only takes manual journals, so any balance sheet built today would exclude all real
+  business. See `clients/dsew/reference-parity/accounting.md` sections 5 to 7.
+- **Why:** Both references (Odoo, Manager) make posting the core of accounting.
+- **How:** (1) Write ADR-044 "Documents post to the ledger through events" (mechanism, per-tenant account
+  mapping that refuses to post when unmapped, reversal, dependency direction, idempotency key, backfill);
+  it is a new cross-capability write path so the ADR comes before code. (2) Build posting, then
+  `profitAndLoss` and `balanceSheet` queries as pure functions with tests, then Summary tiles. (3) Ledger
+  period lock with time-limited exception, opening balances. (4) Bank accounts and CSV statement
+  reconciliation as phase 2.
+- **Done when:** the acceptance walk in `accounting.md` section 8 passes with real D&S data.
+- **Status:** NOT STARTED. Needs the product owner to approve ADR-044 before step 2.
 
 **P1-1c. Phase 3 remainder: quote approval workflow and customer link.**
 - **What:** Quote revisions and the approval snapshot exist. An approval workflow (who must approve a
@@ -325,6 +342,9 @@ Each line names who must act and what they must do. Move the item back to its pr
   with the client's adviser (P0-2). Product owner.
 - **Turn self-order on per outlet** only after a phone walk of the guest page and a printed sticker
   (P0-2). Product owner with the client.
+- **Approve ADR-044 (documents post to the ledger)** before accounting posting is built (P1-1h), and
+  **a session with the D&S owner** to confirm manager.io's tab list and Summary tiles (P1-1b).
+  Product owner.
 - **API key and migration for Task 119** (P1-3). Product owner.
 - **Per-tenant data volumes and a disposable database** for the load test (P3-1). Product owner.
 - **Name the manufacturing design partner** (P2-8): is D & S Electric Works it? Product owner.
