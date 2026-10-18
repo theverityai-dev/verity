@@ -89,15 +89,21 @@ membership lookup already runs per request, so a column on it costs nothing extr
 **Decision needed.** This changes an identity function and adds a permission, so it needs a short ADR and the product owner's
 approval before code (the `verity-adr-gate` rule). It must not weaken RLS, `withTenant()` or authorization.
 
-**Interim offboarding: there is no verified Verity-side revocation today.** Disabling the Keycloak account stops new sign-ins only; it
-does not invalidate the already-issued Verity cookie. Clearing a role (a null role denies every permission check,
-`authorization.ts:380`) is **not** an operating procedure: it is untested end to end, I have not confirmed which screen does it,
-and the person can still sign in to an empty shell. The only bounded exposure is the 1 h idle and 8 h absolute limits. The
-interim runbook must specify and verify a real step before DSEW relies on one. **Do not claim immediate revocation.**
+**Offboarding today (corrected 2026-10-19).** Disabling the Keycloak account stops new sign-ins only; it does not invalidate the
+already-issued Verity cookie. A Verity-side step that does end access already exists and is tested: `revoke_membership` deletes
+the membership, so the next request resolves to no actor (`hq-administration.test.ts`). It is **irreversible** (the role and
+placement are lost). An earlier version of this section said no Verity-side revocation existed; that was wrong. Clearing a role is
+**not** an operating procedure (untested end to end, leaves an empty signed-in shell). The bounded exposure without either step is
+the 1 h idle and 8 h absolute limits. **Do not claim immediate revocation.**
 
-**Status 2026-10-19:** direction approved by the product owner with safeguards; the ADR is drafted as
-`verity-spec/17_decisions/adr/adr-049.md` (PROPOSED). The approved guarantee is "revoked at the next authorization check", not
-instant termination of in-flight requests.
+**Reversible disable (ADR-049, implemented on the local database only, not deployed).** `disable_membership` /
+`restore_membership` need a dedicated permission and a reason, are audited atomically, and take effect at the next authorization
+check for sessions, API keys and HQ operator functions. See ADR-049 for the evidence and the open review points.
+
+**Status 2026-10-19:** direction approved by the product owner with safeguards; `verity-spec/17_decisions/adr/adr-049.md`
+(PROPOSED) is **implemented and tested on the local database only** (migration `20261019100000_membership_disable`, two commands,
+`src/test/membership-disable.test.ts`). Awaiting review; not pushed, not deployed. The approved guarantee is "revoked at the next
+authorization check", not instant termination of in-flight requests.
 
 ## 4. Outbound network policy (design)
 

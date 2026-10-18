@@ -58,7 +58,7 @@ export async function dispatchEvents(tx: TenantScopedClient, now: Date = new Dat
 
   const roleIds = [...new Set(subscriptions.map((s) => s.roleId))];
   const members = roleIds.length > 0
-    ? await tx.tenantMembership.findMany({ where: { roleId: { in: roleIds } }, select: { userId: true, roleId: true } })
+    ? await tx.tenantMembership.findMany({ where: { roleId: { in: roleIds }, disabledAt: null }, select: { userId: true, roleId: true } })
     : [];
   const usersByRole = new Map<string, string[]>();
   for (const m of members) usersByRole.set(m.roleId!, [...(usersByRole.get(m.roleId!) ?? []), m.userId]);

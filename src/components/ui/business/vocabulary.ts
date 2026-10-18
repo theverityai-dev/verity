@@ -62,6 +62,7 @@ export const ENTITY_LABEL: Record<string, string> = {
   "verity.plywood.ledger_entry": "Ledger entry",
   "verity.platform.role": "Role",
   "verity.platform.membership": "Person",
+  "verity.platform.membership_access": "Person access",
   "verity.platform.organization": "Organization",
 };
 
@@ -184,6 +185,8 @@ export const COMMAND_LABEL: Record<string, string> = {
   "verity.platform.assign_role": "Role assigned",
   "verity.platform.create_role": "Role created",
   "verity.platform.revoke_membership": "Access removed",
+  "verity.platform.disable_membership": "Access disabled",
+  "verity.platform.restore_membership": "Access restored",
 };
 
 export function entityLabelOf(entityKey: string): string {

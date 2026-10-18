@@ -410,6 +410,8 @@ model TenantMembership {
   updatedAt      DateTime @updatedAt @map("updated_at")
   version        Int      @default(1)
   customFields   Json     @default("{}") @map("custom_fields")
+  // ADR-049: non-null = this membership authorizes nothing. Disable/restore history lives in `activity`, not here.
+  disabledAt     DateTime? @map("disabled_at")
 
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -796,6 +798,9 @@ enum SecurityEventType {
   RoleAssigned
   ConfigurationChanged
   ApiKeyGenerated
+  /// ADR-049: a membership was disabled / restored. The reason is in the payload.
+  MembershipDisabled
+  MembershipRestored
 }
 
 /// Security audit stream (Authority: Spec EXE-AUD-002).

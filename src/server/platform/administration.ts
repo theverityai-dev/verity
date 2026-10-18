@@ -4,7 +4,7 @@ import { registerCommand, type CommandDefinition } from "./command";
 import { registerQuery, type QueryDefinition } from "./query";
 import { diffFields, recordActivity, recordSecurityEvent } from "./audit";
 import { provisionIdentity } from "./identity";
-import { resolvePermissions, assertGrantCeiling } from "./authorization";
+import { resolvePermissions, assertGrantCeiling, hasTenantPermission } from "./authorization";
 import { activateCapability, suspendCapability, setConfig } from "./capability";
 import { ValidationError } from "./command";
 import { OPERATOR_ROLE_NAME } from "./operator";
@@ -53,6 +53,8 @@ import { registerNotificationOutbox } from "./notification-outbox";
 export const ENTITY_TENANT = "verity.platform.tenant";
 export const ENTITY_ORGANIZATION = "verity.platform.organization";
 export const ENTITY_MEMBERSHIP = "verity.platform.membership";
+/** ADR-049: the dedicated permission to disable and restore access. Not folded into membership Edit/Delete. */
+export const ENTITY_MEMBERSHIP_ACCESS = "verity.platform.membership_access";
 export const ENTITY_ROLE = "verity.platform.role";
 
 /* ============================== organizations ============================== */
@@ -313,6 +315,9 @@ export const createApiKey: CommandDefinition<
   preconditions: async (ctx, input) => {
     const membership = await ctx.tx.tenantMembership.findUnique({ where: { id: input.membershipId } });
     if (!membership) throw new ValidationError("E_VALIDATION: membership not found in this client");
+    if (membership.disabledAt) {
+      throw new ValidationError("E_VALIDATION: this membership is disabled, so a key would grant nothing");
+    }
     if (!membership.roleId) {
       throw new ValidationError("E_VALIDATION: this membership has no role, so a key would grant nothing");
     }
@@ -530,7 +535,153 @@ export const setPersonState: CommandDefinition<
   },
 };
 
+/**
+ * Disable / restore one person's access to this client (ADR-049).
+ *
+ * Reversible, unlike `revokeMembership` (which deletes the row and the role assignment). A disabled membership is excluded
+ * by `memberships_for_auth_user`, `authenticate_api_key` and `is_platform_operator`, so the next request resolves to no
+ * actor. Other memberships of the same person are untouched. History lives in `activity`, which refuses UPDATE and DELETE.
+ */
+const reasonSchema = z.string().trim().min(3, "a reason of at least 3 characters is required").max(500);
+
+/**
+ * Serialises access changes per tenant for the length of the command transaction, so the last-owner count below cannot be
+ * read stale by a second administrator disabling the other owner at the same time (READ COMMITTED re-reads after the lock).
+ */
+async function lockMembershipAccess(tx: TenantScopedClient, tenantId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(["membership-access", tenantId])}, 0))`;
+}
+
+/** Active, non-operator memberships other than `excludeMembershipId` whose role may disable access (the tenant's owners). */
+async function countOtherActiveAccessHolders(
+  tx: TenantScopedClient,
+  tenantId: string,
+  excludeMembershipId: string,
+): Promise<number> {
+  const rows = await tx.$queryRaw<{ n: bigint }[]>`
+    SELECT count(*) AS n
+    FROM tenant_membership m
+    JOIN role r ON r.id = m.role_id
+    WHERE m.tenant_id = ${tenantId}::uuid
+      AND m.id <> ${excludeMembershipId}::uuid
+      AND m.disabled_at IS NULL
+      AND r.name <> ${OPERATOR_ROLE_NAME}
+      AND EXISTS (
+        SELECT 1 FROM verity.resolve_permissions(m.role_id) rp
+        WHERE rp.verb = 'ActionExecute'::"PermissionVerb"
+          AND rp.entity = ${ENTITY_MEMBERSHIP_ACCESS}
+          AND rp.scope = 'Tenant'
+      )`;
+  return Number(rows[0]?.n ?? 0);
+}
+
+type AccessResult = { membershipId: string; disabled: boolean; changed: boolean };
+
+export const disableMembership: CommandDefinition<{ membershipId: string; reason: string }, AccessResult> = {
+  key: "verity.platform.disable_membership",
+  entity: ENTITY_MEMBERSHIP_ACCESS,
+  verb: "ActionExecute",
+  impact: "destructive",
+  input: z.object({ membershipId: z.string().uuid(), reason: reasonSchema }),
+  preconditions: async (ctx, input) => {
+    if (input.membershipId === ctx.actor.membershipId) {
+      throw new ValidationError("E_VALIDATION: you cannot disable your own membership");
+    }
+  },
+  handler: async (ctx, input) => {
+    await lockMembershipAccess(ctx.tx, ctx.actor.tenantId);
+    // RLS scopes this to the actor's tenant: another client's membership id is simply not found.
+    const target = await ctx.tx.tenantMembership.findUniqueOrThrow({
+      where: { id: input.membershipId },
+      include: { role: { select: { name: true } } },
+    });
+    if (target.disabledAt) {
+      return { result: { membershipId: target.id, disabled: true, changed: false }, events: [] };
+    }
+    // ADR-035: an operator's support membership inside a client is the platform's, not the client's, to withdraw. It ends
+    // when the operator's platform membership is disabled (`is_platform_operator`) or the client is suspended (ADR-034).
+    if (target.role?.name === OPERATOR_ROLE_NAME) {
+      throw new ValidationError("E_VALIDATION: a platform operator's support access is not disabled from inside a client");
+    }
+
+    const holdsAccessPower = await hasTenantPermission(ctx.tx, target.roleId, "ActionExecute", ENTITY_MEMBERSHIP_ACCESS);
+    if (holdsAccessPower && (await countOtherActiveAccessHolders(ctx.tx, ctx.actor.tenantId, target.id)) === 0) {
+      throw new ValidationError("E_VALIDATION: this is the last active owner of the client and cannot be disabled");
+    }
+
+    const disabledAt = new Date();
+    await ctx.tx.tenantMembership.update({
+      where: { id: target.id },
+      data: { disabledAt, version: { increment: 1 } },
+    });
+
+    await recordActivity(ctx, {
+      entityKey: ENTITY_MEMBERSHIP,
+      entityId: target.id,
+      commandKey: "verity.platform.disable_membership",
+      changes: diffFields({ access: "Enabled", accessReason: null }, { access: "Disabled", accessReason: input.reason }),
+    });
+    await recordSecurityEvent(ctx.tx, {
+      tenantId: ctx.actor.tenantId,
+      eventType: "MembershipDisabled",
+      actorUserId: ctx.actor.userId,
+      payload: { membershipId: target.id, targetUserId: target.userId, reason: input.reason, at: disabledAt.toISOString() },
+    });
+
+    return {
+      result: { membershipId: target.id, disabled: true, changed: true },
+      events: [{ name: "verity.platform.membership_disabled", entityId: target.id }],
+    };
+  },
+};
+
+export const restoreMembership: CommandDefinition<{ membershipId: string; reason: string }, AccessResult> = {
+  key: "verity.platform.restore_membership",
+  entity: ENTITY_MEMBERSHIP_ACCESS,
+  verb: "ActionExecute",
+  impact: "destructive",
+  input: z.object({ membershipId: z.string().uuid(), reason: reasonSchema }),
+  preconditions: async (ctx, input) => {
+    // Restoring re-grants the role the person already holds, so the actor must be able to grant it (no escalation by restore).
+    const target = await ctx.tx.tenantMembership.findUniqueOrThrow({ where: { id: input.membershipId } });
+    if (target.roleId) await assertGrantCeiling(ctx.tx, ctx.actor, await resolvePermissions(ctx.tx, target.roleId));
+  },
+  handler: async (ctx, input) => {
+    await lockMembershipAccess(ctx.tx, ctx.actor.tenantId);
+    const target = await ctx.tx.tenantMembership.findUniqueOrThrow({ where: { id: input.membershipId } });
+    if (!target.disabledAt) {
+      return { result: { membershipId: target.id, disabled: false, changed: false }, events: [] };
+    }
+
+    // Clears the current-state column only. The disable's activity and security rows are append-only and stay.
+    await ctx.tx.tenantMembership.update({
+      where: { id: target.id },
+      data: { disabledAt: null, version: { increment: 1 } },
+    });
+
+    await recordActivity(ctx, {
+      entityKey: ENTITY_MEMBERSHIP,
+      entityId: target.id,
+      commandKey: "verity.platform.restore_membership",
+      changes: diffFields({ access: "Disabled", accessReason: null }, { access: "Enabled", accessReason: input.reason }),
+    });
+    await recordSecurityEvent(ctx.tx, {
+      tenantId: ctx.actor.tenantId,
+      eventType: "MembershipRestored",
+      actorUserId: ctx.actor.userId,
+      payload: { membershipId: target.id, targetUserId: target.userId, reason: input.reason },
+    });
+
+    return {
+      result: { membershipId: target.id, disabled: false, changed: true },
+      events: [{ name: "verity.platform.membership_restored", entityId: target.id }],
+    };
+  },
+};
+
 export type PersonRow = {
+  /** ADR-049: true when this membership is disabled and authorizes nothing. */
+  disabled: boolean;
   membershipId: string;
   userId: string;
   displayName: string;
@@ -559,6 +710,7 @@ export const listPeople: QueryDefinition<{ search?: string }, PersonRow[]> = {
     const term = input.search?.trim().toLowerCase();
     return rows
       .map((row) => ({
+        disabled: row.disabledAt !== null,
         membershipId: row.id,
         userId: row.userId,
         displayName: row.user.party.displayName,
@@ -930,7 +1082,7 @@ export type GrantableGroup = { group: string; entities: GrantableEntity[] };
  * the platform administration entities are enumerated in code already
  * (`ENTITY_TENANT` etc., just above) and do not change per capability.
  */
-const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.command_failure", "verity.platform.data_export", "verity.platform.notification_subscription", "verity.platform.overview", "verity.platform.capability"];
+const PLATFORM_ADMIN_ENTITIES = [ENTITY_TENANT, ENTITY_ORGANIZATION, ENTITY_MEMBERSHIP, ENTITY_MEMBERSHIP_ACCESS, ENTITY_ROLE, "verity.platform.activity", "verity.platform.security_event", "verity.platform.command_failure", "verity.platform.data_export", "verity.platform.notification_subscription", "verity.platform.overview", "verity.platform.capability"];
 
 /**
  * Entities a role's permissions can target, grouped by owning capability —
@@ -1169,6 +1321,8 @@ export function installAdministration(): void {
   registerCommand(revokeApiKey);
   registerCommand(revokeMembership);
   registerCommand(setPersonState);
+  registerCommand(disableMembership);
+  registerCommand(restoreMembership);
   registerCommand(createRole);
   registerCommand(grantPermission);
   registerCommand(revokePermission);

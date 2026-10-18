@@ -462,8 +462,10 @@ export async function enterClient(tenantId: string, reason: string): Promise<str
 
     const existing = await tx.tenantMembership.findFirst({
       where: { tenantId, userId: operator.userId },
-      select: { id: true },
+      select: { id: true, disabledAt: true },
     });
+    // ADR-049: a disabled membership authorizes nothing, on this path too. Fail closed; never re-enable silently.
+    if (existing?.disabledAt) throw new ForbiddenError("E_FORBIDDEN: this support membership is disabled");
     if (existing) {
       // Every entry is recorded, not only the first.
       await recordSecurityEvent(tx, {
@@ -635,8 +637,10 @@ export async function operatorActorFor(tenantId: string): Promise<ActorContext> 
 
     const existing = await tx.tenantMembership.findFirst({
       where: { tenantId, userId: operator.userId },
-      select: { id: true, organizationId: true, roleId: true },
+      select: { id: true, organizationId: true, roleId: true, disabledAt: true },
     });
+    // ADR-049: a disabled membership authorizes nothing, on this path too. Fail closed; never re-enable silently.
+    if (existing?.disabledAt) throw new ForbiddenError("E_FORBIDDEN: this support membership is disabled");
 
     const roleId = await operatorRoleFor(tx, tenantId);
 
@@ -710,6 +714,8 @@ export const OPERATOR_GRANTS = [
   { verb: "Create" as const, entity: "verity.platform.membership" },
   { verb: "Edit" as const, entity: "verity.platform.membership" },
   { verb: "Delete" as const, entity: "verity.platform.membership" },
+  // ADR-049: disable / restore a person's access. Dedicated, so a role can hold Edit on people without it.
+  { verb: "ActionExecute" as const, entity: "verity.platform.membership_access" },
   { verb: "Read" as const, entity: "verity.platform.role" },
   { verb: "Read" as const, entity: "verity.platform.activity" },
   { verb: "Read" as const, entity: "verity.platform.security_event" },
