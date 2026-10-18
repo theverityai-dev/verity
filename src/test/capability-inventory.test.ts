@@ -241,7 +241,7 @@ describeDb("capability: Inventory stock count", () => {
     expect(listed.find((r) => r.id === asked.id)?.toLocation).toBeTruthy();
 
     await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: false })).rejects.toThrow(/why/);
-    await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true })).rejects.toThrow(/outlet to send from/);
+    await expect(executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true })).rejects.toThrow(/location to send from/);
     await expect(
       executeCommand(manager, decideStockRequest, { requestId: asked.id, approve: true, fromLocationId: outletB }),
     ).rejects.toThrow(/different location/);
