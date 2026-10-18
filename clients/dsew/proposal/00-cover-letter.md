@@ -6,64 +6,58 @@
 **Prepared by:** [Company legal name], [city]
 **Date:** [dd Month yyyy]
 **Validity:** 60 days from the date above
-**Status:** Confidential. Prepared for DSEW only.
+**Status:** DRAFT, pending company approval. Confidential. Prepared for DSEW only.
 
 ---
 
 Dear Mr. Sharma,
 
-Thank you for inviting us to respond. Your enquiry describes something many vendors will under-deliver on: not a
-generic ERP with a few forms added, but one system that follows a job from the first customer enquiry, through
-engineering and controlled documents, procurement, winding and assembly, testing and dispatch, to the invoice and
-the warranty that follows. We read the enquiry that way and have written this proposal that way.
+Thank you for inviting us to respond. Your enquiry describes one system that follows a job from the first customer
+enquiry, through engineering and controlled documents, manufacturing, testing and dispatch. We have read it that way.
 
 ## What we are proposing
 
-We will build DSEW's system on **Verity**, our own platform for service and manufacturing businesses, rather than
-customising someone else's ERP. Verity already provides the hard foundations your requirement depends on:
-strict separation of each company's data, role-based permissions, a complete audit trail, a stock ledger that
-cannot be silently edited, manufacturing orders with route stages and quality checkpoints, project jobs with quote
-revisions, approvals, printable travellers and a QR identity for finished units. These are working today. What we
-build for DSEW is the part that makes it yours: revision-controlled BOMs, controlled engineering documents,
-structured test records with tolerances, lot and heat traceability, your numbering rules, your travellers, your
-quality formats and the integrations you asked for.
+Your enquiry covers nineteen modules (A to S) plus AI. That is a large programme, and we do not think a single fixed
+fee can honestly cover all of it. We propose instead a **bounded Phase 1: Foundation Release at ₹5.00 lakh plus GST
+(₹5.90 lakh including GST)**, built on Verity, our own platform, which already provides tenant isolation, permissions,
+audit, stock integrity, approvals, manufacturing orders and project jobs.
 
-## Why this approach is good for DSEW
+Phase 1 delivers the part of the business where your risk is highest: quotation with revisions, a revision-controlled
+bill of materials, controlled documents, manufacturing orders and travellers, structured test records with tolerances,
+quality gates before dispatch, and a dispatch pack, deployed on your premises with a rehearsed backup and restore.
 
-1. **A working system early.** You can see a working demonstration of the foundation now, with fictional data.
-   The first production-ready release is planned for roughly four months after the requirements are agreed.
-2. **No lock-in in the way that matters most.** Your data is yours, exportable in open formats at any time. Your
-   configuration, templates, numbering rules and DSEW-specific work are yours. The technology stack is open
-   source with no per-user licence. Document 4 answers your source-code questions one by one and explains honestly
-   where a shared platform differs from a one-off build.
-3. **Honest about what is hard.** We tell you where something is proven, where it still has to be built, and where
-   we need to verify before we promise (for example, running on your Windows Server 2019 and the attendance
-   device). You will not find a surprise at go-live that we knew about at signing.
-4. **Priced to be fair, in rupees, with the whole cost visible.** Three options, a fixed price per phase, no
-   per-user or per-module subscription, and a five-year ownership cost so you can compare us on the real number.
-5. **Built with your people.** Each two-week sprint ends with a demonstration of working software on a test
-   environment that your team can use. Your engineers and quality staff decide whether it fits, not a presentation.
+## What Phase 1 does not include
+
+- The other modules and depth in your enquiry. They are listed as **future phases**, quoted separately once Phase 1 has
+  defined their depth.
+- **Tally Prime integration (section N of your enquiry) is excluded and deferred.** We are not claiming to meet that
+  requirement. Tally remains your accounting system, unchanged. We ask you to confirm in writing that you accept this
+  exclusion for Phase 1.
+- Source-code and platform-licence terms are still being finalised and are described in document 4 as open items.
+
+## Why this approach
+
+1. **Honest scope.** You see exactly what is included, what is a future phase, and what is excluded.
+2. **A working system early.** Two-week sprints, each ending with a demonstration on a test environment your team can use.
+3. **Your data is yours.** Exportable at any time in open formats; the stack has no per-user licence.
+4. **No surprises.** We state what we have verified and what we have not (for example, we have not yet run on your
+   Windows Server 2019).
 
 ## What is in this package
 
 | # | Document | What it answers |
 |---|---|---|
-| 1 | Technical Proposal | Solution, module-by-module coverage (A to S), AI, user experience, architecture and deployment, security |
-| 2 | Commercial Proposal | Three options, module-wise prices, payment milestones, AMC, rates, five-year cost |
-| 3 | Implementation Plan | Phases, sprints, acceptance criteria, UAT, migration, training, handover, risks |
-| 4 | Ownership, Licensing and Source Code | Every question in section 5 of your enquiry, answered directly |
-| 5 | Company, Team and Experience | Who we are, who will work on this, references and support |
-| 6 | Assumptions, Exclusions and Information We Need | What we assumed, what is not included, and the short list of inputs that unlock fixed dates and prices |
+| 1 | Technical Proposal | Coverage of modules A to S, architecture, deployment, security |
+| 2 | Commercial Proposal | Phase 1 price, inclusions, exclusions, milestones |
+| 3 | Implementation Plan | Phase 1 timeline, sprints, acceptance, risks |
+| 4 | Ownership, Licensing and Source Code | Agreed principle and open items |
+| 5 | Company, Team and Experience | Company facts (to be completed) |
+| 6 | Assumptions, Exclusions and Information We Need | Assumptions and inputs required |
 
-## What we need from you to move quickly
+## What we need from you
 
-A short working session with your engineering and quality heads, sample documents (a drawing, a BOM, a QAP, an
-ITP, a test report and a traveller you use today), your existing numbering convention, and basic facts about your
-server. Document 6 lists them. With these, we turn the proposal into a signed Software Requirements Specification
-within three weeks.
-
-We would be glad to present this in person at your Rau facility, walk through the working demonstration with
-your team, and answer questions before you decide.
+A working session with your engineering and quality leads, sample documents (drawing, BOM, quotation, traveller, test
+report, packing list), your numbering convention, and basic facts about your server. Document 6 lists them.
 
 Yours sincerely,
 

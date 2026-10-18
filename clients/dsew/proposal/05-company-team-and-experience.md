@@ -29,7 +29,7 @@ system are the people who build it and support it. We do not hand your project t
 | Project jobs with milestones, tasks, timesheets, cost lines, quote revisions | Yes | WBS depth, risk register, DSEW templates |
 | Approvals, notification outbox, evidence storage, QR passport for finished units | Yes | DSEW workflows |
 | Backup, restore, upgrade scripts and a containerised installation package | Yes | Validation on DSEW's host |
-| Revision-controlled BOM, controlled documents, structured test records, MRP, Tally connector, contracts, payroll, AI, Hindi | No | All of these |
+| Revision-controlled BOM, controlled documents, structured test records (Phase 1); MRP, contracts, payroll, AI, Hindi (future phases) | No | Phase 1 items only; Tally integration is excluded |
 
 ## 3. Relevant experience
 
@@ -38,29 +38,28 @@ system are the people who build it and support it. We do not hand your project t
 | Platform design for manufacturing, inventory, project and quality workflows | [Describe projects and years, with references] |
 | Project-based, one-off manufacturing | [Describe, or state that DSEW would be an early reference customer] |
 | ERP, MES, QMS, DMS | The platform's manufacturing, quality and document foundations are our own work; [add client engagements] |
-| Tally Prime integration | [State actual experience. If none in production, say: "We have not shipped a Tally integration to production; we propose a paid-for-in-scope spike on your Tally version before committing."] |
+| Tally Prime integration | Not offered in this proposal (excluded and deferred). [State actual experience only if relevant to a later phase] |
 | Windows Server deployment | [State actual experience. We propose a Linux VM under Hyper-V and will prove it on a test VM before go-live.] |
 | Barcode-based traceability | [State actual experience] |
 | Local AI and document intelligence | [State actual experience] |
 | References | [Two or three client contacts who agree to be called, or "available after NDA"] |
 
 We would rather lose a point in this table than overstate it. If an item here is thin, the plan manages it with a
-spike, a test environment, or a milestone that must pass before you pay for the next stage.
+test environment, or a milestone that must pass before you pay for the next stage.
 
 ## 4. Proposed team
 
 | Role | Name | Responsibility | Allocation |
 |---|---|---|---|
-| Engagement director | [Name] | Commercials, steering, escalation | 10% |
-| Project manager and business analyst | [Name] | SRS, sprint plans, status, UAT coordination | 100% |
-| Technical lead and architect | [Name] | Architecture, security, integrations, quality of code | 100% |
-| Senior engineers (2) | [Names] | Module development | 100% each |
-| Engineer (1) | [Name] | Module development, integrations | 100% |
-| UI/UX designer | [Name] | Prototypes, interface quality | 50% in Phases 0 to 1, 25% after |
-| QA and test engineer | [Name] | Automated and UAT scripts, regression | 100% from Phase 1 |
-| Deployment and infrastructure engineer | [Name] | Hyper-V/Linux set-up, backups, restore, hardening | 50% around deployment |
+| Engagement director | [Name] | Commercials, steering, escalation | [to be set] |
+| Project manager and business analyst | [Name] | Specification, sprint plans, status, UAT coordination | [to be set] |
+| Technical lead and architect | [Name] | Architecture, security, quality of code | [to be set] |
+| Engineers | [Names] | Module development | [to be set] |
+| UI/UX designer | [Name] | Interface quality | [to be set] |
+| QA and test engineer | [Name] | Automated and UAT scripts, regression | [to be set] |
+| Deployment and infrastructure engineer | [Name] | Hyper-V/Linux set-up, backups, restore, hardening | [to be set] |
 
-Expected duration: Option 2 about ten months; Phase 1 about sixteen weeks. Resource plans are confirmed in the SRS.
+Expected duration: Phase 1 about eleven weeks. The actual team and allocations for Phase 1 are **[to be set by the company]**; none is committed here.
 
 ## 5. Support and escalation
 
