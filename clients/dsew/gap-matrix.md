@@ -69,9 +69,31 @@ edit guard. Also corrected: "authorised override of a gate" does not exist at al
 | AI, Hindi | Optional | Missing | D7. |
 | On-prem | Mode B, backup, restore | Missing / unproven | D3. |
 
+## Preflight checks closed on 2026-10-18 (stop/go inputs for M1)
+
+| Check | Result | Level |
+|---|---|---|
+| All BOM write paths | Three Prisma writes, all in `manufacturing/bom.ts` (`create`, `createMany`, `update`). No raw SQL touches `manufacturing_bom`. No code path edits `custom_fields` after creation. Seed scripts create BOMs through commands. No database guard exists today. | Reviewed (grep over `src/` and the repo's TypeScript) |
+| Stock movement immutability | `inventory_stock_movement` has insert-only RLS policies plus a `BEFORE UPDATE OR DELETE` trigger calling `verity.reject_mutation()`: UPDATE is refused for everyone; DELETE is refused except for a role that is superuser or bypasses RLS. Corrections are reversal rows (manufacturing cancel writes an offsetting `Adjustment`). **Caveats:** `inventory_stock_balance` is a mutable projection kept in step by the same transaction, not by a trigger, so a code path that wrote only one of the two could drift; TRUNCATE is not guarded. | Reviewed (migration and function source read in the local database); cancel reversal Test-verified |
+| M1 backfill dry-run | On a disposable copy of the local database (3 BOMs, 18 lines, 6 orders referencing a BOM): counts unchanged after backfill (3 / 18 / 6), no orphan orders; rerun is clean; the application role is refused on every immutable path; draft, release, supersede and edit-after-release behave as designed; existing orders keep their original revision; rollback restores columns and counts; tenant teardown still cascades. The data is local test data, not production volume. **Finding:** after M1, `createBom` must create drafts, so existing tests and the seed that create a BOM and immediately build an order must release it first. | Test-verified by hand-run SQL (scripts in session scratchpad, not in the repo) |
+| QC gate fails closed | Not built. Designed in ADR-047 section 6. | Design only |
+
+## Test status, accurately recorded
+
+Run 1 (2026-10-18, before any change): 70 passed, 1 failed. The failure was `capability-inventory.test.ts`
+"an outlet asks for stock…". Verified behaviour: the command still refuses approval without a source location;
+only its wording changed deliberately in commit `d398eff1` ("location", not "outlet"). The assertion was updated in
+a separate one-line commit (`7dac9538`) and that file now passes 10 of 10. The other seven files were not rerun,
+and the full suite was not run: "70 + 1" is a focused subset, not a green suite.
+
+## Environment note
+
+The local test database runs in Docker (a container on `127.0.0.1:55432`); Docker Desktop had to be started by
+hand. That is a developer environment dependency only. It is not evidence that DSEW's Windows Server 2019
+deployment will work (decision D3).
+
 ## What is still unverified or blocked
 
 - Nothing here is client-validated. Every behaviour needs a walk-through against DSEW's real job and documents.
-- Whether any path other than the BOM commands can change BOM lines or custom fields (generic entity edit): not checked.
-- Whether stock movement rows are protected by an append-only trigger (the checkpoint results are): not checked.
 - Hindi, e-way bill, Tally, attendance: not assessed against code.
+- Remaining Phase 1 gates (fail-closed QC, document capability, test records): designed, not built.

@@ -172,6 +172,28 @@ phase 7.
 - **Done when:** evidence is committed and every defect is fixed or listed.
 - **Status:** NOT STARTED
 
+**P1-1i. Engagement Phase 1 design gate: revision-controlled BOM first (set 2026-10-18).**
+- **What:** The DSEW engagement's Phase 1 (not the demo phases above): revision-controlled BOM, controlled
+  documents, structured test records, fail-closed release gates. **Approved:** the audit and design as the
+  basis for planning; D1, D5, D6 in principle (`clients/dsew/decisions.md`). **Not approved:** starting M1.
+- **Written (no code, no schema):** `clients/dsew/gap-matrix.md` (evidence-backed, legend Found / Reviewed /
+  Test-verified / Client-validated), `decisions.md`, `phase1-design.md`, ADR-047 (BOM revisions, immutability,
+  fail-closed gates) and ADR-048 (controlled documents), both PROPOSED.
+- **Closed preflight:** BOM write paths (three, all in `bom.ts`); stock movements append-only by trigger
+  (balance projection and TRUNCATE caveats); M1 backfill dry-run on a disposable copy, clean, rerunnable,
+  rolls back. **Open:** fail-closed QC gate is designed, not built; the full test suite was not run (70 of 71
+  focused tests passed; the one failure was a stale assertion, fixed in `7dac9538`).
+- **How to resume:** only when (1) ADR-047 and ADR-048 are accepted, (2) `phase1-design.md` section 12 is fully
+  ticked, (3) the client answers in "Blocked on a person" are in writing. Then M1: migration, tests (including
+  direct-SQL immutability and cross-tenant), rollback note and operator guide in the same delivery; M2, M3, M4
+  follow. Repeat the backfill dry-run on a fresh copy of the DSEW demo tenant before M1 merges.
+- **Scope flag:** the `CLAUDE.md` scope note authorises business-capability build only for Tasks 118, 119 and
+  120. M1 extends manufacturing (Task 118). M2 (`verity.capability.document`) and M3 (test records) are new
+  business capabilities; the product owner must confirm scope before they are coded.
+- **Done when:** M1 to M4 are built and proven, and the engagement acceptance walk in
+  `phase1-design.md` section 6 passes on a DSEW-shaped job.
+- **Status:** BLOCKED (waiting on ADR acceptance and client decisions); nothing coded.
+
 ### P1-2. Screens that are built and DB-proven but never opened in a browser
 
 - **What:** Task 125 built these with server tests but no browser check: roster week grid (6.1), leave
@@ -398,6 +420,12 @@ Each line names who must act and what they must do. Move the item back to its pr
 - **Per-tenant data volumes and a disposable database** for the load test (P3-1). Product owner.
 - **Name the manufacturing design partner** (P2-8): is D & S Electric Works it? Product owner.
 - **Relay's contract** for the Task 120 adapter (Verity side is built and dark by default). External.
+- **D & S Phase 1 gate (P1-1i).** Product owner: accept or amend ADR-047 and ADR-048, and confirm scope for the
+  document and test-record capabilities. Client (via the client-facing PM, in writing): document numbering
+  convention and who owns it; who drafts, reviews, approves and releases drawings, BOMs and test records;
+  whether self-approval is allowed; traceability depth (lot/heat, serials, genealogy); server specification,
+  VM or runtime options, backup target, recovery expectations and access; anonymised samples (drawing, released
+  BOM, QAP, ITP, FAT report, test certificate, traveler, dispatch pack). Do not invent these.
 - **D & S on-premise Mode B** needs its validation gate (`clients/dsew/deployment.md`) before any promise
   is made to the client. Product owner and client IT.
 

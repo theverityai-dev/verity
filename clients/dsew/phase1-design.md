@@ -242,6 +242,41 @@ certificate, a traveler/job card, a dispatch pack.
 Product-owner decisions: approval of D1, D5, D6; whether `verity.capability.document` and the revision model need
 a numbered ADR (they add reusable platform behaviour, so an ADR before code is recommended).
 
-## 11. Next step
+## 11. Fail-closed quality gate (design, per ADR-047 section 6)
 
-Stop for review. After approval, implement M1 (revision-controlled BOM) first, test-first, then M2, M3, M4.
+Today the gate is conditional: it exists only when someone planned a route with checkpoints. Design:
+
+- The released BOM revision declares `requires_route` and a list of required checkpoint keys (the checkpoints that
+  must have a current passing verdict).
+- Creating an order from such a revision records the requirement on the order (snapshot, like the lines).
+- `start_order` is refused when `requires_route` and the order has no planned operations.
+- `complete_order` and `dispatch_order` are refused unless every required checkpoint has a current `pass`; an
+  order with zero operations does not satisfy a declared requirement.
+- The only exception is `verity.manufacturing.override_gate`: dedicated permission, a reason of 10 or more
+  characters, append-only `gate_override` row naming the gate, entity, actor and time, plus an activity entry. The
+  dispatch panel shows an overridden gate as "overridden by X, reason" so the exception is visible, not silent.
+- A revision that declares nothing behaves exactly as today, so other tenants are unaffected.
+- Tests: no-operations order refused at start/complete/dispatch; failed or missing required checkpoint refused;
+  override without permission or reason refused; override recorded and shown; unrelated order unaffected;
+  cross-tenant isolation on `gate_override`.
+
+## 12. Stop/go criteria before M1
+
+M1 starts only when every line is ticked in writing.
+
+| # | Criterion | State (2026-10-18) |
+|---|---|---|
+| 1 | All BOM write paths verified | Done: see gap-matrix, preflight table |
+| 2 | Stock-movement immutability verified | Done, with the balance-projection and TRUNCATE caveats noted |
+| 3 | M1 backfill dry-run on a disposable copy: counts, references, uniqueness, ordering, rerun, rollback | Done on local test data; repeat on a fresh copy of the DSEW demo tenant before M1 merges |
+| 4 | QC gate designed to fail closed with audited override | Designed (section 11, ADR-047); not built |
+| 5 | ADR-047 and ADR-048 accepted | Pending product owner |
+| 6 | Client answers: numbering, release authority, self-approval, traceability, server, samples | BLOCKED — CLIENT DECISION |
+| 7 | Compatibility plan for tests and seed that create a BOM and use it at once (draft then release) | To write with M1 |
+| 8 | Migration, tests, rollback instructions and operator guide named as M1 deliverables | Named in section 4 and section 6 |
+
+## 13. Next step
+
+Stop for review. Engineering may refine this design without changing application code while PMs collect client
+decisions and samples. After the gate passes, implement M1 (revision-controlled BOM) first, test-first, then M2,
+M3, M4.

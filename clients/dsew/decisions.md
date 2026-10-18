@@ -80,3 +80,24 @@ invented. Nothing below has been approved by DSEW.
   approved rules. K90 / eTrackTime export or API unverified; nothing is promised or bought before the model and
   edition are confirmed.
 - **Status:** PROPOSED; DSEW may override by naming a go-live requirement.
+
+---
+
+## Product-owner review, 2026-10-18
+
+Approved as the **direction for planning**, not as client commitments. The client must still agree the contract
+terms and operational details.
+
+| Record | Outcome |
+|---|---|
+| D1 ownership | Principle approved: Verity keeps its core platform and reusable IP; DSEW owns its business data and agreed client-specific configuration. Rights to bespoke deliverables and source access are defined explicitly in the contract. Escrow is optional and separately negotiated. **Contract wording still BLOCKED — CLIENT DECISION.** |
+| D5 purchasing | Approved: the inventory purchase-order workflow serves DSEW's BOM-driven procurement. **To document before building:** how it connects to goods receipt, material issue, job costing and Tally Prime. |
+| D6 accounting boundary | Approved: Tally Prime is the financial system of record; Verity is the operational system of record for jobs and manufacturing. **Before the adapter:** which records synchronise, in which direction, and the reconciliation rule. |
+| Numbered ADRs | Required. Written as [ADR-047](../../verity-spec/17_decisions/adr/adr-047.md) (BOM revision model, immutability, fail-closed gates) and [ADR-048](../../verity-spec/17_decisions/adr/adr-048.md) (controlled documents). Both PROPOSED until accepted. ADR-045 is reserved for Mode D. |
+
+**M1 does not start** until the stop/go checks in `phase1-design.md` section 12 are closed and the ADRs are
+accepted. These client answers stay **BLOCKED — CLIENT DECISION** and are not to be invented: document numbering
+convention and who owns the policy; release authority for drawings, BOMs and test records; self-approval
+(default recommendation: separate duties for critical releases, audited exception where staffing requires);
+traceability depth; server specification, VM/runtime options, backup target, recovery expectations and access;
+anonymised samples (drawing, released BOM, QAP, ITP, FAT report, test certificate, traveler, dispatch pack).
