@@ -29,3 +29,10 @@ before Phase 7.
 - Phase 5: **BUILT in part**: Summary home and a Production group. Show/hide/reorder of tabs is NOT YET BUILT.
 - Phase 6: **NOT YET BUILT.**
 - Phase 7: **NOT RUN.** No obvious-basics pass and no Odoo/ERPNext cross-check yet.
+
+## Engagement Phase 1 (contract phase, not the demo phases above), 2026-10-18
+
+The phases above are the demo build. The commercial engagement's Phase 1 (revision-controlled BOM, controlled
+documents, structured test records, release gates) is at a **design gate, no code written**. The broad Odoo/ERPNext
+parity pass is skipped by decision. See [gap-matrix.md](gap-matrix.md) (evidence-backed audit),
+[decisions.md](decisions.md) (D1-D7, several BLOCKED — CLIENT DECISION) and [phase1-design.md](phase1-design.md).
