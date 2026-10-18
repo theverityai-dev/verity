@@ -22,7 +22,15 @@ Companion to `onprem-stage1-evidence.md`. The DSEW installation stays **on hold*
   deployment-security validator passes. The full suite was **not** run.
 - **Not covered:** a failed-upgrade rehearsal, and a clean build on the DSEW host.
 
-## 2. Degraded-operation contract (design)
+## 2. Degraded-operation contract (APPROVED 2026-10-19; readiness part IMPLEMENTED in `ef929e27`)
+
+Implemented: `src/server/platform/readiness-status.ts`, `/api/ready` returns `ready` (200), `degraded` (200, with per-component
+`healthy|degraded|unavailable`) or `not_ready` (503); a `dependency_degraded_total` metric. Tests: `readiness-degraded` (18),
+`readiness-scheduler-grace` (4), plus the existing `health-readiness` and `container-runtime` files, 43 tests passing together.
+**Not yet done:** the storage-down file and evidence-refusal test, and an IdP-down test with a live session, both of which need the
+rebuilt stack; the compose healthcheck is unchanged and still follows `/api/ready`, so it now stays healthy while degraded.
+
+## 2a. (original design text)
 
 Decision (approved): Verity keeps serving existing valid sessions when only the IdP, object store or scheduler is down, reports the
 degradation, and fails safely for operations that need the missing service.
@@ -81,10 +89,15 @@ membership lookup already runs per request, so a column on it costs nothing extr
 **Decision needed.** This changes an identity function and adds a permission, so it needs a short ADR and the product owner's
 approval before code (the `verity-adr-gate` rule). It must not weaken RLS, `withTenant()` or authorization.
 
-**Interim procedure until it exists (not tested end to end).** Disable the account in Keycloak, and in Verity remove the person's
-role so `roleId` is null: `hasTenantPermission` returns false for a null role (`authorization.ts:380`), so permission checks
-deny. I have **not** confirmed which existing screen or command removes a role, and a person without a role can still sign in and
-see an empty shell. **Do not claim immediate revocation** until section 3's mechanism is built and tested.
+**Interim offboarding: there is no verified Verity-side revocation today.** Disabling the Keycloak account stops new sign-ins only; it
+does not invalidate the already-issued Verity cookie. Clearing a role (a null role denies every permission check,
+`authorization.ts:380`) is **not** an operating procedure: it is untested end to end, I have not confirmed which screen does it,
+and the person can still sign in to an empty shell. The only bounded exposure is the 1 h idle and 8 h absolute limits. The
+interim runbook must specify and verify a real step before DSEW relies on one. **Do not claim immediate revocation.**
+
+**Status 2026-10-19:** direction approved by the product owner with safeguards; the ADR is drafted as
+`verity-spec/17_decisions/adr/adr-049.md` (PROPOSED). The approved guarantee is "revoked at the next authorization check", not
+instant termination of in-flight requests.
 
 ## 4. Outbound network policy (design)
 
