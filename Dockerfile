@@ -10,6 +10,13 @@
 # host-built .next/standalone would NOT be portable (verified locally: a
 # Windows dev build produces `query_engine-windows.dll.node`, useless here).
 FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS base
+# Prisma's query engine and CLI detect libssl at startup; the slim image ships none, so every Prisma
+# command warned and fell back to openssl-1.1.x (Stage 1 finding D4). Shared by every stage so the
+# engine generated in the builder matches the one the runner executes. Runs as root before the
+# non-root user is created; apt lists are removed to keep the layer small.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl \
+  && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
 FROM base AS deps

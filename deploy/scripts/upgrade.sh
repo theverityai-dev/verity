@@ -16,8 +16,8 @@ log "step 1/5 — backup (an upgrade that cannot be undone is not an upgrade)"
 BACKUP="$("${SCRIPT_DIR}/backup.sh" | tail -n 1)" || die "backup failed — upgrade aborted, nothing was changed"
 log "backup at ${BACKUP}"
 
-log "step 2/5 — building the new image"
-compose build
+log "step 2/5 — building the new images (application and operator tools)"
+build_images
 
 log "step 3/5 — applying migrations"
 "${SCRIPT_DIR}/migrate.sh"

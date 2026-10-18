@@ -42,8 +42,8 @@ fi
 require_env_file
 "${DEPLOY_DIR}/security/preflight.sh"
 
-log "building the application image"
-compose build
+log "building the application and operator-tools images"
+build_images
 
 log "starting the database"
 compose up -d db

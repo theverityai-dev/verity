@@ -21,6 +21,11 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
+# Never migrate from a stale tools image: it must carry exactly the migrations this checkout has.
+EXPECTED="$(find "${REPO_DIR}/prisma/migrations" -mindepth 1 -maxdepth 1 -type d | wc -l | tr -d ' ')"
+IN_IMAGE="$(compose --profile tools run --rm --entrypoint "" tools sh -c 'find /app/prisma/migrations -mindepth 1 -maxdepth 1 -type d | wc -l' | tr -d ' \r')"
+[ "${EXPECTED}" = "${IN_IMAGE}" ] || die "the tools image has ${IN_IMAGE} migrations but this checkout has ${EXPECTED}; rebuild it (compose --profile tools build tools) and rerun"
+
 log "applying migrations"
 compose --profile tools run --rm --entrypoint "" tools npx prisma migrate deploy
 

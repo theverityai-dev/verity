@@ -61,6 +61,15 @@ compose() {
   docker compose --project-name verity --env-file "${ENV_FILE}" "${files[@]}" "$@"
 }
 
+# Builds every image this release needs: the application (web, scheduler) AND the operator
+# toolchain. `compose build` skips services behind a profile, so the tools image used to be
+# whatever an earlier build left on the host. A stale one ran old migrations and lacked newer
+# scripts (Stage 1 finding D1). Install and upgrade both call this before any migration runs.
+build_images() {
+  compose build
+  compose --profile tools build tools
+}
+
 # Whether the bundled object store (docker-compose.bundled-storage.yml) is part of this deployment.
 #
 # VERITY_WITH_BUNDLED_STORAGE=1 is the setting. VERITY_WITH_MINIO=1 is a DEPRECATED alias, kept so an
