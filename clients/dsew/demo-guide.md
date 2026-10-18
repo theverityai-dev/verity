@@ -103,6 +103,42 @@ customer and to "All jobs for this customer".
 - The customer-facing status page: a public read surface is a new security boundary and needs its own ADR before code.
 - A first-class test report record (needs a schema change and design); testing today is the manufacturing QC checkpoints.
 
+## 5. Hero journey, traveler and dispatch pack (added 2026-10-18)
+
+All of this uses existing capabilities only. It does not show, and must not be described as, revisioned BOMs, controlled
+documents, measured test readings with units and tolerances, Tally, Hindi or attendance. Every name, price, reading and
+date is fictional demo data and the 100 kVA specification is illustrative until DSEW confirms its own.
+
+**Seed:** `npm run seed:dsew-hero` (after `seed:dsew`). Idempotent, touches only the tenant flagged `demoFor = dsew`, and also
+activates the Evidence capability for that tenant (needed to read test readings and, later, to capture them on a phone).
+It adds *100 kVA cast resin dry-type transformer, hero journey* for the fictional Malwa Cement Works: two quote revisions,
+approval, a production order from the 100 kVA BOM, six stages with five test checks and their readings, a published
+verification passport, dispatch and delivery, five tasks, four milestones, time, costs, an advance and a final invoice with
+receipts, then completion. It also adds a **late job** (Helmholtz coil pair, promised date passed, wire task blocked) for the
+Summary. The existing electromagnet job (0.5 T lab magnet, urgent) is unchanged.
+
+**Printables** (links on the order page, in the shell, with a Print button):
+- `/manufacturing/{order}/traveler`: job card from the order's own materials, stages and checks, QR, blank lot/heat and
+  sign-off boxes. The QR encodes only `{VERITY_PUBLIC_URL}/manufacturing/{order}`; a signed-out scan lands on sign-in, and
+  sign-in does **not** return to the order (it opens the home page), so the phone should already be signed in.
+- `/manufacturing/{order}/dispatch-pack`: delivery note, packing list, the checks that stand (the latest verdict per check,
+  with the recorded reading where the reader may see Evidence), transport, delivery and a passport notice. Shown only once an
+  order has been dispatched.
+
+**Proven:** `src/test/capability-manufacturing-documents.test.ts` (7 tests: grants, latest verdict wins, undispatched has no pack,
+another tenant's order is absent) and a `jobForOrder` assertion in `capability-project.test.ts`. Seen live at desktop and at
+390 px, signed in; signed out the three URLs redirect to sign-in. The QR image was compared with the expected order URL.
+
+**Known limits, not hidden:**
+- Verified on a phone-sized browser window, **not on a real phone**; not printed on paper (print uses the same markup).
+- The passport link is shown once and only its hash is stored, so the dispatch pack says a passport exists but cannot print its
+  QR. The nameplate is printed from the link shown at publishing.
+- Lot and heat numbers, package counts and weights are not recorded in Verity; the sheets leave space to write them.
+- A check that needs evidence asks for a **photo link (a URL)**, not the phone camera (FINISHER P2-11). The seeded packing
+  "photo" and readings are typed demo records that point at no image.
+- A round floating chat button covers the bottom-right of "Start stage" on a phone.
+- Tapping Pass opens a small form (remarks, photo link, Record pass); the result is recorded only after "Record pass".
+
 Built 2026-10-15: edit a task or milestone (until it is done or reached), a Lost reasons screen (add, retire, restore, with a count
 of jobs lost for each), a status filter on the Jobs list, and a "Next up" strip on every job.
 - A first-class test report document. Today test results are the manufacturing QC checkpoints on the testing stage.

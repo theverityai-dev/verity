@@ -23,6 +23,7 @@ import { executeCommand as rawExecute, type ActorContext } from "../src/server/p
 import * as inventory from "../src/server/capabilities/inventory";
 import * as manufacturing from "../src/server/capabilities/manufacturing";
 import * as location from "../src/server/capabilities/location";
+import * as evidence from "../src/server/capabilities/evidence";
 import * as hr from "../src/server/capabilities/hr";
 import * as accounting from "../src/server/capabilities/accounting";
 import * as project from "../src/server/capabilities/project";
@@ -112,6 +113,7 @@ function entitiesOf(...modules: Array<Record<string, unknown>>): string[] {
 const CAPABILITIES = [
   TRADING_CAPABILITY,
   location.LOCATION_CAPABILITY,
+  evidence.EVIDENCE_CAPABILITY,
   inventory.INVENTORY_CAPABILITY,
   manufacturing.MANUFACTURING_CAPABILITY,
   hr.HR_CAPABILITY,
@@ -184,7 +186,7 @@ async function main() {
     const loc = await tx.location.create({ data: { tenantId, organizationId: org.id, name: "Rau Works, Indore" } });
     const role = await tx.role.create({ data: { tenantId, name: "Owner" } });
 
-    const entities = entitiesOf(inventory, manufacturing, location, hr, accounting, project);
+    const entities = entitiesOf(inventory, manufacturing, location, evidence, hr, accounting, project);
     await tx.permission.createMany({
       data: entities.flatMap((entity) =>
         (["Read", "Create", "Edit", "ActionExecute"] as const).map((verb) => ({

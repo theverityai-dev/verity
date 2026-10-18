@@ -33,6 +33,7 @@
     "seed:dsew-billing": "node --env-file=.env prisma/run-seed.cjs seed-dsew-billing.ts",
     "seed:dsew-roles": "node --env-file=.env prisma/run-seed.cjs seed-dsew-roles.ts",
     "seed:dsew-passport": "node --env-file=.env prisma/run-seed.cjs seed-dsew-passport.ts",
+    "seed:dsew-hero": "node --env-file=.env prisma/run-seed.cjs seed-dsew-hero.ts",
     "seed:dsew-profile": "node --env-file=.env prisma/run-seed.cjs seed-dsew-profile.ts",
     "seed:dsew-people": "node --env-file=.env prisma/run-seed.cjs seed-dsew-people.ts",
     "seed:dsew-ledger": "node --env-file=.env prisma/run-seed.cjs seed-dsew-ledger.ts",

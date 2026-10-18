@@ -74,6 +74,7 @@ export * from "./jobs";
 export * from "./work";
 export * from "./billing";
 export { jobBilling, jobCosting, jobDetail, listJobs, summaryData, taskProgress } from "./reads";
+export { jobForOrder, type OrderJob } from "./order-link";
 
 /**
  * Where a person who can read jobs lands. The generic Overview is platform vocabulary, so a

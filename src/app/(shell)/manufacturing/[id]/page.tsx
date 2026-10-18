@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
@@ -168,6 +169,13 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
         />
         <StatTile kind="stock" label="Components" value={order.lines.length} />
       </StatTileRow>
+
+      {(canSeeStages || dispatch?.status) && (
+        <p className="m-0 mb-6 flex flex-wrap gap-x-6 gap-y-1 text-[15px]">
+          {canSeeStages && stages.length > 0 && <Link href={`/manufacturing/${order.id}/traveler`} className="text-accent-ink">Print job card and traveler</Link>}
+          {dispatch?.status && <Link href={`/manufacturing/${order.id}/dispatch-pack`} className="text-accent-ink">Print dispatch pack</Link>}
+        </p>
+      )}
 
       {canSeeStages && steps.length > 0 && (
         <Panel title="Production journey" className="mb-6">

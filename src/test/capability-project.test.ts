@@ -301,6 +301,13 @@ describeDb("capability: Project (Jobs)", () => {
     await executeCommand(actor, project.approveQuote, { quoteId: oq.id });
     await expect(executeCommand(actor, project.linkOrder, { jobId: other.id, orderId: order.id })).rejects.toThrow(/already belongs/);
 
+    // The documents printed from the order read its job through one grant-aware lookup.
+    const linked = await withTenant(tenantId, (tx) => project.jobForOrder(tx, actor, order.id));
+    expect(linked).toMatchObject({ reference: project.jobReference(job.number), title: "Costed" });
+    expect(await withTenant(tenantId, (tx) => project.jobForOrder(tx, actor, randomUUID()))).toBeNull();
+    const noJobGrant = await withTenant(tenantId, (tx) => tx.role.create({ data: { tenantId, name: "No job grant" }, select: { id: true } }));
+    expect(await withTenant(tenantId, (tx) => project.jobForOrder(tx, { roleId: noJobGrant.id }, order.id))).toBeNull();
+
     // Not started yet: nothing consumed, so no material cost.
     let costing = await withTenant(tenantId, (tx) => project.jobCosting(tx, job.id));
     expect(costing.materialMinor).toBe(0);
