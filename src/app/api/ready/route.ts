@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { buildIdentity, captureError, observeDuration } from "@/server/platform/observability";
+import { buildIdentity, captureError, increment, observeDuration } from "@/server/platform/observability";
+import { summarizeReadiness } from "@/server/platform/readiness-status";
 import {
   probeDatabase,
   probeIdentity,
@@ -47,22 +48,28 @@ export async function GET() {
     check("runtime", "runtime_privilege_or_secret_invalid", async () => probeRuntimePrivileges()),
   ]);
   const checks = Object.fromEntries(entries) as Record<string, ReadinessCheck>;
-  const ready = Object.values(checks).every((value) => value.status !== "error");
+  // Core failure -> 503. A failed dependency (identity, storage, scheduler) -> 200 "degraded" with the component named,
+  // so a Keycloak or object-store outage does not take a working application out of rotation.
+  const { status, httpStatus, components } = summarizeReadiness(checks);
   const durationMs = Date.now() - startedAt;
 
   observeDuration("dependency_duration_ms", durationMs, {
     dependency: "readiness",
     operation: "ready_probe",
-    outcome: ready ? "ok" : "error",
+    outcome: status === "ready" ? "ok" : status === "degraded" ? "degraded" : "error",
   });
+  for (const [name, component] of Object.entries(components)) {
+    if (component.state !== "healthy") increment("dependency_degraded_total", { dependency: name, state: component.state });
+  }
 
   return NextResponse.json(
     {
-      status: ready ? "ready" : "not_ready",
+      status,
       checks,
+      components,
       durationMs,
       ...buildIdentity(),
     },
-    { status: ready ? 200 : 503 },
+    { status: httpStatus },
   );
 }
