@@ -95,6 +95,39 @@ terms and operational details.
 | D6 accounting boundary | Approved: Tally Prime is the financial system of record; Verity is the operational system of record for jobs and manufacturing. **Before the adapter:** which records synchronise, in which direction, and the reconciliation rule. |
 | Numbered ADRs | Required. Written as [ADR-047](../../verity-spec/17_decisions/adr/adr-047.md) (BOM revision model, immutability, fail-closed gates) and [ADR-048](../../verity-spec/17_decisions/adr/adr-048.md) (controlled documents). Both PROPOSED until accepted. ADR-045 is reserved for Mode D. |
 
+### Second review, 2026-10-18: ADRs and scope
+
+- **ADR-047** (BOM revisions, fail-closed gate): direction accepted with amendments, written into the ADR. Stays PROPOSED.
+- **ADR-048** (controlled documents): direction accepted with scope limits, written into the ADR. Stays PROPOSED.
+
+| Work | Scope decision |
+|---|---|
+| M1 BOM revision control | Authorised as a bounded extension of manufacturing (Task 118), **only after** the stop/go gate passes. |
+| M2 controlled documents | Design and specification only. Build needs a recorded scope amendment. |
+| M3 structured test records | Design and specification only. Build needs the same amendment. |
+| M4 integration and release gates | In the DSEW plan; not started until its dependencies and acceptance criteria are approved. |
+
+**Proposed `CLAUDE.md` exception (not applied; the product owner edits `CLAUDE.md`).** "Product-owner scope decision,
+2026-10-18: business-capability build for the D & S Electric Works engagement is authorised only for Task 118
+extensions and the DSEW increments named in `clients/dsew/decisions.md`, each after its stop/go gate passes. All
+invariants (INV-001, ADR-017, `enforcePolicy()`) are unchanged. Nothing is authorised by implication; any other
+capability needs its own decision."
+
+**Client answers register** (PMs fill in writing; one row per question, no inferred answers):
+
+| Question | Answer | Decision owner | Date | Source (document/email) |
+|---|---|---|---|---|
+| Document numbering convention and policy owner | | | | |
+| Who drafts / reviews / approves / releases drawings, BOMs, test records | | | | |
+| Self-approval allowed for critical releases | | | | |
+| Traceability depth (lot/heat, serials, genealogy) | | | | |
+| Server specification, VM/runtime options, backup target, recovery expectations, access | | | | |
+| Samples received (drawing, BOM, QAP, ITP, FAT, certificate, traveler, dispatch pack) | | | | |
+
+Distinctions that must stay explicit: **approved in principle** D1, D5, D6; **not agreed with the client** contract
+wording and the Tally synchronisation specification; **not proven** Windows Server 2019 compatibility and the K90
+attendance integration. Docker Desktop running local tests proves nothing about the client's server.
+
 **M1 does not start** until the stop/go checks in `phase1-design.md` section 12 are closed and the ADRs are
 accepted. These client answers stay **BLOCKED — CLIENT DECISION** and are not to be invented: document numbering
 convention and who owns the policy; release authority for drawings, BOMs and test records; self-approval

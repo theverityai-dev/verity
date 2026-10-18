@@ -192,6 +192,10 @@ phase 7.
   business capabilities; the product owner must confirm scope before they are coded.
 - **Done when:** M1 to M4 are built and proven, and the engagement acceptance walk in
   `phase1-design.md` section 6 passes on a DSEW-shaped job.
+- **2026-10-18 second review:** ADR-047 and ADR-048 directions accepted with amendments (in the ADR text), both
+  still PROPOSED. M1 authorised only after the gate (incl. rehearsal on a DSEW demo-tenant copy). M2 and M3
+  design only; build needs a recorded scope amendment (proposed `CLAUDE.md` wording in `clients/dsew/decisions.md`).
+  Full regression suite still to run after the final migration; "70 of 71 focused" is not a green suite.
 - **Status:** BLOCKED (waiting on ADR acceptance and client decisions); nothing coded.
 
 ### P1-2. Screens that are built and DB-proven but never opened in a browser
