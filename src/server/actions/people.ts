@@ -6,7 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { executeCommand } from "@/server/platform/command";
 import { authorize } from "@/server/platform/authorization";
-import { requireActor } from "@/server/platform/auth";
+import { activeAuthProviderName, requireActor } from "@/server/platform/auth";
 import { runtimeConfig } from "@/server/platform/config";
 import {
   ENTITY_MEMBERSHIP,
@@ -50,6 +50,16 @@ export async function createTeamLogin(input: {
   phone?: string;
 }): Promise<ActionResult<{ userId: string; membershipId: string }>> {
   try {
+    // Logins live in the Supabase project. Under OIDC an administrator creates the account in the organization's
+    // identity provider and Verity is then told about it by the operator provisioning step, never from here.
+    if (activeAuthProviderName() === "oidc") {
+      return {
+        ok: false,
+        code: "E_VALIDATION",
+        message: "Accounts are created by your administrator in your organization's identity provider. Ask them to add this person, then have the operator link the account to Verity.",
+        retryable: false,
+      };
+    }
     const actor = await requireActor();
     await limitActorRequests(actor.tenantId, actor.userId, "command");
 
@@ -137,6 +147,9 @@ export async function resetTeamPassword(input: {
   password: string;
 }): Promise<ActionResult<null>> {
   try {
+    if (activeAuthProviderName() === "oidc") {
+      return { ok: false, code: "E_VALIDATION", message: "Passwords are managed by your organization's identity provider. Reset it there.", retryable: false };
+    }
     const actor = await requireActor();
     await limitActorRequests(actor.tenantId, actor.userId, "command");
     await withTenant(actor.tenantId, (tx) =>

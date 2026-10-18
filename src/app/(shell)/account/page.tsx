@@ -1,5 +1,5 @@
 import { requireActor } from "@/server/platform/auth";
-import { getAuthUser } from "@/server/platform/auth";
+import { activeAuthProviderName, getAuthUser } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { DefinitionList, PageHeader, Panel } from "@/components/ui/primitives";
 import { PasswordForm } from "./PasswordForm";
@@ -38,7 +38,11 @@ export default async function AccountPage() {
         </Panel>
 
         <Panel title="Change password">
-          <PasswordForm />
+          {activeAuthProviderName() === "oidc" ? (
+            <p className="m-0 text-[15px] text-text-secondary">Your password is managed by your organization's identity provider. Change it there.</p>
+          ) : (
+            <PasswordForm />
+          )}
         </Panel>
       </div>
     </>

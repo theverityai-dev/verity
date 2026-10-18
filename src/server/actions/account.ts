@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient, getAuthUser } from "@/server/platform/auth";
+import { activeAuthProviderName, createSupabaseServerClient, getAuthUser } from "@/server/platform/auth";
 import { toActionFailure, type ActionResult } from "@/server/platform/action-error";
 
 /**
@@ -19,6 +19,10 @@ import { toActionFailure, type ActionResult } from "@/server/platform/action-err
  */
 export async function changeOwnPassword(currentPassword: string, newPassword: string): Promise<ActionResult<{ ok: true }>> {
   try {
+    // Under OIDC the identity provider owns the password; there is no Supabase project to ask.
+    if (activeAuthProviderName() === "oidc") {
+      return { ok: false, code: "E_VALIDATION", message: "Your password is managed by your organization's identity provider. Change it there.", issues: [], retryable: false };
+    }
     if (newPassword.length < 8) {
       return { ok: false, code: "E_VALIDATION", message: "New password must be at least 8 characters.", issues: [], retryable: true };
     }
