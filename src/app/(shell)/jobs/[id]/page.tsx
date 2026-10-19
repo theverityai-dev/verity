@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
@@ -411,6 +412,11 @@ async function JobDetailPage({ params }: { params: Promise<{ id: string }> }) {
         meta={[job.customerName, ...(job.dueDate ? [`promised by ${dateText(job.dueDate)}`] : [])]}
         actions={
           <>
+            {job.orders.length > 0 && (
+              <Link href={`/jobs/${job.id}/project-file`} className="inline-flex h-11 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink no-underline hover:bg-[var(--color-control-strong)]">
+                Project file
+              </Link>
+            )}
             <JobActions jobId={job.id} state={job.state} openQuoteId={openQuote?.id ?? null} lostReasons={detail.lostReasons} />
             {!["completed", "lost", "cancelled"].includes(job.state) && (
               <EditJobButton job={{ id: job.id, title: job.title, customerContact: job.customerContact, description: job.description, priority: job.priority, dueDate: iso(job.dueDate) }} />
