@@ -58,8 +58,8 @@ export function ProjectFileView({ doc }: { doc: ProjectFileDoc }) {
       <article className="verity-solid rounded-[12px] p-5 text-[12.5px] leading-[18px] text-text print:rounded-none print:bg-transparent print:p-0">
         <header className="border-b-2 border-text pb-3">
           <p className="m-0 text-[12px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{doc.business}</p>
-          <p className="m-0 text-[26px] font-bold tracking-[-0.01em]">Project file</p>
-          <p className="m-0 text-[16px] font-semibold"><span className="tabular">{doc.reference}</span> · {doc.title}</p>
+          <p className="m-0 text-[26px] font-bold leading-[32px] tracking-[-0.01em]">Project file</p>
+          <p className="m-0 text-[16px] font-semibold leading-[22px]"><span className="tabular">{doc.reference}</span> · {doc.title}</p>
         </header>
 
         <section className="grid gap-4 py-3 sm:grid-cols-2">

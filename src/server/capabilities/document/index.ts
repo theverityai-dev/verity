@@ -616,6 +616,8 @@ export const documentDetail: QueryDefinition<{ documentId: string }, Record<stri
           validUntil: dayText(r.validUntil),
           expiry: r.status === "released" ? expiryOf(r.validUntil, today) : "none",
           selfApprovalReason: r.selfApprovalReason,
+          /** The signed-in person wrote or submitted this revision, so releasing it is the audited exception. */
+          mine: r.authoredById === ctx.actor.userId || r.submittedById === ctx.actor.userId,
           author: name(r.authoredById),
           submittedBy: name(r.submittedById),
           approvedBy: name(r.approvedById),

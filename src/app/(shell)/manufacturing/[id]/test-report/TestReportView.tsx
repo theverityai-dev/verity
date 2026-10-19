@@ -121,8 +121,8 @@ export function TestReportView({ doc, sheetOnly = false }: { doc: TestReportDoc;
       <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-text pb-3">
         <div className="min-w-0">
           <p className="m-0 text-[12px] font-semibold uppercase tracking-[0.1em] text-text-secondary">{doc.business}</p>
-          <p className="m-0 text-[22px] font-bold tracking-[-0.01em]">Test report</p>
-          <p className="m-0 tabular text-[16px] font-semibold">{doc.reference}</p>
+          <p className="m-0 text-[22px] font-bold leading-[28px] tracking-[-0.01em]">Test report</p>
+          <p className="m-0 tabular text-[16px] font-semibold leading-[22px]">{doc.reference}</p>
         </div>
         <div className="text-right text-text-secondary">
           <p className="m-0">{doc.product} × {doc.quantity}</p>

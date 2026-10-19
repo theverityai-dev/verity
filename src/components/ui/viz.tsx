@@ -295,7 +295,7 @@ export function RangeMeter({ value, min, max, unit }: { value: number; min: numb
   const fmt = (n: number) => n.toLocaleString("en-IN");
   const accepted = min !== null && max !== null ? `${fmt(min)} to ${fmt(max)}` : min !== null ? `at least ${fmt(min)}` : `at most ${fmt(max as number)}`;
   return (
-    <div role="img" aria-label={`${fmt(value)} ${unit}, accepted ${accepted} ${unit}, ${inRange ? "within range" : "outside range"}`} className="w-full min-w-32">
+    <div role="img" aria-label={`${fmt(value)} ${unit}, accepted ${accepted} ${unit}, ${inRange ? "within range" : "outside range"}`} className="w-full min-w-32 max-w-lg">
       <div className="relative h-5">
         <span aria-hidden="true" className="absolute inset-x-0 top-2 h-1 rounded-full bg-[var(--color-control-strong)]" />
         <span
