@@ -1,8 +1,8 @@
 # Proposal: Verity for D & S Electric Works
 
 **Prepared for:** D & S Electric Works (DSEW), 109, Industrial Area Extension, Rau, Indore 453331, Madhya Pradesh
-**Prepared by:** [Company legal name], [address]
-**Date:** [dd Month yyyy]
+**Prepared by:** PlotArmour, GSTIN 07TQDPS9711L1ZT, +91 87440 69597, [address and email]
+**Date:** 20 October 2026
 **Valid for:** 60 days
 
 > **Status: NEGOTIATION DRAFT, pending company approval.** Items in [square brackets] are open company decisions.
@@ -22,7 +22,7 @@ documents, manufacturing, structured test records and dispatch, rather than on a
 | | |
 |---|---|
 | One-time licence and implementation fee (ex GST) | **₹4,00,000** |
-| GST at 18% (illustrative; confirmed at invoicing) | ₹72,000 |
+| GST at 18% (illustrative; IGST is expected because our GSTIN is registered in Delhi and DSEW is in Madhya Pradesh; confirmed at invoicing) | ₹72,000 |
 | **Total including GST** | **₹4,72,000** |
 | Licence | Perpetual, for DSEW's own business, one site, up to 15 named users |
 | Annual or per-user licence fee | None for what is listed in section 2 |
@@ -108,7 +108,7 @@ Each invoice carries GST at the rate then applicable. Payment terms: [15 days] f
 
 ## 7. Ownership and licence in short
 
-Verity, including everything configured or developed for DSEW, is owned by [Company legal name] and is licensed, not
+Verity, including everything configured or developed for DSEW, is owned by PlotArmour and is licensed, not
 sold. DSEW owns its business data and can export it. **Source code is not delivered.** Full terms are in document 3;
 several clauses are still to be settled with counsel.
 
