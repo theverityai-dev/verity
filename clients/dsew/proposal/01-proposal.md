@@ -1,12 +1,12 @@
 # Proposal: Verity for D & S Electric Works
 
 **Prepared for:** D & S Electric Works (DSEW), 109, Industrial Area Extension, Rau, Indore 453331, Madhya Pradesh
-**Prepared by:** PlotArmour, GSTIN 07TQDPS9711L1ZT, +91 87440 69597, team@plotarmour.in, [address]
+**Prepared by:** PlotArmour, 31/44 St 3, Block 17, Vishwas Nagar, Delhi 110032, GSTIN 07TQDPS9711L1ZT, +91 87440 69597, team@plotarmour.in
 **Date:** 20 October 2026
 **Valid for:** 60 days
 
-> **Status: NEGOTIATION DRAFT, pending company approval.** Items in [square brackets] are open company decisions.
-> The company details, terms and ownership clauses are not final until the company approves them in writing.
+> **Status: DRAFT FOR FINAL REVIEW.** Prices and scope are agreed. The ownership and licence wording is subject to legal
+> review before signature (document 3).
 
 ## 1. What we are offering
 
@@ -33,9 +33,10 @@ from kickoff, each with its own price, demonstration and acceptance criteria (se
 alternative delivery and payment structure for Option 2, at the same ₹4,80,000, not an additional purchase.
 
 **Timelines are estimates, not fixed deadlines.** They assume the agreed scope, timely access to data, server,
-stakeholders and decisions, and consolidated DSEW feedback. The final schedule is confirmed when requirements are
-finalised; delays from pending DSEW inputs, scope changes, third-party dependencies or additional requirements revise it
-by the corresponding time.
+stakeholders and decisions, consolidated DSEW feedback, DSEW testing within the review windows, and agreed acceptance
+criteria. The final schedule is confirmed when requirements are finalised; delays from pending DSEW inputs, scope
+changes, third-party dependencies, additional requirements, or a hosting environment that fails the pre-deployment
+compatibility check (document 2, section 6) revise it by the corresponding time.
 
 Use for either option: DSEW's own business, one site, up to 15 named users. No annual or per-user licence fee; the only
 recurring charge is the 12-month bundled fee. More users, sites or new modules are priced separately, and any extra
@@ -197,10 +198,10 @@ None of them is charged on top during the 12 months.** It covers exactly three t
    updates), helping run and check backups and restores, and administrator guidance.
 
 **Service terms.** Support is remote, by email (team@plotarmour.in) and phone (+91 87440 69597), on business days
-[Monday to Saturday, 10:00 to 18:00 IST]. The fee includes up to [8] hours a month of testing assistance and
-maintenance; more is quoted separately. **Response targets:** we acknowledge a report within [1 business day]; a
-reproducible defect is given a fix or workaround plan within [3 business days], with the fix time depending on the
-defect. [Company to confirm the bracketed hours and targets; none is promised until it does.]
+(Monday to Saturday, 10:00 to 18:00 IST). The fee includes up to 8 hours a month of testing assistance and
+maintenance; more is quoted separately. **Response targets:** we acknowledge a report within 1 business day; a
+reproducible defect is given a fix or workaround plan within 3 business days, with the fix time depending on the
+defect. **Escalation:** Shubhankar Rakshit, CFO (team@plotarmour.in, +91 87440 69597).
 
 **Not covered. Each is quoted separately and needs DSEW's written approval before any work:** new features; changes
 to agreed workflows or to a requirement DSEW has already accepted; additional integrations; new product families,
@@ -290,6 +291,7 @@ Verity's foundations (data isolation, permissions, audit, stock, manufacturing o
 approvals, QR identity) exist and have been run on our test environments with fictional data. Revision-controlled BOMs,
 controlled documents, structured test records, HR and payroll, finance and the other modules beyond the foundations are
 built during the project, which is why the timelines are ranges. We have
-**not** yet tested on DSEW's host or on Windows Server 2019, run a real-phone HTTPS upload, rehearsed the combined
+**not** yet tested on DSEW's host or on Windows Server 2019 (a pre-deployment compatibility check comes first,
+document 2), run a real-phone HTTPS upload, rehearsed the combined
 database, files and identity restore, or run the outage tests. These are go-live gates (document 2); **production use is
 blocked until they pass.**

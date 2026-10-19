@@ -2,7 +2,7 @@
 
 D & S Electric Works. How the work is delivered, how it runs on your premises, and what we need from you.
 
-> **Status: NEGOTIATION DRAFT, pending company approval.**
+> **Status: DRAFT FOR FINAL REVIEW.**
 
 ## 1. Estimated timelines
 
@@ -13,9 +13,10 @@ D & S Electric Works. How the work is delivered, how it runs on your premises, a
 | Option 3: Phased Complete ERP | Approximately **8 to 12 weeks**, delivered through four phases with defined milestones and acceptance criteria |
 
 These are estimates, not fixed deadlines. They assume the agreed scope, timely access to the data, server, stakeholders
-and decisions we need, and consolidated DSEW feedback. **The final schedule is confirmed when requirements are
-finalised.** Delays caused by pending DSEW inputs, scope changes, third-party dependencies or additional requirements
-revise the schedule by the corresponding time.
+and decisions we need, consolidated DSEW feedback, DSEW testing within the review windows, and agreed acceptance
+criteria. **The final schedule is confirmed when requirements are finalised.** Delays caused by pending DSEW inputs,
+scope changes, third-party dependencies, additional requirements, or a hosting environment that fails the
+pre-deployment compatibility check (section 6) revise the schedule by the corresponding time.
 
 **Kickoff** is the latest of: signed order; product owner named; requirements inputs delivered (sample documents,
 numbering conventions, server survey answers, access).
@@ -88,6 +89,25 @@ Each phase ends in a working demonstration and a written review. The phase price
 6. The data export reconciles with the system.
 
 **Go-live happens when these gates pass and the handover is signed.** The 12-month support period starts on that date.
+
+### Pre-deployment compatibility check
+
+The hosting environment has not been tested. Before anything is installed on DSEW's host, we run a non-intrusive check
+in the first days after kickoff and record pass or fail for each dependency. Nothing on the host is changed during it.
+
+| Dependency | What we need | DSEW provides |
+|---|---|---|
+| Host and virtualisation | Hyper-V role enabled (or a separate small host), hardware virtualisation switched on, room for one VM of 4 vCPU, 16 GB RAM and 500 GB (the Complete ERP and AI may need more) | Host access; licence confirmation from your Microsoft partner |
+| Guest operating system | An Ubuntu Server LTS VM runs under that host | Installation media access |
+| Network | A fixed address and internal DNS name for the VM; gigabit LAN; shop-floor phones and PCs reach it over HTTPS | DNS entry, firewall rules |
+| TLS certificate | A certificate for the internal name, trusted by office PCs and phones | Certificate or internal certificate authority |
+| Remote access | DSEW's VPN, if remote use is wanted | VPN access |
+| Internet for install and updates | Controlled access, or offline media | Outbound-network policy decision |
+| Backup and power | A separate backup target at least equal to the data size; UPS | Storage and UPS |
+| Administration | A named IT contact with the rights needed during the check | Contact and access |
+
+**Outcome.** On a pass, installation proceeds. On a fail, we give a written report and an alternative (a second VM, a
+dedicated small host, or a different runtime) quoted separately, and the schedule is revised accordingly.
 
 ## 7. Running on Windows Server 2019
 

@@ -2,8 +2,8 @@
 
 D & S Electric Works. Position on section 5 of your enquiry.
 
-> **Status: NEGOTIATION DRAFT. Not approved.** The position in section 1 is the company's decision. The final wording
-> must be reviewed by counsel before it is relied on, and nothing here is a contract until signed.
+> **Status: DRAFT FOR FINAL REVIEW.** The position in section 1 is the company's decision. The final wording must be
+> reviewed by counsel before it is relied on, and nothing here is a contract until signed.
 
 ## 1. The position
 
