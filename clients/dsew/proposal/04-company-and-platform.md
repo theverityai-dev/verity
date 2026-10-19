@@ -24,9 +24,9 @@ this draft.]
 Verity is a modular platform: the same foundation (data isolation per company, role-based permissions, audit trail,
 stock ledger, approvals, manufacturing orders, project jobs) carries every module, so new departments, product families
 and users are added without redeveloping it. DSEW's needs here are engineered, one-off products traced from approved
-drawing to tested unit, which is what Phase 1 configures and extends.
+drawing to tested unit, which is what the project configures and extends.
 
-| Capability | Exists in Verity today | Built or configured for DSEW in Phase 1 |
+| Capability | Exists in Verity today | Built or configured for DSEW in this project |
 |---|---|---|
 | Per-company data isolation, role and permission model, audit trail | Yes | DSEW role set |
 | Sign-in through an identity provider, with an on-premises mode | Yes, tested on our test environments | DSEW configuration |
@@ -35,8 +35,8 @@ drawing to tested unit, which is what Phase 1 configures and extends.
 | Project jobs with milestones, tasks, timesheets, cost lines, quote revisions and approval | Yes | DSEW templates and print formats |
 | Approvals, evidence storage, QR identity for finished units | Yes | DSEW workflows |
 | Install, backup, restore and upgrade scripts, containerised package | Scripts and package exist. A combined database, files and identity restore has **not yet** been rehearsed end to end, and nothing has been tested on DSEW's host | Rehearsal and acceptance on DSEW's host |
-| Revision-controlled BOM, controlled documents, structured test records | No | Built in Phase 1 |
-| Everything marked "later" in document 1 | Partly (stock, purchasing, approvals), not at DSEW depth | Not in Phase 1 |
+| Revision-controlled BOM, controlled documents, structured test records | No | Built in both options |
+| Procurement and inventory depth, planning and MRP, traceability, full quality system, finance, HR and payroll, dispatch, contracts, dashboards, scoped AI | Partly (stock, purchasing, approvals), not at DSEW depth | Option 2 (Complete ERP); the MVP has the basic procurement, inventory and quality layers only |
 
 ## 3. Experience
 
@@ -48,13 +48,13 @@ record is implied by this draft.]
 | ERP, MES, QMS, DMS or manufacturing management systems | The platform's manufacturing, quality and document foundations are our own product. [Client engagements: to be added, or state none] |
 | Engineering, electrical or project-based manufacturing | [Describe, or state that DSEW would be an early reference customer] |
 | Windows Server deployment | [State actual experience. The proposed approach is a Linux VM under Hyper-V, to be proven on DSEW's host] |
-| Barcode-based traceability | Not part of Phase 1 |
-| Local AI and document intelligence | Not part of Phase 1 |
+| Barcode-based traceability | [State actual experience, or none] |
+| Local AI and document intelligence | [State actual experience, or none] |
 | Completed projects and references | [Contacts who agree to be called, or "available after NDA", or none] |
 
 ## 4. Team, duration and support
 
-[The company must name only people who will actually work on Phase 1. No allocation is committed by this draft.]
+[The company must name only people who will actually work on this project. No allocation is committed by this draft.]
 
 | Role | Name | Allocation |
 |---|---|---|
@@ -64,7 +64,8 @@ record is implied by this draft.]
 | Testing | [Name] | [to be set] |
 | Deployment | [Name] | [to be set] |
 
-**Duration:** about 11 weeks for Phase 1 from the effective date (document 2), then the 12-month period.
+**Duration:** 8 weeks for the Complete ERP from the effective date ([MVP duration to be confirmed]; document 2), then the
+12-month period.
 
 **Support and escalation:** during the 12-month period, contact team@plotarmour.in or +91 87440 69597. No response-time
 commitment or emergency number is promised in this proposal. [Named escalation contact: to be completed.]
@@ -74,7 +75,7 @@ commitment or emergency number is promised in this proposal. [Named escalation c
 We can demonstrate the existing platform on fictional manufacturing data at your premises or remotely: a project job
 with quote revisions and approval, a manufacturing order with route stages and quality checkpoints that block
 completion, a printable traveller, a dispatch pack and a QR identity for a finished unit. We will say clearly which
-parts exist today and which are built in Phase 1.
+parts exist today and which are built in the project.
 
 ## 6. Confidentiality
 

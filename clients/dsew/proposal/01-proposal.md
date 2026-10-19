@@ -11,91 +11,161 @@
 ## 1. What we are offering
 
 **Verity** is our own operations platform. We own it. We are offering DSEW a **perpetual licence to use Verity,
-configured for DSEW, for a one-time fee.** Everything below is part of Verity itself: no third-party software to buy,
-and no separate bespoke code base to maintain.
+configured for DSEW, for a one-time fee**, in the options you asked for. Everything is part of Verity itself: no
+third-party software to buy and no separate bespoke code base to maintain.
 
-We configured the scope from your enquiry **and from our own understanding of how DSEW works**: an engineered,
-one-off product only stays trustworthy if you can show that what was approved is what was built, and that nothing left
-the factory without its checks. So Phase 1 centres on that chain: quotation, revision-controlled BOM, controlled
-documents, manufacturing, structured test records and dispatch, rather than on a long list of screens.
+We built the scope from your enquiry **and from our own understanding of how DSEW works**: an engineered, one-off product
+only stays trustworthy if what was approved is what was built, and nothing leaves the factory without its checks.
 
-| | |
-|---|---|
-| One-time licence and implementation fee (ex GST) | **₹4,00,000** |
-| GST at 18% (illustrative; IGST is expected because our GSTIN is registered in Delhi and DSEW is in Madhya Pradesh; confirmed at invoicing) | ₹72,000 |
-| **Total including GST** | **₹4,72,000** |
-| Licence | Perpetual, for DSEW's own business, one site, up to 15 named users |
-| Annual or per-user licence fee | None. The only recurring charge is the 12-month bundled fee below |
-| 12-month bundled fee | 12 months from go-live, as DSEW requires, at **₹8,500 per month** (ex GST): ₹1,02,000. It bundles the defect warranty, testing and UAT assistance, and routine maintenance. No separate warranty or maintenance charge applies in those 12 months |
-| Delivery | About 11 weeks from the effective date (document 2) |
+| | Option 1: MVP | Option 2: Complete ERP |
+|---|---|---|
+| What it is | A usable core engineering and manufacturing ERP: enquiry to quotation to order, engineering and BOM, materials, manufacturing, travellers, quality | All 19 modules of your enquiry plus scoped AI, with deeper workflows and cross-module links |
+| One-time licence and implementation fee (ex GST) | **₹3,25,000** | **₹4,80,000** |
+| GST at 18% (illustrative; IGST expected as our GSTIN is registered in Delhi and DSEW is in Madhya Pradesh; confirmed at invoicing) | ₹58,500 | ₹86,400 |
+| **Total including GST** | **₹3,83,500** | **₹5,66,400** |
+| 12-month bundled fee (section 7), ex GST | ₹1,02,000 | ₹1,02,000 |
+| **Contract value for the first 12 months, ex GST** | **₹4,27,000** | **₹5,82,000** |
+| Delivery | [Company to confirm] | 8 weeks (Option 3 below) |
 
-| First 12 months, all charges | ₹ ex GST | GST 18% | ₹ incl. GST |
+**Option 3: phased implementation.** The Complete ERP delivered in four phases over 8 weeks, each with its own price and
+demonstration (section 6 and document 2). It is the same ₹4,80,000, not an additional charge.
+
+Licence for either option: perpetual, for DSEW's own business, one site, up to 15 named users. No annual or per-user
+licence fee; the only recurring charge is the 12-month bundled fee. More users, sites or new modules are quoted
+separately.
+
+**Scope in one line.** The MVP is roughly 55% of the Complete ERP's functional scope (a planning estimate, not a measured
+figure). It is priced at about 68% of it, because the foundations (architecture, sign-in, permissions, numbering,
+deployment, testing, documentation) are needed in both.
+
+## 2. Included in both options
+
+Responsive interface with searchable, filterable tables; role-based permissions; audit trail; configurable numbering for
+the agreed document types; backup and a tested restore; installation on one DSEW Linux VM; testing and UAT; training;
+administrator and user guides and runbooks; a documented export of DSEW's data (records as CSV, files in original form
+with an index); and the 12-month bundled fee terms in section 7.
+
+## 3. Option 1: MVP, Core Engineering and Manufacturing ERP
+
+One connected workflow: **customer enquiry, quotation and order confirmation, project, engineering documents and BOM,
+material availability and purchasing, manufacturing job and traveller, quality inspection and release, delivery
+readiness.** Creating a manufacturing job identifies its BOM, shows material availability, records material issues,
+tracks operations and the traveller, and blocks final release while mandatory quality checks are incomplete.
+
+| # | Module / deliverable | Price (₹, ex GST) |
+|---|---|---|
+| 1 | CRM, enquiry and quotation management | 35,000 |
+| 2 | Project and order management | 25,000 |
+| 3 | Document management and configurable numbering | 35,000 |
+| 4 | Basic engineering and BOM management | 35,000 |
+| 5 | Basic procurement and inventory management | 40,000 |
+| 6 | Manufacturing execution and job management | 40,000 |
+| 7 | Manufacturing traveller management | 25,000 |
+| 8 | Core quality management | 30,000 |
+| 9 | Operational dashboards and basic notifications | 15,000 |
+| | Module development subtotal | 2,80,000 |
+| | Requirements finalisation and workflow design | 12,000 |
+| | Application configuration and deployment | 10,000 |
+| | Integrated testing and UAT support | 12,000 |
+| | Documentation, training and handover | 11,000 |
+| | Implementation subtotal | 45,000 |
+| | **MVP total (ex GST)** | **3,25,000** |
+
+**MVP boundary.** Basic BOMs, material records, purchasing, stock balances and job-level material allocation are
+included. Excluded: advanced MRP, barcode-driven genealogy, finance and accounting, payroll and HR, dispatch workflow,
+contracts and compliance tracking, AI, and advanced enterprise workflows.
+
+## 4. Option 2: Complete Integrated ERP
+
+| # | Module / deliverable | Price (₹, ex GST) |
+|---|---|---|
+| 1 | CRM, enquiry, quotation and sales order management | 30,000 |
+| 2 | Advanced project management | 20,000 |
+| 3 | Engineering and product lifecycle management | 30,000 |
+| 4 | Document management and controlled document workflows | 25,000 |
+| 5 | Manufacturing execution | 30,000 |
+| 6 | Manufacturing travellers and process documentation | 15,000 |
+| 7 | Quality management system | 25,000 |
+| 8 | Barcode, QR code and traceability | 15,000 |
+| 9 | Procurement and vendor management | 20,000 |
+| 10 | Inventory and warehouse management | 20,000 |
+| 11 | Production planning and basic MRP | 20,000 |
+| 12 | Testing and equipment management | 15,000 |
+| 13 | Finance and accounting, built inside Verity | 20,000 |
+| 14 | HR and payroll management | 15,000 |
+| 15 | Dispatch and logistics | 10,000 |
+| 16 | Contracts, compliance and risk | 10,000 |
+| 17 | Management dashboards and business intelligence | 15,000 |
+| 18 | Notifications and workflow automation | 15,000 |
+| 19 | AI, scoped core capabilities (section 9) | 15,000 |
+| | Module development subtotal | 3,65,000 |
+| | Requirements analysis and solution architecture | 25,000 |
+| | UI/UX design and workflow configuration | 20,000 |
+| | Cross-module integration and deployment | 25,000 |
+| | Integrated testing and UAT support | 20,000 |
+| | Documentation, training and knowledge transfer | 15,000 |
+| | Implementation subtotal | 1,05,000 |
+| | Cross-module dependency coordination and stabilisation | 10,000 |
+| | **Complete ERP total (ex GST)** | **4,80,000** |
+
+**Complete boundary.** All 19 modules and scoped AI at the **agreed baseline depth**: standard workflows and limited
+customisation. The detailed specification and module acceptance criteria fix that baseline before development starts. It
+is not an unlimited implementation of every advanced capability in the enquiry. Explicitly outside it: advanced AI,
+bulk historical data migration, statutory compliance certification, and any integration with third-party systems.
+
+**Price difference:** ₹1,55,000, so Option 2 costs about 47.7% more than Option 1 for the extra breadth.
+
+## 5. MVP versus Complete, module by module
+
+| Module | Option 1: MVP | Option 2: Complete |
+|---|---|---|
+| CRM | Customer records, enquiries, follow-ups | Full pipeline, RFQ and tender tracking, correspondence, complaints, advanced history |
+| Project management | Projects, milestones, tasks, deadlines, status | Dependencies, WBS, budgets, risk and change management, advanced reporting |
+| Enquiry, quotation, sales | Quotations, basic costing, revisions, order confirmation | Advanced costing, alternative offers, PO comparison, sales orders, retention, LDs, milestone billing |
+| Engineering and PLM | Product and component records, BOMs, drawing attachments, revisions | Multi-level BOMs, engineering change orders, formal design approvals |
+| Document management | Repository, numbering, revision history, search, basic approvals | Full controlled-document lifecycle, transmittals, acknowledgements, advanced audit and distribution |
+| Manufacturing | Job cards, operation sequences, material allocation, status | Advanced routing, work-centre scheduling, labour tracking, WIP, subcontracting, bottleneck analytics |
+| Travellers | Configurable travellers, checkpoints, sign-offs | BOM-driven travellers, QR codes, full genealogy, customer-facing formats |
+| Quality | Incoming, in-process and final inspection, NCRs, quality release | QAP/ITP, CAPA, audits, calibration, supplier quality, analytics |
+| Barcode, QR, traceability | Basic material and job references, manual tracking | Barcode scanning, batch, heat and serial tracking, product genealogy |
+| Procurement | Suppliers, purchase requests, receipts, purchasing | Approval workflows, RFQs, comparative statements, supplier performance, subcontracting |
+| Inventory | Stock balances, material issues, reservations, shortages | Multi-warehouse and bins, valuation, reconciliation, ageing, advanced traceability |
+| Planning and MRP | Job priorities, manual material planning | Automated BOM-based MRP, capacity planning, scheduling, shortage recommendations |
+| Testing and equipment | Basic test records and attachments | Dedicated test workflows, automated reports, calibration, preventive maintenance |
+| Finance and accounting | None | Invoicing and payment status, GST support, reconciliation, receivables and payables, profitability, all inside Verity |
+| HR and payroll | None | Employees, attendance, leave, payroll, statutory calculations, competency tracking |
+| Dispatch | Delivery readiness tracking | Dispatch planning, packing lists, challans, shipment tracking, partial deliveries |
+| Contracts and risk | Basic project and order references | Obligations, bank guarantees, LD exposure, insurance and NDA tracking, risk registers |
+| Dashboards | Operational dashboards for the included workflows | Cross-department KPIs, profitability, ageing, cash flow, supplier and resource analytics |
+| Notifications | Basic reminders and alerts | Configurable workflow engine, escalations, cross-module triggers, automated documents |
+| AI | Not included | Scoped core capabilities (section 9) |
+
+## 6. Option 3: the Complete ERP in four phases over 8 weeks
+
+| Phase | Weeks | Content | Price (₹, ex GST) |
 |---|---|---|---|
-| One-time licence and implementation fee | 4,00,000 | 72,000 | 4,72,000 |
-| 12-month bundled fee: 12 months at 8,500 | 1,02,000 | 18,360 | 1,20,360 |
-| **Contract value for the first 12 months** | **5,02,000** | **90,360** | **5,92,360** |
+| 1. Foundation and commercial core | 1-2 | Requirements and architecture, sign-in and roles, CRM, quotation and sales order, projects, document numbering, initial engineering masters and BOM | 1,20,000 |
+| 2. Supply chain and manufacturing core | 3-4 | Engineering revisions and release, procurement, inventory and material allocation, planning and basic MRP, manufacturing jobs and operations | 1,35,000 |
+| 3. Quality, traceability and operational controls | 5-6 | Travellers, quality and NCRs, barcode/QR and traceability, testing and equipment, dispatch, contracts and compliance | 1,30,000 |
+| 4. Business modules, validation and go-live | 7-8 | Finance and accounting, HR and payroll, dashboards, notifications and automation, scoped AI, end-to-end testing, UAT, deployment, training, handover | 95,000 |
+| **Total** | **8 weeks** | | **4,80,000** |
 
-More users, more sites and new modules are quoted separately. No other phase is priced in this document.
+Phase prices allocate the Option 2 total; payments follow the milestones in section 8. Schedule, acceptance criteria and
+assumptions are in document 2. Eight weeks is a compressed plan for a broad scope: it holds only if the assumptions in
+document 2 hold.
 
-## 2. What the fee includes
-
-1. DSEW workspace, up to 10 roles and permissions, and CSV import of customers, suppliers, items and components.
-2. Enquiry to quotation with kept revisions and approval, a DSEW-format quotation print, and conversion to an order and
-   project job (milestones, tasks, timesheets, cost lines, quoted versus actual).
-3. Revision-controlled bill of materials (single level): draft, review, release; a released revision cannot be edited;
-   each manufacturing order records its exact revision.
-4. Controlled documents: one agreed numbering convention, revisions, states, register, permissions, audit history.
-5. Manufacturing order from a released BOM, route and operations, hold and resume, and a printable traveller in one DSEW
-   format with the finished unit's QR identity.
-6. Structured test records for up to 3 product families: readings with value, unit and tolerance, automatic pass or
-   fail, tester and reviewer, one printable report format, and a basic instrument register with calibration due dates.
-7. Quality gates: a failed or missing required check blocks completion and dispatch; an authorised override needs a
-   reason and is audited.
-8. Dispatch record, packing list and delivery challan (one format each), with partial shipments.
-9. Four read-only dashboard views: quotations, jobs, production and quality.
-10. A documented export of DSEW's data: records as CSV and files in their original form, with an index.
-11. Installation on one DSEW Linux VM, backup and restore, 1 day administrator training and 2 days user training,
-    administrator and user guides.
-12. Testing, acceptance, and the 12-month period in section 4.
-
-## 3. Your enquiry, module by module
-
-| Enquiry module | In this licence |
-|---|---|
-| A CRM | Enquiry register and customer master. Contacts, tender tracker, meetings: later |
-| B Projects | Included (job, milestones, tasks, timesheets, cost lines) |
-| C Quotation and sales | Included: revisions, approval, order and job. PO comparison, alternative offers: later |
-| D Engineering and BOM | Revision-controlled single-level BOM. Multi-level BOM, ECR/ECO: later |
-| E Documents | Controlled documents. Transmittals: later |
-| F Manufacturing | Orders, routes, operations. Machine allocation, subcontracting: later |
-| G Travellers | One traveller format and QR identity. Hold and witness points, lot details: later |
-| H Quality | Gates and override. QAP/ITP, NCR/CAPA, audits: later |
-| I Barcode and traceability | Later |
-| J Procurement, K Inventory | Existing stock behaviour as is. Extensions: later |
-| L MRP | Later |
-| M Testing and equipment | Test records and basic instrument register. Maintenance, FAT packs: later |
-| N Finance and accounting | Later, built inside Verity with no third-party software. Job-cost visibility is under B |
-| O HR and payroll | Later: employees, attendance, leave, timesheets, payroll. Attendance-device integration only after the device is verified |
-| P Dispatch | Dispatch pack and gates. E-way bill: later |
-| Q Contracts and risk | Later |
-| R Dashboards | Four views. Role dashboards and exports: later |
-| S Notifications | Existing approvals. Escalations, e-mail, WhatsApp: later |
-| AI (section 6), Hindi | Later |
-
-"Later" means not in this fee and quoted separately, after DSEW has tested the first release and told us what matters.
-
-## 4. The 12-month period: warranty, testing support and maintenance
+## 7. The 12-month period: warranty, testing support and maintenance
 
 DSEW will test Verity in its real workflows for **12 months from go-live**. For that whole period we charge one
 bundled fee of **₹8,500 per month** (₹1,02,000 ex GST for 12 months; ₹10,030 per month including 18% GST), invoiced
-[monthly in advance, company to confirm]. It starts at go-live and ends after 12 months.
+[monthly in advance, company to confirm]. It starts at go-live and ends after 12 months, for either option.
 
 **The bundled fee replaces a separate warranty, a separate testing-support charge and a separate maintenance contract.
 None of them is charged on top during the 12 months.** It covers exactly three things:
 
-1. **Defect warranty.** Correcting any reproducible defect where Verity does not meet the signed Phase 1 requirements,
-   whether found in UAT or at any time in the 12 months. A defect caused by DSEW's own changes, hardware, network or
-   third-party software is not a Verity defect.
+1. **Defect warranty.** Correcting any reproducible defect where Verity does not meet the signed requirements, whether
+   found in UAT or at any time in the 12 months. A defect caused by DSEW's own changes, hardware, network or third-party
+   software is not a Verity defect.
 2. **Testing and UAT assistance.** Helping DSEW run the agreed UAT scripts and test real jobs, reproducing and triaging
    each reported issue, recording DSEW's feedback, and reviewing reported issues and feedback with DSEW at an interval
    agreed at the start.
@@ -114,31 +184,28 @@ separately agreed renewal in writing. No annual contract is part of this offer.
 **Travel:** the fee assumes remote work apart from the site survey visit. [On-site days: company to decide whether
 included or charged at cost.]
 
-## 5. The options you asked for, and the roadmap
+## 8. Payment (proposed)
 
-| Your option | Our response |
-|---|---|
-| Option 1: minimum viable product | **This proposal** (sections 1 and 2): CRM basics, projects, quotations, document numbering and management, manufacturing jobs, travellers and quality gates, plus revision-controlled BOM and structured test records. Fixed price and schedule |
-| Option 2: complete integrated ERP | Not priced here. The "later" items in section 3 are the route to it, quoted after DSEW has tested Phase 1 |
-| Option 3: phased implementation | Phase 1 is priced and scheduled. Each later phase gets its own fixed price and schedule when quoted |
+Each invoice carries GST at the rate then applicable. Payment terms: [15 days] from invoice. The same milestone
+structure applies to Option 1, Option 2 and Option 3.
 
-**Later phases, in dependency order** (no prices yet; each is quoted separately with its own schedule):
+| Milestone | Share | Option 1 ₹ ex GST | Option 2 / 3 ₹ ex GST |
+|---|---|---|---|
+| 1. Project initiation: signed order, product owner named, requirements signed off | 30% | 97,500 | 1,44,000 |
+| 2. Approved architecture and first working release accepted, or deemed accepted after 5 working days | 30% | 97,500 | 1,44,000 |
+| 3. Feature completion and UAT build | 30% | 97,500 | 1,44,000 |
+| 4. Final acceptance and handover (payable anyway if DSEW-side delays hold go-live up for more than [15 working days] after UAT passes) | 10% | 32,500 | 48,000 |
+| **Total** | **100%** | **3,25,000** | **4,80,000** |
 
-| Order | Content | Why this order |
-|---|---|---|
-| 2 | Multi-level BOM, ECR/ECO, document transmittals, CRM contacts and tender tracking | Builds directly on released BOMs and controlled documents |
-| 3 | Procurement, inventory extensions, barcode/QR scanning, lot, heat and serial traceability | Traceability needs receipts and stock movements |
-| 4 | Full quality system: QAP/ITP, incoming inspection, NCR/CAPA, FAT packs, audits | Needs structured tests and traceability |
-| 5 | MRP and production planning | Needs BOMs, stock and lead times |
-| 6 | Finance and accounting, contracts and risk, HR and payroll, role dashboards and exports | Needs jobs, stock and invoicing data to exist |
-| 7 | AI, Hindi, e-way bill, WhatsApp and e-mail automation | Optional layers on top of working data |
+GST at 18% is added to each invoice. The 12-month bundled fee is invoiced separately from go-live. Each milestone has
+written deliverables and acceptance criteria in the specification.
 
-## 6. Artificial intelligence (not in Phase 1)
+## 9. Artificial intelligence (Option 2 only, scoped)
 
-You asked us to propose practical AI. It is later work, never an approver, and always inside each user's permissions. It
-would not approve quotations, release documents, alter records or authorise quality releases, and no essential
-workflow would depend on it. This table is a feasibility view, not a delivered feature; we would prove each in a small
-pilot before pricing it.
+Option 2 includes AI at core, agreed depth: use cases fixed in the specification, never an approver, and always inside
+each user's permissions. It does not approve quotations, release documents, alter records or authorise quality releases,
+and no essential workflow depends on it. A general local AI platform, model training and extensive customisation are
+outside the fee. Each item below is proven in a small pilot against agreed sample documents and accuracy thresholds.
 
 | AI capability you listed | Local on DSEW's server | External service |
 |---|---|---|
@@ -151,54 +218,43 @@ pilot before pricing it.
 | Management summaries | Feasible | Optional |
 
 Local models need suitable hardware (a GPU workstation is the usual choice) and carry no usage charges. External
-services are optional, charged by their providers, and off unless DSEW enables them.
+services are optional, charged by their providers, and off unless DSEW enables them. Their charges and any local GPU
+hardware are not in the fee.
 
-## 7. Commercial headings you asked for
+## 10. Commercial headings you asked for
 
 | # | Heading | Position |
 |---|---|---|
-| 1 | Requirement analysis and system design | Included: week 1 specification |
-| 2 | UI/UX design and prototyping | Included for the printed formats and key screens: mock-ups approved in week 1 |
-| 3 | Development charges by module | One fixed fee for the Phase 1 list in section 2; not itemised per module. Later modules quoted separately |
+| 1 | Requirement analysis and system design | Included (Option 1: ₹12,000; Option 2: ₹25,000) |
+| 2 | UI/UX design and prototyping | Included (Option 2: ₹20,000; Option 1: mock-ups of printed formats and key screens inside the workflow design line) |
+| 3 | Development charges by module | The module tables in sections 3 and 4 |
 | 4 | Third-party software and licences | None |
-| 5 | AI model and API costs | Not included; priced only if AI is added |
-| 7 | Data migration and initial configuration | CSV import of agreed masters included; cleansing and historical migration excluded |
-| 8 | Testing and deployment | Included |
-| 9 | Training and documentation | Included (1 + 2 days, guides, runbooks) |
+| 5 | AI model and API costs | Scoped AI in Option 2 only; external service charges and GPU hardware not included |
+| 7 | Data migration and initial configuration | Initial master-data setup included (CSV import of agreed masters); cleansing and bulk historical migration excluded |
+| 8 | Testing and deployment | Included in the implementation lines |
+| 9 | Training and documentation | Included in the implementation lines |
 | 10 | Server, infrastructure and cybersecurity | DSEW's own costs, estimated in document 2; security measures in document 2; independent penetration testing excluded |
-| 11 | Annual maintenance contract | None. The first 12 months are covered by the bundled fee; any later support is a renewal agreed in writing |
-| 12 | Warranty and post-deployment support | The bundled fee in section 4 |
+| 11 | Annual maintenance contract | None. The first 12 months are covered by the bundled fee; later support is a renewal agreed in writing |
+| 12 | Warranty and post-deployment support | The bundled fee in section 7 |
 | 13 | Change-request rates | Each request is quoted separately and approved in writing; no rate card is published |
 | 14 | Recurring per-user, per-module or subscription fees | None, apart from the ₹8,500 a month for the first 12 months |
 | 15 | Taxes | GST at 18% on all fees (see section 1) |
 
-**Cost over three to five years.** What is fixed today: ₹5,02,000 ex GST in the first 12 months. Not yet priced:
-support after 12 months, later phases, AI. DSEW's own infrastructure is estimated in document 2. No third-party
-licence fees apply.
+**Cost over three to five years.** Fixed today: the option price plus ₹1,02,000 in the first 12 months (₹4,27,000 or
+₹5,82,000 ex GST). Not yet priced: support after 12 months and any later enhancements. DSEW's own infrastructure is
+estimated in document 2. No third-party licence fees apply.
 
-## 8. Payment (proposed)
-
-Each invoice carries GST at the rate then applicable. Payment terms: [15 days] from invoice.
-
-| Milestone | Share | ₹ ex GST | GST 18% | ₹ incl. GST |
-|---|---|---|---|---|
-| 1. Start: signed order and product owner named | 30% | 1,20,000 | 21,600 | 1,41,600 |
-| 2. Mid-point: sprint 3 demonstration accepted, or deemed accepted after 5 working days | 40% | 1,60,000 | 28,800 | 1,88,800 |
-| 3. Completion: UAT signed off and go-live gates passed (document 2). Payable anyway if DSEW-side delays hold the gates up for more than [15 working days] after UAT passes | 30% | 1,20,000 | 21,600 | 1,41,600 |
-| **Total** | **100%** | **4,00,000** | **72,000** | **4,72,000** |
-
-The 12-month bundled fee is invoiced separately from go-live.
-
-## 9. Ownership and licence in short
+## 11. Ownership and licence in short
 
 Verity, including everything configured or developed for DSEW, is owned by PlotArmour and is licensed, not sold. DSEW
 owns its business data and can export it. **Source code is not delivered.** Full terms are in document 3; several
 clauses are still to be settled with counsel.
 
-## 10. What we have and have not verified
+## 12. What we have and have not verified
 
 Verity's foundations (data isolation, permissions, audit, stock, manufacturing orders, QC checkpoints, project jobs,
-approvals, QR identity) exist and have been run on our test environments with fictional data. The BOM revision,
-controlled document and structured test capabilities are completed during Phase 1. We have **not** yet tested on DSEW's
-host or on Windows Server 2019, run a real-phone HTTPS upload, rehearsed the combined database, files and identity
-restore, or run the outage tests. These are go-live gates (document 2); **production use is blocked until they pass.**
+approvals, QR identity) exist and have been run on our test environments with fictional data. Revision-controlled BOMs,
+controlled documents, structured test records and the modules beyond them are completed during the project. We have
+**not** yet tested on DSEW's host or on Windows Server 2019, run a real-phone HTTPS upload, rehearsed the combined
+database, files and identity restore, or run the outage tests. These are go-live gates (document 2); **production use is
+blocked until they pass.**

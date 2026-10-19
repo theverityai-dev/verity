@@ -29,8 +29,8 @@ D & S Electric Works. Position on section 5 of your enquiry.
 | 2 | Does DSEW own the custom code and IP? | No. We own Verity and the configuration. DSEW owns its data |
 | 3 | Can DSEW or another developer modify the code? | Not the code. DSEW can configure what the product allows, and request changes from us |
 | 4 | Can it run without dependence on you? | It runs on DSEW's server day to day. Updates and changes to the product come from us. Runbooks for install, backup, restore and upgrade are provided |
-| 5 | Proprietary frameworks, paid components, recurring licences? | Verity is licensed as above. No paid third-party components or recurring licence fees in Phase 1 |
-| 6 | Schema, API docs, deployment scripts, technical documents? | Deployment runbooks, administrator and user guides and API notes for what Phase 1 uses. Source code and internal design documents are not included |
+| 5 | Proprietary frameworks, paid components, recurring licences? | Verity is licensed as above. No paid third-party components or recurring licence fees; the only recurring charge is the 12-month bundled fee in document 1 |
+| 6 | Schema, API docs, deployment scripts, technical documents? | Deployment runbooks, administrator and user guides and API notes for what the delivered scope uses. Source code and internal design documents are not included |
 | 7 | Repository access from the beginning? | No |
 | 8 | Credentials, deployment instructions, backup procedures? | Yes, through a signed handover checklist, with credentials rotated at handover |
 | 9 | Use limited to DSEW; no resale? | Yes. DSEW may not resell, sublicense or share Verity. We will not resell or disclose DSEW's confidential material |
