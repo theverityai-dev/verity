@@ -6,6 +6,7 @@ import {
   jwtVerify,
   type JWTPayload,
 } from "jose";
+import { safeReturnPath } from "@/lib/return-path";
 import type { Principal } from "./authProvider";
 import {
   discoverProviderMetadata,
@@ -27,10 +28,6 @@ function randomUrlSafe(bytes = 32): string {
   return randomBytes(bytes).toString("base64url");
 }
 
-function safeReturnPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
-}
 
 export type OidcTransaction = {
   state: string;

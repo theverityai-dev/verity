@@ -26,6 +26,8 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = contentSecurityPolicy(nonce, process.env.NODE_ENV !== "production");
   request.headers.set("x-nonce", nonce);
+  // The shell redirects a signed-out visitor to sign-in; this lets it send them back to the page they asked for.
+  request.headers.set("x-return-path", request.nextUrl.pathname + request.nextUrl.search);
   request.headers.set("Content-Security-Policy", csp);
   let response = NextResponse.next({ request: { headers: request.headers } });
 

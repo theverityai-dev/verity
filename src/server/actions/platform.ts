@@ -3,6 +3,7 @@ import { increment, log } from "@/server/platform/observability";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { safeReturnPath } from "@/lib/return-path";
 import { ForbiddenError } from "@/server/platform/authorization";
 import { CapabilityError } from "@/server/platform/capability";
 import { ValidationError, executeCommand, getCommand } from "@/server/platform/command";
@@ -206,7 +207,7 @@ export async function signInWithPassword(formData: FormData): Promise<ActionFail
     redirect("/hq");
   }
 
-  redirect("/");
+  redirect(safeReturnPath(String(formData.get("returnTo") ?? "")));
 }
 
 /**

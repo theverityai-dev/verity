@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { activeAuthProviderName, suspendedWorkspaceNames, resolveActor } from "@/server/platform/auth";
+import { safeReturnPath } from "@/lib/return-path";
 import { SignInForm } from "./SignInForm";
 import { AuthShell } from "./AuthShell";
 
@@ -28,14 +29,15 @@ export const dynamic = "force-dynamic";
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; returnTo?: string }>;
 }) {
+  const { error, returnTo } = await searchParams;
+  const destination = safeReturnPath(returnTo);
   // Already signed in with a usable membership? Nothing to do here.
   const actor = await resolveActor();
-  if (actor) redirect("/");
+  if (actor) redirect(destination);
 
   const provider = activeAuthProviderName();
-  const { error } = await searchParams;
   // ADR-034: signed in, but every workspace they belong to is suspended.
   const suspended = await suspendedWorkspaceNames();
 
@@ -54,7 +56,7 @@ export default async function SignInPage({
             </p>
           )}
           <a
-            href="/api/auth/oidc/start"
+            href={destination === "/" ? "/api/auth/oidc/start" : `/api/auth/oidc/start?returnTo=${encodeURIComponent(destination)}`}
             className="inline-flex min-h-11 items-center justify-center rounded-md bg-[var(--brand)] px-4 text-[14px] font-medium text-white no-underline transition-opacity hover:opacity-90"
           >
             Continue with organization sign-in
@@ -64,7 +66,7 @@ export default async function SignInPage({
           </p>
         </div>
       ) : (
-        <SignInForm />
+        <SignInForm returnTo={destination} />
       )}
     </AuthShell>
   );

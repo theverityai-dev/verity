@@ -333,7 +333,18 @@ export function ShellChrome({
           <Link href="/" aria-label="Verity" className="inline-flex min-h-11 items-center no-underline">
             <VerityLockup size={22} className="text-text" />
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              type="button"
+              title="Assistant"
+              onClick={() => window.dispatchEvent(new Event("verity:toggle-assistant"))}
+              className="glass-control grid size-11 cursor-pointer place-items-center rounded-full text-text-secondary transition-colors hover:text-text active:opacity-70"
+            >
+              <Icon name="assistant" size={19} />
+              <span className="sr-only">Assistant</span>
+            </button>
+          </div>
         </div>
 
         {navOpen && (

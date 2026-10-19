@@ -3,6 +3,8 @@ import { CommandAccessProvider } from "@/components/ui/CommandAccess";
 import { listCommands } from "@/server/platform/command";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { safeReturnPath } from "@/lib/return-path";
 import {
   getAuthUser,
   listMemberships,
@@ -50,7 +52,10 @@ export default async function ShellLayout({
   installAdministration();
 
   const actor = await resolveActor();
-  if (!actor) redirect("/sign-in");
+  if (!actor) {
+    const wanted = safeReturnPath((await headers()).get("x-return-path"));
+    redirect(wanted === "/" ? "/sign-in" : `/sign-in?returnTo=${encodeURIComponent(wanted)}`);
+  }
 
   const memberships = await listMemberships();
   const active =

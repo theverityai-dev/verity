@@ -21,7 +21,7 @@ import { signInWithPassword } from "@/server/actions/platform";
  * the reference board's own composition — and touch nothing about how the
  * form submits.
  */
-export function SignInForm() {
+export function SignInForm({ returnTo = "/" }: { returnTo?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +54,7 @@ export function SignInForm() {
         </p>
       )}
 
+      <input type="hidden" name="returnTo" value={returnTo} />
       <Field label="Email" htmlFor="email" required>
         <div className="relative">
           <Icon
