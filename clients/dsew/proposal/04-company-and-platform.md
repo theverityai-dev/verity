@@ -36,7 +36,7 @@ drawing to tested unit, which is what the project configures and extends.
 | Approvals, evidence storage, QR identity for finished units | Yes | DSEW workflows |
 | Install, backup, restore and upgrade scripts, containerised package | Scripts and package exist. A combined database, files and identity restore has **not yet** been rehearsed end to end, and nothing has been tested on DSEW's host | Rehearsal and acceptance on DSEW's host |
 | Revision-controlled BOM, controlled documents, structured test records | No | Built in both options |
-| Procurement and inventory depth, planning and MRP, traceability, full quality system, finance, HR and payroll, dispatch, contracts, dashboards, scoped AI | Partly (stock, purchasing, approvals), not at DSEW depth | Option 2 (Complete ERP); the MVP has the basic procurement, inventory and quality layers only |
+| Procurement and inventory depth, planning and MRP, traceability, full quality system, finance, HR and payroll, dispatch, contracts, dashboards, documented AI use cases | Partly (stock, purchasing, approvals), not at DSEW depth | Option 2 (Complete ERP); the MVP has the basic procurement, inventory and quality layers only |
 
 ## 3. Experience
 
@@ -64,11 +64,12 @@ record is implied by this draft.]
 | Testing | [Name] | [to be set] |
 | Deployment | [Name] | [to be set] |
 
-**Duration:** 8 weeks for the Complete ERP from the effective date ([MVP duration to be confirmed]; document 2), then the
-12-month period.
+**Estimated duration:** about 6 to 8 weeks for the MVP and about 8 to 12 weeks for the Complete ERP, from kickoff
+(document 2), then the 12-month support period.
 
-**Support and escalation:** during the 12-month period, contact team@plotarmour.in or +91 87440 69597. No response-time
-commitment or emergency number is promised in this proposal. [Named escalation contact: to be completed.]
+**Support and escalation:** during the 12-month period, contact team@plotarmour.in or +91 87440 69597. The service
+terms (hours, included time and response targets) are in document 1, section 7. [Named escalation contact: to be
+completed.]
 
 ## 5. Demonstration
 
