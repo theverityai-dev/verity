@@ -57,13 +57,18 @@ const line = (description: string, qty: number, rupees: number) => ({ descriptio
 const RATE = { winder: 45_000, engineer: 60_000, helper: 35_000 };
 
 /** Typed instrument readings for the checks that need evidence, by checkpoint key. Fictional demo values. */
-const READINGS: Record<string, Record<string, unknown>> = {
-  ir_test: { instrument: "5 kV megger", reading: "2,400 MΩ, HV to LV and to earth, 60 s", demo: true },
-  hv_withstand: { instrument: "HV test set", reading: "28 kV applied for 60 s, no breakdown", demo: true },
+const READINGS: Record<string, { value: number; condition: string; instrument: string }> = {
+  ratio_test: { value: 0.21, condition: "all taps, 11 kV to 415 V", instrument: "TTR meter" },
+  ir_test: { value: 2400, condition: "HV to LV and earth, 60 s, after drying", instrument: "5 kV megger" },
+  hv_withstand: { value: 28, condition: "applied 60 s, no breakdown", instrument: "HV test set" },
+  noload_loss: { value: 312, condition: "at rated voltage", instrument: "Power analyser" },
+  load_loss: { value: 1560, condition: "at 120 °C reference", instrument: "Power analyser" },
+  temp_rise: { value: 82, condition: "at rated load, class F winding", instrument: "Winding RTD" },
 };
+/** The first insulation test fails before the coils are dried; the retest passes. A re-inspection the report shows. */
+const FIRST_IR = { value: 640, condition: "HV to LV and earth, 60 s, before drying", instrument: "5 kV megger" };
 const REMARKS: Record<string, string> = {
-  losses: "No-load and load loss recorded on the test sheet (demo values).",
-  temp_rise: "Temperature rise within the limit at rated load (demo value).",
+  ir_test: "Low reading: moisture in the coil. Dried and re-tested (demo).",
 };
 
 async function main() {
@@ -143,20 +148,45 @@ async function main() {
   );
   for (const op of ops) {
     await executeCommand(owner, startOperation, { operationId: op.id });
-    const checkpoints = (Array.isArray(op.checkpoints) ? op.checkpoints : []) as Array<{ key: string; requireEvidence?: boolean; requireRemarks?: boolean }>;
+    const checkpoints = (Array.isArray(op.checkpoints) ? op.checkpoints : []) as Array<{
+      key: string;
+      requireEvidence?: boolean;
+      requireRemarks?: boolean;
+      measure?: { unit: string };
+    }>;
+    /** A reading as Evidence about this operation, with a photo record of the instrument where the check asks for one. */
+    const captureReading = (cp: (typeof checkpoints)[number], r: { value: number; condition: string; instrument: string }) =>
+      withTenant(tenantId, async (tx) => {
+        const photo = cp.requireEvidence
+          ? await tx.evidence.create({
+              data: {
+                tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",
+                uri: "demo://instrument-photo", capturedAt: new Date(), capturedById: owner.userId,
+              },
+            })
+          : null;
+        return tx.evidence.create({
+          data: {
+            tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Reading",
+            capturedAt: new Date(), capturedById: owner.userId,
+            payload: { value: r.value, unit: cp.measure!.unit, condition: r.condition, instrument: r.instrument, ...(photo ? { photoEvidenceId: photo.id } : {}) } as never,
+          },
+        });
+      });
     for (const cp of checkpoints) {
+      if (cp.key === "ir_test") {
+        const first = await captureReading(cp, FIRST_IR);
+        await executeCommand(owner, recordCheckpoint, { operationId: op.id, checkpointKey: cp.key, result: "fail", remarks: REMARKS.ir_test, evidenceId: first.id });
+      }
       let evidenceId: string | undefined;
-      if (cp.requireEvidence) {
+      if (cp.measure) {
+        evidenceId = (await captureReading(cp, READINGS[cp.key] ?? { value: 0, condition: "demo", instrument: "demo" })).id;
+      } else if (cp.requireEvidence) {
         const evidence = await withTenant(tenantId, (tx) =>
           tx.evidence.create({
             data: {
-              tenantId,
-              entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION,
-              entityId: op.id,
-              kind: "Reading",
-              capturedAt: new Date(),
-              capturedById: owner.userId,
-              payload: (READINGS[cp.key] ?? { reading: "recorded", demo: true }) as never,
+              tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",
+              uri: "demo://photo", capturedAt: new Date(), capturedById: owner.userId,
             },
           }),
         );
@@ -166,7 +196,7 @@ async function main() {
         operationId: op.id,
         checkpointKey: cp.key,
         result: "pass",
-        remarks: cp.requireRemarks ? (REMARKS[cp.key] ?? "Recorded on the test sheet (demo).") : undefined,
+        remarks: cp.requireRemarks ? "Recorded on the test sheet (demo)." : undefined,
         evidenceId,
       });
     }

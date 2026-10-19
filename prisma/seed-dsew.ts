@@ -141,12 +141,14 @@ const ITEMS = [
   { sku: "EM-LAB05", name: "0.5 T lab electromagnet system", unit: "pc", group: "Finished", opening: 0 },
 ] as const;
 
+// Units and limits are illustrative until DSEW confirms its own QAP; the unit belongs to the check, so no one types it.
 const TEST_CHECKPOINTS = [
-  { key: "ratio_test", label: "Turns ratio test within 0.5%", requireEvidence: false, requireRemarks: false },
-  { key: "ir_test", label: "Insulation resistance (5 kV megger)", requireEvidence: true, requireRemarks: false },
-  { key: "hv_withstand", label: "Applied and induced HV withstand", requireEvidence: true, requireRemarks: false },
-  { key: "losses", label: "No-load and load loss measured", requireEvidence: false, requireRemarks: true },
-  { key: "temp_rise", label: "Temperature rise at rated load", requireEvidence: false, requireRemarks: true },
+  { key: "ratio_test", label: "Turns ratio deviation", requireEvidence: false, requireRemarks: false, measure: { unit: "%", min: -0.5, max: 0.5 } },
+  { key: "ir_test", label: "Insulation resistance (5 kV megger)", requireEvidence: true, requireRemarks: false, measure: { unit: "MΩ", min: 1000 } },
+  { key: "hv_withstand", label: "Applied HV withstand, 60 s", requireEvidence: true, requireRemarks: false, measure: { unit: "kV", min: 28 } },
+  { key: "noload_loss", label: "No-load loss", requireEvidence: false, requireRemarks: false, measure: { unit: "W", max: 450 } },
+  { key: "load_loss", label: "Load loss", requireEvidence: false, requireRemarks: false, measure: { unit: "W", max: 1900 } },
+  { key: "temp_rise", label: "Temperature rise at rated load", requireEvidence: false, requireRemarks: false, measure: { unit: "K", max: 100 } },
 ];
 
 const TRAFO_ROUTE = [
@@ -166,7 +168,7 @@ const MAGNET_ROUTE = [
     stageKey: "field_mapping",
     label: "3-axis field mapping",
     checkpoints: [
-      { key: "uniformity", label: "Field uniformity within spec", requireEvidence: true, requireRemarks: false },
+      { key: "uniformity", label: "Field uniformity within spec", requireEvidence: true, requireRemarks: false, measure: { unit: "%", max: 1 } },
       { key: "calibration", label: "Gaussmeter calibration reference noted", requireEvidence: false, requireRemarks: true },
     ],
   },
