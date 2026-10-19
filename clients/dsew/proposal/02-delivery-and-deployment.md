@@ -18,6 +18,7 @@ decisions, approvals, host access or UAT moves the schedule by the same number o
 | Sprint 3 (weeks 6-7) | Controlled documents, revision-controlled BOM. **First backup and restore rehearsal.** Mid-point milestone |
 | Sprint 4 (weeks 8-9) | Manufacturing order, traveller, test records, instrument register, quality gates and override |
 | Sprint 5 (weeks 10-11) | Dispatch pack, four dashboards, data export, training, **final restore test and UAT** |
+| After go-live | 12-month testing period in DSEW's real workflows (document 1, section 5) |
 
 Each sprint ends with a demonstration on a company-hosted test environment. DSEW has **5 working days** to accept it or
 report reproducible failures against the agreed criteria; a failure is corrected and shown again; no report means
@@ -65,7 +66,7 @@ dedicated host. **This has not been tested on your server.** Licensing of the Wi
 | 13 | Source code and repository | Not delivered: Verity is proprietary (document 3) |
 | 14 | Test, staging, production | See section 2 |
 | - | Where Windows Server 2019 comes in | Section 4 |
-| 15 | Upgrades, support | Versioned releases with tested upgrade and rollback; support after warranty is agreed separately |
+| 15 | Upgrades, support | Versioned releases with tested upgrade and rollback; covered during the 12-month testing period (document 1, section 5); support after it is agreed separately |
 
 ## 6. Assumptions and exclusions
 
@@ -73,7 +74,7 @@ dedicated host. **This has not been tested on your server.** Licensing of the Wi
 convention; DSEW provides the host, TLS certificates, internal DNS, VPN access, backup storage and a network contact.
 
 **Excluded:** everything marked "later" in document 1; Tally Prime integration; historical transaction migration;
-hardware and networking; GST on fees; support after warranty; a second VM; travel beyond the survey visit unless the
+hardware and networking; GST on fees; support after the 12-month testing period; a second VM; travel beyond the survey visit unless the
 company decides otherwise; independent penetration testing; DSEW staff time.
 
 **DSEW's own costs (planning estimates, not quotations):** backup target and UPS ₹0.8 to 1.2 lakh; a new server only

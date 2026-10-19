@@ -1,7 +1,7 @@
 # Proposal: Verity for D & S Electric Works
 
 **Prepared for:** D & S Electric Works (DSEW), 109, Industrial Area Extension, Rau, Indore 453331, Madhya Pradesh
-**Prepared by:** PlotArmour, GSTIN 07TQDPS9711L1ZT, +91 87440 69597, [address and email]
+**Prepared by:** PlotArmour, GSTIN 07TQDPS9711L1ZT, +91 87440 69597, team@plotarmour.in, [address]
 **Date:** 20 October 2026
 **Valid for:** 60 days
 
@@ -25,8 +25,15 @@ documents, manufacturing, structured test records and dispatch, rather than on a
 | GST at 18% (illustrative; IGST is expected because our GSTIN is registered in Delhi and DSEW is in Madhya Pradesh; confirmed at invoicing) | ₹72,000 |
 | **Total including GST** | **₹4,72,000** |
 | Licence | Perpetual, for DSEW's own business, one site, up to 15 named users |
-| Annual or per-user licence fee | None for what is listed in section 2 |
+| Annual or per-user licence fee | None. The only recurring charge is the testing-period fee below |
+| Testing period | 12 months from go-live, as DSEW requires, at **₹8,500 per month** (ex GST) for the whole period: ₹1,02,000 |
 | Delivery | About 11 weeks from the effective date (document 2) |
+
+| First 12 months, all charges | ₹ ex GST | GST 18% | ₹ incl. GST |
+|---|---|---|---|
+| One-time licence and implementation fee | 4,00,000 | 72,000 | 4,72,000 |
+| Testing period: 12 months at 8,500 | 1,02,000 | 18,360 | 1,20,360 |
+| **Total** | **5,02,000** | **90,360** | **5,92,360** |
 
 More users, more sites and new modules are quoted separately. No other phase is priced in this document.
 
@@ -49,7 +56,7 @@ More users, more sites and new modules are quoted separately. No other phase is 
 10. A documented export of DSEW's data: records as CSV and files in their original form, with an index.
 11. Installation on one DSEW Linux VM, backup and restore, 1 day administrator training and 2 days user training,
     administrator and user guides.
-12. Testing, acceptance, and the warranty in section 5.
+12. Testing, acceptance, and the 12-month testing period in section 5.
 
 ## 3. Your enquiry, module by module
 
@@ -84,14 +91,21 @@ a method, or claim to meet that requirement. Tally Prime stays your accounting s
 or write Tally. **DSEW must accept this exclusion in writing before the order.** If you want the integration, we
 would review your TallyPrime setup and quote it separately.
 
-## 5. After you test: fixes and additions
+## 5. The 12-month testing period
 
-- **Included:** fixes for reproducible defects where the system does not meet the agreed specification, found in UAT or
-  during the warranty of [3 months] from go-live.
+DSEW will test Verity in its real workflows for **12 months from go-live**. For that whole period we charge
+**₹8,500 per month** (₹1,02,000 ex GST for 12 months; ₹10,030 per month including 18% GST), invoiced [monthly in
+advance, company to confirm]. It starts at go-live and ends after 12 months. [Company to confirm what the monthly fee
+covers; the list below is the proposed cover.]
+
+- **Covered by the monthly fee:** correcting reproducible defects where the system does not meet the agreed
+  specification (including those found in UAT), keeping the DSEW installation running on Verity's tested releases,
+  help with backup and restore, and recording DSEW's testing feedback.
 - **Quoted separately:** new features, changes to approved requirements, new product families, reports, formats,
-  integrations, users or sites. Each is recorded, quoted and approved by you in writing before any work.
-- **Not included:** support after the warranty. There is no annual contract in this offer; any support would be agreed
-  separately in writing.
+  integrations, users or sites. DSEW's feedback is used to prioritise them; each is recorded, quoted and approved by
+  you in writing before any work.
+- **Not included:** support after the 12 months. No annual contract is included in this offer; support after the
+  testing period would be agreed separately in writing.
 - **Travel:** the fee assumes remote work apart from the site survey visit. [On-site days: company to decide whether
   included or charged at cost.]
 

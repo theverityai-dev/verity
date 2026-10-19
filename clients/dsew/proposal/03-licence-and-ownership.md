@@ -13,7 +13,7 @@ D & S Electric Works. Position on section 5 of your enquiry.
 - **DSEW receives a perpetual, non-exclusive, non-transferable licence** to use Verity for its own business, at one
   site, for up to 15 named users, for the one-time fee. No annual or per-user licence fee applies to that scope.
 - **DSEW owns its business data**, including everything it enters or uploads, and can take a documented export
-  (records as CSV, files in original form with an index) at handover and once more on request during warranty.
+  (records as CSV, files in original form with an index) at handover and once more on request during the 12-month testing period.
 - **Source code is not delivered.** Your enquiry asked for it; we are telling you plainly that this offer does not
   include it.
 - We do not use DSEW's confidential drawings, prices, specifications or quality formats for anyone else, under a
