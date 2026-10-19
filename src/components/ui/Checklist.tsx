@@ -22,6 +22,8 @@ export type ChecklistRow = {
   verdict: ChecklistVerdict;
   /** Extra line under the label: the latest remark. */
   note?: string;
+  /** Always-visible content under the label: a measured reading and its range, a condition chip. */
+  detail?: ReactNode;
   /** Controls at the right of the row (Pass / Fail). */
   actions?: ReactNode;
   /** Rendered under the row when it is open. */
@@ -60,6 +62,7 @@ export function ChecklistRows({ rows }: { rows: readonly ChecklistRow[] }) {
               <div className="min-w-0 flex-1">
                 <p className="m-0 text-[15px] leading-[20px] text-text">{row.label}</p>
                 {row.requirement && <p className="m-0 mt-0.5 text-[13px] text-text-tertiary">{row.requirement}</p>}
+                {row.detail && <div className="mt-1.5">{row.detail}</div>}
                 {row.note && <p className="m-0 mt-1 text-[13px] text-text-secondary">{row.note}</p>}
               </div>
               <span

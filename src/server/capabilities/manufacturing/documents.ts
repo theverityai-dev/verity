@@ -7,7 +7,7 @@ import {
   ENTITY_MANUFACTURING_ORDER,
   ENTITY_MANUFACTURING_PASSPORT,
 } from "./shared";
-import { latestFindings, readCheckpoints } from "./stages";
+import { latestFindings, readCheckpoints, readReadingPayload, withinMeasure } from "./stages";
 
 /**
  * What the printed documents for one production order are built from: the job card and traveler, and the dispatch
@@ -116,6 +116,10 @@ export type DispatchPackRecord = {
 
 /** A reading evidence row keeps its instrument and value in a small payload; show them only as text. */
 export function readingText(payload: unknown): string | null {
+  const structured = readReadingPayload(payload);
+  if (structured) {
+    return [`${structured.value.toLocaleString("en-IN")} ${structured.unit}`, structured.condition ? `, ${structured.condition}` : "", structured.instrument ? ` (${structured.instrument})` : ""].join("");
+  }
   if (!payload || typeof payload !== "object") return null;
   const p = payload as { instrument?: unknown; reading?: unknown };
   const parts = [typeof p.reading === "string" ? p.reading : null, typeof p.instrument === "string" ? `(${p.instrument})` : null].filter(Boolean);
@@ -192,5 +196,98 @@ export async function loadDispatchPack(
     materials: order.lines.map((l) => ({ id: l.id, item: l.componentItem.name, qty: l.qtyRequired, unit: l.componentItem.unitLabel })),
     checks,
     passport,
+  };
+}
+
+export type TestReportCheck = {
+  key: string;
+  label: string;
+  /** The latest finding is the verdict; null when the check has not been recorded yet. */
+  verdict: "pass" | "fail" | null;
+  /** How many times this check was recorded, so a re-inspection after a fail is visible. */
+  attempts: number;
+  recordedAt: Date | null;
+  remarks: string | null;
+  /** Null when the reader may not see Evidence, or the check is not a measured one. */
+  measured: { value: number; unit: string; min: number | null; max: number | null; inRange: boolean; condition: string | null; instrument: string | null } | null;
+  /** The check is measured: the unit and range are on the checklist even when the reading is hidden. */
+  unit: string | null;
+  /** Free-text reading from before readings were structured. */
+  readingNote: string | null;
+  photoOnRecord: boolean;
+};
+
+export type TestReportRecord = {
+  tenant: { name: string; timeZone: string; demo: boolean };
+  order: { id: string; reference: string | null; product: string; quantity: number; state: string };
+  /** Cancelled stages (history of a send-back) are left out. */
+  stages: Array<{ id: string; label: string; state: string; rework: boolean; checks: TestReportCheck[] }>;
+};
+
+/**
+ * The test report for one order, built to be read summary first: the totals and every failure answer "did it pass"
+ * without opening a stage, and each check carries its reading, accepted range and test condition for the reader who
+ * does need detail. Needs Read on the order and on stages; a reading is shown only to a reader who may see Evidence.
+ */
+export async function loadTestReport(
+  tx: TenantScopedClient,
+  actor: Reader & { tenantId: string },
+  orderId: string,
+): Promise<TestReportRecord | "denied" | null> {
+  if (
+    !(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_ORDER)) ||
+    !(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_OPERATION))
+  ) {
+    return "denied";
+  }
+  const order = await tx.manufacturingOrder.findUnique({ where: { id: orderId }, include: { outputItem: true } });
+  if (!order) return null;
+
+  const canReadEvidence = await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_EVIDENCE);
+  const ops = await tx.manufacturingOperation.findMany({ where: { orderId: order.id, state: { not: "cancelled" } }, orderBy: { sequence: "asc" } });
+  const results = await tx.manufacturingCheckpointResult.findMany({ where: { operationId: { in: ops.map((o) => o.id) } } });
+  const evidenceIds = results.map((r) => r.evidenceId).filter((v): v is string => v !== null);
+  const evidence = canReadEvidence && evidenceIds.length > 0 ? await tx.evidence.findMany({ where: { id: { in: evidenceIds } } }) : [];
+
+  const stages = ops
+    .map((op) => {
+      const opResults = results.filter((r) => r.operationId === op.id);
+      const latest = latestFindings(opResults);
+      const checks: TestReportCheck[] = readCheckpoints(op.checkpoints).map((c) => {
+        const f = latest.get(c.key);
+        const ev = f?.evidenceId ? evidence.find((e) => e.id === f.evidenceId) : undefined;
+        const reading = ev ? readReadingPayload(ev.payload) : null;
+        return {
+          key: c.key,
+          label: c.label,
+          verdict: f ? (f.result === "pass" ? "pass" : "fail") : null,
+          attempts: opResults.filter((r) => r.checkpointKey === c.key).length,
+          recordedAt: f?.recordedAt ?? null,
+          remarks: f?.remarks ?? null,
+          measured:
+            reading && c.measure
+              ? {
+                  value: reading.value,
+                  unit: reading.unit,
+                  min: c.measure.min ?? null,
+                  max: c.measure.max ?? null,
+                  inRange: withinMeasure(c.measure, reading.value),
+                  condition: reading.condition ?? null,
+                  instrument: reading.instrument ?? null,
+                }
+              : null,
+          unit: c.measure?.unit ?? null,
+          readingNote: ev && !reading ? readingText(ev.payload) : null,
+          photoOnRecord: f?.evidenceId !== null && f?.evidenceId !== undefined,
+        };
+      });
+      return { id: op.id, label: op.label, state: op.state, rework: op.reworkOfId !== null, checks };
+    })
+    .filter((s) => s.checks.length > 0);
+
+  return {
+    tenant: await tenantFacts(tx, actor.tenantId),
+    order: { id: order.id, reference: order.reference, product: order.outputItem.name, quantity: order.outputQty, state: order.state },
+    stages,
   };
 }

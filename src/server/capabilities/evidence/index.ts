@@ -31,6 +31,14 @@ import { reserveUpload, confirmUpload } from "@/server/platform/files";
 export const EVIDENCE_CAPABILITY = "verity.capability.evidence";
 export const ENTITY_EVIDENCE = "verity.evidence.evidence";
 
+const measuredReading = z.strictObject({
+  value: z.number().finite(),
+  unit: z.string().trim().min(1).max(12),
+  condition: z.string().trim().max(120).optional(),
+  instrument: z.string().trim().max(120).optional(),
+  photoEvidenceId: z.string().uuid().optional(),
+});
+
 export const captureEvidence: CommandDefinition<
   {
     entityKey: string;
@@ -71,7 +79,17 @@ export const captureEvidence: CommandDefinition<
     }
   },
   handler: async (ctx, input) => {
-    if (input.payload) await validateCustomFields(ctx.tx, ENTITY_EVIDENCE, input.payload);
+    if (input.payload) {
+      if (input.kind === "Reading" && "value" in input.payload && "unit" in input.payload) {
+        // A measured reading is a platform-defined shape (a value in a unit), not tenant custom data.
+        const parsed = measuredReading.safeParse(input.payload);
+        if (!parsed.success) {
+          throw new Error(`E_VALIDATION: a measured reading needs a number and a unit (${parsed.error.issues.map((i) => i.path.join(".") || "payload").join(", ")})`);
+        }
+      } else {
+        await validateCustomFields(ctx.tx, ENTITY_EVIDENCE, input.payload);
+      }
+    }
     // Judge against the fence now and record the verdict, because the fence may
     // move later and the verdict must not move with it.
     let withinFence: boolean | null = null;

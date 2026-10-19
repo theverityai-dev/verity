@@ -37,8 +37,41 @@ const checkpointSchema = z.object({
   label: z.string().trim().min(1).max(200),
   requireEvidence: z.boolean().default(false),
   requireRemarks: z.boolean().default(false),
+  /**
+   * A measured check. The unit belongs to the check and is never typed by whoever records a reading, so a value
+   * cannot be entered in the wrong unit. `min` and `max` are the accepted range: a value outside it cannot be
+   * recorded as a pass.
+   */
+  measure: z
+    .object({
+      unit: z.string().trim().min(1).max(12),
+      min: z.number().finite().optional(),
+      max: z.number().finite().optional(),
+    })
+    .refine((m) => m.min === undefined || m.max === undefined || m.min <= m.max, "min is above max")
+    .optional(),
 });
 export type Checkpoint = z.infer<typeof checkpointSchema>;
+
+/** The structured part of a Reading evidence payload for a measured check. */
+export type ReadingPayload = { value: number; unit: string; condition?: string; instrument?: string; photoEvidenceId?: string };
+
+export function readReadingPayload(payload: unknown): ReadingPayload | null {
+  if (!payload || typeof payload !== "object") return null;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.value !== "number" || !Number.isFinite(p.value) || typeof p.unit !== "string") return null;
+  return {
+    value: p.value,
+    unit: p.unit,
+    condition: typeof p.condition === "string" && p.condition ? p.condition : undefined,
+    instrument: typeof p.instrument === "string" && p.instrument ? p.instrument : undefined,
+    photoEvidenceId: typeof p.photoEvidenceId === "string" ? p.photoEvidenceId : undefined,
+  };
+}
+
+export function withinMeasure(measure: { min?: number; max?: number }, value: number): boolean {
+  return (measure.min === undefined || value >= measure.min) && (measure.max === undefined || value <= measure.max);
+}
 
 const stageInput = z.object({
   stageKey: stageKeySchema,
@@ -384,8 +417,10 @@ export const recordCheckpoint: CommandDefinition<
     const checkpoint = readCheckpoints(op.checkpoints).find((c) => c.key === input.checkpointKey);
     if (!checkpoint) throw new ValidationError("E_VALIDATION: that checkpoint is not part of this stage's checklist");
 
-    if (checkpoint.requireEvidence && !input.evidenceId) {
-      throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs a photo or other evidence`);
+    if ((checkpoint.requireEvidence || checkpoint.measure) && !input.evidenceId) {
+      throw new ValidationError(
+        `E_VALIDATION: ${checkpoint.label} needs ${checkpoint.measure ? "a recorded reading" : "a photo or other evidence"}`,
+      );
     }
     if ((input.result === "fail" || checkpoint.requireRemarks) && (input.remarks ?? "").length < 3) {
       throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs remarks${input.result === "fail" ? " when it fails" : ""}`);
@@ -394,6 +429,26 @@ export const recordCheckpoint: CommandDefinition<
       const evidence = await ctx.tx.evidence.findUnique({ where: { id: input.evidenceId } });
       if (!evidence || evidence.entityKey !== ENTITY_MANUFACTURING_OPERATION || evidence.entityId !== op.id) {
         throw new ValidationError("E_VALIDATION: that evidence was not captured for this operation");
+      }
+      if (checkpoint.measure) {
+        const reading = evidence.kind === "Reading" ? readReadingPayload(evidence.payload) : null;
+        if (!reading) throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs a numeric reading`);
+        if (reading.unit !== checkpoint.measure.unit) {
+          throw new ValidationError(`E_VALIDATION: ${checkpoint.label} is measured in ${checkpoint.measure.unit}, not ${reading.unit}`);
+        }
+        if (input.result === "pass" && !withinMeasure(checkpoint.measure, reading.value)) {
+          throw new ValidationError(
+            `E_VALIDATION: ${reading.value} ${reading.unit} is outside the accepted range for ${checkpoint.label}; record it as a fail`,
+          );
+        }
+        if (checkpoint.requireEvidence) {
+          const photo = reading.photoEvidenceId
+            ? await ctx.tx.evidence.findUnique({ where: { id: reading.photoEvidenceId } })
+            : null;
+          if (!photo || photo.entityKey !== ENTITY_MANUFACTURING_OPERATION || photo.entityId !== op.id) {
+            throw new ValidationError(`E_VALIDATION: ${checkpoint.label} needs a photo of the instrument or the set-up`);
+          }
+        }
       }
     }
 

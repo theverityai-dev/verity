@@ -23,20 +23,30 @@ export function stageKeyFor(label: string): string {
  */
 export function parseChecklist(text: string) {
   const seen = new Map<string, number>();
+  const bound = (line: string, word: "min" | "max") => {
+    const m = line.match(new RegExp(`\\[${word}\\s+(-?[\\d.,]+)\\]`, "i"));
+    const n = m ? Number(m[1]!.replace(/,/g, "")) : NaN;
+    return Number.isFinite(n) ? n : undefined;
+  };
   return text
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => {
-      const label = line.replace(/\[(photo|note)\]/gi, "").trim();
+      const label = line.replace(/\[(photo|note)\]/gi, "").replace(/\[unit\s+[^\]]*\]/gi, "").replace(/\[(min|max)\s+[^\]]*\]/gi, "").trim();
       const base = stageKeyFor(label);
       const n = (seen.get(base) ?? 0) + 1;
       seen.set(base, n);
+      const unit = line.match(/\[unit\s+([^\]\s]{1,12})\]/i)?.[1];
+      const min = bound(line, "min");
+      const max = bound(line, "max");
       return {
         key: n === 1 ? base : `${base}_${n}`.slice(0, 40),
         label,
         requireEvidence: /\[photo\]/i.test(line),
         requireRemarks: /\[note\]/i.test(line),
+        // A range with no unit has nothing to be measured in, so it is ignored rather than guessed.
+        ...(unit ? { measure: { unit, ...(min !== undefined ? { min } : {}), ...(max !== undefined ? { max } : {}) } } : {}),
       };
     })
     .filter((c) => c.label);
@@ -130,7 +140,7 @@ export function CreateRouteForm() {
                   Remove
                 </Button>
               </div>
-              <Field label="Checklist (optional)" htmlFor={`checklist-${s.key}`} hint="One per line. Add [photo] or [note] to require them.">
+              <Field label="Checklist (optional)" htmlFor={`checklist-${s.key}`} hint="One per line. Add [photo] or [note] to require them. For a measured check add [unit MΩ] and optionally [min 1000] [max 5000].">
                 <Textarea
                   id={`checklist-${s.key}`}
                   rows={3}

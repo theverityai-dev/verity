@@ -273,3 +273,43 @@ export function Gauge({
     </span>
   );
 }
+
+/* ------------------------------ range meter ------------------------------- */
+
+/**
+ * A measured reading against its accepted range: a track, the accepted band, and a marker for the value. Drawn
+ * only when the check really has a range (a reading with no limits has nothing to be compared with, and a bare
+ * marker would imply a verdict nobody defined). Inside the band the marker is the "completed" state colour,
+ * outside it the "blocked" one; the figures are written beside it so colour is never the only signal.
+ */
+export function RangeMeter({ value, min, max, unit }: { value: number; min: number | null; max: number | null; unit: string }) {
+  if (min === null && max === null) return null;
+  const inRange = (min === null || value >= min) && (max === null || value <= max);
+  const bound = (min ?? max) as number;
+  const pad = min !== null && max !== null ? (max - min || Math.abs(bound) || 1) * 0.5 : Math.max(Math.abs(value - bound) * 1.2, Math.abs(bound) * 0.25, 1);
+  const lo = min !== null ? min - pad : bound - pad;
+  const hi = max !== null ? max + pad : bound + pad;
+  const at = (n: number) => `${Math.min(98, Math.max(2, ((n - lo) / (hi - lo)) * 100)).toFixed(1)}%`;
+  const bandLeft = min !== null ? at(min) : "0%";
+  const bandRight = max !== null ? at(max) : "100%";
+  const fmt = (n: number) => n.toLocaleString("en-IN");
+  const accepted = min !== null && max !== null ? `${fmt(min)} to ${fmt(max)}` : min !== null ? `at least ${fmt(min)}` : `at most ${fmt(max as number)}`;
+  return (
+    <div role="img" aria-label={`${fmt(value)} ${unit}, accepted ${accepted} ${unit}, ${inRange ? "within range" : "outside range"}`} className="w-full min-w-32">
+      <div className="relative h-5">
+        <span aria-hidden="true" className="absolute inset-x-0 top-2 h-1 rounded-full bg-[var(--color-control-strong)]" />
+        <span
+          aria-hidden="true"
+          className="absolute top-1.5 h-2 rounded-full"
+          style={{ left: bandLeft, right: `calc(100% - ${bandRight})`, backgroundColor: "var(--color-state-completed)", opacity: 0.28 }}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute top-0.5 size-4 -translate-x-1/2 rounded-full border-2 border-[var(--color-surface)]"
+          style={{ left: at(value), backgroundColor: inRange ? "var(--color-state-completed)" : "var(--color-state-blocked)" }}
+        />
+      </div>
+      <p className="m-0 mt-0.5 text-[12px] text-text-tertiary">Accepted: {accepted} {unit}</p>
+    </div>
+  );
+}

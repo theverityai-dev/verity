@@ -173,6 +173,7 @@ async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) 
       {(canSeeStages || dispatch?.status) && (
         <p className="m-0 mb-6 flex flex-wrap gap-x-6 gap-y-1 text-[15px]">
           {canSeeStages && stages.length > 0 && <Link href={`/manufacturing/${order.id}/traveler`} className="text-accent-ink">Print job card and traveler</Link>}
+          {canSeeStages && stages.length > 0 && <Link href={`/manufacturing/${order.id}/test-report`} className="text-accent-ink">Test report</Link>}
           {dispatch?.status && <Link href={`/manufacturing/${order.id}/dispatch-pack`} className="text-accent-ink">Print dispatch pack</Link>}
         </p>
       )}
