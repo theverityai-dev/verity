@@ -26,14 +26,14 @@ documents, manufacturing, structured test records and dispatch, rather than on a
 | **Total including GST** | **₹4,72,000** |
 | Licence | Perpetual, for DSEW's own business, one site, up to 15 named users |
 | Annual or per-user licence fee | None. The only recurring charge is the testing-period fee below |
-| Testing period | 12 months from go-live, as DSEW requires, at **₹8,500 per month** (ex GST) for the whole period: ₹1,02,000 |
+| 12-month bundled fee | 12 months from go-live, as DSEW requires, at **₹8,500 per month** (ex GST): ₹1,02,000. It bundles the defect warranty, testing and UAT assistance, and routine maintenance. No separate warranty or maintenance charge applies in those 12 months |
 | Delivery | About 11 weeks from the effective date (document 2) |
 
 | First 12 months, all charges | ₹ ex GST | GST 18% | ₹ incl. GST |
 |---|---|---|---|
 | One-time licence and implementation fee | 4,00,000 | 72,000 | 4,72,000 |
-| Testing period: 12 months at 8,500 | 1,02,000 | 18,360 | 1,20,360 |
-| **Total** | **5,02,000** | **90,360** | **5,92,360** |
+| 12-month bundled fee: 12 months at 8,500 | 1,02,000 | 18,360 | 1,20,360 |
+| **Contract value for the first 12 months** | **5,02,000** | **90,360** | **5,92,360** |
 
 More users, more sites and new modules are quoted separately. No other phase is priced in this document.
 
@@ -93,19 +93,30 @@ would review your TallyPrime setup and quote it separately.
 
 ## 5. The 12-month testing period
 
-DSEW will test Verity in its real workflows for **12 months from go-live**. For that whole period we charge
-**₹8,500 per month** (₹1,02,000 ex GST for 12 months; ₹10,030 per month including 18% GST), invoiced [monthly in
-advance, company to confirm]. It starts at go-live and ends after 12 months. [Company to confirm what the monthly fee
-covers; the list below is the proposed cover.]
+DSEW will test Verity in its real workflows for **12 months from go-live**. For that whole period we charge one
+bundled fee of **₹8,500 per month** (₹1,02,000 ex GST for 12 months; ₹10,030 per month including 18% GST), invoiced
+[monthly in advance, company to confirm]. It starts at go-live and ends after 12 months.
 
-- **Covered by the monthly fee:** correcting reproducible defects where the system does not meet the agreed
-  specification (including those found in UAT), keeping the DSEW installation running on Verity's tested releases,
-  help with backup and restore, and recording DSEW's testing feedback.
-- **Quoted separately:** new features, changes to approved requirements, new product families, reports, formats,
-  integrations, users or sites. DSEW's feedback is used to prioritise them; each is recorded, quoted and approved by
-  you in writing before any work.
-- **Not included:** support after the 12 months. No annual contract is included in this offer; support after the
-  testing period would be agreed separately in writing.
+**The bundled fee replaces a separate warranty, a separate testing-support charge and a separate maintenance contract.
+None of them is charged on top during the 12 months.** It covers exactly three things:
+
+1. **Defect warranty.** Correcting any reproducible defect where Verity does not meet the signed Phase 1 requirements,
+   whether found in UAT or at any time in the 12 months. A defect caused by DSEW's own changes, hardware, network or
+   third-party software is not a Verity defect.
+2. **Testing and UAT assistance.** Helping DSEW run the agreed UAT scripts and test real jobs, reproducing and triaging
+   each reported issue, recording DSEW's feedback, and reviewing reported issues and feedback with DSEW at an interval
+   agreed at the start.
+3. **Routine maintenance.** Keeping the DSEW installation on Verity's tested releases (stability and security
+   updates), helping run and check backups and restores, and administrator guidance by email (team@plotarmour.in) and
+   phone (+91 87440 69597). No response-time commitment is made.
+
+**Not covered. Each is quoted separately and needs DSEW's written approval before any work:** new features; changes
+to agreed workflows or to a requirement DSEW has already accepted; additional integrations (including Tally Prime);
+new product families, reports, formats, users or sites; data cleansing or migration beyond the agreed imports; hardware
+or network faults; and on-site work. DSEW's testing feedback is used to prioritise and quote these.
+
+**After the 12 months,** no warranty, testing support or maintenance is included. Any support afterwards needs a
+separately agreed renewal in writing. No annual contract is part of this offer.
 - **Travel:** the fee assumes remote work apart from the site survey visit. [On-site days: company to decide whether
   included or charged at cost.]
 
