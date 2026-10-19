@@ -291,3 +291,68 @@ export async function loadTestReport(
     stages,
   };
 }
+
+export type OrderPhoto = {
+  id: string;
+  caption: string;
+  capturedAt: Date;
+  /** A platform-stored file, readable through a short-lived signed link. */
+  fileId: string | null;
+  /** An external https link for a photo the platform does not host. Anything else is "on record" only. */
+  uri: string | null;
+};
+
+/**
+ * The photographs behind one order's latest findings and its dispatch: the instrument or set-up photo of each check
+ * and the packed-order photo. Evidence is its own entity, so a reader without Read on it gets an empty list rather
+ * than a refusal. A photo that has no stored file and no external link is still listed, so the file can say it is
+ * on record without pretending to show it.
+ */
+export async function loadOrderPhotos(
+  tx: TenantScopedClient,
+  actor: Reader & { tenantId: string },
+  orderId: string,
+): Promise<OrderPhoto[]> {
+  if (
+    !(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_EVIDENCE)) ||
+    !(await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_ORDER))
+  ) {
+    return [];
+  }
+  const photos: OrderPhoto[] = [];
+  const seen = new Set<string>();
+  const add = (e: { id: string; fileId: string | null; uri: string | null; capturedAt: Date }, caption: string) => {
+    if (seen.has(e.id)) return;
+    seen.add(e.id);
+    photos.push({ id: e.id, caption, capturedAt: e.capturedAt, fileId: e.fileId, uri: e.uri && /^https:\/\//i.test(e.uri) ? e.uri : null });
+  };
+
+  if (await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_OPERATION)) {
+    const ops = await tx.manufacturingOperation.findMany({ where: { orderId, state: { not: "cancelled" } }, orderBy: { sequence: "asc" } });
+    const results = await tx.manufacturingCheckpointResult.findMany({ where: { operationId: { in: ops.map((o) => o.id) } } });
+    const evidenceIds = results.map((r) => r.evidenceId).filter((v): v is string => v !== null);
+    const evidence = evidenceIds.length > 0 ? await tx.evidence.findMany({ where: { id: { in: evidenceIds } } }) : [];
+    const linkedPhotoIds = evidence.map((e) => readReadingPayload(e.payload)?.photoEvidenceId).filter((v): v is string => v !== undefined);
+    const linked = linkedPhotoIds.length > 0 ? await tx.evidence.findMany({ where: { id: { in: linkedPhotoIds } } }) : [];
+    for (const op of ops) {
+      const latest = latestFindings(results.filter((r) => r.operationId === op.id));
+      for (const c of readCheckpoints(op.checkpoints)) {
+        const f = latest.get(c.key);
+        const ev = f?.evidenceId ? evidence.find((e) => e.id === f.evidenceId) : undefined;
+        if (!ev) continue;
+        const caption = `${op.label}: ${c.label}`;
+        if (ev.kind === "Photo") add(ev, caption);
+        const photoId = readReadingPayload(ev.payload)?.photoEvidenceId;
+        const photo = photoId ? linked.find((e) => e.id === photoId && e.entityId === op.id) : undefined;
+        if (photo) add(photo, `${caption} (instrument or set-up)`);
+      }
+    }
+  }
+
+  if (await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_MANUFACTURING_DISPATCH)) {
+    const sent = await tx.manufacturingDispatch.findFirst({ where: { orderId, status: "dispatched" }, orderBy: { recordedAt: "asc" } });
+    const packed = sent?.packagingEvidenceId ? await tx.evidence.findUnique({ where: { id: sent.packagingEvidenceId } }) : null;
+    if (packed) add(packed, "Packed order, before dispatch");
+  }
+  return photos;
+}

@@ -66,14 +66,14 @@ export function PhotoCapture({
       setState({ phase: "working", preview });
       onCaptured(null);
 
-      const reserved = await runCommand<{ fileId: string; uploadUrl?: string }>("verity.evidence.reserve_file", {
+      const reserved = await runCommand<{ fileId: string; uploadUrl?: string; uploadHeaders?: Record<string, string> }>("verity.evidence.reserve_file", {
         entityKey, entityId, fileName: `photo-${Date.now()}.jpg`, mimeType: "image/jpeg", byteSize: blob.size,
       });
       if (!reserved.ok) return setState({ phase: "error", message: reserved.message });
       if (!reserved.data.uploadUrl) return setState({ phase: "error", message: "File storage is not set up on this server." });
 
       const bytes = await blob.arrayBuffer();
-      const put = await fetch(reserved.data.uploadUrl, { method: "PUT", headers: { "content-type": "image/jpeg" }, body: bytes });
+      const put = await fetch(reserved.data.uploadUrl, { method: "PUT", headers: reserved.data.uploadHeaders ?? { "content-type": "image/jpeg" }, body: bytes });
       if (!put.ok) return setState({ phase: "error", message: `The upload did not go through (${put.status}). Try again.` });
 
       const stored = await runCommand<{ id: string | null; status: "Stored" | "Quarantined" }>(

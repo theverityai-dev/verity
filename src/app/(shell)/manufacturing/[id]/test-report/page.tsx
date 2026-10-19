@@ -7,8 +7,8 @@ import { loadTestReport } from "@/server/capabilities/manufacturing/documents";
 import { jobForOrder } from "@/server/capabilities/project";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
-import { dateText } from "../../../jobs/format";
-import { TestReportView, type TestReportDoc } from "./TestReportView";
+import { testReportDoc } from "../document-data";
+import { TestReportView } from "./TestReportView";
 
 export const dynamic = "force-dynamic";
 
@@ -31,34 +31,7 @@ async function TestReportPage({ params }: { params: Promise<{ id: string }> }) {
   if (loaded === "denied") return <PermissionDenied what="viewing this test report" />;
   if (!loaded) notFound();
 
-  const { record, job } = loaded;
-  const doc: TestReportDoc = {
-    business: record.tenant.name,
-    demo: record.tenant.demo,
-    reference: record.order.reference ?? `MO ${record.order.id.slice(0, 8)}`,
-    product: record.order.product,
-    quantity: record.order.quantity,
-    job: job ? { reference: job.reference, title: job.title, customer: job.customer?.name ?? null } : null,
-    stages: record.stages.map((s) => ({
-      id: s.id,
-      label: s.label,
-      rework: s.rework,
-      checks: s.checks.map((c) => ({
-        key: c.key,
-        label: c.label,
-        verdict: c.verdict,
-        attempts: c.attempts,
-        on: c.recordedAt ? dateText(c.recordedAt) : null,
-        remarks: c.remarks,
-        unit: c.unit,
-        measured: c.measured,
-        readingNote: c.readingNote,
-        photoOnRecord: c.photoOnRecord,
-      })),
-    })),
-    printedOn: new Date().toLocaleString("en-IN", { timeZone: record.tenant.timeZone, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
-    backHref: `/manufacturing/${record.order.id}`,
-  };
+  const doc = testReportDoc(loaded.record, loaded.job);
 
   return (
     <>

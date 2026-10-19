@@ -65,7 +65,8 @@ function headline(t: ReturnType<typeof totals>): { text: string; tone: "complete
   return { text: `All ${t.total} checks passed`, tone: "completed" };
 }
 
-export function TestReportView({ doc }: { doc: TestReportDoc }) {
+/** `sheetOnly` returns just the document sheet, for embedding in the project file. */
+export function TestReportView({ doc, sheetOnly = false }: { doc: TestReportDoc; sheetOnly?: boolean }) {
   const t = totals(doc);
   const head = headline(t);
 
@@ -171,6 +172,8 @@ export function TestReportView({ doc }: { doc: TestReportDoc }) {
       {doc.demo && <p className="m-0 mt-3 text-[10.5px] text-text-tertiary">Demo data: every name, number and value on this sheet is fictional.</p>}
     </article>
   );
+
+  if (sheetOnly) return printable;
 
   return (
     <>

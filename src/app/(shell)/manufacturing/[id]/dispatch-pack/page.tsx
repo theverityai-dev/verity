@@ -7,8 +7,8 @@ import { loadDispatchPack } from "@/server/capabilities/manufacturing/documents"
 import { jobForOrder } from "@/server/capabilities/project";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { EmptyState, PageHeader, PermissionDenied } from "@/components/ui/primitives";
-import { dateText } from "../../../jobs/format";
-import { DispatchPackDoc, type DispatchPackData } from "./DispatchPackDoc";
+import { dispatchPackDoc } from "../document-data";
+import { DispatchPackDoc } from "./DispatchPackDoc";
 
 export const dynamic = "force-dynamic";
 
@@ -40,39 +40,7 @@ async function DispatchPackPage({ params }: { params: Promise<{ id: string }> })
   }
   if (!loaded) notFound();
 
-  const { record, job } = loaded;
-  const doc: DispatchPackData = {
-    business: record.tenant.name,
-    demo: record.tenant.demo,
-    reference: record.order.reference ?? `MO ${record.order.id.slice(0, 8)}`,
-    product: record.order.product,
-    quantity: record.order.quantity,
-    job: job ? { reference: job.reference, title: job.title } : null,
-    customer: job ? job.customer : null,
-    dispatch: {
-      dispatchedOn: dateText(record.sent.recordedAt),
-      transporter: record.sent.transporter ?? "—",
-      vehicleNo: record.sent.vehicleNo,
-      trackingRef: record.sent.trackingRef,
-      note: record.sent.note,
-      photoOnRecord: record.sent.photoOnRecord,
-    },
-    delivered: record.deliveredAt ? dateText(record.deliveredAt) : null,
-    materials: record.materials,
-    checks:
-      record.checks?.map((c) => ({
-        id: c.id,
-        stage: c.stage,
-        label: c.label,
-        verdict: c.verdict === "pass" ? "Passed" : "Failed",
-        on: dateText(c.recordedAt),
-        remarks: c.remarks,
-        reading: c.reading,
-      })) ?? null,
-    passport: record.passport ? { issuedOn: dateText(record.passport.issuedAt), reference: record.passport.reference } : null,
-    printedOn: new Date().toLocaleString("en-IN", { timeZone: record.tenant.timeZone, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }),
-    backHref: `/manufacturing/${record.order.id}`,
-  };
+  const doc = dispatchPackDoc(loaded.record, loaded.job);
 
   return (
     <>

@@ -139,7 +139,7 @@ export const captureEvidence: CommandDefinition<
  */
 export const reserveEvidenceFile: CommandDefinition<
   { entityKey: string; entityId: string; fileName: string; mimeType: string; byteSize: number },
-  { fileId: string; uploadUrl?: string }
+  { fileId: string; uploadUrl?: string; uploadHeaders?: Record<string, string> }
 > = {
   key: "verity.evidence.reserve_file",
   entity: ENTITY_EVIDENCE,
@@ -161,7 +161,8 @@ export const reserveEvidenceFile: CommandDefinition<
       entityKey: input.entityKey,
       entityId: input.entityId,
     });
-    return { result: { fileId: reserved.fileId, uploadUrl: reserved.uploadUrl }, events: [] };
+    // Some drivers sign headers into the upload URL (S3 signs `if-none-match`); the browser must send them as given.
+    return { result: { fileId: reserved.fileId, uploadUrl: reserved.uploadUrl, uploadHeaders: reserved.uploadHeaders }, events: [] };
   },
 };
 

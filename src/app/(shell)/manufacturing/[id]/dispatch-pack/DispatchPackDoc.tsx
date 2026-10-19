@@ -23,7 +23,7 @@ export type DispatchPackData = {
 };
 
 /** The packing list, delivery note and the test checks that supported the release, as one sheet. */
-export function DispatchPackDoc({ doc }: { doc: DispatchPackData }) {
+export function DispatchPackDoc({ doc, sheetOnly = false }: { doc: DispatchPackData; sheetOnly?: boolean }) {
   const body = (
     <article className="text-[12.5px] leading-[18px] text-text">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-text pb-3">
@@ -146,6 +146,8 @@ export function DispatchPackDoc({ doc }: { doc: DispatchPackData }) {
       {doc.demo && <p className="m-0 mt-3 text-[10.5px] text-text-tertiary">Demo data: every name, number and value on this sheet is fictional.</p>}
     </article>
   );
+
+  if (sheetOnly) return body;
 
   return (
     <>
