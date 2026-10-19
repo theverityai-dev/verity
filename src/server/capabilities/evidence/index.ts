@@ -4,6 +4,7 @@ import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { withinGeofence } from "@/server/capabilities/location";
+import { reserveUpload, confirmUpload } from "@/server/platform/files";
 
 /**
  * CAPABILITY: Evidence — `verity.capability.evidence`
@@ -112,6 +113,88 @@ export const captureEvidence: CommandDefinition<
   },
 };
 
+/**
+ * Phase one of capturing a photograph from a device camera: reserve a `StoredFile`
+ * (Pending, unreadable) about the subject and hand back an upload URL. No evidence
+ * row exists until `captureEvidenceFile` confirms the bytes, so an Evidence row can
+ * never claim a photograph that did not arrive.
+ */
+export const reserveEvidenceFile: CommandDefinition<
+  { entityKey: string; entityId: string; fileName: string; mimeType: string; byteSize: number },
+  { fileId: string; uploadUrl?: string }
+> = {
+  key: "verity.evidence.reserve_file",
+  entity: ENTITY_EVIDENCE,
+  verb: "Create",
+  input: z.object({
+    entityKey: z.string().min(1),
+    entityId: z.string().uuid(),
+    fileName: z.string().min(1).max(200),
+    mimeType: z.enum(["image/jpeg", "image/png", "image/webp"]),
+    byteSize: z.number().int().positive(),
+  }),
+  handler: async (ctx, input) => {
+    const reserved = await reserveUpload(ctx.tx, {
+      tenantId: ctx.actor.tenantId,
+      uploadedById: (await ctx.tx.user.findUniqueOrThrow({ where: { id: ctx.actor.userId } })).partyId,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      byteSize: input.byteSize,
+      entityKey: input.entityKey,
+      entityId: input.entityId,
+    });
+    return { result: { fileId: reserved.fileId, uploadUrl: reserved.uploadUrl }, events: [] };
+  },
+};
+
+/**
+ * Phase two: confirm the uploaded bytes match what was declared, then record the
+ * Evidence row that points at the sealed file. A mismatch quarantines the file and
+ * records nothing. The reserved file must be about the same subject, so a file
+ * uploaded for one record cannot be attached to another.
+ */
+export const captureEvidenceFile: CommandDefinition<
+  { entityKey: string; entityId: string; fileId: string; checksum: string; byteSize: number; capturedAt: string },
+  { id: string | null; status: "Stored" | "Quarantined" }
+> = {
+  key: "verity.evidence.capture_file",
+  entity: ENTITY_EVIDENCE,
+  verb: "Create",
+  input: z.object({
+    entityKey: z.string().min(1),
+    entityId: z.string().uuid(),
+    fileId: z.string().uuid(),
+    checksum: z.string().min(1),
+    byteSize: z.number().int().positive(),
+    capturedAt: z.string().datetime(),
+  }),
+  handler: async (ctx, input) => {
+    const file = await ctx.tx.storedFile.findUnique({ where: { id: input.fileId } });
+    if (!file || file.entityKey !== input.entityKey || file.entityId !== input.entityId) {
+      throw new Error("E_VALIDATION: that upload was not reserved for this record");
+    }
+    const confirmed = await confirmUpload(ctx.tx, { fileId: input.fileId, checksum: input.checksum, byteSize: input.byteSize });
+    if (!confirmed.ok) return { result: { id: null, status: "Quarantined" }, events: [] };
+
+    const evidence = await ctx.tx.evidence.create({
+      data: {
+        tenantId: ctx.actor.tenantId,
+        entityKey: input.entityKey,
+        entityId: input.entityId,
+        kind: "Photo",
+        fileId: input.fileId,
+        capturedAt: new Date(input.capturedAt),
+        capturedById: ctx.actor.userId,
+        payload: {} as never,
+      },
+    });
+    return {
+      result: { id: evidence.id, status: "Stored" },
+      events: [{ name: "verity.evidence.captured", entityId: evidence.id, payload: { kind: "Photo", subject: input.entityKey, withinFence: null } }],
+    };
+  },
+};
+
 export const listEvidenceFor: QueryDefinition<
   { entityKey: string; entityId: string },
   Array<Record<string, unknown>>
@@ -135,5 +218,7 @@ export function registerEvidenceCapability(): void {
     ],
   });
   registerCommand(captureEvidence);
+  registerCommand(reserveEvidenceFile);
+  registerCommand(captureEvidenceFile);
   registerQuery(listEvidenceFor);
 }

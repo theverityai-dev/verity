@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
+import { PhotoCapture } from "@/components/ui/PhotoCapture";
 import { ChecklistHeader, ChecklistRows, type ChecklistRow } from "@/components/ui/Checklist";
 import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
@@ -40,7 +41,9 @@ export function ChecklistPanel({
   const [items, setItems] = useState<Item[] | null>(null);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [drafting, setDrafting] = useState<{ key: string; result: "pass" | "fail" } | null>(null);
+  const [photoId, setPhotoId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const begin = (key: string, result: "pass" | "fail") => { setPhotoId(null); setDrafting({ key, result }); };
 
   const load = () =>
     startTransition(async () => {
@@ -54,20 +57,12 @@ export function ChecklistPanel({
     setFailure(null);
     startTransition(async () => {
       const remarks = String(fd.get("remarks") ?? "").trim();
-      const photo = String(fd.get("photo") ?? "").trim();
-      let evidenceId: string | undefined;
-      if (photo) {
-        const captured = await runCommand<{ id: string }>(
-          "verity.evidence.capture",
-          { entityKey: OPERATION_ENTITY, entityId: operationId, kind: "Photo", uri: photo, capturedAt: new Date().toISOString() },
-          revalidate,
-        );
-        if (!captured.ok) return setFailure(captured);
-        evidenceId = captured.data.id;
+      if (item.requireEvidence && !photoId) {
+        return setFailure({ ok: false, code: "E_VALIDATION", message: "This check needs a photo. Take one first.", retryable: false });
       }
       const result = await runCommand(
         "verity.manufacturing.record_checkpoint",
-        { operationId, checkpointKey: item.key, result: drafting!.result, remarks: remarks || undefined, evidenceId },
+        { operationId, checkpointKey: item.key, result: drafting!.result, remarks: remarks || undefined, evidenceId: photoId ?? undefined },
         revalidate,
       );
       if (!result.ok) return setFailure(result);
@@ -98,11 +93,11 @@ export function ChecklistPanel({
       actions: open ? undefined : (
         <>
           <CommandButton commands="verity.manufacturing.record_checkpoint" size="sm" variant="secondary" disabled={pending}
-            onClick={() => setDrafting({ key: item.key, result: "pass" })}>
+            onClick={() => begin(item.key, "pass")}>
             Pass
           </CommandButton>
           <CommandButton commands="verity.manufacturing.record_checkpoint" size="sm" variant="danger" disabled={pending}
-            onClick={() => setDrafting({ key: item.key, result: "fail" })}>
+            onClick={() => begin(item.key, "fail")}>
             Fail
           </CommandButton>
         </>
@@ -112,9 +107,8 @@ export function ChecklistPanel({
           <Field label={`Remarks${drafting!.result === "fail" || item.requireRemarks ? " (required)" : ""}`} htmlFor={`rm-${item.key}`}>
             <Input id={`rm-${item.key}`} name="remarks" maxLength={1000} required={drafting!.result === "fail" || item.requireRemarks} autoFocus />
           </Field>
-          <Field label={`Photo link${item.requireEvidence ? " (required)" : ""}`} htmlFor={`ph-${item.key}`}>
-            <Input id={`ph-${item.key}`} name="photo" type="url" placeholder="https://…" required={item.requireEvidence} />
-          </Field>
+          <PhotoCapture key={item.key} entityKey={OPERATION_ENTITY} entityId={operationId} revalidate={revalidate}
+            required={item.requireEvidence} onCaptured={setPhotoId} />
           <div className="flex gap-2">
             <Button type="submit" size="sm" variant="primary" disabled={pending}>
               {drafting!.result === "pass" ? "Record pass" : "Record fail"}

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { ErrorState, Field, Input } from "@/components/ui/primitives";
+import { PhotoCapture } from "@/components/ui/PhotoCapture";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -39,6 +40,7 @@ export function DispatchPanel({
 }) {
   const router = useRouter();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
+  const [packagingPhotoId, setPackagingPhotoId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const trail = events.length > 0 && (
@@ -67,18 +69,9 @@ export function DispatchPanel({
         action={(fd) =>
           startTransition(async () => {
             setFailure(null);
-            const captured = await runCommand<{ id: string }>(
-              "verity.evidence.capture",
-              {
-                entityKey: ORDER_ENTITY,
-                entityId: orderId,
-                kind: "Photo",
-                uri: String(fd.get("photo") ?? "").trim(),
-                capturedAt: new Date().toISOString(),
-              },
-              "/manufacturing",
-            );
-            if (!captured.ok) return setFailure(captured);
+            if (!packagingPhotoId) {
+              return setFailure({ ok: false, code: "E_VALIDATION", message: "Take a photo of the packed order first.", retryable: false });
+            }
             const result = await runCommand(
               "verity.manufacturing.dispatch_order",
               {
@@ -86,7 +79,7 @@ export function DispatchPanel({
                 transporter: String(fd.get("transporter") ?? "").trim(),
                 vehicleNo: String(fd.get("vehicleNo") ?? "").trim() || undefined,
                 trackingRef: String(fd.get("trackingRef") ?? "").trim() || undefined,
-                packagingEvidenceId: captured.data.id,
+                packagingEvidenceId: packagingPhotoId,
                 note: String(fd.get("note") ?? "").trim() || undefined,
               },
               "/manufacturing",
@@ -107,8 +100,8 @@ export function DispatchPanel({
           <Field label="Tracking reference" htmlFor="dispatch-tracking">
             <Input id="dispatch-tracking" name="trackingRef" maxLength={120} />
           </Field>
-          <Field label="Packaging photo" htmlFor="dispatch-photo" required hint="Link to the photo of the packed order.">
-            <Input id="dispatch-photo" name="photo" type="url" required />
+          <Field label="Packaging photo" htmlFor="dispatch-photo" required hint="Photograph the packed order.">
+            <PhotoCapture entityKey={ORDER_ENTITY} entityId={orderId} revalidate="/manufacturing" required onCaptured={setPackagingPhotoId} />
           </Field>
         </div>
         <Field label="Note" htmlFor="dispatch-note" hint="Optional.">

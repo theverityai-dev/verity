@@ -124,6 +124,55 @@ capability needs its own decision."
 | Server specification, VM/runtime options, backup target, recovery expectations, access | | | | |
 | Samples received (drawing, BOM, QAP, ITP, FAT, certificate, traveler, dispatch pack) | | | | |
 
+### Client call findings, 2026-10-19
+
+Source: `Video Project 4.srt` and `Video Project 5.srt` (auto-captioned call transcripts, noisy Hinglish; the
+statements below are the client's words as read from them, **client-stated, not client-validated**). Nothing here is
+approved by the product owner or agreed in a contract.
+
+**Register rows partly answered** (the rows above stay open until the PMs confirm in writing):
+
+| Question | Client-stated answer | Still open |
+|---|---|---|
+| Document numbering convention | Positions: country/region, organization, division, detail/section, document type. Characters 0-9 and A-Z. Drawings use a decimal sub-part scheme (assembly `B4000`, parts `4001.1`, `4001.2`) with `R01`/`R02` revisions. Part and assembly numbers may be plain references (`AP001`, `SA001`). | The exact scheme: the client will send it. Policy owner not named. |
+| Traceability depth | Per-component traceability to origin, including sub-components of an assembly. | Conflicts with D2 (genealogy is outside the baseline). Cost impact undecided. |
+| Samples | Client will send documents and has shared a CRM/document-manager trial; asked us for SOP, challan and invoice samples. | None received by us. |
+| Server and access | Billing and invoicing already run on his own server; confidential data must stay there. Website and CRM are in the cloud. | Specification, backup target, access: unchanged, still blocked. |
+
+**Conflicts with decisions above (resolve before the proposal is final):**
+
+- **D1 ownership.** The client wants full source code and independence because an earlier vendor delivered none.
+  This is the largest contract risk. D1 stands (principle approved), but the proposal wording must address it head
+  on; nothing is promised.
+- **D7 Hindi.** He wants Hindi and English labels for shop-floor workers on Android. D7 lets DSEW override by naming a
+  go-live requirement; the call arguably does. Needs a written answer from DSEW and a product-owner call.
+- **D7 attendance feeding payroll.** His pain is re-entering attendance into the payroll software for salary slips.
+  Payroll stays outside the initial release until DSEW names it; attendance import remains unverified (K90 model
+  and export or API not confirmed).
+- **D2 traceability.** See table above.
+- **PRD customer portal.** The PRD (`prd.md`) says read-only. The client expects client accounts (3-4 users per
+  project) that raise tickets, start discussions and see which files and drawings are shared with them.
+
+**New requirements surfaced (none decided; each needs scope and cost before it is quoted):**
+
+- **Controlled document validity.** Documents such as the Traveller are issued for a limited period (3, 6 or 12
+  months). `phase1-design.md` has no expiry or validity window.
+- **Per-client, per-product checklists** that the client builds himself, with photo and video approval fields.
+- **Test report summary plus detail.** Clients read a summary first and open the detail only on a failure. Each
+  result carries its test condition (for example before casting, on magnet). Unit correctness is critical: a
+  mH/H mix-up reached a client. Entry must produce a print-ready report. This sharpens D4.
+- **Export Project Data PDF.** One action bundles photos, drawings and records into the stamped manufacturing and
+  inspection file submitted at project end. The client called it very important.
+- **Drawings shared with the client before manufacturing**, so a mistake is caught early.
+- **Returnable material** sent out for cutting: tracking and a receipt stamp.
+- **Attendance constraints.** Mobile phones are banned on the shop floor, so geofenced phone attendance is out.
+  Chemical-covered hands break thumbprints (RFID cards were added; cards get swapped). A shop-floor tablet with face
+  scan was floated and left open. Needs a client decision.
+- **Usability bar.** He dropped ERPNext on UI complexity. Data-entry staff are non-technical and the shop floor
+  uses Android phones.
+- **Hosting split.** Confidential client data under NDA stays on his server; a cloud-only design will not pass. This
+  is consistent with D3 and the on-prem work and changes nothing there.
+
 Distinctions that must stay explicit: **approved in principle** D1, D5, D6; **not agreed with the client** contract
 wording and the Tally synchronisation specification; **not proven** Windows Server 2019 compatibility and the K90
 attendance integration. Docker Desktop running local tests proves nothing about the client's server.
