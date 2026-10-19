@@ -2,7 +2,7 @@
 
 D & S Electric Works. Position on section 5 of your enquiry.
 
-> **Status: DRAFT. Not approved.** Only the principle below is agreed internally. Source-access rights, escrow, and
+> **Status: NEGOTIATION DRAFT. Not approved.** Only the principle below is agreed internally. Source-access rights, escrow, and
 > intellectual-property clauses are **unresolved** and listed in section 4 for the company's decision. Nothing here
 > is a contractual commitment until approved by the company, agreed with DSEW and signed.
 
@@ -10,7 +10,8 @@ D & S Electric Works. Position on section 5 of your enquiry.
 
 - **The Verity platform remains the property of [Company legal name].** This includes its pre-existing core and reusable
   capabilities (tenant isolation, permissions, audit, stock, approvals, manufacturing, project and quality foundations).
-- **DSEW owns its business data**, including everything it enters or uploads, and can export it in open formats at any time.
+- **DSEW owns its business data**, including everything it enters or uploads. Phase 1 includes one documented export
+  (records as CSV, files in original form with an index) at handover and once more on request during warranty.
 - **DSEW owns its DSEW-specific configuration**: numbering rules, templates, workflows, forms, roles, test and traveller
   formats, report layouts.
 - We do not use DSEW's confidential data, drawings, specifications, prices or quality formats for anyone else.
@@ -19,7 +20,7 @@ D & S Electric Works. Position on section 5 of your enquiry.
 
 | Component | Owner | DSEW's position |
 |---|---|---|
-| DSEW business data and uploaded documents | DSEW | Full ownership; open-format export |
+| DSEW business data and uploaded documents | DSEW | Full ownership; the Phase 1 export (CSV and original files) |
 | DSEW-specific configuration (see section 1) | DSEW | Full ownership, documented at handover |
 | Verity platform core and reusable capabilities | [Company legal name] | Right to use for DSEW's own business, terms to be defined (section 4) |
 | Code written only for DSEW under this contract | **Unresolved** (section 4) | To be decided |
@@ -48,9 +49,14 @@ None of these is approved, priced or promised. **No escrow fee and no source-acc
 | 1 | Whether DSEW receives platform source, and on what terms | None; read/maintain-only access for DSEW's deployment; or other |
 | 2 | Whether any independent escrow arrangement is offered | None; or an escrow arrangement priced separately if separately authorised |
 | 3 | Ownership of code written only for DSEW | Company-owned and licensed; or DSEW-owned |
-| 4 | Whether DSEW's funded features become reusable by the company, and under what confidentiality limits | Reusable with DSEW data excluded; or exclusive to DSEW |
-| 5 | Licence scope, term, termination and what happens if the company stops supporting the product | To be drafted by counsel |
-| 6 | Liability, warranty and indemnity clauses | To be drafted by counsel |
+| 4 | Whether DSEW's funded features become reusable by the company, and under what confidentiality limits. DSEW's confidential drawings, prices, specifications and formats are not reused in any case | Reusable general code with DSEW data and formats excluded; or exclusive to DSEW |
+| 5 | Rights to maintain, modify, deploy and keep operating the solution if the company stops supporting it | To be decided with the source-access choice in row 1 |
+| 6 | Licence scope, term and termination | To be drafted by counsel |
+| 7 | Liability, warranty and indemnity clauses | To be drafted by counsel |
+
+**This document is a negotiation draft. It does not answer DSEW's source-code questions finally, and it is not ready
+for signature.** Rows 1 to 7 must be decided by the company, and the clauses reviewed by counsel, before the package is
+presented as a response ready for acceptance.
 
 ## 5. Confidentiality
 

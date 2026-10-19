@@ -1,7 +1,7 @@
 # Company, Team and Experience
 
-> **Before sending:** fields in [square brackets] must be completed by us. We have deliberately not filled in any
-> statement about clients, years or references that we cannot back with a document.
+> **Status: NEGOTIATION DRAFT.** Fields in [square brackets] must be completed by the company before sending. We have
+> deliberately not filled in any statement about clients, years or references that we cannot back with a document.
 
 ## 1. Company profile
 
@@ -14,62 +14,66 @@
 | Contact | [Name, phone, email] |
 | Website | [URL] |
 
-**Who we are.** [Company legal name] is a new-age software company building Verity, a business operating platform
-for service and manufacturing organisations. We are a small, senior team, which means the people who design the
-system are the people who build it and support it. We do not hand your project to a junior pool after the sale.
+**Who we are.** [Company legal name] builds Verity, a business operating platform for service and manufacturing
+organisations. [Company to describe its size and team accurately; no claim about team seniority or staffing is made in
+this draft.]
 
-## 2. What exists already and what will be built for DSEW
+## 2. What exists today and what is built for DSEW
 
-| Capability | Exists in the platform today | Built specifically for DSEW |
+"Exists today" means the capability is present in the platform and has been exercised with fictional data. It does not
+mean it has been configured or validated for DSEW or accepted on DSEW's host.
+
+| Capability | Exists in the platform today | Built or configured for DSEW in Phase 1 |
 |---|---|---|
 | Per-company data isolation enforced in the database; role, entity and scope permissions; audit trail | Yes | Role set for DSEW |
-| Authentication through an identity provider, with an on-premises (Keycloak) mode | Yes | DSEW configuration |
-| Stock ledger with reversal-only corrections; items, balances, counts | Yes | Lot/heat, bins, valuation reports |
-| Manufacturing orders from a BOM, route stages, operations, hold, QC checkpoints with evidence, dispatch, reservations | Yes | Revisioned BOM, measured values, hold/witness points |
-| Project jobs with milestones, tasks, timesheets, cost lines, quote revisions | Yes | WBS depth, risk register, DSEW templates |
-| Approvals, notification outbox, evidence storage, QR passport for finished units | Yes | DSEW workflows |
-| Backup, restore, upgrade scripts and a containerised installation package | Yes | Validation on DSEW's host |
-| Revision-controlled BOM, controlled documents, structured test records (Phase 1); MRP, contracts, payroll, AI, Hindi (future phases) | No | Phase 1 items only; Tally integration is excluded |
+| Authentication through an identity provider, with an on-premises (Keycloak) mode | Yes, tested on company test environments | DSEW configuration |
+| Stock ledger with reversal-only corrections; items, balances, counts | Yes | Used as is |
+| Manufacturing orders from a BOM, route stages, operations, hold, QC checkpoints with evidence, dispatch, reservations | Yes | BOM revisions, measured values, gates |
+| Project jobs with milestones, tasks, timesheets, cost lines, quote revisions | Yes | DSEW templates and formats |
+| Approvals, evidence storage, QR passport for finished units | Yes | DSEW workflows |
+| Install, backup, restore and upgrade scripts and a containerised installation package | Scripts and package exist. A combined database, files and identity restore has **not yet** been rehearsed end to end, and nothing has been tested on DSEW's host | Rehearsal and acceptance on DSEW's host |
+| Revision-controlled BOM, controlled documents, structured test records | No | Built in Phase 1 |
+| Everything marked future phase, and Tally Prime integration | No | Not in Phase 1 (Tally excluded) |
 
 ## 3. Relevant experience
 
+[The company must replace each cell with a verifiable statement, or write "no previous client deployment". No track
+record is implied by this draft.]
+
 | Area | Our position |
 |---|---|
-| Platform design for manufacturing, inventory, project and quality workflows | [Describe projects and years, with references] |
+| Platform design for manufacturing, inventory, project and quality workflows | [Describe projects and years, with references, or state none] |
 | Project-based, one-off manufacturing | [Describe, or state that DSEW would be an early reference customer] |
-| ERP, MES, QMS, DMS | The platform's manufacturing, quality and document foundations are our own work; [add client engagements] |
-| Tally Prime integration | Not offered in this proposal (excluded and deferred). [State actual experience only if relevant to a later phase] |
-| Windows Server deployment | [State actual experience. We propose a Linux VM under Hyper-V and will prove it on a test VM before go-live.] |
-| Barcode-based traceability | [State actual experience] |
-| Local AI and document intelligence | [State actual experience] |
-| References | [Two or three client contacts who agree to be called, or "available after NDA"] |
-
-We would rather lose a point in this table than overstate it. If an item here is thin, the plan manages it with a
-test environment, or a milestone that must pass before you pay for the next stage.
+| ERP, MES, QMS, DMS | [Describe client engagements, or state none] |
+| Windows Server deployment | [State actual experience. The proposed approach is a Linux VM under Hyper-V, to be proven on DSEW's host] |
+| Barcode-based traceability | Not part of Phase 1 |
+| Local AI and document intelligence | Not part of Phase 1 |
+| References | [Contacts who agree to be called, or "available after NDA", or none] |
 
 ## 4. Proposed team
 
+[The company must name only people who will actually work on Phase 1. No roles are committed by this draft.]
+
 | Role | Name | Responsibility | Allocation |
 |---|---|---|---|
-| Engagement director | [Name] | Commercials, steering, escalation | [to be set] |
+| Engagement lead | [Name] | Commercials, steering, escalation | [to be set] |
 | Project manager and business analyst | [Name] | Specification, sprint plans, status, UAT coordination | [to be set] |
-| Technical lead and architect | [Name] | Architecture, security, quality of code | [to be set] |
+| Technical lead | [Name] | Architecture, security, quality of code | [to be set] |
 | Engineers | [Names] | Module development | [to be set] |
-| UI/UX designer | [Name] | Interface quality | [to be set] |
-| QA and test engineer | [Name] | Automated and UAT scripts, regression | [to be set] |
-| Deployment and infrastructure engineer | [Name] | Hyper-V/Linux set-up, backups, restore, hardening | [to be set] |
+| Quality and deployment | [Name] | Test scripts, installation, backup and restore | [to be set] |
 
-Expected duration: Phase 1 about eleven weeks. The actual team and allocations for Phase 1 are **[to be set by the company]**; none is committed here.
+Expected duration: Phase 1 about eleven weeks from the effective date.
 
-## 5. Support and escalation
+## 5. Contacts and escalation
 
-| Level | Contact | When |
-|---|---|---|
-| Support desk | [email / phone / ticket portal] | All issues, Monday to Saturday 9:30 to 18:30 IST |
-| Technical lead | [Name, phone] | Unresolved high-severity issues |
-| Managing director | [Name, phone] | Critical faults or contractual escalation |
+| Purpose | Contact |
+|---|---|
+| Project contact for DSEW | [Name, email, phone] |
+| Escalation | [Name, email, phone] |
 
-Response targets are in the Commercial Proposal. Critical faults have an out-of-hours emergency number.
+No support hours, response targets or emergency number are promised in this proposal. Defects found during the
+warranty period are reported to the project contact; ongoing support, if wanted, would be agreed separately in writing
+(Commercial Proposal, section 7). **On-site attendance** is not assumed; see Commercial Proposal, section 7.
 
 ## 6. A demonstration of the working foundation
 

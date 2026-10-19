@@ -2,7 +2,7 @@
 
 D & S Electric Works. Integrated operations platform for engineering-led, project-based manufacturing.
 
-> **Status: DRAFT, pending company approval.** This proposal offers a bounded Phase 1 (see the Commercial Proposal).
+> **Status: NEGOTIATION DRAFT, pending company approval.** This proposal offers a bounded Phase 1 (see the Commercial Proposal).
 > It does **not** offer every module in DSEW's enquiry within that phase.
 
 ## 1. Executive summary
@@ -31,7 +31,7 @@ None of these labels means "validated against DSEW's workflow". That validation 
 
 | Label | Meaning |
 |---|---|
-| **Foundation present** | The core behaviour exists in the platform and has been demonstrated with fictional data. It is configured and extended for DSEW. |
+| **Foundation present** | The core behaviour exists in the platform today and has been demonstrated with fictional data. It has **not** yet been configured or validated for DSEW; that is Phase 1 work where marked included. |
 | **Extend** | Part of it exists; the DSEW-specific part (revisions, tolerances, your formats) is built in Phase 1 if marked included. |
 | **Build** | Not present today. |
 | **In Phase 1** | Included in the fixed Phase 1 price, within the boundary in the Commercial Proposal. |
@@ -84,11 +84,9 @@ reason and is permanently audited.
 
 ## 5. Artificial intelligence (future phase)
 
-Not part of Phase 1. For planning only: if DSEW later wants AI, we propose it as an assistant and never as an approver.
-Search and drafting could run on local models on DSEW's own server, respecting each user's permissions, with answers
-traceable to their sources; external AI services would be optional and charged by their providers. AI would not
-approve quotations, release documents, alter records or authorise quality releases, and no essential workflow would
-depend on it. Scope and price would be set only if DSEW asks.
+Not part of Phase 1. For planning only: if DSEW later wants AI, it would be an assistant, never an approver, able to
+run on local models on DSEW's own server within each user's permissions. It would not approve, release or authorise
+anything, and no essential workflow would depend on it. Scope and price would be set only if DSEW asks.
 
 ## 6. User interface
 
@@ -118,13 +116,17 @@ TallyPrime setup, and only on explicit authorisation.
 |---|---|---|
 | Application | TypeScript, Next.js and React web application | Open source, none |
 | Data | PostgreSQL 16, row-level security isolating each company's data | Open source, none |
-| Identity | Keycloak (OpenID Connect), optional multi-factor | Open source, none |
+| Identity | Keycloak (OpenID Connect). Multi-factor sign-in is a Keycloak feature; enabling and testing it for DSEW users is part of set-up if DSEW asks for it, and it is not enforced by default | Open source, none |
 | Files | S3-compatible object storage (SeaweedFS), checksum on every stored file | Open source, none |
 | Packaging | Docker containers, install, upgrade and backup scripts | Open source, none |
 | Reverse proxy and TLS | Caddy or nginx with your internal certificate authority | Open source, none |
 
 No per-user, per-module or subscription licence is required to run the platform. A licence inventory of every
 third-party component is part of the handover.
+
+**Data export.** Phase 1 includes one documented export of DSEW's data: tabular records as CSV files and uploaded files
+in original form with an index, taken at handover and once more on request during warranty, with record and file counts
+reconciled as the acceptance test. The exact fields and files are listed in the specification.
 
 **Integration and API.** A permissioned REST interface with API keys tied to a user, so an integration can never exceed
 that user's permissions. No external integrations are included in Phase 1.
@@ -158,30 +160,27 @@ commit a date for installation on your premises until your server facts are surv
 | 4 | Database and licence | PostgreSQL 16, open source, no licence fee |
 | 5 | Browsers and devices | Current Chrome, Edge, Firefox on Windows; Android and iOS phones and tablets |
 | 6 | Network and remote access | LAN inside the plant. Remote access through your VPN. We do not expose the server to the internet by default |
-| 7 | Backup and recovery | Nightly encrypted database and file backup to a separate target plus an identity-configuration backup; a documented restore rehearsed before go-live. Recovery time and data-loss window to be agreed with you |
-| 8 | Security, authentication, audit | TLS, role-based permissions, per-company data isolation enforced in the database, MFA through Keycloak, immutable audit log, API keys bound to a user |
-| 9 | Encryption and remote access | TLS in transit; encrypted backups; disk encryption recommended; VPN for remote use |
-| 10 | Performance and growth | Design target for Phase 1 is 15 named users; a load test against an agreed workload is part of acceptance |
-| 11 | Offline operation | Runs on your LAN with no internet dependency. Browser-offline data entry on phones is not in Phase 1 |
+| 7 | Backup and recovery | Backup scripts for the database and files exist; an identity-configuration backup is part of the procedure. **The combined restore onto a clean environment has not yet been rehearsed and is a go-live gate** (Commercial Proposal, section 3). Recovery time and data-loss window to be agreed with you |
+| 8 | Security, authentication, audit | TLS, role-based permissions, per-company data isolation enforced in the database (tested by the platform's isolation tests), API keys bound to a user, MFA as described in section 8. The audit trail is append-only for the application: the application's database role cannot change or delete audit records, as verified by tests. A database administrator with elevated rights is outside that guarantee |
+| 9 | Encryption and remote access | TLS in transit; backup encryption and disk encryption are recommended set-up steps, confirmed at acceptance; VPN for remote use |
+| 10 | Performance and growth | Design target for Phase 1 is 15 named users; no load test has been run for DSEW yet, and one against an agreed workload is part of acceptance |
+| 11 | Offline operation | Normal in-LAN operation after deployment needs no internet. Installation, upgrades and any support access need either controlled internet access or offline media. Browser-offline data entry on phones is not in Phase 1 |
 | 12 | Integration and API | Section 8. No external integrations in Phase 1; Tally Prime is excluded (section 7) |
 | 13 | Repository and version control | A private repository for DSEW-specific work, shared from the start; platform source terms are unresolved (document 4) |
-| 14 | Test, staging, production | Test and production in Phase 1; a staging environment can be added |
+| 14 | Test, staging, production | A company-hosted environment for sprint demonstrations, and **one** DSEW-hosted Linux VM used for UAT and then, after the go-live gates pass, as production. A separate staging or second production VM is not included and would be a change request |
 | 15 | Upgrades and long-term support | Versioned releases, tested upgrade and rollback, migration safety checks. Support after warranty is under an AMC to be quoted |
 
 ## 10. Security summary
 
 - **Tenant isolation in the database**, not only in application code, tested on every change.
 - **Authorisation on the server for every action.** Hiding a button is never the only control.
-- **Audit trail** records actor, time, record, field and reason, and cannot be edited through the application.
-- **Reversible access suspension** without deleting history, effective at the next request.
+- **Audit trail** records actor, time, record, field and reason. The application's database role cannot change or
+  delete it (verified by tests); a database administrator with elevated rights is outside that guarantee.
+- **Reversible access suspension** without deleting history, effective at the next request. Implemented and tested on
+  company test databases; accepted for DSEW during UAT.
 - **Secrets** are never stored in the repository.
-- **Controlled egress.** The application makes no outbound connection unless a feature you enabled needs one.
-- **Graceful degradation.** If the identity service or object store is briefly down, existing sessions keep working,
-  new sign-ins or uploads fail with a clear message, and quality gates are never relaxed.
-
-## 11. What we have not claimed
-
-- All modules A to S within the Phase 1 price. They are not included.
-- Tally Prime integration. It is excluded.
-- Windows-native operation, attendance-device compatibility, e-way bill integration, AI or Hindi in Phase 1.
-- That any capability is validated against DSEW's workflow. Phase 1 and each sprint demonstration do that.
+- **Controlled egress.** The design intends no outbound connection unless a feature you enabled needs one. This is
+  **not yet verified** for DSEW; an outbound-network restriction test is part of acceptance.
+- **Graceful degradation.** The design keeps existing sessions working if the identity service is briefly down, fails
+  new sign-ins and uploads with a clear message if a service is down, and never relaxes quality gates. The identity and
+  object-store outage tests have **not yet been run** and are part of acceptance.
