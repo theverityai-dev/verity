@@ -175,6 +175,9 @@ describe("conformance: capability contracts (Phase E)", () => {
     evidence: ["location"],
     scheduling: ["asset"],
     approval: [],
+    // ADR-048 (PROPOSED). Controlled documents link to jobs, orders and BOMs by keyed reference (entity key and id),
+    // the style Evidence uses, rather than by importing those capabilities, so it depends on none.
+    document: [],
     // Kent's Restaurant, the first real client. Depends on nothing: a menu, a
     // floor and a bill need no other capability, and declaring one it does not
     // use would make the graph a wish rather than a fact.
@@ -337,6 +340,9 @@ describe("conformance: over-genericity (Phase G)", () => {
       // operation; a public passport's minimal projection (ADR-030). Outreach/
       // external idempotency: the stored response replayed on a repeated key.
       "checkpoints", "snapshot", "response",
+      // Document (ADR-048): the code lists a document number is assembled from (client, division) on a type, and
+      // the codes chosen for one document, kept so its number can be explained later.
+      "segments",
     ]);
     const unexpected = jsonFields.filter((name) => !permitted.has(name));
     expect(unexpected).toEqual([]);
@@ -507,6 +513,8 @@ describeDb("conformance: database enforcement", () => {
         "billing_meter_reading",
         "cash_movement",
         "command_failure",
+        "document_access_log",
+        "document_link",
         "domain_event",
         "evidence",
         "hr_leave_decision",

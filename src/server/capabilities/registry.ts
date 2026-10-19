@@ -22,6 +22,7 @@ import { registerComplaintCapability } from "./complaint";
 import { registerAttendanceCapability } from "./attendance";
 import { registerFinanceCapability } from "./finance";
 import { registerOutreachCapability } from "./outreach";
+import { registerDocumentCapability } from "./document";
 import { installStorage } from "@/server/storage";
 
 /**
@@ -70,4 +71,6 @@ export function installCapabilities(): void {
   registerAttendanceCapability();
   registerFinanceCapability();
   registerOutreachCapability();
+  // ADR-048 (PROPOSED). Inert until a tenant activates the capability; no tenant has it by default.
+  registerDocumentCapability();
 }

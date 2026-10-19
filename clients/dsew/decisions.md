@@ -124,6 +124,19 @@ capability needs its own decision."
 | Server specification, VM/runtime options, backup target, recovery expectations, access | | | | |
 | Samples received (drawing, BOM, QAP, ITP, FAT, certificate, traveler, dispatch pack) | | | | |
 
+### Scope amendment, 2026-10-19 (product-owner instruction in session)
+
+The product owner instructed "complete it all" for the DSEW demo gaps. Recorded as: **M2 (controlled documents) and M3
+(structured test records, test report, project file) are authorised to build**, bounded by ADR-048's scope limits and
+`phase1-design.md`; the same exception wording as above applies and all invariants (INV-001, ADR-017,
+`enforcePolicy()`) are unchanged. This does **not** accept ADR-048: it stays PROPOSED until the product owner accepts
+it in writing, and the document capability ships dark (not activated for any tenant by default). Nothing here
+changes the client-answers register: the numbering scheme, release authority and self-approval rule remain the
+client's to confirm.
+
+Built under this amendment on 2026-10-19: phone-camera evidence capture; measured checks with fixed units and ranges;
+the summary-first test report; the job project file; QR scan returning to the order after sign-in.
+
 ### Client call findings, 2026-10-19
 
 Source: `Video Project 4.srt` and `Video Project 5.srt` (auto-captioned call transcripts, noisy Hinglish; the

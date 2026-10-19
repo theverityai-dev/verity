@@ -218,6 +218,14 @@ model Tenant {
   projectInvoices    ProjectInvoice[]
   projectReceipts    ProjectReceipt[]
 
+  // Capability: document (controlled engineering documents, ADR-048). Back-relations only.
+  documentTypes     DocumentType[]
+  documentCounters  DocumentNumberCounter[]
+  documents         Document[]
+  documentRevisions DocumentRevision[]
+  documentLinks     DocumentLink[]
+  documentAccessLog DocumentAccessLog[]
+
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
   recipeIngredients RecipeIngredient[]
@@ -2227,6 +2235,7 @@ model StoredFile {
 
   tenant   Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   evidence Evidence[]
+  documentRevisions DocumentRevision[]
 
   @@unique([tenantId, storageKey])
   @@index([tenantId, entityKey, entityId])
@@ -7029,4 +7038,145 @@ model ProjectReceipt {
 
   @@index([tenantId, jobId])
   @@map("project_receipt")
+}
+
+// ===========================================================================
+// CAPABILITY: Document (controlled engineering documents) — ADR-048 (PROPOSED),
+// clients/dsew/phase1-design.md section 3.2. A document is a numbered, revisioned,
+// approved artefact; Evidence stays immutable captured field data and is not reused.
+// Every table: tenant column, RLS enabled and forced. A released revision is immutable
+// (trigger); revisions are never deleted; the access log is append-only.
+// ===========================================================================
+
+/// A kind of document (drawing, procedure, traveller) and how its numbers are built.
+model DocumentType {
+  id               String   @id @default(uuid()) @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  key              String
+  label            String
+  /// Tokens: {TYPE} {YEAR} {SEG:name} and exactly one {SEQ:n}. Parsed and validated in the capability.
+  pattern          String
+  /// [{ key, label, options: [{ code, label }] }]: the code lists a number is assembled from.
+  segments         Json     @default("[]")
+  requiresApproval Boolean  @default(true) @map("requires_approval")
+  /// A revision is valid for this many months from its effective date; null means it does not expire.
+  validMonths      Int?     @map("valid_months")
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@unique([tenantId, key])
+  @@unique([tenantId, id])
+  @@map("document_type")
+}
+
+/// One counter per rendered number prefix, so a sequence runs within a client, division and type.
+model DocumentNumberCounter {
+  id        String @id @default(uuid()) @db.Uuid
+  tenantId  String @map("tenant_id") @db.Uuid
+  prefix    String
+  nextValue Int    @default(1) @map("next_value")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, prefix])
+  @@map("document_number_counter")
+}
+
+model Document {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  number            String
+  typeId            String   @map("type_id") @db.Uuid
+  title             String
+  /// internal | customer. Customer-facing is a label only: release is not a public surface.
+  classification    String   @default("internal")
+  /// The code chosen for each segment of the number, kept so the number can be explained later.
+  segments          Json     @default("{}")
+  currentRevisionId String?  @map("current_revision_id") @db.Uuid
+  createdById       String?  @map("created_by_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      DocumentType       @relation(fields: [tenantId, typeId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+  revisions DocumentRevision[]
+  links     DocumentLink[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, id])
+  @@index([tenantId, typeId])
+  @@map("document")
+}
+
+model DocumentRevision {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tenantId           String    @map("tenant_id") @db.Uuid
+  documentId         String    @map("document_id") @db.Uuid
+  revision           Int
+  /// R01, R02: how people refer to it.
+  label              String
+  /// draft | in_review | released | superseded | obsolete
+  status             String    @default("draft")
+  fileId             String?   @map("file_id") @db.Uuid
+  changeReason       String?   @map("change_reason")
+  reviewNote         String?   @map("review_note")
+  obsoleteReason     String?   @map("obsolete_reason")
+  effectiveFrom      DateTime? @map("effective_from") @db.Date
+  validUntil         DateTime? @map("valid_until") @db.Date
+  authoredById       String?   @map("authored_by_id") @db.Uuid
+  submittedById      String?   @map("submitted_by_id") @db.Uuid
+  approvedById       String?   @map("approved_by_id") @db.Uuid
+  selfApprovalReason String?   @map("self_approval_reason")
+  submittedAt        DateTime? @map("submitted_at")
+  releasedAt         DateTime? @map("released_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document Document       @relation(fields: [tenantId, documentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+  file     StoredFile?    @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  links    DocumentLink[]
+
+  @@unique([documentId, revision])
+  @@unique([tenantId, id])
+  @@index([tenantId, documentId])
+  @@map("document_revision")
+}
+
+/// A record that a job, order or BOM relied on this exact revision. It never moves to a newer one.
+model DocumentLink {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  revisionId String   @map("revision_id") @db.Uuid
+  entityKey  String   @map("entity_key")
+  entityId   String   @map("entity_id") @db.Uuid
+  linkedById String?  @map("linked_by_id") @db.Uuid
+  linkedAt   DateTime @default(now()) @map("linked_at")
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document Document         @relation(fields: [tenantId, documentId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+  revision DocumentRevision @relation(fields: [tenantId, revisionId], references: [tenantId, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([revisionId, entityKey, entityId])
+  @@index([tenantId, entityKey, entityId])
+  @@map("document_link")
+}
+
+/// Who opened or downloaded which revision, and when. Append-only.
+model DocumentAccessLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  documentId  String   @map("document_id") @db.Uuid
+  revisionId  String   @map("revision_id") @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  /// open | download
+  action      String
+  at          DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, documentId, at])
+  @@map("document_access_log")
 }
