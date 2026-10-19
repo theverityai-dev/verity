@@ -117,3 +117,9 @@ deployment will work (decision D3).
 - Nothing here is client-validated. Every behaviour needs a walk-through against DSEW's real job and documents.
 - Hindi, e-way bill, Tally, attendance: not assessed against code.
 - Remaining Phase 1 gates (fail-closed QC, document capability, test records): designed, not built.
+
+## Build status of the 2026-10-19 call rows (end of day)
+
+Built and checked locally (not on production, not client-validated): document numbering from a client-defined rule; documents issued with an expiry; test report with summary, units, conditions and re-inspection count; print-ready report; Export project data as the job project file; drawings and revisions with an exact-revision link and a newer-release warning; photo and reading capture on a phone.
+
+Still missing: client-built checklist forms (route checklists are typed lines), a two-way client portal, per-component genealogy beyond lot and heat (D2), returnable material, attendance into payroll, Hindi labels, Tally. These stay BLOCKED or unscheduled in `decisions.md`.

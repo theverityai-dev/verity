@@ -198,6 +198,20 @@ phase 7.
   Full regression suite still to run after the final migration; "70 of 71 focused" is not a green suite.
 - **Status:** BLOCKED (waiting on ADR acceptance and client decisions); nothing coded.
 
+### P1-1b. DSEW call follow-ups (2026-10-19): built locally, not on production, not client-validated
+
+Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings") and `clients/dsew/demo-guide.md` section 6.
+- **Built, committed, tested, and opened in a browser against a local database and a local object store:** phone-camera
+  evidence capture, measured checks with fixed units and ranges, the summary-first test report, the job project file,
+  sign-in returning to the page asked for, and the controlled-documents capability (ADR-048) with register and detail screens.
+- **Needs the product owner before any of it reaches production:** apply `20261019120000_capability_document` (additive, six
+  tables, forced RLS); accept or amend ADR-048 (still PROPOSED); decide self-approval and release authority with DSEW.
+  Reseed the production demo tenant for the new test stage (`seed:dsew`, then `seed-dsew-hero`, then
+  `seed-dsew-documents`). **Run the seeds with an explicit local `DATABASE_URL`; the `*-hero` npm scripts load `.env`, which is production.**
+- **Not built:** Hindi on the shop floor; a checklist builder the client uses himself (route checklists are typed text lines);
+  a two-way client portal (needs its own ADR); attendance; Tally; document transmittals, OCR and drawing viewer (ADR-048 defers them).
+- **Not verified:** the camera on a real phone, HEIC photos, printing to paper, and anything on DSEW's Windows Server 2019.
+- **Known baseline failures untouched:** three conformance tests (project and manufacturing imports not declared, platform module count).
 ### P1-2. Screens that are built and DB-proven but never opened in a browser
 
 - **What:** Task 125 built these with server tests but no browser check: roster week grid (6.1), leave

@@ -150,3 +150,43 @@ of jobs lost for each), a status filter on the Jobs list, and a "Next up" strip 
 
 **On-premise:** only the local rehearsal exists. Nothing here is validated on his server, and a private-network
 install is Mode B, which ADR-031 does not yet promise. See `deployment.md`.
+
+## 6. Added 2026-10-19, in answer to the client calls
+
+Everything below was built, committed, tested and **opened in a browser against a local database and a local
+object store**. None of it is on production, none of it is client-validated, and every name and number is fictional.
+
+**What it shows, in the order to demo it**
+
+1. **A document with a number he defines.** `/documents` > *Numbering*: add a type with a rule such as
+   `IN-{SEG:client}{SEG:division}-{TYPE}-{SEQ:3}` and its codes. *New document* shows the number it will take; each
+   client counts on its own. Search by number is the table's filter. Tiles count the real list; a lapsed document reads
+   *Expired*, not *Released*. The exact scheme is still the client's to send: this one is illustrative.
+2. **Revision control that answers "which drawing was used".** Open `IN-A3-DRG-001`: R02 is in force, R01 is superseded,
+   and the job that relied on R01 is shown with *a newer release is in force; moving to it is a deliberate step*.
+   Release is a separate permission; releasing your own work needs a dedicated grant and a recorded reason.
+3. **A test report he can read in ten seconds.** Order page > *Test report*: the verdict first, each reading in its own
+   unit against its accepted range, the condition it was taken under, and "recorded 2 times" on the insulation test that
+   failed before drying. The unit is fixed by the check, so a value cannot be keyed in the wrong unit.
+4. **The stamped project file.** Job page > *Project file*: cover, milestones, test report, delivery note and packing list,
+   and photographs, one printable document ("Save as PDF" in the print window).
+5. **Shop floor on a phone.** A check that needs a photo opens the camera and stores the photograph as evidence; a
+   scan of an order QR while signed out returns to that order after sign-in; nothing floats over the Start button.
+
+**To run it locally** (never against production without the product owner's say-so): a local Postgres with every migration,
+Keycloak with realm `dsew`, `DSEW_OWNER_SUB` set, then `node prisma/run-seed.cjs seed-dsew.ts`, `seed-dsew-hero.ts`,
+`seed-dsew-documents.ts` with `DATABASE_URL` and `DIRECT_URL` exported to the local database. **Do not use the `seed:dsew-hero`
+npm script for this: it loads `.env`, which points at production. Likewise `next dev` fills any unset variable from `.env`,
+so blank the Supabase variables explicitly, or the app binds production storage.** For uploads, point `VERITY_S3_*` at a
+local S3-compatible server; the content-security policy admits that one origin.
+
+**Known limits, not hidden**
+- The camera was exercised through the same upload path with a file, **not on a real phone**; HEIC is converted by the
+  browser's canvas, unverified on iOS.
+- The demo documents' files are records that point at no stored bytes; opening them returns a signed link that resolves to
+  nothing. Uploading a real file works.
+- The project file lists photographs that have no stored image as "on record"; it never draws a picture it does not have.
+- Document types and number rules are defined through the *Numbering* form; the client's real scheme, release authority
+  and self-approval rule are still open (`decisions.md`).
+- Not built: Hindi, a checklist builder the client uses himself, a two-way client portal, attendance, Tally.
+- The migration `20261019120000_capability_document` is applied to the local database only. ADR-048 is still PROPOSED.
