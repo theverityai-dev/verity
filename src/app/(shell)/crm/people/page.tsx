@@ -4,7 +4,7 @@ import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { EmptyState, PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { RecordView } from "@/components/records/RecordView";
 import { loadRecordPage } from "../_parts/load";
-import { ImportButton, NewPersonButton } from "../_parts/crm-ui";
+import { CustomFieldsButton, DuplicatesButton, ImportButton, NewPersonButton } from "../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +22,8 @@ async function PeoplePage({ searchParams }: { searchParams: Promise<{ view?: str
         description="Contacts at your customers and partners: who they are, how to reach them, and when you last spoke."
         actions={
           <>
+            <CustomFieldsButton described={described} />
+            <DuplicatesButton object="person" described={described} />
             <ImportButton object="person" label="people" />
             <NewPersonButton described={described} />
           </>

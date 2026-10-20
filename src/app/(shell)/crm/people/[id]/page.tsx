@@ -20,7 +20,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/icons";
 import { OptionPill } from "@/components/records/RecordView";
 import { moneyShort, type Described, type Row } from "@/components/records/model";
-import { ArchiveButton, NewOpportunityButton, RecordFields, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
+import { ArchiveButton, MergedNotice, NewOpportunityButton, RecordFields, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -78,11 +78,13 @@ async function PersonPage({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </div>
 
+      {person.mergedInto ? <MergedNotice into={person.mergedInto as { id: string; label: string }} href={`/crm/people/${(person.mergedInto as { id: string }).id}`} /> : null}
+
       <div className="grid gap-5 lg:grid-cols-[minmax(320px,400px)_1fr]">
         <div className="flex min-w-0 flex-col gap-5">
           <section aria-label="Details" className="glass-card rounded-[12px] px-4 py-2">
             <h2 className="m-0 py-2 text-[17px] font-semibold">Details</h2>
-            <RecordFields described={described} row={person} fieldKeys={["givenName", "familyName", "jobTitle", "company", "emails", "phones", "city", "owner"]} />
+            <RecordFields described={described} row={person} fieldKeys={["givenName", "familyName", "jobTitle", "company", "emails", "phones", "city", "owner", ...described.fields.filter((f) => f.custom).map((f) => f.key)]} />
           </section>
 
           <section aria-label="Opportunities" className="glass-card rounded-[12px]">

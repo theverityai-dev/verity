@@ -21,7 +21,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { IconTile } from "@/components/ui/IconTile";
 import { OptionPill } from "@/components/records/RecordView";
 import { moneyShort, type Described, type Row } from "@/components/records/model";
-import { ArchiveButton, FactRow, NewOpportunityButton, NewPersonButton, RecordFields, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
+import { ArchiveButton, FactRow, MergedNotice, NewOpportunityButton, NewPersonButton, RecordFields, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +65,8 @@ async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
         }
       />
 
+      {company.mergedInto ? <MergedNotice into={company.mergedInto as { id: string; label: string }} href={`/crm/companies/${(company.mergedInto as { id: string }).id}`} /> : null}
+
       <div className="mb-5">
         <FactRow
           items={[
@@ -83,7 +85,7 @@ async function CompanyPage({ params }: { params: Promise<{ id: string }> }) {
             <RecordFields
               described={described}
               row={company}
-              fieldKeys={["name", "domain", "industry", "sizeBand", "phone", "email", "taxId", "city", "region", "country", "owner", "source"]}
+              fieldKeys={["name", "domain", "industry", "sizeBand", "phone", "email", "taxId", "city", "region", "country", "owner", "source", ...described.fields.filter((f) => f.custom).map((f) => f.key)]}
             />
           </section>
 

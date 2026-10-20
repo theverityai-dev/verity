@@ -16,7 +16,11 @@ import {
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { EntityHeader } from "@/components/ui/EntityHeader";
 import { dayLabel, moneyShort, relativeDay, type Described, type Row } from "@/components/records/model";
-import { ArchiveButton, FactRow, RecordFields, StageTrack, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
+import Link from "next/link";
+import { jobForOpportunity } from "@/server/capabilities/project";
+import { IconTile } from "@/components/ui/IconTile";
+import { Icon } from "@/components/ui/icons";
+import { ArchiveButton, FactRow, OpenJobButton, RecordFields, StageTrack, Timeline, type TimelineEntry } from "../../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +48,23 @@ async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) 
   const category = String(opp.stageCategory);
   const lostReason = LOST_REASONS.find((r) => r.value === opp.lostReason)?.label;
 
+  // A won deal becomes a job when the workspace has Jobs: either the job it became, or the way to open one.
+  // Jobs are another capability, so their absence (or no permission) simply hides this.
+  const handover =
+    category === "Completed"
+      ? await executeQuery(actor, jobForOpportunity, { opportunityId: opp.id })
+          .then(async (job) => {
+            if (job) return { job, customers: [] as Array<{ id: string; displayName: string }> };
+            const customers = await withTenant(actor.tenantId, (tx) =>
+              tx.tradingCustomer.findMany({ where: { active: true }, orderBy: { displayName: "asc" }, select: { id: true, displayName: true } }),
+            );
+            return { job: null, customers };
+          })
+          .catch(() => null)
+      : null;
+  const firstWord = (s: string) => s.toLowerCase().replace(/\(demo\)/g, "").trim().split(/\s+/).slice(0, 2).join(" ");
+  const suggested = handover && company ? handover.customers.find((c) => firstWord(c.displayName) === firstWord(company.label))?.id : undefined;
+
   return (
     <>
       <EntityHeader
@@ -52,8 +73,28 @@ async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) 
         code={String(opp.ref)}
         state={{ category: opp.archived ? "Cancelled" : category, label: opp.archived ? "Archived" : String(opp.stageLabel) }}
         meta={[company?.label, (opp.owner as { label: string } | null)?.label ? `Owner ${(opp.owner as { label: string }).label}` : null].filter(Boolean) as string[]}
-        actions={<ArchiveButton kind="opportunities" id={opp.id} archived={Boolean(opp.archived)} label={String(opp.ref)} />}
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {handover && !handover.job && <OpenJobButton opportunityId={opp.id} title={String(opp.name)} customers={handover.customers} suggestedCustomerId={suggested} />}
+            <ArchiveButton kind="opportunities" id={opp.id} archived={Boolean(opp.archived)} label={String(opp.ref)} />
+          </div>
+        }
       />
+
+      {handover?.job && (
+        <Link
+          href={`/jobs/${handover.job.id}`}
+          className="glass-card mb-4 flex min-h-14 items-center gap-3 rounded-[12px] px-4 py-3 text-text no-underline hover:bg-[var(--color-surface-sunken)]"
+        >
+          <IconTile kind="job" size="sm" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] text-text-secondary">Became job {handover.job.reference}</span>
+            <span className="block truncate text-[15px] font-semibold">{handover.job.title}</span>
+          </span>
+          <span className="text-[13px] capitalize text-text-secondary">{handover.job.state.replace(/_/g, " ")}</span>
+          <Icon name="chevronRight" size={16} className="text-text-tertiary" />
+        </Link>
+      )}
 
       {category === "Cancelled" && lostReason && (
         <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-blocked-fill)] px-4 py-3 text-[15px] text-[var(--color-state-blocked-ink)]">
@@ -83,7 +124,7 @@ async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) 
           <RecordFields
             described={described}
             row={opp}
-            fieldKeys={["name", "company", "contact", "amount", "expectedCloseOn", "submissionDueOn", "source", "owner", "createdAt", ...(category === "Cancelled" ? ["lostReason"] : [])]}
+            fieldKeys={["name", "company", "contact", "amount", "expectedCloseOn", "submissionDueOn", "source", "owner", "createdAt", ...(category === "Cancelled" ? ["lostReason"] : []), ...described.fields.filter((f) => f.custom).map((f) => f.key)]}
           />
         </section>
         <section aria-label="Timeline" className="min-w-0">
