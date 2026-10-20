@@ -58,12 +58,13 @@ anything and update it in the same commit as the code.
 
 ## Since 2026-10-09 (URY comparison, added 2026-10-09)
 
-- **Task 126 — URY gap closure: BUILT 2026-10-10 (Waves 0 to 5), not pushed, not on production.**
+- **Task 126 — URY gap closure: BUILT 2026-10-10 (Waves 0 to 5), on production** (code pushed, migrations
+  `20261009100000` to `20261009140000` applied; confirmed 2026-10-20 by `migrate status`).
   `taskplans/126_ury_gap_closure_restaurant_operations.md` (its Status section lists the deviations).
   ADR-040 (GST tax invoice), ADR-041 (stations, courses, tickets), ADR-043 (outlet and channel prices) and
   ADR-042 (customer self-order) are ACCEPTED. Comparison: `docs/reference/ury-parity/ury-vs-verity-a-to-z.md`.
-- **Needs the product owner:** approval to apply migrations `20261009100000` to `20261009140000` to
-  production (all additive); give outlet codes for the three Colonel Kebabz outlets; name who confirms the
+  The restaurant screens are functional but not yet redesigned: that is Task 127 Phase 4.
+- **Needs the product owner:** give outlet codes for the three Colonel Kebabz outlets; name who confirms the
   tax points in ADR-040 with the client's adviser; turn self-order on per outlet only after a phone walk of
   the guest page and a printed sticker. Not built: kiosk mode, order-pad favourites, unmerge, and an ADR-039
   notification for service requests.

@@ -7,12 +7,13 @@ ADR-043 (written with this plan), the Colonel Kebabz parity set
 (`clients/colonel-kebabz/reference-parity/`, `DECISIONS.md`) and the Task 125 register. Stop conditions:
 `CLAUDE.md`. Anything that adds a security boundary needs its ADR approved before code; Wave 5 does.
 
-## Status: BUILT 2026-10-10 (Waves 0 to 5), nothing pushed, no migration applied to production
+## Status: BUILT 2026-10-10 (Waves 0 to 5), on production
 
 The product owner approved the plan and ADR-040 to ADR-043 on 2026-10-09 ("yes go ahead complete it all"); the
-ADRs are ACCEPTED. Every wave is committed on `main` (last: `96f3916a`). All six migrations (`20261009100000`
-to `20261009140000`, all additive) were applied to the local test database only; **applying them to production
-still needs the owner's say-so**.
+ADRs are ACCEPTED. Every wave is committed on `main` (last: `96f3916a`) and pushed. All six migrations
+(`20261009100000` to `20261009140000`, all additive) are applied to production (`prisma migrate status`,
+2026-10-20). Self-order stays off for every outlet until the phone walk. The screens work but are not yet
+redesigned; that is Task 127 Phase 4. Leftovers: FINISHER P2-7.
 
 Evidence (PROVEN against the real database): `capability-dinein.test.ts` (reports, hand-over, checklists, GST
 invoice and credit notes, stations/courses/tickets, scoped prices), `capability-dinein-selforder.test.ts` (9

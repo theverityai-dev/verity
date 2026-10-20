@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-16** (against `main` at `205eef45`)
+**Last updated: 2026-10-20** (against `main` at `b285fa3c`)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -60,23 +60,27 @@ Every item has: **What**, **Why**, **How**, **Done when**, **Source**, **Status*
 - **Source:** 125 progress log, "Production state, 2026-10-09 evening".
 - **Status:** NOT STARTED
 
-### P0-2. Task 126 (URY gap closure) is built but not on production
+### P0-2. A push can reach production before its migration
 
-- **What:** Waves 0 to 5 (GST tax invoice, kitchen stations/courses/tickets, customer self-order,
-  outlet and channel prices) are built and not pushed or migrated on production.
-- **Why:** Built code with no production migration is a push that cannot be deployed safely, and the
-  work is at risk of being lost or conflicting with other sessions.
-- **How:** (1) Confirm the working tree has no other session's uncommitted files that the pushed
-  commits import. (2) From a temporary worktree at the exact commit being pushed, apply migrations
-  `20261009100000` to `20261009140000` (all additive) to production with `prisma migrate deploy` on
-  `DIRECT_URL`; confirm `migrate status` is up to date. (3) Push. (4) Confirm CI, `/api/health` shows the
-  commit, `/api/ready` is 200. (5) Do **not** turn self-order on for any outlet (see "Blocked on a
-  person").
-- **Done when:** production runs the commit, health and ready are green, and Task 126's status section
-  says "on production".
-- **Source:** `taskplans/126_ury_gap_closure_restaurant_operations.md`; handoffs README. Check the
-  current state first: the 125 log says part of Wave 1 was already pushed on 2026-10-09.
-- **Status:** BLOCKED on the product owner's approval to apply migrations (see "Blocked on a person").
+- **What:** Production deployed `490ed4f1` (2026-10-20 11:24) carrying `TenantMembership.disabledAt`
+  (ADR-049) while the production database did not have `20261019100000_membership_disable` or
+  `20261019120000_capability_document`. Every Prisma read of a whole membership row failed with a missing
+  column: role changes, HQ entering a client, the notification dispatcher, outreach team pages, the
+  self-order guest page. Found and fixed 2026-10-20 by applying the pending migrations (see "Recently
+  removed"); the cause is still open.
+- **Why:** `npm run build` runs `prisma generate` only, and Vercel deploys every push to `main`. Nothing
+  stops a commit whose migration is missing from production from going live; the process rule ("apply
+  the migration before the push") depends on every session remembering it.
+- **How:** Pick one with the product owner: (a) a CI job on `main` that runs `prisma migrate status`
+  against production and fails the deploy when anything is pending (needs a read-only production
+  secret in CI); (b) run `prisma migrate deploy` in the Vercel build (simplest; every additive migration
+  ships with its code, but a failed migration then blocks the deploy and migrations run as `postgres`
+  from the build); (c) a pre-push hook that refuses a push whose `prisma/migrations` is ahead of
+  production. Not decided; (a) keeps today's manual control and is the smallest change.
+- **Done when:** a push whose migration is not on production cannot become the production deployment,
+  proven once on a branch.
+- **Source:** this session's finding, 2026-10-20.
+- **Status:** NOT STARTED. Needs the product owner's choice of (a), (b) or (c).
 
 ---
 
@@ -434,12 +438,12 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 
 Each line names who must act and what they must do. Move the item back to its priority once done.
 
-- **Approve production migrations and the push** (P0-2). Product owner: say "apply and push", or name
-  what to hold back.
+- **Choose how deploys wait for migrations** (P0-2): (a) CI status check, (b) migrate in the build, or
+  (c) pre-push hook. Product owner.
 - **Outlet codes** for the three Colonel Kebabz outlets, and **who confirms the ADR-040 tax points**
-  with the client's adviser (P0-2). Product owner.
+  with the client's adviser (Task 126). Product owner.
 - **Turn self-order on per outlet** only after a phone walk of the guest page and a printed sticker
-  (P0-2). Product owner with the client.
+  (Task 126). Product owner with the client.
 - **Approve ADR-044 (documents post to the ledger)** before accounting posting is built (P1-1h), and
   **a session with the D&S owner** to confirm manager.io's tab list and Summary tiles (P1-1b).
   Product owner.
@@ -483,6 +487,14 @@ Do not pick these up without a fresh product-owner decision (`CLAUDE.md` stop co
 ## Recently removed
 
 (Newest first. One line each: date, item, commit. Keep the last 10.)
+
+- 2026-10-20: old P0-2, Task 126 on production. Its migrations `20261009100000` to `20261009140000` were
+  already applied and its code pushed; the register had not been updated. The same day
+  `20261019100000_membership_disable`, `20261019120000_capability_document` and
+  `20261020100000_capability_relationship` were applied to production (`migrate status` up to date) to
+  repair the live `disabled_at` failure (new P0-2). The third belongs to CRM commits not yet pushed when
+  it was applied; it adds tables, the CRM capability row and saved-view grants only, which the deployed
+  code ignores.
 
 - 2026-10-15: shell navigation headings and icons, row-level table links, status pills, light-mode
   contrast, plain sign-in, one scrolling chip row (`d71e537b`, `6feff843`, `99672b3e`, `682d6a44`,
