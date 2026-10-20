@@ -209,7 +209,9 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
   Reseed the production demo tenant for the new test stage (`seed:dsew`, then `seed-dsew-hero`, then
   `seed-dsew-documents`). **Run the seeds with an explicit local `DATABASE_URL`; the `*-hero` npm scripts load `.env`, which is production.**
 - **Not built:** Hindi on the shop floor; a checklist builder the client uses himself (route checklists are typed text lines);
-  a two-way client portal (needs its own ADR); attendance; Tally; document transmittals, OCR and drawing viewer (ADR-048 defers them).
+  a two-way client portal (needs its own ADR); attendance; Tally; document transmittals, OCR and drawing viewer (ADR-048 defers them);
+  a linked-documents panel on job, order and BOM screens (`verity.document.for_entity`) and a retire control for document types
+  (`verity.document.set_type_active`) — both listed in `ui-reachability.baseline.json` until wired.
 - **Not verified:** the camera on a real phone, HEIC photos, printing to paper, and anything on DSEW's Windows Server 2019.
 - **Known baseline failures untouched:** three conformance tests (project and manufacturing imports not declared, platform module count).
 ### P1-2. Screens that are built and DB-proven but never opened in a browser
