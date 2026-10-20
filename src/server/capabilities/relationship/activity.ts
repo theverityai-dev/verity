@@ -725,7 +725,9 @@ export const describeObject: QueryDefinition<{ objectKey: string }, DescribedObj
     const fields = object.fields.map((f) =>
       f.key === "stage"
         ? { ...f, options: stages.filter((s) => s.active).map((s) => ({ value: s.id, label: s.label, tone: TONE_FOR_CATEGORY[s.category] ?? "neutral" })) }
-        : f,
+        : f.relation
+          ? { ...f, relationHref: getRecordObject(f.relation)?.recordHref }
+          : f,
     );
     return {
       ...object,

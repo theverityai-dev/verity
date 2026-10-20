@@ -244,7 +244,11 @@ const FIELD_ICON: Record<string, IconName> = {
 
 /* ================================= cell display ================================ */
 
-export function FieldDisplay({ field, value, row, described }: { field: RecordField; value: unknown; row?: Row; described?: Described }) {
+/**
+ * One value, drawn for its type. `plain` drops every link, for places that already sit inside one (a phone list row).
+ * Relative dates and times read the viewer's clock, so their text may differ from the server's first render.
+ */
+export function FieldDisplay({ field, value, row, described, plain }: { field: RecordField; value: unknown; row?: Row; described?: Described; plain?: boolean }) {
   if (value === null || value === undefined || value === "" || (Array.isArray(value) && value.length === 0)) {
     return <span className="text-text-tertiary" aria-label="empty">—</span>;
   }
@@ -260,16 +264,18 @@ export function FieldDisplay({ field, value, row, described }: { field: RecordFi
       ) : null;
     case "relation": {
       if (!isRef(value)) return null;
-      const target = field.relation?.endsWith(".person") ? "person" : "company";
-      const href = target === "person" ? `/crm/people/${value.id}` : `/crm/companies/${value.id}`;
-      return (
-        <Link
-          href={href}
-          onClick={(e) => e.stopPropagation()}
-          className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-[8px] bg-[var(--color-control)] py-0.5 pl-1 pr-2 text-[14px] text-text no-underline hover:bg-[var(--color-control-strong)]"
-        >
-          {target === "person" ? <Avatar name={value.label} size={18} /> : <IconTile icon="building" hue="indigo" size="sm" className="!size-[18px] !rounded-[5px] [&_svg]:!size-3" />}
+      const human = field.relation?.endsWith(".person");
+      const chip = "inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-[8px] bg-[var(--color-control)] py-0.5 pl-1 pr-2 text-[14px] text-text no-underline";
+      const inner = (
+        <>
+          {human ? <Avatar name={value.label} size={18} /> : <IconTile icon="building" hue="indigo" size="sm" className="!size-[18px] !rounded-[5px] [&_svg]:!size-3" />}
           <span className="truncate">{value.label}</span>
+        </>
+      );
+      if (plain || !field.relationHref) return <span className={chip}>{inner}</span>;
+      return (
+        <Link href={hrefFor(field.relationHref, value.id)} onClick={(e) => e.stopPropagation()} className={cx(chip, "hover:bg-[var(--color-control-strong)]")}>
+          {inner}
         </Link>
       );
     }
@@ -279,7 +285,7 @@ export function FieldDisplay({ field, value, row, described }: { field: RecordFi
       const iso = String(value);
       const late = described?.boardGroupField && row?.stageCategory === "Active" && daysFromToday(iso) < 0;
       return (
-        <span className={cx("tabular", late && "font-medium text-[var(--color-danger-ink)]")} title={relativeDay(iso)}>
+        <span className={cx("tabular", late && "font-medium text-[var(--color-danger-ink)]")} title={relativeDay(iso)} suppressHydrationWarning>
           {dayLabel(iso)}
         </span>
       );
@@ -292,15 +298,23 @@ export function FieldDisplay({ field, value, row, described }: { field: RecordFi
       const href = field.type === "email" ? `mailto:${first}` : field.type === "phone" ? `tel:${first.replace(/\s/g, "")}` : `https://${first.replace(/^https?:\/\//, "")}`;
       return (
         <span className="inline-flex min-w-0 items-center gap-1.5">
-          <a href={href} onClick={(e) => e.stopPropagation()} className="truncate text-accent-ink no-underline hover:underline" target={field.type === "link" ? "_blank" : undefined} rel="noreferrer">
-            {first}
-          </a>
+          {plain ? (
+            <span className="truncate">{first}</span>
+          ) : (
+            <a href={href} onClick={(e) => e.stopPropagation()} className="truncate text-accent-ink no-underline hover:underline" target={field.type === "link" ? "_blank" : undefined} rel="noreferrer">
+              {first}
+            </a>
+          )}
           {list.length > 1 && <span className="tabular shrink-0 rounded-full bg-[var(--color-control)] px-1.5 text-[12px] text-text-secondary">+{list.length - 1}</span>}
         </span>
       );
     }
     default:
-      return <span className={cx("truncate", (field.type === "number" || field.type === "datetime") && "tabular")}>{textOf(field, value)}</span>;
+      return (
+        <span className={cx("truncate", (field.type === "number" || field.type === "datetime") && "tabular")} suppressHydrationWarning={field.type === "datetime"}>
+          {textOf(field, value)}
+        </span>
+      );
   }
 }
 
@@ -935,7 +949,7 @@ function RecordTable({
                       style={{ width: col.width }}
                     >
                       {isTitle ? (
-                        <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="relative flex min-w-0 flex-1 items-center gap-2">
                           <Link href={hrefFor(described.recordHref, row.id)} className="min-w-0 truncate font-semibold text-text no-underline hover:underline" tabIndex={-1}>
                             {String(value ?? "Untitled")}
                           </Link>
@@ -944,7 +958,7 @@ function RecordTable({
                             type="button"
                             tabIndex={-1}
                             onClick={(e) => { e.stopPropagation(); onPreview(row); }}
-                            className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-[8px] bg-[var(--color-control)] px-2 py-0.5 text-[13px] font-medium text-text-secondary opacity-0 transition-opacity hover:text-text group-hover:opacity-100 focus-visible:opacity-100"
+                            className="absolute right-0 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 rounded-[8px] bg-[var(--color-surface)] px-2 py-0.5 shadow-[0_0_0_6px_var(--color-surface-sunken)] text-[13px] font-medium text-text-secondary opacity-0 transition-opacity hover:text-text group-hover:opacity-100 focus-visible:opacity-100"
                           >
                             Open <Icon name="chevronRight" size={12} />
                           </button>
@@ -1052,7 +1066,7 @@ function RecordList({ described, rows, columns, selected, onSelect }: { describe
                 {extra.map((c) => {
                   const v = row[c.field.key];
                   if (v === null || v === undefined || v === "" || (Array.isArray(v) && !v.length)) return null;
-                  return <span key={c.field.key} className="min-w-0 max-w-full truncate"><FieldDisplay field={c.field} value={v} row={row} described={described} /></span>;
+                  return <span key={c.field.key} className="min-w-0 max-w-full truncate"><FieldDisplay field={c.field} value={v} row={row} described={described} plain /></span>;
                 })}
               </span>
             </span>
@@ -1282,7 +1296,7 @@ function BoardCard({
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
           {typeof row.ref === "string" && <span className="tabular text-text-tertiary">{row.ref}</span>}
           {open && bid && bidDays !== null && bidDays <= 14 && (
-            <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium", bidDays < 0 ? "bg-[var(--color-state-blocked-fill)] text-[var(--color-state-blocked-ink)]" : "bg-[var(--color-state-pending-fill)] text-[var(--color-state-pending-ink)]")}>
+            <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium", bidDays < 0 ? "bg-[var(--color-state-blocked-fill)] text-[var(--color-state-blocked-ink)]" : "bg-[var(--color-state-pending-fill)] text-[var(--color-state-pending-ink)]")} suppressHydrationWarning>
               <Icon name="flag" size={12} /> Bid {bidDays < 0 ? "overdue" : relativeDay(bid)}
             </span>
           )}

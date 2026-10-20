@@ -20,10 +20,32 @@ some files under its commercial Enterprise licence. No Twenty source is copied i
 data model, its interaction patterns and its UI/UX only; every line here is written fresh against Verity's
 runtime.
 
-## Status: PROPOSED 2026-10-20 — plan only, no code
+## Status: STAGES 0-2 BUILT 2026-10-20 (local database only; ADR-050 and ADR-051 PROPOSED)
 
-Nothing built. Stage 1+2 design is in brainstorming with the owner; its spec will be
-`docs/superpowers/specs/2026-10-20-crm-capability-design.md`. ADR-050 and ADR-051 (below) are not yet written.
+Owner said "go ahead complete it all" after the design sections; built the same day:
+
+- **Stage 0:** ADR-050 written, and it **supersedes decision D1 below**: `party` is global and visible only
+  through a membership, so CRM companies and people are tenant-owned rows, not Party rows. ADR-051 written
+  (record objects and saved views, `src/server/platform/views.ts`).
+- **Stage 1** (`cd73c249`, `052ea283`): migration `20261020100000_capability_relationship` (eight tables, forced
+  RLS, interaction immutability trigger, saved-view grants); `src/server/capabilities/relationship/`; 20 database
+  tests in `src/test/capability-relationship.test.ts`, all passing on the local `verity_crm` database.
+- **Stage 2** (`cb87ec0d`): `src/components/records/` (record table, board, saved views, filters, sorts, fields,
+  totals, bulk bar, preview, phone list) and `/crm` screens; Cmd-K searches the CRM.
+- **Not built:** stage 3 (custom fields and objects, merge), stage 4 (automations, pipeline dashboard beyond the
+  summary tiles), stage 5 (email/calendar sync: needs its own ADR), "won -> open a job" in `project`, the
+  `trading_customer` link (ADR-050 clause 4 puts it in `project`).
+- **Not on production:** the migration is applied to the local test database only.
+
+Screen verdicts (screen-deserves):
+
+| Route | Deserves | Why (shape + job) | Data |
+|---|---|---|---|
+| `/crm/opportunities` | Board by stage, table one tap away; tiles + value-by-stage bar | Lanes; job is monitor and move | `pipeline_summary`, list query |
+| `/crm/companies`, `/crm/people` | Record table with relationship columns, saved views, bulk owner | Scanning comparable rows | list queries with counts and last activity |
+| `/crm/companies/[id]`, `/crm/people/[id]` | Party header + facts row; details, people/deals; timeline with composer | A party and its relationship | `company_detail`, `person_detail`, `timeline` |
+| `/crm/opportunities/[id]` | Stage track (n of m, won/lost), facts, details, timeline | Ordered stages | `opportunity_detail` with stage history |
+| `/crm/follow-ups` | Queue grouped Overdue / Today / 7 days / Later | Work someone acts on | `list_follow_ups` |
 
 ---
 

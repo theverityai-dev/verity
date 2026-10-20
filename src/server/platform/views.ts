@@ -74,6 +74,8 @@ export type RecordField = {
   options?: FieldOption[];
   /** For a relation field: the record object it points at, so the editor can offer its records. */
   relation?: string;
+  /** For a relation field: the target object's record page (`/crm/companies/{id}`), filled in when described. */
+  relationHref?: string;
   filterable?: boolean;
   sortable?: boolean;
   aggregates?: readonly Aggregate[];
