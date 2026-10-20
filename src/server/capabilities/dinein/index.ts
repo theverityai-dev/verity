@@ -29,7 +29,7 @@ import { findGuestByPhone } from "@/server/capabilities/crm/guests";
 import { registerExportable } from "@/server/platform/data-export";
 import { minuteOfDay, unavailableReason, type AvailabilityRule, type RuleLabels } from "@/lib/menu-availability";
 import { assertOutletInScope, reachableOutletIds, scopedLocationIds } from "./scope";
-import { registerDineinReports } from "./reports";
+import { registerDineinReports, serviceStageOf, type ServiceStage } from "./reports";
 import { registerDineinService } from "./service";
 import { registerDineinChecklist } from "./checklist";
 import { describeSource, resolvePrice } from "@/lib/menu-price";
@@ -2133,6 +2133,10 @@ export type FloorTable = {
   openMinutes: number | null;
   /** True once the open order has run longer than the outlet's "seated too long" setting. */
   needsAttention: boolean;
+  /** The "seated too long" setting itself, so a screen can show minutes against it. */
+  attentionMinutes: number;
+  /** Where the table is in its service (shared with the outlet's Today page). */
+  stage: ServiceStage;
 };
 
 /** The floor map feed: every table, where it sits, and what it is doing. */
@@ -2152,7 +2156,7 @@ export const listFloor: QueryDefinition<{ locationId?: string }, FloorTable[]> =
         zone: { select: { id: true, name: true } },
         orders: {
           where: { state: { notIn: ["settled", "cancelled"] } },
-          include: { lines: { where: { state: { notIn: ["served", "voided"] } } } },
+          include: { lines: { where: { state: { not: "voided" } }, select: { state: true } } },
           take: 1,
         },
       },
@@ -2179,9 +2183,11 @@ export const listFloor: QueryDefinition<{ locationId?: string }, FloorTable[]> =
         orderId: order?.id ?? null,
         orderState: order?.state ?? null,
         covers: order?.covers ?? null,
-        openLines: order?.lines.length ?? 0,
+        openLines: order?.lines.filter((line) => line.state !== "served").length ?? 0,
         openMinutes,
         needsAttention: openMinutes !== null && openMinutes > seatedMinutes,
+        attentionMinutes: seatedMinutes,
+        stage: serviceStageOf(table.state, order),
       };
     });
   },
@@ -2579,7 +2585,7 @@ export const getBillDetail: QueryDefinition<{ billId: string }, BillDetail | nul
 
 export const listOpenBills: QueryDefinition<
   { locationId?: string },
-  Array<{ id: string; label: string; totalMinor: number; paidMinor: number }>
+  Array<{ id: string; label: string; channel: string; covers: number; createdAt: Date; totalMinor: number; paidMinor: number }>
 > = {
   key: "verity.dinein.list_open_bills",
   entity: ENTITY_BILL,
@@ -2598,6 +2604,9 @@ export const listOpenBills: QueryDefinition<
     return bills.map((bill) => ({
       id: bill.id,
       label: orderLabel(bill.order),
+      channel: bill.order.channel,
+      covers: bill.order.covers,
+      createdAt: bill.createdAt,
       totalMinor: bill.totalMinor,
       paidMinor: bill.payments.reduce((sum, payment) => sum + payment.amountMinor, 0),
     }));

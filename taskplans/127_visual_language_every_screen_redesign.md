@@ -344,6 +344,16 @@ Neither mockup exists today; the "Today" column names the nearest real page.
 
 ### 4.2 Restaurant operations (Colonel Kebabz) — Phase 4
 
+**Ledger (2026-10-20).** Built, not yet browser-checked: `/floor` (table tiles with service-stage pill,
+seated-minutes ring against the outlet's "seated too long" setting, guest-waiting flag, area chips with
+counts, phone grid, seat sheet with a guest stepper, four KPI tiles), `/kitchen` (one docket per order per
+column, age ring against the SLA target, late count, per-dish and whole-docket moves, cancelled lane),
+`/counter` (one queue, three filters with counts, channel tiles, live pane with the next step pinned, KPI
+tiles; "oldest bill" flags on the outlet's unpaid setting). Shared additions: glyphs `table`, `dish`,
+`takeaway`, `receipt`, `qr`; channel kinds and `channelKindFor`; `TABLE_STAGE` (also used by `/today`);
+`serviceStageOf` (one derivation for floor and Today); `ProgressRing.centre`; `ButtonLink`. Every other
+row below is not started.
+
 | Route | Target | Graphics | Data |
 |---|---|---|---|
 | `/floor` | P-BOARD: **FloorPlan** tables as coloured tiles by order state, seat count, elapsed-time ring, self-order inbox as chips | table state colours, elapsed ring | exists (`FloorPlan.tsx`) |

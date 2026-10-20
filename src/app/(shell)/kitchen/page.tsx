@@ -18,6 +18,14 @@ import { KitchenBoard } from "./KitchenBoard";
 
 export const dynamic = "force-dynamic";
 
+/** Minutes since each dish was sent, read once on the server so every docket agrees (the board refreshes every ten seconds). */
+function ages(tickets: KitchenTicket[]): Record<string, number> {
+  const now = Date.now();
+  return Object.fromEntries(
+    tickets.filter((t) => t.placedAt).map((t) => [t.lineId, Math.max(0, Math.floor((now - t.placedAt!.getTime()) / 60_000))]),
+  );
+}
+
 /**
  * The kitchen.
  *
@@ -63,7 +71,7 @@ async function KitchenPage({ searchParams }: { searchParams: Promise<{ station?:
     <>
       <PageHeader
         title="Kitchen"
-        description="What is waiting, what is on, and what is ready to go out. Oldest first, starters before mains."
+        description="One docket per order: what is waiting, what is on, and what is ready to go out. Oldest first, starters before mains."
         actions={
           <Link href="/kitchen/setup" className="text-[13px] text-text-secondary underline-offset-4 hover:underline">
             Stations and courses
@@ -72,6 +80,7 @@ async function KitchenPage({ searchParams }: { searchParams: Promise<{ station?:
       />
       <KitchenBoard
         tickets={tickets}
+        ageMinutes={ages(tickets)}
         cancelled={cancelled}
         stations={stations}
         activeStationId={stationId ?? null}

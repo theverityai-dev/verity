@@ -33,6 +33,7 @@ export function ProgressRing({
   size = 44,
   tone = "completed",
   showValue = true,
+  centre,
 }: {
   value: number;
   total: number;
@@ -40,6 +41,8 @@ export function ProgressRing({
   size?: number;
   tone?: StateTone;
   showValue?: boolean;
+  /** Text in the middle instead of "value/total", e.g. "42m" for minutes against a limit. */
+  centre?: string;
 }) {
   const stroke = Math.max(3, Math.round(size / 10));
   const r = (size - stroke) / 2;
@@ -64,7 +67,7 @@ export function ProgressRing({
       </svg>
       {showValue && (
         <span aria-hidden="true" className="tabular absolute text-[11px] font-semibold text-text">
-          {value}/{total}
+          {centre ?? `${value}/${total}`}
         </span>
       )}
     </span>

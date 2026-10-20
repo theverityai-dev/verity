@@ -107,7 +107,13 @@ export type IconName =
   | "temperature"
   | "revision"
   | "lost"
-  | "truck";
+  | "truck"
+  // Restaurant (Task 127 Phase 4).
+  | "table"
+  | "dish"
+  | "takeaway"
+  | "receipt"
+  | "qr";
 
 const PATHS: Record<IconName, string> = {
   // Navigation — board nav geometry.
@@ -295,6 +301,18 @@ const PATHS: Record<IconName, string> = {
   lost: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6",
   // truck: delivery on the road.
   truck: "M3 6h11v10H3zM14 9h4l3 3v4h-7M5 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0M15 18a2 2 0 1 0 4 0 2 2 0 1 0-4 0",
+
+  // Restaurant (Task 127 Phase 4).
+  // table: a round table seen from above with a chair on each side. Dine-in.
+  table: "M7.5 12a4.5 4.5 0 1 0 9 0 4.5 4.5 0 1 0-9 0M10 3.5h4M10 20.5h4M3.5 10v4M20.5 10v4",
+  // dish: a covered plate (cloche). A dish on its way to the pass.
+  dish: "M3 19h18M5 16.5a7 7 0 0 1 14 0zM12 9.5V8M10.5 8h3",
+  // takeaway: a carry bag with handles.
+  takeaway: "M5.5 8h13l-1 12h-11zM9 8V6.5a3 3 0 0 1 6 0V8",
+  // receipt: a bill with a torn foot.
+  receipt: "M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5zM9 8h6M9 11.5h6M9 15h3",
+  // qr: a guest ordering from the table's code.
+  qr: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1",
 };
 
 /**

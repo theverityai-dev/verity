@@ -390,34 +390,50 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
  * ink rather than as a red fill — a destructive action should be legible, not
  * loud, on a screen an operator uses all day.
  */
+// ADR-024 motion: press feedback on pointer-down territory, not click — apple-design skill §1.
+// ADR-033: iOS button styles. Pressed state dims, as UIKit buttons do.
+const BUTTON_BASE =
+  "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-[color,background-color,opacity,transform] duration-150 active:opacity-70 " +
+  "disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer";
+
+// 44pt minimum touch target (HIG and WCAG) for md; sm is the compact in-row size used inside tables.
+const BUTTON_SIZES = {
+  sm: "h-9 px-3 text-[14px] max-sm:h-11",
+  md: "h-11 px-5 text-[15px]",
+};
+
+// primary = iOS filled (tint background; ink chosen by accent.ts for AA), secondary = iOS gray
+// (system fill, tint label), ghost = iOS plain (tint label only), danger = iOS destructive tinted.
+const BUTTON_VARIANTS = {
+  primary: "bg-accent text-accent-on hover:bg-accent-hover",
+  secondary: "bg-[var(--color-control)] text-accent-ink hover:bg-[var(--color-control-strong)]",
+  ghost: "bg-transparent text-accent-ink hover:bg-[var(--color-control)]",
+  danger: "bg-danger-subtle text-[var(--color-danger-ink)] hover:bg-[var(--color-control-strong)]",
+};
+
 export function Button({ variant = "secondary", size = "md", className, ...rest }: ButtonProps) {
-  // ADR-024 motion: press feedback on pointer-down territory, not click —
-  // apple-design skill §1. A 3% scale is small enough that reduced-motion
-  // doesn't need a guard (it's not the vestibular kind of motion §14 warns
-  // about), and it's the exact value the skill's own CSS example ships.
-  // ADR-033: iOS button styles. Pressed state dims, as UIKit buttons do.
-  const base =
-    "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-[color,background-color,opacity,transform] duration-150 active:opacity-70 " +
-    "disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer";
+  return <button className={cx(BUTTON_BASE, BUTTON_SIZES[size], BUTTON_VARIANTS[variant], className)} {...rest} />;
+}
 
-  // 44pt minimum touch target (HIG and WCAG) for md; sm is the compact
-  // in-row size used inside tables.
-  const sizes = {
-    sm: "h-9 px-3 text-[14px] max-sm:h-11",
-    md: "h-11 px-5 text-[15px]",
-  };
-
-  // primary = iOS filled (tint background; ink chosen by accent.ts for AA),
-  // secondary = iOS gray (system fill, tint label), ghost = iOS plain (tint
-  // label only), danger = iOS destructive tinted.
-  const variants = {
-    primary: "bg-accent text-accent-on hover:bg-accent-hover",
-    secondary: "bg-[var(--color-control)] text-accent-ink hover:bg-[var(--color-control-strong)]",
-    ghost: "bg-transparent text-accent-ink hover:bg-[var(--color-control)]",
-    danger: "bg-danger-subtle text-[var(--color-danger-ink)] hover:bg-[var(--color-control-strong)]",
-  };
-
-  return <button className={cx(base, sizes[size], variants[variant], className)} {...rest} />;
+/** A navigation that reads as a button (Take payment, Open order): the same weights, as a link. */
+export function ButtonLink({
+  href,
+  variant = "secondary",
+  size = "md",
+  className,
+  children,
+}: {
+  href: string;
+  variant?: keyof typeof BUTTON_VARIANTS;
+  size?: keyof typeof BUTTON_SIZES;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link href={href} className={cx(BUTTON_BASE, "no-underline", BUTTON_SIZES[size], BUTTON_VARIANTS[variant], className)}>
+      {children}
+    </Link>
+  );
 }
 
 /**

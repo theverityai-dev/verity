@@ -294,6 +294,24 @@ export const exceptionsReport: QueryDefinition<
 
 export type ServiceStage = "free" | "seated" | "with_kitchen" | "ready" | "served" | "reserved" | "cleaning" | "out_of_service";
 
+/**
+ * Where a table is in its service, from the table's state and its open order's non-voided lines.
+ * One derivation for the floor plan and the outlet's Today page, so the two never disagree.
+ */
+export function serviceStageOf(
+  tableState: string,
+  order: { state: string; lines: Array<{ state: string }> } | null | undefined,
+): ServiceStage {
+  if (tableState === "available") return "free";
+  if (tableState === "reserved") return "reserved";
+  if (tableState === "cleaning") return "cleaning";
+  if (tableState === "out_of_service") return "out_of_service";
+  if (!order || order.state === "draft" || order.lines.length === 0) return "seated";
+  if (order.lines.some((l) => l.state === "queued" || l.state === "preparing")) return "with_kitchen";
+  if (order.lines.some((l) => l.state === "ready")) return "ready";
+  return "served";
+}
+
 export type OutletToday = {
   day: string;
   timeZone: string;
@@ -380,19 +398,10 @@ export const outletToday: QueryDefinition<{ locationId?: string }, OutletToday> 
     const serviceLine: OutletToday["serviceLine"] = tables.map((t) => {
       const order = orderByTable.get(t.id);
       const minutes = order ? Math.floor((now.getTime() - order.createdAt.getTime()) / 60_000) : null;
-      let stage: ServiceStage;
-      if (t.state === "available") stage = "free";
-      else if (t.state === "reserved") stage = "reserved";
-      else if (t.state === "cleaning") stage = "cleaning";
-      else if (t.state === "out_of_service") stage = "out_of_service";
-      else if (!order || order.state === "draft" || order.lines.length === 0) stage = "seated";
-      else if (order.lines.some((l) => l.state === "queued" || l.state === "preparing")) stage = "with_kitchen";
-      else if (order.lines.some((l) => l.state === "ready")) stage = "ready";
-      else stage = "served";
       return {
         tableId: t.id,
         label: t.label,
-        stage,
+        stage: serviceStageOf(t.state, order),
         minutes,
         over: t.state === "occupied" && minutes !== null && minutes > SERVICE_LINE_OVER_MINUTES,
       };

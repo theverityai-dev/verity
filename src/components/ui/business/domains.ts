@@ -94,7 +94,24 @@ export const KIND_PRESENTATION: Record<string, KindPresentation> = {
   milestone: { hue: "olive", icon: "milestone" },
   timesheet: { hue: "cyan", icon: "timesheet" },
   certificate: { hue: "cyan", icon: "certificate" },
+
+  // Restaurant (Task 127 §4.2). Kitchen and menu are brown; a bill is money (cyan). Order channels
+  // each get their own hue so a counter queue scans by channel at a glance.
+  table: { hue: "brown", icon: "table" },
+  dish: { hue: "brown", icon: "dish" },
+  bill: { hue: "cyan", icon: "receipt" },
+  "channel-dine_in": { hue: "brown", icon: "table" },
+  "channel-takeaway": { hue: "teal", icon: "takeaway" },
+  "channel-delivery": { hue: "olive", icon: "truck" },
+  "channel-delivery_platform": { hue: "purple", icon: "truck" },
+  "channel-qr": { hue: "cyan", icon: "qr" },
+  "channel-other": { hue: "indigo", icon: "sales" },
 };
+
+/** The kind a dine-in order channel is shown as. Presentation only; unknown channels share one tile. */
+export function channelKindFor(channel: string): string {
+  return `channel-${channel}` in KIND_PRESENTATION ? `channel-${channel}` : "channel-other";
+}
 
 /**
  * Which stage kind a tenant's stage is, from its key and label. Routes are tenant data, so a stage

@@ -6,8 +6,9 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { executeQuery } from "@/server/platform/query";
 import { ForbiddenError } from "@/server/platform/authorization";
 import { outletToday, type ServiceStage } from "@/server/capabilities/dinein";
-import { EmptyState, PageHeader, Panel, PermissionDenied, Row, RowList, Stat, StatRow } from "@/components/ui/primitives";
+import { EmptyState, PageHeader, Panel, PermissionDenied, Row, RowList, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
 import { day } from "@/components/ui/business/format";
+import { TABLE_STAGE } from "@/components/ui/business/states";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +16,6 @@ function rupees(minor: number): string {
   return `₹${(minor / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-const STAGE: Record<ServiceStage, { label: string; tone: string }> = {
-  free: { label: "Free", tone: "text-success" },
-  seated: { label: "Seated", tone: "text-accent-ink" },
-  with_kitchen: { label: "With the kitchen", tone: "text-warning" },
-  ready: { label: "Ready to serve", tone: "text-info" },
-  served: { label: "Served", tone: "text-text-secondary" },
-  reserved: { label: "Reserved", tone: "text-info" },
-  cleaning: { label: "Cleaning", tone: "text-warning" },
-  out_of_service: { label: "Out of service", tone: "text-text-tertiary" },
-};
 
 const chip = (active: boolean) =>
   "inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-medium no-underline transition-colors " +
@@ -129,7 +120,7 @@ async function TodayPage({ searchParams }: { searchParams: Promise<{ outlet?: st
           <>
             <p className="m-0 border-b border-line px-4 py-3 text-[13px] text-text-secondary">
               {(["seated", "with_kitchen", "ready", "served", "free"] as ServiceStage[])
-                .map((s) => `${stageCounts.get(s) ?? 0} ${STAGE[s].label.toLowerCase()}`)
+                .map((s) => `${stageCounts.get(s) ?? 0} ${TABLE_STAGE[s]!.label.toLowerCase()}`)
                 .join(" · ")}
             </p>
             <ul className="m-0 grid list-none grid-cols-2 gap-px bg-line p-0 sm:grid-cols-3 lg:grid-cols-4">
@@ -137,7 +128,9 @@ async function TodayPage({ searchParams }: { searchParams: Promise<{ outlet?: st
                 <li key={row.tableId} className="bg-surface px-4 py-3">
                   <Link href="/floor" className="flex min-h-11 flex-col justify-center no-underline">
                     <span className="text-[15px] font-medium text-text">{row.label}</span>
-                    <span className={`text-[13px] ${STAGE[row.stage].tone}`}>{STAGE[row.stage].label}</span>
+                    <span className="mt-0.5">
+                      <StateBadge category={TABLE_STAGE[row.stage]!.category} label={TABLE_STAGE[row.stage]!.label} />
+                    </span>
                     {row.minutes !== null && (
                       <span className={`tabular text-[12px] ${row.over ? "text-danger" : "text-text-tertiary"}`}>
                         {row.minutes} min{row.over ? ", longer than usual" : ""}
