@@ -95,7 +95,7 @@ export type RecordObject = {
   /** The field shown as the record's name, first column, link to the record page. */
   titleField: string;
   /** `/crm/companies/{id}`. */
-  href: string;
+  recordHref: string;
   fields: RecordField[];
   /** The query that lists the object, called with `ListInput`. */
   listQuery: string;
@@ -108,6 +108,12 @@ export type RecordObject = {
   boardSumField?: string;
   /** Free-text search runs `contains` over these columns. */
   searchColumns: string[];
+  /** The query a relation picker calls, with `{ object, search }`, for fields that point at this capability's objects. */
+  lookupQuery?: string;
+  /** The command a board drag runs: `{ id, version, position, [groupParam]: value }` plus any reason fields. */
+  boardMove?: { command: string; groupParam: string };
+  /** The command a board column's quick add runs: `{ [titleParam]: text, [groupParam]: value }`. */
+  quickCreate?: { command: string; titleParam: string; groupParam: string };
 };
 
 const objects = new Map<string, RecordObject>();

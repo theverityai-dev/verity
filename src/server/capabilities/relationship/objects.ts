@@ -20,6 +20,7 @@ import {
 const UPDATE_COMPANY = "verity.relationship.update_company";
 const UPDATE_PERSON = "verity.relationship.update_person";
 const UPDATE_OPPORTUNITY = "verity.relationship.update_opportunity";
+const LOOKUP = "verity.relationship.lookup";
 
 export const COMPANY_OBJECT: RecordObject = {
   key: ENTITY_COMPANY,
@@ -29,9 +30,10 @@ export const COMPANY_OBJECT: RecordObject = {
   labelPlural: "Companies",
   icon: "building",
   titleField: "name",
-  href: "/crm/companies/{id}",
+  recordHref: "/crm/companies/{id}",
   listQuery: "verity.relationship.list_companies",
   searchColumns: ["name", "domain", "city", "email", "phone"],
+  lookupQuery: LOOKUP,
   defaultSort: { field: "name", dir: "asc" },
   defaultColumns: ["name", "domain", "industry", "city", "owner", "people", "openOpportunities", "pipelineValue", "lastActivity"],
   fields: [
@@ -64,11 +66,12 @@ export const PERSON_OBJECT: RecordObject = {
   labelPlural: "People",
   icon: "people",
   titleField: "name",
-  href: "/crm/people/{id}",
+  recordHref: "/crm/people/{id}",
   listQuery: "verity.relationship.list_people",
   searchColumns: ["givenName", "familyName", "jobTitle", "city", "company.name"],
   defaultSort: { field: "name", dir: "asc" },
   defaultColumns: ["name", "company", "jobTitle", "emails", "phones", "city", "owner", "lastActivity"],
+  lookupQuery: LOOKUP,
   fields: [
     { key: "name", label: "Name", type: "text", column: "givenName", filterable: false, width: 220 },
     { key: "givenName", label: "First name", type: "text", editCommand: UPDATE_PERSON, width: 140 },
@@ -95,13 +98,16 @@ export const OPPORTUNITY_OBJECT: RecordObject = {
   labelPlural: "Opportunities",
   icon: "enquiry",
   titleField: "name",
-  href: "/crm/opportunities/{id}",
+  recordHref: "/crm/opportunities/{id}",
   listQuery: "verity.relationship.list_opportunities",
   searchColumns: ["name", "company.name"],
   defaultSort: { field: "createdAt", dir: "desc" },
   defaultColumns: ["name", "company", "stage", "amount", "expectedCloseOn", "owner", "contact", "source"],
   boardGroupField: "stage",
   boardSumField: "amount",
+  lookupQuery: LOOKUP,
+  boardMove: { command: "verity.relationship.move_opportunity", groupParam: "stageId" },
+  quickCreate: { command: "verity.relationship.create_opportunity", titleParam: "name", groupParam: "stage" },
   fields: [
     { key: "name", label: "Name", type: "text", editCommand: UPDATE_OPPORTUNITY, width: 260 },
     { key: "number", label: "Ref", type: "number", width: 90 },

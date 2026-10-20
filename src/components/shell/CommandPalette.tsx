@@ -7,9 +7,13 @@ import { Icon } from "@/components/ui/icons";
 import { runQuery } from "@/server/actions/platform";
 import { prefersReducedMotion, reducedMotionFade, springDefault } from "@/lib/motion";
 
-type Result = { id: string; type: "lead" | "domain" | "team"; label: string; sublabel: string; href: string };
+type Result = { id: string; type: "lead" | "domain" | "team" | "company" | "person" | "opportunity"; label: string; sublabel: string; href: string };
 
-const TYPE_LABEL: Record<Result["type"], string> = { lead: "Lead", domain: "Domain", team: "Team" };
+const TYPE_LABEL: Record<Result["type"], string> = {
+  lead: "Lead", domain: "Domain", team: "Team", company: "Company", person: "Person", opportunity: "Deal",
+};
+
+type CrmHit = { kind: "company" | "person" | "opportunity"; id: string; label: string; sub: string | null; href: string };
 const START_ACTION = { label: "Create prospect", detail: "Start a researched prospect", href: "/outreach/prospects?create=1" };
 
 /**
@@ -109,8 +113,15 @@ export function CommandPalette() {
     }
     const handle = setTimeout(() => {
       startTransition(async () => {
-        const result = await runQuery<Result[]>("verity.outreach.command_palette_search", { q: q.trim() });
-        setResults(result.ok ? result.data : []);
+        // Each source answers only for a tenant that has it: an inactive capability's query fails and adds nothing.
+        const [outreach, crm] = await Promise.all([
+          runQuery<Result[]>("verity.outreach.command_palette_search", { q: q.trim() }),
+          runQuery<CrmHit[]>("verity.relationship.search", { term: q.trim() }),
+        ]);
+        setResults([
+          ...(crm.ok ? crm.data.map((h) => ({ id: h.id, type: h.kind, label: h.label, sublabel: h.sub ?? "", href: h.href })) : []),
+          ...(outreach.ok ? outreach.data : []),
+        ]);
         setActiveIndex(0);
       });
     }, 200);
@@ -145,7 +156,7 @@ export function CommandPalette() {
             transition={transition}
             role="dialog"
             aria-modal="true"
-            aria-label="Search Outreach leads, domains, and teams"
+            aria-label="Search companies, people, deals and leads"
             className="glass-overlay relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px]"
             onKeyDown={(e) => {
           onTrapKeyDown(e);
@@ -167,7 +178,7 @@ export function CommandPalette() {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search leads, domains, teams…"
+            placeholder="Search companies, people, deals, leads…"
             className="h-8 w-full border-0 bg-transparent text-[14px] text-text placeholder:text-text-tertiary focus:outline-none"
           />
           <kbd className="hidden shrink-0 rounded px-1.5 py-0.5 text-[12px] text-text-tertiary sm:inline bg-control">Esc</kbd>
