@@ -1,0 +1,3503 @@
+1
+00:00:00,070 --> 00:00:01,110
+Hai We Ki use Why single it Address. that?
+
+2
+00:00:00,925 --> 00:00:01,883
+for client each hai and uske multiple
+
+3
+00:00:01,660 --> 00:00:02,790
+every projects product. chal raha hai.
+
+4
+00:00:02,990 --> 00:00:04,666
+Yes, aaj kisi And Mein multiple Ek mere
+
+5
+00:00:04,494 --> 00:00:05,729
+projects ko parallel detail dena children
+
+6
+00:00:05,503 --> 00:00:06,900
+hai usme Sir, number kya of hota tons
+
+7
+00:00:06,900 --> 00:00:08,296
+dena hai hai issue total number Ki of
+
+8
+00:00:08,199 --> 00:00:09,413
+document tonne. Telling bana me hai we
+
+9
+00:00:09,413 --> 00:00:10,809
+built shop in floor that only pay. unka
+
+10
+00:00:10,809 --> 00:00:13,180
+toh hamne we So. made a I would say UN
+
+11
+00:00:13,043 --> 00:00:14,160
+itna logon complex ko yeh kar nahi diya
+
+12
+00:00:13,938 --> 00:00:14,886
+Pata hai tha Ki unhone kiska document
+
+13
+00:00:14,719 --> 00:00:15,836
+because hai he kya hai wanted toh to.
+
+14
+00:00:15,645 --> 00:00:16,673
+kahin bhee He kisi basically bhee wanted
+
+15
+00:00:16,403 --> 00:00:17,351
+file Mein freedom aaj unhone. ke time
+
+16
+00:00:17,232 --> 00:00:18,349
+Humse Mein first padaa Hua word hai. ye
+
+17
+00:00:18,349 --> 00:00:19,745
+Bola tha. I The want traceability freedom
+
+18
+00:00:19,665 --> 00:00:20,862
+Jo Ki havo mujhe proper har nahi cheez
+
+19
+00:00:20,695 --> 00:00:21,979
+hai karne toh ke Jo liye bhee aapke
+
+20
+00:00:21,725 --> 00:00:23,013
+document paas hum log dubara Ki na taraf
+
+21
+00:00:22,817 --> 00:00:24,213
+AA se raha software hai per bade ban Mein
+
+22
+00:00:24,043 --> 00:00:25,330
+Ki har unko cheez jaayega khud toh. se
+
+23
+00:00:25,074 --> 00:00:26,361
+There kar will be paaun a itna document
+
+24
+00:00:26,168 --> 00:00:27,391
+mujhe number freedom on do that. I Wo
+
+25
+00:00:27,285 --> 00:00:28,681
+should log be usko able fill to up create
+
+26
+00:00:28,422 --> 00:00:29,519
+kar lenge my aur own jaise categories.
+
+27
+00:00:29,452 --> 00:00:30,739
+bhee I hum should log be ismein able app
+
+28
+00:00:30,636 --> 00:00:31,770
+to Mein create bhee my karenge own toh
+
+29
+00:00:31,753 --> 00:00:32,591
+subcategories. app Mein I bhee. should
+
+30
+00:00:32,542 --> 00:00:33,611
+Same be. document number Bad will like
+
+31
+00:00:33,572 --> 00:00:35,505
+follow. I should be able to operate my
+
+32
+00:00:35,505 --> 00:00:37,128
+business And if I just. have another 100
+
+33
+00:00:37,128 --> 00:00:39,292
+kind of products like I mean do products
+
+34
+00:00:39,292 --> 00:00:41,456
+pay aapke paas aaya Hoon mujhe baad Mein
+
+35
+00:00:41,456 --> 00:00:43,079
+sau banane Yes. padenge Mein sau bar
+
+36
+00:00:43,079 --> 00:00:45,243
+aapke paas nahi aunga? I want I want
+
+37
+00:00:45,243 --> 00:00:46,866
+everything to be customizable from my
+
+38
+00:00:46,866 --> 00:00:49,030
+side only. I want every checklist to be
+
+39
+00:00:49,030 --> 00:00:51,195
+created from my side only. Toh phir hamne
+
+40
+00:00:51,195 --> 00:00:52,818
+form bhee aisi tarike Right. se banaaya
+
+41
+00:00:52,818 --> 00:00:54,441
+hai Ki jaise Google form Right. banata
+
+42
+00:00:54,441 --> 00:00:56,875
+hai Ki you have every kind of option Ki
+
+43
+00:00:56,875 --> 00:00:57,957
+short answer, Uh, long screens answer,
+
+44
+00:00:57,900 --> 00:00:58,769
+visible remark, here photo approval,
+
+45
+00:00:58,540 --> 00:01:01,013
+from. video approval. Check box, OK
+
+46
+00:01:00,901 --> 00:01:02,373
+multiple iske choice andar question Agar
+
+47
+00:01:01,953 --> 00:01:03,706
+or everything AAP he dekhenge. had in
+
+48
+00:01:03,706 --> 00:01:05,870
+those option and for every product Kuchh
+
+49
+00:01:05,809 --> 00:01:07,005
+every. client votes hai. Classification
+
+50
+00:01:07,005 --> 00:01:08,545
+he made different Toh kind client of code
+
+51
+00:01:08,479 --> 00:01:09,659
+checklist Mein and bhee unke kya saath
+
+52
+00:01:09,420 --> 00:01:10,586
+hota Mein hai wo Ki checklist multiple
+
+53
+00:01:10,543 --> 00:01:11,753
+Hua Agar hai Mein sign suppose per karta
+
+54
+00:01:11,723 --> 00:01:12,627
+dikhe Hoon Whenever hum this logon
+
+55
+00:01:12,607 --> 00:01:13,787
+product ka is Ek getting single paid
+
+56
+00:01:13,502 --> 00:01:14,669
+client the hai worker Agar will Baba
+
+57
+00:01:14,669 --> 00:01:15,835
+Atomic see research only centre this ke
+
+58
+00:01:15,556 --> 00:01:16,735
+checklist liye not BARC any Mumbai. yes
+
+59
+00:01:16,735 --> 00:01:19,380
+yes. So BRC is based So in similarly EC
+
+60
+00:01:19,183 --> 00:01:20,967
+India. type se hum logon ko bhee plan
+
+61
+00:01:20,750 --> 00:01:23,236
+Right. karna rahega. So the first digit
+
+62
+00:01:23,170 --> 00:01:24,893
+Right. will come from the Aur country
+
+63
+00:01:24,793 --> 00:01:25,887
+module itself. Jo Country Hain toh or
+
+64
+00:01:25,764 --> 00:01:26,979
+Maine the aapko region?Ek document bhee
+
+65
+00:01:26,979 --> 00:01:29,200
+jaata hai I think. The second will
+
+66
+00:01:29,190 --> 00:01:30,859
+Document be the or organization. write
+
+67
+00:01:30,859 --> 00:01:33,740
+mere pass abhi koi Then the document 3rd
+
+68
+00:01:33,641 --> 00:01:35,180
+nahi will be aaya either document. their
+
+69
+00:01:35,180 --> 00:01:36,160
+division Document or ya phir the detail
+
+70
+00:01:36,160 --> 00:01:37,560
+write section. up I have shared you or
+
+71
+00:01:37,560 --> 00:01:39,652
+not. 4 can be both. No, no, we So just
+
+72
+00:01:39,454 --> 00:01:40,974
+4th had and a 5th, call. 3rd Uski and
+
+73
+00:01:40,714 --> 00:01:42,041
+alava 4th hamaari koi can baat be nahi
+
+74
+00:01:41,886 --> 00:01:43,634
+combined. Hui. OK, I will just Then share
+
+75
+00:01:43,620 --> 00:01:45,500
+there you the will details. be a
+
+76
+00:01:45,500 --> 00:01:48,437
+numbering system from zero to So 9 a
+
+77
+00:01:48,320 --> 00:01:50,200
+and tentative then idea what ABCD I till
+
+78
+00:01:49,871 --> 00:01:52,110
+require Z. is Mein Ek aapko So Sara it
+
+79
+00:01:52,022 --> 00:01:53,150
+detail will be bhej permitted deta for
+
+80
+00:01:53,098 --> 00:01:55,249
+Hoon numeric code. Ki kaun kaun se models
+
+81
+00:01:55,249 --> 00:01:57,041
+mujhe lag sakte So Hain basically kaunse
+
+82
+00:01:57,000 --> 00:01:59,067
+you nahi. have a fixed Yes pattern and
+
+83
+00:01:59,067 --> 00:02:00,421
+uske and andar according irrigate to all
+
+84
+00:02:00,322 --> 00:02:01,436
+that the particular complete details
+
+85
+00:02:01,152 --> 00:02:03,128
+format or you ho will sakta be hai Kendra
+
+86
+00:02:02,813 --> 00:02:04,058
+saving Mein their complete details,
+
+87
+00:02:03,805 --> 00:02:05,159
+detail right, naam right, bech paanv
+
+88
+00:02:04,889 --> 00:02:06,513
+right, abhi right, at right. the So time
+
+89
+00:02:06,513 --> 00:02:07,795
+which whenever models we missing create
+
+90
+00:02:07,528 --> 00:02:09,898
+honge document. Jo time of hum logon ko
+
+91
+00:02:09,590 --> 00:02:10,913
+We will implementation we Mein will Pata
+
+92
+00:02:10,667 --> 00:02:12,553
+need chalta to issue hai. a number so we
+
+93
+00:02:12,553 --> 00:02:15,402
+will select the client. Where will
+
+94
+00:02:15,350 --> 00:02:16,367
+Ek be the overview client. Maine aapko
+
+95
+00:02:16,367 --> 00:02:18,147
+bheja hai aur SAB ke Yes, upar the aapko
+
+96
+00:02:18,110 --> 00:02:20,657
+year check kar code. lijie. It will Yeah,
+
+97
+00:02:20,412 --> 00:02:21,706
+be give automatically me a selected
+
+98
+00:02:21,489 --> 00:02:22,999
+second based overview. Maine on aapko the
+
+99
+00:02:22,598 --> 00:02:24,816
+bata diya date. hai Ki hum log kya kya
+
+100
+00:02:24,816 --> 00:02:27,037
+plan karna hai and for Then the scope the
+
+101
+00:02:26,757 --> 00:02:29,052
+of work project. aur Jo bhee hum log And
+
+102
+00:02:28,698 --> 00:02:30,316
+abhi ISS type stage of ke upar document
+
+103
+00:02:30,085 --> 00:02:31,471
+soch we rahe Hain are wo providing Maine
+
+104
+00:02:31,471 --> 00:02:32,845
+aapko either detail bill diya hai. of
+
+105
+00:02:32,845 --> 00:02:35,102
+material calculation, drawing. So you can
+
+106
+00:02:35,030 --> 00:02:36,245
+Factory discuss acceptance it with test
+
+107
+00:02:36,104 --> 00:02:37,865
+your or team a or shop ho sakta floor
+
+108
+00:02:37,775 --> 00:02:39,280
+ekadh traveller. model plus ya Whatever
+
+109
+00:02:39,111 --> 00:02:40,781
+minus will ho be sakta there. hai So baad
+
+110
+00:02:40,760 --> 00:02:42,451
+project Mein you in don't this Ek is he
+
+111
+00:02:42,240 --> 00:02:43,720
+basically stage the ke client upar will
+
+112
+00:02:43,454 --> 00:02:44,830
+You be cannot having decide all multiple
+
+113
+00:02:44,790 --> 00:02:46,126
+the projects. things. So Yes using nahi
+
+114
+00:02:45,940 --> 00:02:47,262
+the Madam. project This from is Aadhaar
+
+115
+00:02:47,050 --> 00:02:48,160
+his Pata particular he tab catalogue,
+
+116
+00:02:47,964 --> 00:02:49,368
+chalti right? hai wo And jab haath Mein
+
+117
+00:02:49,270 --> 00:02:50,304
+last aapko software part exactly you when
+
+118
+00:02:50,304 --> 00:02:52,230
+you see start M3 using it. MC zero one.
+
+119
+00:02:52,190 --> 00:02:54,037
+Right aur hum log So ka hai M3 jaise saal
+
+120
+00:02:53,817 --> 00:02:55,191
+MC ke ZERO Agar bees ONE ya is pachchis
+
+121
+00:02:55,191 --> 00:02:56,345
+project the utha raha item hai code toh
+
+122
+00:02:56,345 --> 00:02:57,499
+not on every which time that you software
+
+123
+00:02:57,499 --> 00:02:58,653
+will are be working will be because in
+
+124
+00:02:58,653 --> 00:03:00,163
+Mela you ho are sakta hai creating Ki a
+
+125
+00:02:59,807 --> 00:03:00,962
+wo weekly customised Ek ya machinery do
+
+126
+00:03:00,910 --> 00:03:02,347
+and bar kaam it AA raha may ho have kisi
+
+127
+00:03:02,347 --> 00:03:03,039
+Ek multiple single subcomponents. user
+
+128
+00:03:03,039 --> 00:03:05,630
+ko. So each component Toh shall usme be
+
+129
+00:03:05,296 --> 00:03:06,761
+kya hoga traceable Ki at Agar their niche
+
+130
+00:03:06,638 --> 00:03:08,226
+origin workshop level. pe kuchh kaam chal
+
+131
+00:03:08,110 --> 00:03:09,691
+So raha hai this toh particular Ek Baja
+
+132
+00:03:09,520 --> 00:03:11,156
+part pure pay assembly around or 4 to
+
+133
+00:03:10,930 --> 00:03:12,621
+part 5 or days toh assembly jab uski
+
+134
+00:03:12,340 --> 00:03:13,500
+identification entries is vagairah wo
+
+135
+00:03:13,280 --> 00:03:14,965
+there. karega wo soft floor So vaala
+
+136
+00:03:14,965 --> 00:03:16,430
+Banda let wo us teen select ya one chaar
+
+137
+00:03:16,363 --> 00:03:18,188
+part. din baad usko access karega toh
+
+138
+00:03:17,950 --> 00:03:19,360
+Okay iske then andar aapka document jaise
+
+139
+00:03:19,210 --> 00:03:20,890
+title general will hota hai create Ki a
+
+140
+00:03:20,532 --> 00:03:22,150
+AAP 3 document month title ya 6 whatever
+
+141
+00:03:21,997 --> 00:03:23,410
+month be ka the trial period document
+
+142
+00:03:23,169 --> 00:03:25,350
+dete is. hai toh we will Lets require say
+
+143
+00:03:24,927 --> 00:03:26,392
+date for Sir one year Traveller. kyonki
+
+144
+00:03:26,392 --> 00:03:28,150
+multiple some usages ke nahi For. hai.
+
+145
+00:03:29,770 --> 00:03:30,930
+Mean coil assembly.
+
+146
+00:03:32,870 --> 00:03:35,470
+Yeh hai aapko. Yeah, I understood.
+
+147
+00:03:36,730 --> 00:03:38,143
+Then will Because officially the issue
+
+148
+00:03:37,886 --> 00:03:39,424
+working the duration document. is so much
+
+149
+00:03:39,424 --> 00:03:40,963
+the amount Correct. of usage which
+
+150
+00:03:40,963 --> 00:03:42,224
+generally concentrated Part Ki wo number
+
+151
+00:03:42,194 --> 00:03:43,733
+Ek zero he one din is Mein not kaafi
+
+152
+00:03:43,573 --> 00:03:45,579
+registered. cheese use ho jaati hai toh
+
+153
+00:03:45,350 --> 00:03:46,630
+Project Pata number chal zero jaata one
+
+154
+00:03:46,503 --> 00:03:47,910
+hai is bande not ko. registered But OK.
+
+155
+00:03:47,734 --> 00:03:50,196
+that is taking a week So or I 2 will so
+
+156
+00:03:50,196 --> 00:03:51,750
+this requires you much the more exact.
+
+157
+00:03:51,427 --> 00:03:54,227
+longer period right?Or apan
+
+158
+00:03:54,227 --> 00:03:56,258
+dekh rahe Hain landscape mode Mein
+
+159
+00:03:56,258 --> 00:03:58,909
+karenge ISS pe Ek bar. Okay, we
+
+160
+00:03:58,909 --> 00:04:00,420
+had Yeah, registered yeah, a this is
+
+161
+00:04:00,122 --> 00:04:01,740
+project Workers here Ka as View. well.
+
+162
+00:04:01,372 --> 00:04:03,595
+Its landscape mode Mein kar sakte Hain
+
+163
+00:04:03,595 --> 00:04:05,871
+hum log. Okay, Haan haan so kar this
+
+164
+00:04:05,566 --> 00:04:08,172
+sakte Hain. was the case where we have
+
+165
+00:04:08,172 --> 00:04:10,856
+issued the documents. Let us see this
+
+166
+00:04:10,856 --> 00:04:13,223
+document. So what this It document is is
+
+167
+00:04:13,070 --> 00:04:15,361
+showing?in desktop mode, I think mobile
+
+168
+00:04:15,361 --> 00:04:17,983
+ka landscape It view. will provide a part
+
+169
+00:04:17,983 --> 00:04:19,205
+identification, part description, Mobile
+
+170
+00:04:19,205 --> 00:04:20,530
+you the are saying? project Give name, me
+
+171
+00:04:20,530 --> 00:04:22,020
+a the second. client organization.
+
+172
+00:04:23,350 --> 00:04:25,548
+Then based on their internal metadata, it
+
+173
+00:04:25,370 --> 00:04:26,526
+Wo will vaise create landscape some hai
+
+174
+00:04:26,490 --> 00:04:27,746
+kind toh of phir wo identity. tab This
+
+175
+00:04:27,682 --> 00:04:29,127
+mode is Mein not chala any jaata use hai
+
+176
+00:04:29,002 --> 00:04:30,862
+of Okay me. okay haan ye Then raha I hai
+
+177
+00:04:30,862 --> 00:04:32,078
+aapka can upper just just copy karta this
+
+178
+00:04:32,018 --> 00:04:32,982
+bhee number theek from hai. here
+
+179
+00:04:32,885 --> 00:04:34,187
+Instagram and link paste ke it niche on
+
+180
+00:04:34,041 --> 00:04:35,840
+right?my document. Yes.
+
+181
+00:04:36,940 --> 00:04:38,384
+Yes, My the stages document OK saved
+
+182
+00:04:38,172 --> 00:04:40,008
+Koshibi in order my Ki screen pari in Ek
+
+183
+00:04:39,827 --> 00:04:41,993
+my bar PC click will Karen. be of same
+
+184
+00:04:41,993 --> 00:04:44,158
+name. So whenever I Abhi wo would Ek like
+
+185
+00:04:43,820 --> 00:04:45,241
+he order to signed hai trace usko. any
+
+186
+00:04:45,241 --> 00:04:48,128
+document by using a search bar, I will
+
+187
+00:04:48,128 --> 00:04:49,933
+just type in Okay this checklist number
+
+188
+00:04:49,724 --> 00:04:51,376
+abhi and ismein there then is we no will
+
+189
+00:04:51,107 --> 00:04:52,491
+checklist. get You can it ismein to wo
+
+190
+00:04:52,459 --> 00:04:54,705
+you. the same thing I told you. Okay you
+
+191
+00:04:54,705 --> 00:04:57,040
+can create a form kind of a thing So
+
+192
+00:04:56,919 --> 00:04:58,026
+which is it is clear to checklist you?the
+
+193
+00:04:58,026 --> 00:04:59,410
+image you showed Yeah, me that's and.
+
+194
+00:04:59,263 --> 00:05:01,053
+clear. So this is basically Abhi
+
+195
+00:05:00,947 --> 00:05:02,366
+something if you I tell have you build na
+
+196
+00:05:02,293 --> 00:05:04,205
+yourself. Mein demo toh I feel this is
+
+197
+00:05:04,030 --> 00:05:06,245
+Yes. very basic and aapki use case ka So
+
+198
+00:05:06,043 --> 00:05:07,464
+hai you he have nahi abhi the demo source
+
+199
+00:05:07,357 --> 00:05:08,407
+you code will and see everything terms
+
+200
+00:05:08,378 --> 00:05:10,207
+with very. this. This is being made
+
+201
+00:05:09,960 --> 00:05:11,426
+Common by in your a work, I but studio
+
+202
+00:05:11,217 --> 00:05:13,916
+thing Google is. a I. The whole system is
+
+203
+00:05:13,916 --> 00:05:15,810
+not suitable Then away. its perfect, you
+
+204
+00:05:15,630 --> 00:05:17,250
+From will what be you having have like
+
+205
+00:05:16,898 --> 00:05:18,330
+showed me, every I important have context
+
+206
+00:05:18,167 --> 00:05:19,770
+understood about it it. and Yeah I and
+
+207
+00:05:19,435 --> 00:05:21,021
+would say also we I will wanted require
+
+208
+00:05:20,850 --> 00:05:22,606
+to wo know aapka like. if you can
+
+209
+00:05:22,606 --> 00:05:23,875
+provide. Just Yeah, since of we course,
+
+210
+00:05:23,816 --> 00:05:25,238
+will if be you can starting provide that
+
+211
+00:05:25,143 --> 00:05:26,304
+the product source management code stage
+
+212
+00:05:26,094 --> 00:05:27,371
+for where that you document complete
+
+213
+00:05:27,046 --> 00:05:28,081
+management system business, and business
+
+214
+00:05:27,997 --> 00:05:29,265
+that analysis CRM will because be it
+
+215
+00:05:29,148 --> 00:05:30,534
+done. has So transferred do is you not
+
+216
+00:05:30,534 --> 00:05:31,802
+complete have yet. a And complete for
+
+217
+00:05:31,636 --> 00:05:33,057
+context the of CRM your Jo business
+
+218
+00:05:32,753 --> 00:05:34,339
+client stored ko uski in baat a kar
+
+219
+00:05:34,124 --> 00:05:35,545
+proper rahe contextual Hain and wo a
+
+220
+00:05:35,290 --> 00:05:36,612
+vaale textual Ki format baat Karen or
+
+221
+00:05:36,559 --> 00:05:38,744
+source is sort it Ki. just like with you
+
+222
+00:05:38,470 --> 00:05:40,166
+Jo only website you Jo kah only rahe know
+
+223
+00:05:40,047 --> 00:05:41,625
+Hain. the I that don't stuff want and the
+
+224
+00:05:41,588 --> 00:05:43,202
+you database, I have don't it want in the
+
+225
+00:05:43,009 --> 00:05:44,464
+your data brain. of You the will clients.
+
+226
+00:05:44,431 --> 00:05:45,853
+have I want to the explain structure each
+
+227
+00:05:45,726 --> 00:05:46,919
+you and built everything around verbally,
+
+228
+00:05:46,673 --> 00:05:48,148
+it. Abhi Wo Tak. actually jisamen Kya ho
+
+229
+00:05:47,935 --> 00:05:49,319
+website raha banakar tha di Ki it thi is
+
+230
+00:05:49,196 --> 00:05:50,489
+naa in unhone my brain he but iska wo
+
+231
+00:05:50,458 --> 00:05:51,720
+source bar bar code problem diya bhee tha
+
+232
+00:05:51,425 --> 00:05:52,596
+AA raha source hai code mere nahi ko
+
+233
+00:05:52,596 --> 00:05:53,532
+sabko diya explain tha karna uske pad
+
+234
+00:05:53,532 --> 00:05:55,191
+raha andar tha. integrate kiya tha So and
+
+235
+00:05:54,950 --> 00:05:56,550
+for wo that Ek only readymade I CRM have
+
+236
+00:05:56,453 --> 00:05:57,830
+hai created perfects this CRM or I iske
+
+237
+00:05:57,715 --> 00:05:59,430
+think. andar jab bhee search karenge.
+
+238
+00:05:59,350 --> 00:06:01,664
+Perfect, perfect. Toh usase Jo bhee
+
+239
+00:06:01,664 --> 00:06:04,204
+relevant PERLFEX. document hai. AB iske
+
+240
+00:06:04,204 --> 00:06:05,807
+andar abhi iska Perfect. proper Hua nahi
+
+241
+00:06:05,807 --> 00:06:07,678
+hai so Agar OK hum yahaan this. se kisi
+
+242
+00:06:07,678 --> 00:06:09,066
+bhee client ko So search this karte is
+
+243
+00:06:09,014 --> 00:06:10,128
+Hain. ready So made. it They shall didn't
+
+244
+00:06:10,082 --> 00:06:11,151
+list customise all it the for documents
+
+245
+00:06:10,925 --> 00:06:12,635
+you. Ki unse related kaun kaunse Uske
+
+246
+00:06:12,487 --> 00:06:13,556
+documents andar hai unhone kon just konsa
+
+247
+00:06:13,461 --> 00:06:14,892
+mera police wo hai Jo wo apna SAB naam AA
+
+248
+00:06:14,838 --> 00:06:15,940
+hai Jana use chaahiye apna yaad company
+
+249
+00:06:15,693 --> 00:06:17,029
+tha. naam Let perfects us Ki say hum
+
+250
+00:06:16,766 --> 00:06:18,098
+jagah logon unhone ne D&S Ek kar client
+
+251
+00:06:17,867 --> 00:06:19,244
+diya ko hai click baki ko lagbhag Kara wo
+
+252
+00:06:19,166 --> 00:06:20,070
+toh similar related he projects tha
+
+253
+00:06:19,968 --> 00:06:21,037
+jyaada AB yahaan Mein per isliye kaun
+
+254
+00:06:20,896 --> 00:06:21,998
+prefer kaun Kara se tha document unhone
+
+255
+00:06:21,838 --> 00:06:23,174
+hai do hum teen usko mere filter ko kar
+
+256
+00:06:23,099 --> 00:06:24,476
+die sakte the hai but based ye on Maine
+
+257
+00:06:24,243 --> 00:06:25,853
+project. isliye select Kara tha. Kyonki
+
+258
+00:06:25,853 --> 00:06:27,230
+Jo Right, hum logon so ka that manager
+
+259
+00:06:27,230 --> 00:06:28,607
+software we hai can ye usase just bahut
+
+260
+00:06:28,484 --> 00:06:29,984
+choose jyaada similar it. hai So UI Mein
+
+261
+00:06:29,722 --> 00:06:31,085
+essentially toh this, logon ko this kaam
+
+262
+00:06:30,959 --> 00:06:32,196
+particular karne Mein software jyaada is
+
+263
+00:06:31,911 --> 00:06:33,288
+issue nahi solving hai. your Kyonki hum
+
+264
+00:06:33,021 --> 00:06:34,114
+document log management Agar multiple
+
+265
+00:06:33,846 --> 00:06:35,491
+part time key. UI change It karte is hai
+
+266
+00:06:35,491 --> 00:06:36,868
+toh just UN structurising logon ke a liye
+
+267
+00:06:36,733 --> 00:06:37,970
+complete problem hoti document hai flow.
+
+268
+00:06:37,694 --> 00:06:39,965
+chijen dhundhane Mein. Which Yes, goes so
+
+269
+00:06:39,965 --> 00:06:41,983
+it into was very the close to appropriate
+
+270
+00:06:41,502 --> 00:06:42,732
+my existing project, software to
+
+271
+00:06:42,590 --> 00:06:43,655
+appropriate Isliye Menospa clients select
+
+272
+00:06:43,655 --> 00:06:46,583
+Kara profile. Tha. It is just. So Storing
+
+273
+00:06:46,284 --> 00:06:47,941
+the the naming names of of document those
+
+274
+00:06:47,794 --> 00:06:50,013
+and particular the. like tabs and all,
+
+275
+00:06:49,990 --> 00:06:51,670
+What it I was can already say there.
+
+276
+00:06:51,355 --> 00:06:53,402
+which document is issued to, against
+
+277
+00:06:53,110 --> 00:06:55,449
+Which?which project number or to As which
+
+278
+00:06:55,311 --> 00:06:56,814
+in client? you Its showed creating me a
+
+279
+00:06:56,756 --> 00:06:58,519
+ke trail Jo kind client of for K the
+
+280
+00:06:58,201 --> 00:06:59,884
+profile document Mein and JA its kar not
+
+281
+00:06:59,645 --> 00:07:00,908
+de storing Hua the hai documents.
+
+282
+00:07:00,729 --> 00:07:02,272
+multiple You dth have like to gantt copy
+
+283
+00:07:02,174 --> 00:07:03,637
+chart the and names all from most this
+
+284
+00:07:03,618 --> 00:07:05,343
+present and you Yes have and to it search
+
+285
+00:07:05,063 --> 00:07:06,708
+is it absolutely in suitable your for own
+
+286
+00:07:06,508 --> 00:07:09,353
+you PC yes. yes. So To don't project you
+
+287
+00:07:09,009 --> 00:07:10,355
+management ke guys liye work that like is
+
+288
+00:07:10,355 --> 00:07:11,702
+very you good have uske a andar koi
+
+289
+00:07:11,519 --> 00:07:12,963
+server issue yourself nahi hai. and don't
+
+290
+00:07:12,963 --> 00:07:15,115
+you have network shared access for Or
+
+291
+00:07:15,115 --> 00:07:15,878
+similar the functionality. database Humma
+
+292
+00:07:15,850 --> 00:07:17,294
+or marriage Mein we bhee just use kar use
+
+293
+00:07:17,151 --> 00:07:19,099
+sakte your Hain. system? No no Aur no
+
+294
+00:07:18,775 --> 00:07:20,125
+Mein Ek we bar unse do baat have karta
+
+295
+00:07:20,125 --> 00:07:21,265
+Hoon server Agar installed wo source in
+
+296
+00:07:21,025 --> 00:07:22,348
+code de our sakte premises Hain toh. and
+
+297
+00:07:22,348 --> 00:07:24,150
+each and every But system I is don't
+
+298
+00:07:24,150 --> 00:07:25,236
+think connected they with will that
+
+299
+00:07:24,990 --> 00:07:27,041
+provide. server whatever the data we
+
+300
+00:07:26,830 --> 00:07:28,270
+Arishad store. iska Let's source say code
+
+301
+00:07:28,124 --> 00:07:29,568
+we I do think have $49 accessible
+
+302
+00:07:29,350 --> 00:07:31,011
+something to like all. usme Yes mil we
+
+303
+00:07:30,790 --> 00:07:33,538
+jaata do hai. have 2 user. So the admin
+
+304
+00:07:33,538 --> 00:07:35,702
+credentials are with me and No I issues
+
+305
+00:07:35,702 --> 00:07:37,331
+usme have toh assigned phir a if few they
+
+306
+00:07:37,148 --> 00:07:38,635
+other have users. already used prebuilt
+
+307
+00:07:38,310 --> 00:07:40,264
+Name CRM so so it based is on absolutely
+
+308
+00:07:40,264 --> 00:07:42,219
+fine. their. Both of our manageable. I
+
+309
+00:07:42,219 --> 00:07:43,523
+thought who aapne Accessibility. kuchh
+
+310
+00:07:43,523 --> 00:07:44,501
+customise They vagairah share karvaya
+
+311
+00:07:44,501 --> 00:07:46,130
+hoga the as documents per your at issue.
+
+312
+00:07:46,021 --> 00:07:48,202
+their drive. Perfect Aur perfect yeh open
+
+313
+00:07:47,989 --> 00:07:49,690
+perfect toh perfect. CRM hai So toh iska
+
+314
+00:07:49,464 --> 00:07:51,177
+you aapko have source code that bhee mil
+
+315
+00:07:50,940 --> 00:07:52,367
+database jaayega already I think set haan
+
+316
+00:07:52,367 --> 00:07:54,152
+that's up why so I am its saying usko
+
+317
+00:07:53,891 --> 00:07:55,366
+fine. phir So toh meri essentially
+
+318
+00:07:55,044 --> 00:07:56,761
+jaayega if this it problem. is not This
+
+319
+00:07:56,531 --> 00:07:57,721
+customised problem for was you toh
+
+320
+00:07:57,483 --> 00:07:58,614
+handpicked they and didn't solved deploy
+
+321
+00:07:58,565 --> 00:08:00,101
+by it on you your by server. just They
+
+322
+00:08:00,009 --> 00:08:01,588
+creating just a made it trail and of this
+
+323
+00:08:01,453 --> 00:08:02,896
+documents is which not you on my can
+
+324
+00:08:02,778 --> 00:08:03,968
+server. later Yeah on website search kaju
+
+325
+00:08:03,968 --> 00:08:05,158
+mera in hosting your kar database. rahe
+
+326
+00:08:05,062 --> 00:08:06,505
+Yes, Hain now same domain coming ke back
+
+327
+00:08:06,348 --> 00:08:07,835
+upar to se yeah. unhone But deploy kiya
+
+328
+00:08:07,588 --> 00:08:10,115
+again Hua what hai. my issue is at this
+
+329
+00:08:09,900 --> 00:08:11,421
+The stage website you is not have with
+
+330
+00:08:11,197 --> 00:08:12,638
+seen you one Unki software. use like
+
+331
+00:08:12,638 --> 00:08:14,160
+cloud site Mein Yeah, right then website
+
+332
+00:08:14,106 --> 00:08:15,681
+I Jo will hai wo just cloud show posted
+
+333
+00:08:15,457 --> 00:08:17,507
+you hai another aur one. baki Jo rest of
+
+334
+00:08:17,507 --> 00:08:19,332
+all the things For I billing need and it
+
+335
+00:08:19,230 --> 00:08:20,549
+invoicing on you my server have aur
+
+336
+00:08:20,310 --> 00:08:21,767
+another kaaran manager kya IO hai Yes, Ki
+
+337
+00:08:21,750 --> 00:08:23,190
+yes, Maine aapko yes. Jo And clients for
+
+338
+00:08:22,984 --> 00:08:24,505
+bataaenge CRM jaise you BARC ho have Gaya
+
+339
+00:08:24,270 --> 00:08:25,722
+your toh. website It ka is inbuilt a
+
+340
+00:08:25,710 --> 00:08:26,790
+Vaala very confidential CRM client right?
+
+341
+00:08:26,635 --> 00:08:28,230
+aur I UN have logon shown ka hamako you
+
+342
+00:08:28,156 --> 00:08:29,678
+NDA earlier sign right. dalke dena rahta
+
+343
+00:08:29,678 --> 00:08:31,222
+hai data No, breach no, hota hai you
+
+344
+00:08:31,199 --> 00:08:32,492
+kyonki didn't aaj show ke me time that
+
+345
+00:08:32,416 --> 00:08:33,762
+Mein we technology had itani a hai call,
+
+346
+00:08:33,633 --> 00:08:35,032
+Ki Spay, Mein you mera told server me,
+
+347
+00:08:34,850 --> 00:08:36,783
+bhee okay?safe nahi rah sakta but So
+
+348
+00:08:36,676 --> 00:08:38,550
+still. I will Mera just show server you.
+
+349
+00:08:38,343 --> 00:08:40,800
+it is basic compliance Ki.
+
+350
+00:08:41,350 --> 00:08:43,886
+Is Here it not is. open to So all. this
+
+351
+00:08:43,886 --> 00:08:45,358
+is Yes my protected accounting software
+
+352
+00:08:45,130 --> 00:08:46,750
+usmein where environment, I issue right?
+
+353
+00:08:46,462 --> 00:08:48,914
+quotes. Orders Toh us invoice, case Mein
+
+354
+00:08:48,914 --> 00:08:49,957
+hum Delivery log bowl sakte notes. Hain
+
+355
+00:08:49,957 --> 00:08:51,504
+Ki Agar AB kyonki Agar hacking Documents
+
+356
+00:08:51,208 --> 00:08:52,447
+karna hai are toh being koi Banda stored
+
+357
+00:08:52,250 --> 00:08:53,501
+bank here. bhee hack AB kar iske lega toh
+
+358
+00:08:53,390 --> 00:08:54,647
+andar phir bhee uska toh Ek kuchh issue
+
+359
+00:08:54,335 --> 00:08:55,586
+bhee nahi hota kar sakta hai hai Ki kuchh
+
+360
+00:08:55,586 --> 00:08:56,629
+nahi Agar kar normal sakte wo and toh
+
+361
+00:08:56,533 --> 00:08:57,671
+supply phir out kar of rahe your scope
+
+362
+00:08:57,476 --> 00:08:59,678
+hai. hai. Wo supply But karne still Mein
+
+363
+00:08:59,476 --> 00:09:00,393
+hum log logon jitna ko usko control
+
+364
+00:09:00,242 --> 00:09:01,125
+delivery Mein note rakh sakte hum Hain
+
+365
+00:09:01,088 --> 00:09:02,042
+logon toh hum ko log aise isliye usko
+
+366
+00:09:01,934 --> 00:09:02,775
+banao cloud aur pay nahi material rakhna
+
+367
+00:09:02,775 --> 00:09:03,626
+chaah vahaan rahe per Hain. We receipt
+
+368
+00:09:03,507 --> 00:09:04,607
+need ho to install Gaya. it on our
+
+369
+00:09:04,607 --> 00:09:06,374
+server. Right vahaan se Ek Right. receipt
+
+370
+00:09:06,374 --> 00:09:08,256
+ka stamp lagi hum logon ko document
+
+371
+00:09:08,256 --> 00:09:09,902
+office So mil it jaata is hai fine. so It
+
+372
+00:09:09,600 --> 00:09:10,945
+that we is can much store much it
+
+373
+00:09:10,827 --> 00:09:12,020
+necessary on for our your system and
+
+374
+00:09:11,752 --> 00:09:12,985
+business wo to comment keep clear it
+
+375
+00:09:12,827 --> 00:09:13,902
+karne on. Mein Pretty wo much document
+
+376
+00:09:13,902 --> 00:09:14,978
+helpful yes. rahta Baki hai manager but
+
+377
+00:09:14,835 --> 00:09:16,053
+is Agar also hum fine. logon Manager ka
+
+378
+00:09:16,053 --> 00:09:16,993
+kuchh Mein material bhee kisi aapne
+
+379
+00:09:16,860 --> 00:09:17,918
+vendor kuchh ke customization paas nahi
+
+380
+00:09:17,666 --> 00:09:19,152
+JA karaya raha hai. naa Like nahi here wo
+
+381
+00:09:19,010 --> 00:09:20,086
+you bhee can open see source returnable
+
+382
+00:09:20,077 --> 00:09:21,161
+uska material being bhee sent poora for
+
+383
+00:09:21,002 --> 00:09:22,543
+code cutting. available open source hai.
+
+384
+00:09:22,310 --> 00:09:24,155
+So I there know. shall be a Theek
+
+385
+00:09:24,070 --> 00:09:25,135
+traceability hai phir Ki toh kiska what
+
+386
+00:09:25,126 --> 00:09:26,534
+material we can kab do Tak is baki Gaya
+
+387
+00:09:26,360 --> 00:09:27,585
+uske kiss alava anything date you Tak are
+
+388
+00:09:27,585 --> 00:09:29,350
+using. jaana tha Matlab validating yes
+
+389
+00:09:29,350 --> 00:09:31,310
+toh uska Nahi, bhee not yahaan per SH.
+
+390
+00:09:31,110 --> 00:09:32,870
+kuchh bhee trace nahi Magizo hai.
+
+391
+00:09:32,705 --> 00:09:34,278
+templates hai uske Lets liye say Maine
+
+392
+00:09:34,172 --> 00:09:35,537
+ghar aapko Mein word Isco bataaya he word
+
+393
+00:09:35,255 --> 00:09:36,481
+open toh Jo ye formal kiske templates
+
+394
+00:09:36,338 --> 00:09:38,430
+pass banate Gaya Hain. hai. Right.
+
+395
+00:09:39,190 --> 00:09:40,936
+Lets say mold plus ke So paas Gaya what
+
+396
+00:09:40,730 --> 00:09:42,307
+hai we proper rod will gayi hai do ISS is
+
+397
+00:09:42,050 --> 00:09:43,370
+ke andar see Ek Mr kab Tak Himanshu Ana
+
+398
+00:09:43,335 --> 00:09:44,706
+would hai aaya be nahi in aaya wo need
+
+399
+00:09:44,470 --> 00:09:45,735
+abhi Tak to yahaan connect per iska with
+
+400
+00:09:45,570 --> 00:09:46,670
+koi you detail nahi for hai the haan.
+
+401
+00:09:46,763 --> 00:09:48,820
+complete business analysis. If he So need
+
+402
+00:09:48,786 --> 00:09:50,191
+what any are further you details. There
+
+403
+00:09:49,852 --> 00:09:51,562
+made is a basically trail a for SOP
+
+404
+00:09:51,274 --> 00:09:53,276
+Documents. for us Ki Yes, hum you kya
+
+405
+00:09:53,177 --> 00:09:54,510
+need kya something cheese for aapse this
+
+406
+00:09:54,304 --> 00:09:55,510
+puchhenge as and well, that like
+
+407
+00:09:55,333 --> 00:09:56,361
+particular for data delivery will
+
+408
+00:09:56,177 --> 00:09:57,177
+challanes, help for us invoices,
+
+409
+00:09:57,046 --> 00:09:58,177
+understand have the they whole been
+
+410
+00:09:58,075 --> 00:09:59,446
+system received better. or Then not only
+
+411
+00:09:59,177 --> 00:10:01,160
+everything. we will draft anything for
+
+412
+00:10:01,160 --> 00:10:02,520
+you. So So that just should be let there.
+
+413
+00:10:02,531 --> 00:10:04,494
+us know whenever you And usme are toh
+
+414
+00:10:04,245 --> 00:10:05,959
+available what for you a can meet do with
+
+415
+00:10:05,700 --> 00:10:07,207
+is him like and we physically his he
+
+416
+00:10:06,987 --> 00:10:08,956
+team. JA rahe honge saare Uske slips baad
+
+417
+00:10:08,715 --> 00:10:09,790
+invoices Mein delivery we challan. will
+
+418
+00:10:09,619 --> 00:10:10,825
+So start they working should with have
+
+419
+00:10:10,624 --> 00:10:12,015
+the a devs QR Abhi or I something have
+
+420
+00:10:12,015 --> 00:10:13,127
+understood so the that system the we
+
+421
+00:10:12,935 --> 00:10:14,239
+person need can to scan discuss it. with
+
+422
+00:10:14,141 --> 00:10:15,351
+And the then team if and that phase
+
+423
+00:10:15,347 --> 00:10:16,552
+particular Sai C thing is is a scanned,
+
+424
+00:10:16,463 --> 00:10:17,576
+plan so out. obviously Ho it Jaayenge
+
+425
+00:10:17,457 --> 00:10:18,361
+will complete be complete marked
+
+426
+00:10:18,132 --> 00:10:19,522
+blueprint as will seen, be it given to
+
+427
+00:10:19,265 --> 00:10:21,029
+will you. be marked as approved, Once
+
+428
+00:10:20,773 --> 00:10:21,988
+whatever that right? is Suppose approved,
+
+429
+00:10:21,677 --> 00:10:23,184
+revert will once be you given are on
+
+430
+00:10:22,946 --> 00:10:24,224
+ready to with your that software phir
+
+431
+00:10:24,089 --> 00:10:25,821
+directly. hum usape we will start
+
+432
+00:10:25,821 --> 00:10:26,460
+implementing it.
+
+433
+00:10:26,440 --> 00:10:29,335
+2 days right Or ISS case Mein Agar hum
+
+434
+00:10:29,335 --> 00:10:31,891
+log local AI model use kar saken without
+
+435
+00:10:31,891 --> 00:10:34,127
+need of bigger hardware. So uske andar
+
+436
+00:10:34,127 --> 00:10:37,002
+kya hai hum log Ki plan baat karte Hain
+
+437
+00:10:37,002 --> 00:10:39,238
+kabhi Jo traveller documents word ke upar
+
+438
+00:10:39,238 --> 00:10:41,155
+bataaen toh designing aur developing each
+
+439
+00:10:41,155 --> 00:10:43,711
+and of the document usase better hai Ki
+
+440
+00:10:43,711 --> 00:10:44,030
+hum.
+
+441
+00:10:53,580 --> 00:10:55,020
+So here is your CRN.
+
+442
+00:10:56,250 --> 00:10:58,010
+We created few customers.
+
+443
+00:10:59,210 --> 00:11:01,050
+Yahaan per customer ka naam AA Gaya hai.
+
+444
+00:11:02,880 --> 00:11:05,006
+Then video or sales proposals to speech
+
+445
+00:11:05,006 --> 00:11:07,739
+ke liye hum log Isco use nahi kar rahe
+
+446
+00:11:07,739 --> 00:11:10,169
+Hain. We are using it for only project
+
+447
+00:11:10,169 --> 00:11:13,102
+updates to client. Toh Agar Mein
+
+448
+00:11:13,102 --> 00:11:15,278
+Ek baat karta Hoon, lets say abhi
+
+449
+00:11:15,278 --> 00:11:18,075
+recently ye project. Ho Chuka hai
+
+450
+00:11:18,075 --> 00:11:20,810
+complete toh uske andar kya kya task hai.
+
+451
+00:11:22,320 --> 00:11:25,153
+Kaun kaunse chal rahe Hain. Timesheets
+
+452
+00:11:25,153 --> 00:11:27,261
+kyonki hum logon ko kaam nahi hai that
+
+453
+00:11:27,261 --> 00:11:29,104
+ISS a programmer or something like that
+
+454
+00:11:29,104 --> 00:11:31,212
+toh usme hum log kuchh bhee fill nahi
+
+455
+00:11:31,212 --> 00:11:33,055
+karte hai milestones kaun kaun se kaam
+
+456
+00:11:33,055 --> 00:11:35,426
+the kitne huye hai. Then we do have file
+
+457
+00:11:35,426 --> 00:11:37,270
+sharing option with the customers if they
+
+458
+00:11:37,270 --> 00:11:38,850
+are visible to customer or not.
+
+459
+00:11:40,090 --> 00:11:42,496
+Then discussion in case they want to say
+
+460
+00:11:42,496 --> 00:11:44,601
+something or we do have any non
+
+461
+00:11:44,601 --> 00:11:46,406
+conformance or like any confusion is
+
+462
+00:11:46,406 --> 00:11:48,210
+there we can create a discussion.
+
+463
+00:11:49,410 --> 00:11:52,010
+Then the planning.
+
+464
+00:11:53,330 --> 00:11:55,816
+Attentive plan. Whenever the
+
+465
+00:11:55,816 --> 00:11:57,268
+documentation will complete the
+
+466
+00:11:57,268 --> 00:11:59,446
+procurement fabrication as only each and
+
+467
+00:11:59,446 --> 00:12:01,260
+everything, whenever the customer is
+
+468
+00:12:01,260 --> 00:12:03,801
+having issue, they can raise the ticket
+
+469
+00:12:03,801 --> 00:12:04,890
+from their end.
+
+470
+00:12:06,700 --> 00:12:09,440
+In the contracts section where our
+
+471
+00:12:09,440 --> 00:12:12,180
+system. But thing is your system
+
+472
+00:12:12,180 --> 00:12:14,920
+is so disconnected in itself exactly
+
+473
+00:12:14,920 --> 00:12:17,660
+OK, everything is scattered away from
+
+474
+00:12:17,660 --> 00:12:20,400
+each other. Beat CRM, beat that
+
+475
+00:12:20,400 --> 00:12:23,140
+doc document manager and then voicing.
+
+476
+00:12:24,010 --> 00:12:26,943
+Right. Other than that, we
+
+477
+00:12:26,943 --> 00:12:27,730
+can see.
+
+478
+00:12:29,650 --> 00:12:32,615
+View projects customer as well. Iske
+
+479
+00:12:32,615 --> 00:12:35,215
+andar Ek cheese bahut achchhi di hai UN
+
+480
+00:12:35,215 --> 00:12:37,490
+logon ne Ki dehu provided export data.
+
+481
+00:12:38,770 --> 00:12:41,458
+Button. So jab
+
+482
+00:12:41,458 --> 00:12:44,006
+bhee hum logon ka project complete hota
+
+483
+00:12:44,006 --> 00:12:46,806
+hai. Lets say
+
+484
+00:12:46,806 --> 00:12:48,962
+we will go to overview export project
+
+485
+00:12:48,962 --> 00:12:51,927
+data. So it will create a
+
+486
+00:12:51,927 --> 00:12:54,010
+PDF. Including all the things.
+
+487
+00:12:54,970 --> 00:12:56,740
+Including all the photographs what we
+
+488
+00:12:56,740 --> 00:12:59,648
+have shared. This is very important,
+
+489
+00:12:59,648 --> 00:13:02,234
+this kind of politics report to be
+
+490
+00:13:02,234 --> 00:13:04,819
+submitted at the end, right? So whenever
+
+491
+00:13:04,819 --> 00:13:07,405
+our project is completed, we just print
+
+492
+00:13:07,405 --> 00:13:10,361
+this out and we will stamp and provide
+
+493
+00:13:10,361 --> 00:13:10,730
+them.
+
+494
+00:13:14,450 --> 00:13:17,231
+Not in archives. We have to submit
+
+495
+00:13:17,231 --> 00:13:19,218
+a manufacturing file. Manufacturing and
+
+496
+00:13:19,218 --> 00:13:22,041
+inspection file, yeah. So us case
+
+497
+00:13:22,041 --> 00:13:24,414
+Mein ye report hum logon ke liye kaam kar
+
+498
+00:13:24,414 --> 00:13:26,259
+leta hai. So that is very necessary
+
+499
+00:13:26,259 --> 00:13:28,632
+right? So yeah being Jo system hai ye hum
+
+500
+00:13:28,632 --> 00:13:30,478
+log sirf Isco client ko project status
+
+501
+00:13:30,478 --> 00:13:32,587
+share karne ke liye use karte hai jaise
+
+502
+00:13:32,587 --> 00:13:34,960
+abhi unko ye dikh raha hai Ki kya kya
+
+503
+00:13:34,960 --> 00:13:37,333
+task ho chuke hai AB Maine log out kar
+
+504
+00:13:37,333 --> 00:13:39,706
+diya hai theek hai toh client can see the
+
+505
+00:13:39,706 --> 00:13:41,551
+real time updates from their end. They
+
+506
+00:13:41,551 --> 00:13:43,661
+don't need to ask each senior title was
+
+507
+00:13:43,661 --> 00:13:45,770
+on your the website you showed me yes.
+
+508
+00:13:46,610 --> 00:13:48,997
+Client can directly create their account
+
+509
+00:13:48,997 --> 00:13:51,781
+and then you can start there. You
+
+510
+00:13:51,781 --> 00:13:53,770
+have to create the yes.
+
+511
+00:13:55,580 --> 00:13:57,986
+We create the account and we share the
+
+512
+00:13:57,986 --> 00:14:00,091
+details of project. Whenever we create a
+
+513
+00:14:00,091 --> 00:14:02,496
+project, we need to include a client. So
+
+514
+00:14:02,496 --> 00:14:04,902
+jab bhee hum client ko include karta hai
+
+515
+00:14:04,902 --> 00:14:06,706
+so vahaan per automatically project unse
+
+516
+00:14:06,706 --> 00:14:09,112
+visible ho jaata hai. We can add multiple
+
+517
+00:14:09,112 --> 00:14:11,217
+clients because abhi jaise AAP log Hain.
+
+518
+00:14:11,217 --> 00:14:13,923
+So you are around 3 to 4 peoples in
+
+519
+00:14:13,923 --> 00:14:16,028
+a single project. Similarly hum logon ke
+
+520
+00:14:16,028 --> 00:14:18,734
+client site ke upar bhee 3 to 4 people
+
+521
+00:14:18,734 --> 00:14:21,140
+may be engaged in a single project. We.
+
+522
+00:14:21,180 --> 00:14:23,595
+Can just enter a section name and based
+
+523
+00:14:23,595 --> 00:14:26,578
+on that we. Add the names of
+
+524
+00:14:26,578 --> 00:14:28,438
+people and provide them individual
+
+525
+00:14:28,438 --> 00:14:31,248
+accounts. Understood,
+
+526
+00:14:31,248 --> 00:14:33,709
+there is there will be no confusion and
+
+527
+00:14:33,709 --> 00:14:36,477
+all of them will be on same page that
+
+528
+00:14:36,477 --> 00:14:38,938
+what will be the status of Project Kyunki
+
+529
+00:14:38,938 --> 00:14:41,399
+Hum log jinke liye kaam kar rahe Hain.
+
+530
+00:14:41,399 --> 00:14:43,245
+Those clients are also working for
+
+531
+00:14:43,245 --> 00:14:46,226
+someone else. So they need to provide
+
+532
+00:14:46,226 --> 00:14:48,434
+a status to their clients as well.
+
+533
+00:14:48,434 --> 00:14:50,956
+Perfect wo tu middleman hai? They need to
+
+534
+00:14:50,956 --> 00:14:52,848
+show it everything transparently. And yes
+
+535
+00:14:52,848 --> 00:14:54,739
+they do have sound available weekly
+
+536
+00:14:54,739 --> 00:14:55,370
+meeting scheduled.
+
+537
+00:14:57,590 --> 00:14:59,647
+So abhi Tak confusion kya hota tha Ki
+
+538
+00:14:59,647 --> 00:15:01,704
+Agar Mein factory bahu ko yahaan Ki mere
+
+539
+00:15:01,704 --> 00:15:03,761
+se puchhega Agar mere pass update nahi Ki
+
+540
+00:15:03,761 --> 00:15:05,561
+Mein kisi se puchhunga toh sabko ISS
+
+541
+00:15:05,561 --> 00:15:07,619
+cheese diya hai SAB Ki users yahaan per
+
+542
+00:15:07,619 --> 00:15:09,676
+ban chuke Hain per de update on their
+
+543
+00:15:09,676 --> 00:15:11,957
+real account. Jo bhee uska position rahta
+
+544
+00:15:11,957 --> 00:15:14,650
+hai. Usage code, yeah.
+
+545
+00:15:16,270 --> 00:15:18,920
+Manufacturing Mein toh this is sabse bada
+
+546
+00:15:18,920 --> 00:15:21,570
+headache. The owner knows every kind of
+
+547
+00:15:21,570 --> 00:15:24,220
+context, but he isn't updated by the.
+
+548
+00:15:24,380 --> 00:15:27,068
+Workers so vahaan pay lack karega and
+
+549
+00:15:27,068 --> 00:15:29,782
+if the workers. Agar wo
+
+550
+00:15:29,782 --> 00:15:32,232
+decent nahi hai toh wo kahaan pay process
+
+551
+00:15:32,232 --> 00:15:34,988
+lack Curry hai wo owner ka bhee Pata kar
+
+552
+00:15:34,988 --> 00:15:37,438
+he nahi sakta right abhi problem kya hai
+
+553
+00:15:37,438 --> 00:15:39,887
+Ki hum logon ne hotel bana diya hamlogon
+
+554
+00:15:39,887 --> 00:15:42,337
+Ki website pay but still someone from the
+
+555
+00:15:42,337 --> 00:15:45,093
+office has to go to shop floor. Take an
+
+556
+00:15:45,093 --> 00:15:47,980
+update and update it on portal. Agar
+
+557
+00:15:47,980 --> 00:15:50,480
+do din ya Ek week wo Banda chutti per hai
+
+558
+00:15:50,480 --> 00:15:52,230
+office vaala toh again client ko update
+
+559
+00:15:52,230 --> 00:15:55,120
+nahi pahunchega. So what we are planning
+
+560
+00:15:55,120 --> 00:15:57,471
+is this system ismein shop floor ke upar
+
+561
+00:15:57,471 --> 00:16:00,410
+Jo hum log plan kar rahe Hain app ka toh
+
+562
+00:16:00,410 --> 00:16:02,468
+directly Jo employee hai soft floor ke
+
+563
+00:16:02,468 --> 00:16:05,113
+upar Yes he will enter all the details or
+
+564
+00:16:05,113 --> 00:16:07,171
+uske andar Hindi English kyonki Jo labour
+
+565
+00:16:07,171 --> 00:16:09,522
+class rehti hai wo jaruri nahi Ki bahut
+
+566
+00:16:09,522 --> 00:16:11,286
+jyaada technically advanced ho but mobile
+
+567
+00:16:11,286 --> 00:16:13,637
+SAB chala sakte Hain sabke pass aaj ke
+
+568
+00:16:13,637 --> 00:16:15,695
+time Android phone hai Jo question AAP
+
+569
+00:16:15,695 --> 00:16:18,046
+English Mein likh sakte ho wahi AAP Hindi
+
+570
+00:16:18,046 --> 00:16:20,689
+Mein bhee likh sakte ho right?Aur wo
+
+571
+00:16:20,689 --> 00:16:23,466
+samajhate ho wahi vaala aayega. Haan AB
+
+572
+00:16:23,466 --> 00:16:25,610
+jaise yahaan per likha hai 4 cutting toh
+
+573
+00:16:25,610 --> 00:16:27,486
+pore cutting Mein usko itna samajh Mein
+
+574
+00:16:27,486 --> 00:16:29,630
+AA jayega aur saath Mein hum log uske
+
+575
+00:16:29,630 --> 00:16:31,506
+saath Mein likh bhee denge Hindi Mein
+
+576
+00:16:31,506 --> 00:16:32,846
+bhee pore cutting aur stacking
+
+577
+00:16:32,846 --> 00:16:34,722
+preparation stage toh kya karna hai kya
+
+578
+00:16:34,722 --> 00:16:36,866
+nahi karta hai. Like what we did last
+
+579
+00:16:36,866 --> 00:16:38,742
+time. Hamne toh images reference ke liye
+
+580
+00:16:38,742 --> 00:16:40,886
+attach kar di toh person what was not
+
+581
+00:16:40,886 --> 00:16:41,690
+even reading it.
+
+582
+00:16:44,800 --> 00:16:46,944
+Images hum logon ko case Mein isliye nahi
+
+583
+00:16:46,944 --> 00:16:48,820
+ho payega kyonki. Each and every product
+
+584
+00:16:48,820 --> 00:16:51,664
+is different is different, yeah. That
+
+585
+00:16:51,664 --> 00:16:54,349
+is so is a big issue. Tabhi
+
+586
+00:16:54,349 --> 00:16:56,267
+ismein difficult bhee hai Your
+
+587
+00:16:56,267 --> 00:16:58,569
+manufacturing is very very very very
+
+588
+00:16:58,569 --> 00:17:01,254
+difficult and kaafi complex but ISS case
+
+589
+00:17:01,254 --> 00:17:03,939
+Mein Ek cheese ho sakti hai. We
+
+590
+00:17:03,939 --> 00:17:06,624
+do have or 3D models ready before
+
+591
+00:17:06,624 --> 00:17:09,310
+the fabrication so we can provide a
+
+592
+00:17:09,310 --> 00:17:11,611
+screenshot of that model address. Take
+
+593
+00:17:11,611 --> 00:17:14,296
+snapshot uske saath Yes that can be
+
+594
+00:17:14,296 --> 00:17:17,049
+done. And which is basically
+
+595
+00:17:17,049 --> 00:17:19,235
+passed by the cadworker. Jo bhee aapka
+
+596
+00:17:19,235 --> 00:17:22,045
+designer Jo bhee hai. He can pass it on
+
+597
+00:17:22,045 --> 00:17:24,230
+before submitting it as a point because
+
+598
+00:17:24,230 --> 00:17:26,728
+he hum before and after proof ka toh
+
+599
+00:17:26,728 --> 00:17:28,914
+rakhate Hain Ki how things were before
+
+600
+00:17:28,914 --> 00:17:31,724
+you and how things are after you. A kind
+
+601
+00:17:31,724 --> 00:17:34,222
+of a proof and Ek poora maintain karta
+
+602
+00:17:34,222 --> 00:17:36,720
+hai thread Ki how things are going on.
+
+603
+00:17:37,720 --> 00:17:39,729
+Through and through each process and at
+
+604
+00:17:39,729 --> 00:17:41,737
+the very last stage you have complete
+
+605
+00:17:41,737 --> 00:17:44,320
+trail of the work which was done over it.
+
+606
+00:17:48,040 --> 00:17:50,228
+So that is how we were proposing
+
+607
+00:17:50,228 --> 00:17:51,791
+something. This will bring transparency,
+
+608
+00:17:51,791 --> 00:17:53,978
+this will bring like real time updates
+
+609
+00:17:53,978 --> 00:17:56,479
+and this will bring much more, you know,
+
+610
+00:17:56,479 --> 00:17:58,979
+cleaner process. Kisi ko kisi ke Sir ke
+
+611
+00:17:58,979 --> 00:18:01,479
+upar khada nahi rehna padega all the time
+
+612
+00:18:01,479 --> 00:18:04,292
+Ki yaar ye iska update do so death. I
+
+613
+00:18:04,292 --> 00:18:06,480
+can give that detail to somebody else.
+
+614
+00:18:09,560 --> 00:18:11,260
+AB jaise Ek bar aapka ismein customer The
+
+615
+00:18:11,260 --> 00:18:12,960
+customers ke upar Ek bar AAP click Karen.
+
+616
+00:18:14,520 --> 00:18:16,200
+Theek hai Central University labh Sagar
+
+617
+00:18:16,200 --> 00:18:17,880
+uske upper Ek bar Click Karen.
+
+618
+00:18:20,320 --> 00:18:23,128
+OK to abhi iske andar I don't think ye
+
+619
+00:18:23,128 --> 00:18:24,1000
+koi iska code assign Hua hai.
+
+620
+00:18:26,660 --> 00:18:29,052
+Nahi nahi nahi abhi iska koi photo Sahi
+
+621
+00:18:29,052 --> 00:18:31,742
+nahi Hua hai toh toh miss ke andar Jo
+
+622
+00:18:31,742 --> 00:18:33,835
+jaise sabke liye hota hai Bola banaaya
+
+623
+00:18:33,835 --> 00:18:36,226
+hai toh usme it ISS just customers name,
+
+624
+00:18:36,226 --> 00:18:38,319
+phone, GST and credit limit. This is
+
+625
+00:18:38,319 --> 00:18:40,711
+basic okay toh hum logon ke ismein Jo
+
+626
+00:18:40,711 --> 00:18:42,504
+Maine aapko terminology bataiye haan yes
+
+627
+00:18:42,504 --> 00:18:44,597
+customer Agar yes toh Agar hum select
+
+628
+00:18:44,597 --> 00:18:46,689
+karte hai DARC toh automatically it will
+
+629
+00:18:46,689 --> 00:18:49,380
+create a code or VRC Mein bhee hum log
+
+630
+00:18:49,380 --> 00:18:50,875
+section select karna padega division
+
+631
+00:18:50,875 --> 00:18:52,967
+select karna padega and Agar us section
+
+632
+00:18:52,967 --> 00:18:55,060
+Mein already hum logon ka customer hai.
+
+633
+00:18:55,600 --> 00:18:57,539
+To by numbering system it will
+
+634
+00:18:57,539 --> 00:18:59,478
+automatically fetch a new number. Yes
+
+635
+00:18:59,478 --> 00:19:02,064
+let's say P number existing so it will
+
+636
+00:19:02,064 --> 00:19:03,680
+automatically. We have done that.
+
+637
+00:19:05,410 --> 00:19:07,318
+Production management I told you ye
+
+638
+00:19:07,318 --> 00:19:09,863
+unhone he karaya tha abhi bar bar example
+
+639
+00:19:09,863 --> 00:19:12,089
+unke yaar hai karsi cover valon ka
+
+640
+00:19:12,089 --> 00:19:14,634
+because unka AK sq Agar hum dekhe toh
+
+641
+00:19:14,634 --> 00:19:17,496
+unke pass Mein thi 1000 Jo sku toh they
+
+642
+00:19:17,496 --> 00:19:20,041
+wanted everything to be SKU should have a
+
+643
+00:19:20,041 --> 00:19:22,267
+particular code which is derived from the
+
+644
+00:19:22,267 --> 00:19:24,812
+Sku's product name right toh usme AB uska
+
+645
+00:19:24,812 --> 00:19:27,612
+model. Ka year uska generation AA jaata
+
+646
+00:19:27,612 --> 00:19:29,914
+hai usmein uske fabric Ki details AA
+
+647
+00:19:29,914 --> 00:19:31,886
+jaate hai usme customizations Jo usmein
+
+648
+00:19:31,886 --> 00:19:34,516
+use nahi boss Mein AA jaati hai toh
+
+649
+00:19:34,516 --> 00:19:36,817
+complete code itself can be derived from
+
+650
+00:19:36,817 --> 00:19:39,118
+the particular products name and which is
+
+651
+00:19:39,118 --> 00:19:41,419
+automatic code bande ko setting karna it
+
+652
+00:19:41,419 --> 00:19:44,049
+is not manual. Once you enter the details
+
+653
+00:19:44,049 --> 00:19:46,350
+about the product, product name will be
+
+654
+00:19:46,350 --> 00:19:48,323
+created. Naming con unhen template set
+
+655
+00:19:48,323 --> 00:19:50,953
+karo hai and product code will be created
+
+656
+00:19:50,953 --> 00:19:53,583
+because code ka also template he has set
+
+657
+00:19:53,583 --> 00:19:56,142
+up right. AB hum logon ke ismein jaise
+
+658
+00:19:56,142 --> 00:19:58,070
+naming card Jo template hai wo already
+
+659
+00:19:58,070 --> 00:19:59,998
+present hai but Jo part number ka
+
+660
+00:19:59,998 --> 00:20:02,821
+template hai wo abhi uske andar. Unhone
+
+661
+00:20:02,821 --> 00:20:05,545
+kuchh socha nahi hai toh depending on the
+
+662
+00:20:05,545 --> 00:20:07,928
+type of part kyonki usko template hum
+
+663
+00:20:07,928 --> 00:20:10,652
+isliye nahi soch PA rahe Hain Ki sabhi
+
+664
+00:20:10,652 --> 00:20:13,376
+apne apne different hai toh SAB Mein Ek
+
+665
+00:20:13,376 --> 00:20:15,760
+Ek karke template dena wo feasible lag
+
+666
+00:20:15,760 --> 00:20:18,484
+nahi raha hai toh. What we can do
+
+667
+00:20:18,484 --> 00:20:20,868
+is part number aur assembly number. Like
+
+668
+00:20:20,868 --> 00:20:23,592
+for part we can provide AP001 and for
+
+669
+00:20:23,592 --> 00:20:26,316
+assembly or sub assembly we can provide a
+
+670
+00:20:26,316 --> 00:20:28,699
+zero, zero or SA zero something like
+
+671
+00:20:28,699 --> 00:20:31,451
+that. Something like that which is
+
+672
+00:20:31,451 --> 00:20:33,525
+basically just a reference thing for you
+
+673
+00:20:33,525 --> 00:20:35,895
+guys. Kyonki aapko wo Pata hai and aisa
+
+674
+00:20:35,895 --> 00:20:38,265
+nahi hai kisi aur ko dikhana padega toh
+
+675
+00:20:38,265 --> 00:20:40,945
+it is fine haan?Dikhana hda
+
+676
+00:20:40,945 --> 00:20:43,274
+padega because Jo bhee hum logon ka
+
+677
+00:20:43,274 --> 00:20:45,935
+drawing create hota hai. Let me show you
+
+678
+00:20:45,935 --> 00:20:46,600
+another thing.
+
+679
+00:20:49,280 --> 00:20:50,360
+Share my screen.
+
+680
+00:20:56,570 --> 00:20:58,739
+Is it visible to you? Yeah, yeah, its
+
+681
+00:20:58,739 --> 00:21:01,480
+visible. Okay so video
+
+682
+00:21:01,480 --> 00:21:04,480
+of few projects running and
+
+683
+00:21:04,480 --> 00:21:05,680
+design status.
+
+684
+00:21:09,490 --> 00:21:12,470
+Shared Okay, so here you can see
+
+685
+00:21:12,470 --> 00:21:15,024
+the nomenclature we have already provided
+
+686
+00:21:15,024 --> 00:21:17,120
+then. Right.
+
+687
+00:21:18,560 --> 00:21:21,265
+So. For this particular assembly, this is
+
+688
+00:21:21,265 --> 00:21:22,520
+assembly drawing the first one.
+
+689
+00:21:23,1000 --> 00:21:26,705
+Right. And in that case we
+
+690
+00:21:26,705 --> 00:21:28,960
+do have a drawing number.
+
+691
+00:21:31,040 --> 00:21:33,520
+So B4000 is this
+
+692
+00:21:33,520 --> 00:21:36,489
+assembly number. So this is based
+
+693
+00:21:36,489 --> 00:21:37,800
+on their part, uh, details.
+
+694
+00:21:39,370 --> 00:21:42,190
+Then for the first part of
+
+695
+00:21:42,190 --> 00:21:45,010
+that assembly, that will be 4001.1.
+
+696
+00:21:46,910 --> 00:21:49,301
+If any revisions are there then R0 one or
+
+697
+00:21:49,301 --> 00:21:52,143
+R0 to something like that. Then
+
+698
+00:21:52,143 --> 00:21:55,107
+0.2. So we have created a decimal
+
+699
+00:21:55,107 --> 00:21:57,973
+nomenclature for sub parts. For assembly
+
+700
+00:21:57,973 --> 00:22:00,940
+parts. Right. And we
+
+701
+00:22:00,940 --> 00:22:02,620
+have to share all the all of these
+
+702
+00:22:02,620 --> 00:22:05,425
+drawings to the client as well. So
+
+703
+00:22:05,425 --> 00:22:07,841
+that director can identify or if they
+
+704
+00:22:07,841 --> 00:22:10,603
+have any issues they can just tell Sabhi
+
+705
+00:22:10,603 --> 00:22:12,674
+they can tell instead of after
+
+706
+00:22:12,674 --> 00:22:14,400
+manufacturing on Co issue right?
+
+707
+00:22:15,160 --> 00:22:17,880
+Similarly, we do have our on.
+
+708
+00:22:20,500 --> 00:22:21,660
+Regular documents.
+
+709
+00:22:23,720 --> 00:22:26,600
+Let us show me M3 here. All of
+
+710
+00:22:26,600 --> 00:22:28,400
+the traveller documents are there.
+
+711
+00:22:40,310 --> 00:22:42,340
+So first on first page we do provide them
+
+712
+00:22:42,340 --> 00:22:44,145
+all of the project details so that they
+
+713
+00:22:44,145 --> 00:22:45,950
+can trace at their end level as well.
+
+714
+00:22:46,840 --> 00:22:48,440
+Whatever the specifications they have
+
+715
+00:22:48,440 --> 00:22:50,040
+suggested and we have used.
+
+716
+00:22:51,480 --> 00:22:54,109
+Then if there is any layer wise winding
+
+717
+00:22:54,109 --> 00:22:56,080
+record details, we do provide them.
+
+718
+00:22:57,440 --> 00:22:59,820
+Then whatever the taste the conditions at
+
+719
+00:22:59,820 --> 00:23:01,860
+which condition this taste has been
+
+720
+00:23:01,860 --> 00:23:03,900
+performed because of single component is
+
+721
+00:23:03,900 --> 00:23:06,720
+being tested at multiple times. So
+
+722
+00:23:06,720 --> 00:23:08,640
+we have created a checkbox type.
+
+723
+00:23:09,880 --> 00:23:11,920
+Table where you can select the.
+
+724
+00:23:12,800 --> 00:23:15,467
+Position of that particular
+
+725
+00:23:15,467 --> 00:23:18,224
+component so. In this particular
+
+726
+00:23:18,224 --> 00:23:20,972
+case, we do have approximately 56
+
+727
+00:23:20,972 --> 00:23:23,720
+conditions, so we have created 123456.
+
+728
+00:23:23,720 --> 00:23:26,360
+Yes, 6 reports are there. There.
+
+729
+00:23:27,750 --> 00:23:30,280
+So currently what we have to do is
+
+730
+00:23:30,280 --> 00:23:32,809
+report. Currently what we have to do is
+
+731
+00:23:32,809 --> 00:23:35,022
+we have to create a that particular
+
+732
+00:23:35,022 --> 00:23:37,236
+table. Then this table will be copy
+
+733
+00:23:37,236 --> 00:23:39,765
+pasted to another page. Then you have to
+
+734
+00:23:39,765 --> 00:23:41,030
+select the condition yes.
+
+735
+00:23:41,800 --> 00:23:44,712
+Or right. Problem kya ho
+
+736
+00:23:44,712 --> 00:23:46,816
+raha hai Ki Like let's say here is Millie
+
+737
+00:23:46,816 --> 00:23:49,363
+Henry. Aur Jo data entry karta hai, that
+
+738
+00:23:49,363 --> 00:23:52,289
+is not a technical person. Maybe
+
+739
+00:23:52,289 --> 00:23:54,264
+she is from commerce background, maybe
+
+740
+00:23:54,264 --> 00:23:56,567
+from whatever background is so unlogo ko
+
+741
+00:23:56,567 --> 00:23:58,871
+ISS terminology ka matlab Pata nahi hota
+
+742
+00:23:58,871 --> 00:24:01,869
+hai. OK, what that M consists
+
+743
+00:24:01,869 --> 00:24:04,542
+of Agar Mein M hata deta Hoon
+
+744
+00:24:04,542 --> 00:24:07,215
+toh. This H will be 1000 times
+
+745
+00:24:07,215 --> 00:24:10,175
+of MH, yes?So this
+
+746
+00:24:10,175 --> 00:24:12,327
+is the terminology which we need to
+
+747
+00:24:12,327 --> 00:24:14,787
+expect them from IO unit check nahi Kara
+
+748
+00:24:14,787 --> 00:24:17,247
+from the place they are taking the data
+
+749
+00:24:17,247 --> 00:24:19,706
+and the place they are putting the data.
+
+750
+00:24:19,706 --> 00:24:21,859
+There will be too many discrepancies and
+
+751
+00:24:21,859 --> 00:24:24,011
+Rome poora meeting change ho jayega right
+
+752
+00:24:24,011 --> 00:24:26,163
+abhi similar Ek Maine client koi bheja
+
+753
+00:24:26,163 --> 00:24:28,931
+tha toh uske andar yahi issue AA raha tha
+
+754
+00:24:28,931 --> 00:24:31,390
+Ki UN logon ne units Jahan uske upper
+
+755
+00:24:31,390 --> 00:24:33,850
+dhyan nahi diya aur before passing it on
+
+756
+00:24:33,850 --> 00:24:36,519
+to client I just. Said I just check all
+
+757
+00:24:36,519 --> 00:24:38,742
+the documents in logo ke paas kya issue
+
+758
+00:24:38,742 --> 00:24:41,243
+hai. I don't know wo log dhyan se data
+
+759
+00:24:41,243 --> 00:24:43,466
+entry karte hai nahi karte hai toh hum
+
+760
+00:24:43,466 --> 00:24:45,966
+log ye chaah rahe hai Ki jab bhee data
+
+761
+00:24:45,966 --> 00:24:47,634
+entry hoga toh directly hamaara data
+
+762
+00:24:47,634 --> 00:24:49,579
+enter Hawker ye print ready format hum
+
+763
+00:24:49,579 --> 00:24:52,188
+logon ko mil jaayega. Yes, exactly. So
+
+764
+00:24:52,188 --> 00:24:54,823
+from that if you already have a select
+
+765
+00:24:54,823 --> 00:24:57,458
+good system, you already have a good form
+
+766
+00:24:57,458 --> 00:24:59,434
+which covers all your particular details
+
+767
+00:24:59,434 --> 00:25:02,398
+that have to be entered. So why is this
+
+768
+00:25:02,398 --> 00:25:04,374
+data entry getting repetitive? I mean
+
+769
+00:25:04,374 --> 00:25:07,009
+this could have been into a software and
+
+770
+00:25:07,009 --> 00:25:09,644
+the person just had to enter the details
+
+771
+00:25:09,644 --> 00:25:11,949
+and could have gotten the printout from
+
+772
+00:25:11,949 --> 00:25:14,255
+there like directly and these could have
+
+773
+00:25:14,255 --> 00:25:16,231
+directly been saved into your database,
+
+774
+00:25:16,231 --> 00:25:18,602
+yes. Abhi kya ho raha hai Ki hum logon ke
+
+775
+00:25:18,602 --> 00:25:20,230
+yahaan per check box click karna pad raha
+
+776
+00:25:20,230 --> 00:25:21,858
+hai kyonki ye repetitive task hai toh hum
+
+777
+00:25:21,858 --> 00:25:23,486
+log Ek Ek bar condition nahi likh sakte
+
+778
+00:25:23,486 --> 00:25:26,364
+hai. So you created a check box type of
+
+779
+00:25:26,364 --> 00:25:28,408
+in case Agar hum logon ke paas software
+
+780
+00:25:28,408 --> 00:25:30,708
+rahega toh. What we will do is we will
+
+781
+00:25:30,708 --> 00:25:32,241
+select the drop down condition to
+
+782
+00:25:32,241 --> 00:25:33,518
+automatically test condition upper Ek
+
+783
+00:25:33,518 --> 00:25:35,562
+noting AA jayega Ki. These are the test
+
+784
+00:25:35,562 --> 00:25:37,973
+condition. These are the ratings. But
+
+785
+00:25:37,973 --> 00:25:40,320
+like yahaan pe Jo report padh bhee rahe
+
+786
+00:25:40,320 --> 00:25:42,960
+hai naa uske liye it is confusing Ki use
+
+787
+00:25:42,960 --> 00:25:45,307
+pahle se check box check karna pad raha
+
+788
+00:25:45,307 --> 00:25:47,653
+hai kahaan pe. Which one exactly is this?
+
+789
+00:25:47,653 --> 00:25:49,707
+Right right, right exactly haan toh ye
+
+790
+00:25:49,707 --> 00:25:52,065
+saari charity is again. Taste court karke
+
+791
+00:25:52,065 --> 00:25:54,345
+yahaan per aapko he dikh raha hoga toh
+
+792
+00:25:54,345 --> 00:25:56,625
+test quote kya hai Jo bhee condition hai
+
+793
+00:25:56,625 --> 00:25:59,280
+individual hai before casting hai. Then
+
+794
+00:25:59,280 --> 00:26:02,193
+on magnet hai. Toh us case, Mein ye,
+
+795
+00:26:02,193 --> 00:26:04,739
+Sir. Test code ban jaata hai abhi ye test
+
+796
+00:26:04,739 --> 00:26:06,155
+code banane Ki jarurat hamlogon ko kyon
+
+797
+00:26:06,155 --> 00:26:08,795
+padti hai. Because we need to provide
+
+798
+00:26:08,795 --> 00:26:09,680
+them a summary.
+
+799
+00:26:11,750 --> 00:26:14,450
+Mm hmm. AB ye jab summary ban kar jaati
+
+800
+00:26:14,450 --> 00:26:16,417
+hai toh we need to provide them a test
+
+801
+00:26:16,417 --> 00:26:18,166
+code. Kiye hamne Jo test Kara hai kis
+
+802
+00:26:18,166 --> 00:26:20,557
+condition Mein karaya hai. Aur summary
+
+803
+00:26:20,557 --> 00:26:22,226
+isliye lagti hai kyonki they need to
+
+804
+00:26:22,226 --> 00:26:23,894
+compare it side by side abhi aapko
+
+805
+00:26:23,894 --> 00:26:25,563
+different pages ke upar explore karna pad
+
+806
+00:26:25,563 --> 00:26:28,256
+raha hai. Jis
+
+807
+00:26:28,256 --> 00:26:30,781
+bande ko detail Mein nahi dekhna wo toh.
+
+808
+00:26:30,781 --> 00:26:33,307
+Obviously we will see the summary and us
+
+809
+00:26:33,307 --> 00:26:35,390
+say check the area. Ye cheeje client
+
+810
+00:26:35,390 --> 00:26:37,210
+hamesha nahi dekhte kab dikhta hai. Jab
+
+811
+00:26:37,210 --> 00:26:40,159
+kuchh issue aata hai. There is
+
+812
+00:26:40,159 --> 00:26:42,394
+no particular issue and summary then this
+
+813
+00:26:42,394 --> 00:26:44,630
+particular test report will be open. Yes
+
+814
+00:26:44,630 --> 00:26:47,185
+to Agar unke product ko use karte time
+
+815
+00:26:47,185 --> 00:26:49,740
+kar kuchh issue aata hai toh first thing
+
+816
+00:26:49,740 --> 00:26:51,976
+they will doubt on multiple products. AB
+
+817
+00:26:51,976 --> 00:26:54,850
+hum log Jo part bhej rahe hai unko usase
+
+818
+00:26:54,850 --> 00:26:57,725
+bhee wo Ek matlab UN logon Ki assembly ka
+
+819
+00:26:57,725 --> 00:27:00,280
+Ek simple part hum log bechte hai unko.
+
+820
+00:27:01,080 --> 00:27:02,663
+But hamaare liye wo complete assembly hai
+
+821
+00:27:02,663 --> 00:27:04,247
+toh jab bhee wo Ek comprehensive machine
+
+822
+00:27:04,247 --> 00:27:06,057
+test karte hai toh uske andar issue he
+
+823
+00:27:06,057 --> 00:27:07,866
+aata hai Ki Agar kahin bhee kisi bhee
+
+824
+00:27:07,866 --> 00:27:09,676
+part Mein failure aata hai ya koi bhee
+
+825
+00:27:09,676 --> 00:27:11,486
+obligations aate hai toh. What they do is
+
+826
+00:27:11,486 --> 00:27:13,295
+they doubt on each and every part. Yes
+
+827
+00:27:13,295 --> 00:27:16,154
+they have to take. Yes phir uske
+
+828
+00:27:16,154 --> 00:27:17,583
+baad wo summary sabki dekhate Hain
+
+829
+00:27:17,583 --> 00:27:19,250
+summary dekhane ke baad Agar kisi Mein
+
+830
+00:27:19,250 --> 00:27:21,155
+unko doubt lagta hai toh uske baad phir
+
+831
+00:27:21,155 --> 00:27:22,822
+unki detailed report Mein jaate Hain but
+
+832
+00:27:22,822 --> 00:27:24,489
+abhi hamaare pass summary nahi hai. Agar
+
+833
+00:27:24,489 --> 00:27:26,632
+summary hum ko karna hai toh. We need to
+
+834
+00:27:26,632 --> 00:27:28,537
+provide them this test code as well. Ki
+
+835
+00:27:28,537 --> 00:27:30,204
+hamne kiss condition Mein ye test kar
+
+836
+00:27:30,204 --> 00:27:33,025
+rakhe hai. Good night kyonki har Ek test
+
+837
+00:27:33,025 --> 00:27:35,032
+Mein apna apna Jo values hai wo Badal
+
+838
+00:27:35,032 --> 00:27:36,787
+jaata hai. Lets say Agar yahaan per
+
+839
+00:27:36,787 --> 00:27:38,543
+hamaara assembled with hit Singh hai on
+
+840
+00:27:38,543 --> 00:27:40,550
+magnet hai on former hai toh abhi yahaan
+
+841
+00:27:40,550 --> 00:27:42,055
+per dekhenge abhi same component hai
+
+842
+00:27:42,055 --> 00:27:43,560
+donon Ki readings Mein difference hai.
+
+843
+00:27:44,440 --> 00:27:47,223
+Mm. So we need to provide
+
+844
+00:27:47,223 --> 00:27:48,880
+in depth result to them as well.
+
+845
+00:27:50,450 --> 00:27:52,878
+Toh ye kaam hamaara. This requires a lot
+
+846
+00:27:52,878 --> 00:27:55,002
+of precision. Yes yahaan pe Agar wo
+
+847
+00:27:55,002 --> 00:27:57,429
+minute Jo human errors bhee Agar ho jaate
+
+848
+00:27:57,429 --> 00:27:59,250
+Hain wahi problem ho raha hai.
+
+849
+00:28:01,290 --> 00:28:03,781
+This will be like very expensive later
+
+850
+00:28:03,781 --> 00:28:06,627
+on. HM AB ERP next pahle hum log
+
+851
+00:28:06,627 --> 00:28:09,474
+try kar rahe the but uska user interface
+
+852
+00:28:09,474 --> 00:28:12,321
+itna jyaada wo hai Ki hum log kahaan
+
+853
+00:28:12,321 --> 00:28:15,167
+ke Jo persons hai. They will not be
+
+854
+00:28:15,167 --> 00:28:17,658
+able to handle that. What I personally
+
+855
+00:28:17,658 --> 00:28:18,370
+think is.
+
+856
+00:28:20,500 --> 00:28:22,259
+Matlab uske andar bilkul basic jitna ban
+
+857
+00:28:22,259 --> 00:28:24,017
+sakta hai utana simplest banana hota hai
+
+858
+00:28:24,017 --> 00:28:26,278
+case wo use kar rahe hai yahi apne AAP
+
+859
+00:28:26,278 --> 00:28:28,288
+Mein itani badi baat hai wo AAP usme
+
+860
+00:28:28,288 --> 00:28:30,298
+difficulty ye bana do hai Ki usage Mein
+
+861
+00:28:30,298 --> 00:28:32,056
+issue AA raha hai. Usability ISS so
+
+862
+00:28:32,056 --> 00:28:33,815
+difficult toh wo toh use karna chhod
+
+863
+00:28:33,815 --> 00:28:35,825
+denge barabar hai toh usi cheez ke liye
+
+864
+00:28:35,825 --> 00:28:38,086
+Mein phir try kar raha Hoon Ki Ek naya
+
+865
+00:28:38,086 --> 00:28:40,096
+software hum log bana de kyonki hum log
+
+866
+00:28:40,096 --> 00:28:42,106
+ke paas already saare tools hai but unko
+
+867
+00:28:42,106 --> 00:28:43,613
+Ek interconnected system Mein ya single
+
+868
+00:28:43,613 --> 00:28:45,372
+software Mein create karna hai so that
+
+869
+00:28:45,372 --> 00:28:47,381
+hum logo ko bar bar multiple systems use
+
+870
+00:28:47,381 --> 00:28:50,192
+naa karna pade and we can directly. It
+
+871
+00:28:50,192 --> 00:28:53,017
+around it is here. Aur sabse
+
+872
+00:28:53,017 --> 00:28:55,363
+valent based Agar ye ho jaayega Ki hum
+
+873
+00:28:55,363 --> 00:28:57,417
+logon ka ismein Jo live project tracking
+
+874
+00:28:57,417 --> 00:28:59,763
+data hai Agar hum usko sing kar PAYE
+
+875
+00:28:59,763 --> 00:29:01,817
+hamaari websites hai toh that will be
+
+876
+00:29:01,817 --> 00:29:03,480
+more. Better.
