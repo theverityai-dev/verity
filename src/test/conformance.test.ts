@@ -181,6 +181,8 @@ describe("conformance: capability contracts (Phase E)", () => {
     // Project (jobs) points a job at the trading customer master (`customerId`) and reads it in
     // jobs.ts and index.ts; billing and order links hold keyed references only.
     project: ["trading"],
+    // Task 128 / ADR-050: the B2B CRM depends on nothing; a "won -> open a job" link belongs to project.
+    relationship: [],
     // Kent's Restaurant, the first real client. Depends on nothing: a menu, a
     // floor and a bill need no other capability, and declaring one it does not
     // use would make the graph a wish rather than a fact.
@@ -443,7 +445,9 @@ describe("conformance: over-genericity (Phase G)", () => {
     // 57: readiness-status.ts (ef929e27) — readiness reports core versus dependency
     // tiers (identity, storage, scheduler). Platform because readiness is a deployment
     // property no capability owns, and every capability's health depends on it.
-    expect(platformModules.length).toBeLessThanOrEqual(57);
+    // 58: views.ts (ADR-051) — record object descriptors and saved views. Platform because every capability's
+    // lists share one table, board and saved-view layer; it reads no capability's tables and adds no write path.
+    expect(platformModules.length).toBeLessThanOrEqual(58);
   });
 });
 

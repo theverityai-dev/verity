@@ -226,6 +226,18 @@ model Tenant {
   documentLinks     DocumentLink[]
   documentAccessLog DocumentAccessLog[]
 
+  // Platform: saved views over record objects (ADR-051). Back-relation only.
+  savedViews SavedView[]
+
+  // Capability: relationship (B2B CRM, Task 128, ADR-050). Back-relations only.
+  relationshipStages        RelationshipStage[]
+  relationshipCompanies     RelationshipCompany[]
+  relationshipPeople        RelationshipPerson[]
+  relationshipOpportunities RelationshipOpportunity[]
+  relationshipNotes         RelationshipNote[]
+  relationshipInteractions  RelationshipInteraction[]
+  relationshipFollowUps     RelationshipFollowUp[]
+
   // Capability: recipe (Colonel Kebabz Phase 1). Back-relations only.
   recipes           Recipe[]
   recipeIngredients RecipeIngredient[]
@@ -7179,4 +7191,267 @@ model DocumentAccessLog {
 
   @@index([tenantId, documentId, at])
   @@map("document_access_log")
+}
+
+/* ============================================================================
+ * Platform: saved views over record objects (ADR-051)
+ * ========================================================================== */
+
+/// How someone looks at a list of records: which columns, filters, sorts and grouping, as a table or a board.
+/// The object it shows is a code-registered descriptor (`views.ts`); `config` is validated against it on save.
+model SavedView {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// The record object's key, e.g. `verity.relationship.opportunity`.
+  objectKey   String   @map("object_key")
+  name        String
+  /// table | board
+  type        String
+  /// { columns: [{ key, width }], filters: [{ field, op, value }], sorts: [{ field, dir }], groupBy, aggregate }
+  config      Json     @default("{}")
+  /// personal | shared
+  visibility  String
+  /// The person a personal view belongs to; null on a shared view.
+  ownerUserId String?  @map("owner_user_id") @db.Uuid
+  isDefault   Boolean  @default(false) @map("is_default")
+  position    Int      @default(0)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, objectKey])
+  @@map("saved_view")
+}
+
+/* ============================================================================
+ * Capability: relationship (B2B CRM, Task 128). ADR-050: companies and people are tenant-owned, not Party rows.
+ * ========================================================================== */
+
+/// One step of the sales pipeline, per tenant and ordered. `category` is the closed ADR-009 behaviour:
+/// Active while open, Completed when won, Cancelled when lost.
+model RelationshipStage {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  key         String
+  label       String
+  category    String
+  position    Int
+  /// Likelihood of winning at this stage, 0 to 100, for the weighted forecast.
+  probability Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  opportunities RelationshipOpportunity[]
+
+  @@unique([tenantId, key])
+  @@unique([tenantId, id])
+  @@map("relationship_stage")
+}
+
+/// A business the tenant sells to or works with.
+model RelationshipCompany {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  name         String
+  /// The company's web domain without scheme, e.g. `acme.in`; used to match people by email and to dedupe imports.
+  domain       String?
+  industry     String?
+  /// 1-10 | 11-50 | 51-200 | 201-1000 | 1000+
+  sizeBand     String?   @map("size_band")
+  phone        String?
+  email        String?
+  taxId        String?   @map("tax_id")
+  addressLine  String?   @map("address_line")
+  city         String?
+  region       String?
+  country      String?
+  postalCode   String?   @map("postal_code")
+  ownerUserId  String?   @map("owner_user_id") @db.Uuid
+  source       String?
+  archivedAt   DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  version      Int       @default(1)
+  customFields Json      @default("{}") @map("custom_fields")
+
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  people        RelationshipPerson[]
+  opportunities RelationshipOpportunity[]
+  notes         RelationshipNote[]
+  interactions  RelationshipInteraction[]
+  followUps     RelationshipFollowUp[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, name])
+  @@index([tenantId, domain])
+  @@map("relationship_company")
+}
+
+/// A person at a company (or on their own). Several emails and phones, the first of each is primary.
+model RelationshipPerson {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  companyId    String?   @map("company_id") @db.Uuid
+  givenName    String    @map("given_name")
+  familyName   String?   @map("family_name")
+  jobTitle     String?   @map("job_title")
+  emails       String[]  @default([])
+  phones       String[]  @default([])
+  city         String?
+  ownerUserId  String?   @map("owner_user_id") @db.Uuid
+  archivedAt   DateTime? @map("archived_at")
+  createdById  String?   @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  version      Int       @default(1)
+  customFields Json      @default("{}") @map("custom_fields")
+
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company       RelationshipCompany?      @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  opportunities RelationshipOpportunity[]
+  notes         RelationshipNote[]
+  interactions  RelationshipInteraction[]
+  followUps     RelationshipFollowUp[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, companyId])
+  @@index([tenantId, familyName, givenName])
+  @@map("relationship_person")
+}
+
+/// A deal in the pipeline, from first enquiry to won or lost.
+model RelationshipOpportunity {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  /// Per-tenant running number; shown as `OPP-12`.
+  number          Int
+  name            String
+  companyId       String?   @map("company_id") @db.Uuid
+  contactId       String?   @map("contact_id") @db.Uuid
+  ownerUserId     String?   @map("owner_user_id") @db.Uuid
+  amount          Decimal?  @db.Decimal(14, 2)
+  currency        String    @default("INR")
+  stageId         String    @map("stage_id") @db.Uuid
+  /// Order within its stage on the board.
+  position        Float     @default(0)
+  expectedCloseOn DateTime? @map("expected_close_on") @db.Date
+  /// For a tender or RFQ: the date the bid must be submitted by.
+  submissionDueOn DateTime? @map("submission_due_on") @db.Date
+  source          String?
+  lostReason      String?   @map("lost_reason")
+  lostNote        String?   @map("lost_note")
+  closedAt        DateTime? @map("closed_at")
+  archivedAt      DateTime? @map("archived_at")
+  createdById     String?   @map("created_by_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  version         Int       @default(1)
+  customFields    Json      @default("{}") @map("custom_fields")
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stage        RelationshipStage         @relation(fields: [tenantId, stageId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  company      RelationshipCompany?      @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  contact      RelationshipPerson?       @relation(fields: [tenantId, contactId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  notes        RelationshipNote[]
+  interactions RelationshipInteraction[]
+  followUps    RelationshipFollowUp[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, id])
+  @@index([tenantId, stageId, position])
+  @@index([tenantId, companyId])
+  @@map("relationship_opportunity")
+}
+
+/// A free-text note on a company, person or opportunity.
+model RelationshipNote {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  companyId     String?   @map("company_id") @db.Uuid
+  personId      String?   @map("person_id") @db.Uuid
+  opportunityId String?   @map("opportunity_id") @db.Uuid
+  body          String
+  authorUserId  String?   @map("author_user_id") @db.Uuid
+  archivedAt    DateTime? @map("archived_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  version       Int       @default(1)
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     RelationshipCompany?     @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  person      RelationshipPerson?      @relation(fields: [tenantId, personId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  opportunity RelationshipOpportunity? @relation(fields: [tenantId, opportunityId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenantId, companyId])
+  @@index([tenantId, personId])
+  @@index([tenantId, opportunityId])
+  @@map("relationship_note")
+}
+
+/// A call, meeting, visit, email or message that happened, logged by hand.
+model RelationshipInteraction {
+  id              String    @id @default(uuid()) @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  companyId       String?   @map("company_id") @db.Uuid
+  personId        String?   @map("person_id") @db.Uuid
+  opportunityId   String?   @map("opportunity_id") @db.Uuid
+  /// call | meeting | visit | email | message
+  kind            String
+  subject         String
+  summary         String?
+  outcome         String?
+  occurredAt      DateTime  @map("occurred_at")
+  durationMinutes Int?      @map("duration_minutes")
+  loggedById      String?   @map("logged_by_id") @db.Uuid
+  archivedAt      DateTime? @map("archived_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     RelationshipCompany?     @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  person      RelationshipPerson?      @relation(fields: [tenantId, personId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  opportunity RelationshipOpportunity? @relation(fields: [tenantId, opportunityId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenantId, companyId, occurredAt])
+  @@index([tenantId, personId, occurredAt])
+  @@index([tenantId, opportunityId, occurredAt])
+  @@map("relationship_interaction")
+}
+
+/// Something someone has to do next, with a due time and an assignee. (Not `Task`: ADR-006 reserves that word.)
+model RelationshipFollowUp {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  companyId     String?   @map("company_id") @db.Uuid
+  personId      String?   @map("person_id") @db.Uuid
+  opportunityId String?   @map("opportunity_id") @db.Uuid
+  title         String
+  details       String?
+  dueAt         DateTime? @map("due_at")
+  assigneeId    String?   @map("assignee_id") @db.Uuid
+  /// open | done
+  status        String    @default("open")
+  doneAt        DateTime? @map("done_at")
+  doneById      String?   @map("done_by_id") @db.Uuid
+  /// When the overdue reminder last went out, so the daily sweep tells someone once a day, not once a run.
+  remindedOn    DateTime? @map("reminded_on") @db.Date
+  createdById   String?   @map("created_by_id") @db.Uuid
+  archivedAt    DateTime? @map("archived_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  version       Int       @default(1)
+
+  tenant      Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company     RelationshipCompany?     @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  person      RelationshipPerson?      @relation(fields: [tenantId, personId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  opportunity RelationshipOpportunity? @relation(fields: [tenantId, opportunityId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([tenantId, assigneeId, status, dueAt])
+  @@index([tenantId, companyId])
+  @@index([tenantId, personId])
+  @@index([tenantId, opportunityId])
+  @@map("relationship_follow_up")
 }
