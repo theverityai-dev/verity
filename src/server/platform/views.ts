@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { registerCommand, ValidationError, type CommandDefinition } from "./command";
 import { registerQuery, type QueryDefinition } from "./query";
-import { ConflictError } from "./entity";
+import { ConflictError, CustomFieldValidationError, compileCustomFieldValidator } from "./entity";
 import { ForbiddenError, hasTenantPermission } from "./authorization";
 import type { TenantScopedClient } from "./tenancy";
 
@@ -76,6 +76,11 @@ export type RecordField = {
   relation?: string;
   /** For a relation field: the target object's record page (`/crm/companies/{id}`), filled in when described. */
   relationHref?: string;
+  /**
+   * A tenant's custom field (PLA-EXT-001): its declared name in `custom_fields`. Filters run on the JSON path, it is
+   * never sortable, and an edit sends `{ patch: { customFields: { [custom]: value } } }` to the object's edit command.
+   */
+  custom?: string;
   filterable?: boolean;
   sortable?: boolean;
   aggregates?: readonly Aggregate[];
@@ -116,6 +121,11 @@ export type RecordObject = {
   boardMove?: { command: string; groupParam: string };
   /** The command a board column's quick add runs: `{ [titleParam]: text, [groupParam]: value }`. */
   quickCreate?: { command: string; titleParam: string; groupParam: string };
+  /**
+   * The command that edits a record's tenant custom fields, called as `{ id, version, patch: { customFields } }`.
+   * Present only on objects whose model has a `custom_fields` column and whose commands merge them.
+   */
+  customFieldsCommand?: string;
 };
 
 const objects = new Map<string, RecordObject>();
@@ -176,7 +186,7 @@ export function validateViewConfig(object: RecordObject, config: ViewConfig, typ
   for (const f of config.filters) {
     const def = field(f.field, "filter by");
     if (def.filterable === false) throw new ValidationError(`E_VALIDATION: ${def.label} cannot be filtered`);
-    if (!OPS_FOR_TYPE[def.type].includes(f.op)) throw new ValidationError(`E_VALIDATION: ${def.label} cannot be filtered with "${f.op}"`);
+    if (!opsFor(def).includes(f.op)) throw new ValidationError(`E_VALIDATION: ${def.label} cannot be filtered with "${f.op}"`);
   }
   for (const s of config.sorts) {
     const def = field(s.field, "sort by");
@@ -256,7 +266,51 @@ const startOfDay = (d: Date) => new Date(`${d.toISOString().slice(0, 10)}T00:00:
 
 export type FilterContext = { userId: string; now?: Date };
 
+/**
+ * Operators for a field. A custom field lives in a JSON document, where Prisma can compare a value at a path but cannot
+ * reliably tell a missing key from a null one, so emptiness filters are not offered for it.
+ */
+export function opsFor(field: RecordField): readonly FilterOp[] {
+  if (!field.custom) return OPS_FOR_TYPE[field.type];
+  if (field.type === "select") return ["is_any_of"];
+  if (field.type === "number" || field.type === "date") return ["eq", "gt", "gte", "lt", "lte"];
+  if (field.type === "boolean") return ["eq"];
+  return ["contains", "eq"];
+}
+
+/** A filter on one key of `custom_fields`, which Prisma reads as a JSON path. */
+function customCondition(field: RecordField, filter: ViewFilter): Where {
+  const at = (cond: Record<string, unknown>) => ({ customFields: { path: [field.custom!], ...cond } });
+  const v = filter.value;
+  const value =
+    field.type === "number" ? asNumber(v)
+    : field.type === "date" ? `${String(v).slice(0, 10)}T00:00:00.000Z`
+    : field.type === "boolean" ? v === true || v === "true"
+    : typeof v === "string" ? v.trim() : v;
+  switch (filter.op) {
+    case "contains":
+      return typeof value === "string" && value ? at({ string_contains: value }) : {};
+    case "eq":
+      return at({ equals: value as never });
+    case "gt":
+      return at({ gt: value });
+    case "gte":
+      return at({ gte: value });
+    case "lt":
+      return at({ lt: value });
+    case "lte":
+      return at({ lte: value });
+    case "is_any_of": {
+      const list = asList(v);
+      return list.length ? { OR: list.map((x) => at({ equals: x })) } : {};
+    }
+    default:
+      throw new ValidationError(`E_VALIDATION: ${field.label} cannot be filtered with "${filter.op}"`);
+  }
+}
+
 function condition(field: RecordField, filter: ViewFilter, ctx: FilterContext): Where {
+  if (field.custom) return customCondition(field, filter);
   const column = field.column ?? field.key;
   const v = filter.value;
   const now = ctx.now ?? new Date();
@@ -326,7 +380,7 @@ export function buildWhere(object: RecordObject, config: Pick<ViewConfig, "filte
     .map((f) => {
       const field = fields.get(f.field);
       if (!field) throw new ValidationError(`E_VALIDATION: ${object.labelPlural} have no field "${f.field}" to filter by`);
-      if (!OPS_FOR_TYPE[field.type].includes(f.op)) throw new ValidationError(`E_VALIDATION: ${field.label} cannot be filtered with "${f.op}"`);
+      if (!opsFor(field).includes(f.op)) throw new ValidationError(`E_VALIDATION: ${field.label} cannot be filtered with "${f.op}"`);
       return condition(field, f, ctx);
     })
     .filter((w) => Object.keys(w).length > 0);
@@ -510,7 +564,7 @@ export const saveView: CommandDefinition<
     config: viewConfigSchema,
   }),
   handler: async (ctx, input) => {
-    const object = requireObject(input.objectKey);
+    const object = await withCustomFields(ctx.tx, requireObject(input.objectKey));
     const config = validateViewConfig(object, viewConfigSchema.parse(input.config), input.type);
     const existing = input.id ? await ctx.tx.savedView.findUnique({ where: { id: input.id } }) : null;
     if (input.id && !existing) throw new ValidationError("E_VALIDATION: no such view");
@@ -580,4 +634,197 @@ export function registerViewCommands(): void {
   registerCommand(saveView as never);
   registerCommand(deleteView as never);
   registerQuery(listViews as never);
+  registerCommand(defineCustomField as never);
+  registerCommand(retireCustomField as never);
+  registerQuery(listCustomFields as never);
 }
+
+/* ================================ custom fields (PLA-EXT-001/002/003) ================================ */
+
+/**
+ * A tenant adds its own fields to a record object: DSEW's tender number and EMD on an opportunity, a GST
+ * registration type on a company. The schema rows and the validator already existed (`custom_field_schema`,
+ * `compileCustomFieldValidator`); these are the commands that declare them, and the helpers that turn the
+ * declarations into record fields every table, filter and record page can show.
+ */
+export const ENTITY_CUSTOM_FIELD = "verity.platform.custom_field";
+export const CUSTOM_FIELD_TYPES = ["String", "Number", "Boolean", "Select", "Date"] as const;
+const FIELD_TYPE_FOR: Record<(typeof CUSTOM_FIELD_TYPES)[number], FieldType> = {
+  String: "text", Number: "number", Boolean: "boolean", Select: "select", Date: "date",
+};
+export const customFieldKey = (name: string) => `cf:${name}`;
+
+type CustomFieldRow = { id: string; fieldName: string; fieldType: string; required: boolean; selectOptions: string[] };
+
+function toRecordField(object: RecordObject, c: CustomFieldRow): RecordField {
+  return {
+    key: customFieldKey(c.fieldName),
+    label: c.fieldName,
+    type: FIELD_TYPE_FOR[c.fieldType as keyof typeof FIELD_TYPE_FOR] ?? "text",
+    custom: c.fieldName,
+    sortable: false,
+    options: c.fieldType === "Select" ? c.selectOptions.map((o) => ({ value: o, label: o })) : undefined,
+    aggregates: c.fieldType === "Number" ? ["count_not_empty"] : ["count"],
+    editCommand: object.customFieldsCommand,
+    width: 160,
+  };
+}
+
+/** The object with this tenant's custom fields appended, as every list, view and record page should see it. */
+export async function withCustomFields(tx: TenantScopedClient, object: RecordObject): Promise<RecordObject> {
+  if (!object.customFieldsCommand) return object;
+  const rows = await tx.customFieldSchema.findMany({ where: { entityKey: object.entity }, orderBy: { createdAt: "asc" } });
+  return rows.length ? { ...object, fields: [...object.fields, ...rows.map((r) => toRecordField(object, r))] } : object;
+}
+
+/** `{ "cf:Tender number": "T-21" }` for a list row, from the record's `custom_fields`. */
+export function customFieldValues(customFields: unknown): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  if (customFields && typeof customFields === "object" && !Array.isArray(customFields)) {
+    for (const [k, v] of Object.entries(customFields)) out[customFieldKey(k)] = v;
+  }
+  return out;
+}
+
+/**
+ * Applies a patch to a record's custom fields and validates the declared ones (PLA-EXT-003). A null or empty value
+ * clears a field. Keys no longer declared (a retired field) are kept as they were, never silently dropped, and never
+ * accepted from a patch.
+ */
+export async function mergeCustomFields(
+  tx: TenantScopedClient,
+  entityKey: string,
+  current: unknown,
+  patch: Record<string, unknown> | undefined,
+): Promise<Record<string, unknown>> {
+  const schemas = await tx.customFieldSchema.findMany({ where: { entityKey } });
+  const declared = new Map(schemas.map((s) => [s.fieldName, s]));
+  const base = current && typeof current === "object" && !Array.isArray(current) ? { ...(current as Record<string, unknown>) } : {};
+  for (const [k, raw] of Object.entries(patch ?? {})) {
+    const schema = declared.get(k);
+    if (!schema) throw new ValidationError(`E_VALIDATION: there is no field called "${k}"`);
+    if (raw === null || raw === "" || raw === undefined) {
+      delete base[k];
+      continue;
+    }
+    if (schema.fieldType === "Number") base[k] = typeof raw === "number" ? raw : Number(String(raw).replace(/[,\s₹]/g, ""));
+    else if (schema.fieldType === "Boolean") base[k] = raw === true || raw === "true";
+    else if (schema.fieldType === "Date") base[k] = `${String(raw).slice(0, 10)}T00:00:00.000Z`;
+    else base[k] = String(raw).trim();
+  }
+  const kept: Record<string, unknown> = {};
+  const checked: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(base)) (declared.has(k) ? checked : kept)[k] = v;
+  const result = compileCustomFieldValidator(schemas).safeParse(checked);
+  if (!result.success) {
+    const issues = result.error.issues.map((i) => `${i.path.join(".") || "<root>"}: ${i.message}`);
+    const first = result.error.issues[0];
+    const what = first?.path[0] ? `${String(first.path[0])} ${first.code === "invalid_type" && first.message.includes("undefined") ? "is required" : "is not valid"}` : "custom fields are not valid";
+    throw new CustomFieldValidationError(`E_VALIDATION: ${what}`, issues);
+  }
+  return { ...kept, ...(result.data as Record<string, unknown>) };
+}
+
+function customFieldObject(entityKey: string): RecordObject {
+  const object = listRecordObjects().find((o) => o.entity === entityKey && o.customFieldsCommand);
+  if (!object) throw new ValidationError(`E_VALIDATION: ${entityKey} does not take custom fields`);
+  return object;
+}
+
+export type CustomFieldDefinition = { id: string; entityKey: string; name: string; type: string; required: boolean; options: string[] };
+
+export const listCustomFields: QueryDefinition<{ entityKey: string }, CustomFieldDefinition[]> = {
+  key: "verity.view.list_custom_fields",
+  entity: ENTITY_SAVED_VIEW,
+  description: "The fields this workspace has added to a kind of record.",
+  input: z.object({ entityKey: z.string().max(120) }),
+  handler: async (ctx, input) =>
+    (await ctx.tx.customFieldSchema.findMany({ where: { entityKey: input.entityKey }, orderBy: { createdAt: "asc" } })).map((c) => ({
+      id: c.id, entityKey: c.entityKey, name: c.fieldName, type: c.fieldType, required: c.required, options: c.selectOptions,
+    })),
+};
+
+export const defineCustomField: CommandDefinition<
+  { entityKey: string; name: string; type: (typeof CUSTOM_FIELD_TYPES)[number]; options?: string[]; required?: boolean },
+  { id: string }
+> = {
+  key: "verity.view.define_custom_field",
+  entity: ENTITY_CUSTOM_FIELD,
+  verb: "Edit",
+  description: "Add a field of the workspace's own to a kind of record, such as a tender number on an opportunity.",
+  input: z.object({
+    entityKey: z.string().max(120),
+    name: z.string().trim().min(1).max(60).regex(/^[\p{L}\p{N}][\p{L}\p{N} ._()/&-]*$/u, "letters, digits, spaces and . _ ( ) / & -"),
+    type: z.enum(CUSTOM_FIELD_TYPES),
+    options: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
+    required: z.boolean().optional(),
+  }),
+  handler: async (ctx, input) => {
+    const object = customFieldObject(input.entityKey);
+    if (object.fields.some((f) => f.label.toLowerCase() === input.name.toLowerCase())) {
+      throw new ValidationError(`E_VALIDATION: ${object.labelPlural} already have a field called ${input.name}`);
+    }
+    const existing = await ctx.tx.customFieldSchema.findMany({ where: { entityKey: input.entityKey } });
+    if (existing.some((e) => e.fieldName.toLowerCase() === input.name.toLowerCase())) {
+      throw new ValidationError(`E_VALIDATION: there is already a field called ${input.name}`);
+    }
+    if (existing.length >= 40) throw new ValidationError("E_VALIDATION: forty fields is the limit for one kind of record");
+    const options = [...new Set(input.options ?? [])];
+    if (input.type === "Select" && options.length < 2) throw new ValidationError("E_VALIDATION: a choice field needs at least two choices");
+    if (input.required) {
+      const records = await recordCount(ctx.tx, input.entityKey);
+      if (records > 0) {
+        throw new ValidationError(`E_VALIDATION: ${records} ${object.labelPlural.toLowerCase()} already exist without it, so it cannot start out required`);
+      }
+    }
+    const row = await ctx.tx.customFieldSchema.create({
+      data: {
+        tenantId: ctx.actor.tenantId, entityKey: input.entityKey, fieldName: input.name, fieldType: input.type,
+        required: input.required ?? false, selectOptions: input.type === "Select" ? options : [],
+      },
+    });
+    return { result: { id: row.id }, events: [{ name: "verity.platform.custom_field_defined", entityId: row.id }] };
+  },
+};
+
+/** Records of an object, counted through Prisma's generic model lookup by table name. */
+async function recordCount(tx: TenantScopedClient, entityKey: string): Promise<number> {
+  const def = await tx.entityDefinition.findUnique({ where: { key: entityKey }, select: { tableName: true } });
+  if (!def?.tableName || !/^[a-z_]+$/.test(def.tableName)) return 0;
+  const rows = await tx.$queryRawUnsafe<Array<{ n: bigint }>>(`SELECT count(*) AS n FROM "${def.tableName}"`);
+  return Number(rows[0]?.n ?? 0);
+}
+
+export const retireCustomField: CommandDefinition<{ id: string }, { id: string }> = {
+  key: "verity.view.retire_custom_field",
+  entity: ENTITY_CUSTOM_FIELD,
+  verb: "Edit",
+  impact: "destructive",
+  description: "Remove a custom field from forms and lists. Values already entered stay on the records, hidden.",
+  input: z.object({ id: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const row = await ctx.tx.customFieldSchema.findUnique({ where: { id: input.id } });
+    if (!row) throw new ValidationError("E_VALIDATION: no such field");
+    await ctx.tx.customFieldSchema.delete({ where: { id: row.id } });
+    const views = await ctx.tx.savedView.findMany({ select: { id: true, config: true } });
+    // A saved view that names the field would no longer validate; take the field out of it.
+    const key = customFieldKey(row.fieldName);
+    for (const v of views) {
+      const c = viewConfigSchema.safeParse(v.config);
+      if (!c.success) continue;
+      const cfg = c.data;
+      const named = cfg.columns.some((x) => x.key === key) || cfg.filters.some((f) => f.field === key) || key in cfg.aggregates || cfg.groupBy === key;
+      if (!named) continue;
+      const { [key]: _drop, ...aggregates } = cfg.aggregates;
+      void _drop;
+      await ctx.tx.savedView.update({
+        where: { id: v.id },
+        data: {
+          config: { ...cfg, columns: cfg.columns.filter((x) => x.key !== key), filters: cfg.filters.filter((f) => f.field !== key), aggregates, groupBy: cfg.groupBy === key ? null : cfg.groupBy } as object,
+          version: { increment: 1 },
+        },
+      });
+    }
+    return { result: { id: row.id }, events: [{ name: "verity.platform.custom_field_retired", entityId: row.id }] };
+  },
+};

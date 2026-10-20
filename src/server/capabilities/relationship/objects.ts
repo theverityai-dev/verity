@@ -34,6 +34,7 @@ export const COMPANY_OBJECT: RecordObject = {
   listQuery: "verity.relationship.list_companies",
   searchColumns: ["name", "domain", "city", "email", "phone"],
   lookupQuery: LOOKUP,
+  customFieldsCommand: UPDATE_COMPANY,
   defaultSort: { field: "name", dir: "asc" },
   defaultColumns: ["name", "domain", "industry", "city", "owner", "people", "openOpportunities", "pipelineValue", "lastActivity"],
   fields: [
@@ -72,6 +73,7 @@ export const PERSON_OBJECT: RecordObject = {
   defaultSort: { field: "name", dir: "asc" },
   defaultColumns: ["name", "company", "jobTitle", "emails", "phones", "city", "owner", "lastActivity"],
   lookupQuery: LOOKUP,
+  customFieldsCommand: UPDATE_PERSON,
   fields: [
     { key: "name", label: "Name", type: "text", column: "givenName", filterable: false, width: 220 },
     { key: "givenName", label: "First name", type: "text", editCommand: UPDATE_PERSON, width: 140 },
@@ -106,6 +108,7 @@ export const OPPORTUNITY_OBJECT: RecordObject = {
   boardGroupField: "stage",
   boardSumField: "amount",
   lookupQuery: LOOKUP,
+  customFieldsCommand: UPDATE_OPPORTUNITY,
   boardMove: { command: "verity.relationship.move_opportunity", groupParam: "stageId" },
   quickCreate: { command: "verity.relationship.create_opportunity", titleParam: "name", groupParam: "stage" },
   fields: [

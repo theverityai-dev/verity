@@ -4,13 +4,17 @@ import { ValidationError, type CommandContext, type CommandDefinition } from "@/
 import type { QueryDefinition } from "@/server/platform/query";
 import { ConflictError } from "@/server/platform/entity";
 import { diffFields, recordActivity } from "@/server/platform/audit";
+import { notify } from "@/server/platform/notification";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
 import {
   buildOrderBy,
   buildWhere,
   computeAggregates,
+  customFieldValues,
   listInputSchema,
   memberDirectory,
+  mergeCustomFields,
+  withCustomFields,
   type ListResult,
   type ParsedListInput,
 } from "@/server/platform/views";
@@ -62,6 +66,17 @@ const amount = z.union([z.number(), z.string(), z.null()]).transform((v, ctx) =>
   return Math.round(n * 100) / 100;
 });
 
+/** A patch to a record's tenant custom fields (PLA-EXT-001); a null clears one. Validated by `mergeCustomFields`. */
+const customFieldsPatch = z.record(z.string().max(80), z.union([z.string().max(2000), z.number(), z.boolean(), z.null()])).optional();
+
+/** Before and after values of the custom fields a patch touched, keyed by field name, for the change log. */
+function customFieldChanges(names: string[], before: unknown, after: unknown): [Record<string, unknown>, Record<string, unknown>] {
+  const b = (before ?? {}) as Record<string, unknown>;
+  const a = (after ?? {}) as Record<string, unknown>;
+  const shown = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/.test(v) ? v.slice(0, 10) : (v ?? null));
+  return [Object.fromEntries(names.map((n) => [n, shown(b[n])])), Object.fromEntries(names.map((n) => [n, shown(a[n])]))];
+}
+
 const asDay = (iso: string | null) => (iso ? new Date(`${iso}T00:00:00.000Z`) : null);
 export const dayText = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : null);
 export const instant = (d: Date | null | undefined) => (d ? d.toISOString() : null);
@@ -105,7 +120,10 @@ async function logCreated(ctx: CommandContext, entityKey: string, entityId: stri
 
 /* ================================ stages ================================ */
 
-export type StageRow = { id: string; key: string; label: string; category: string; position: number; probability: number; active: boolean };
+export type StageRow = {
+  id: string; key: string; label: string; category: string; position: number; probability: number; active: boolean;
+  playbook: { followUps: Array<{ title: string; dueInDays: number }>; notifyOwner: boolean };
+};
 
 /** Writes the default pipeline the first time a tenant needs one. Called only from commands. */
 async function ensureStages(ctx: CommandContext): Promise<void> {
@@ -206,6 +224,7 @@ export const listStages: QueryDefinition<Record<string, never>, StageRow[]> = {
   handler: async (ctx) =>
     (await ctx.tx.relationshipStage.findMany({ orderBy: { position: "asc" } })).map((s) => ({
       id: s.id, key: s.key, label: s.label, category: s.category, position: s.position, probability: s.probability, active: s.active,
+      playbook: readPlaybook(s.config),
     })),
 };
 
@@ -227,6 +246,7 @@ const companyPatchSchema = z
     addressLine: optionalText(300),
     owner: optionalUuid,
     source: optionalChoice(OPPORTUNITY_SOURCES),
+    customFields: customFieldsPatch,
   })
   .partial();
 type CompanyPatch = z.infer<typeof companyPatchSchema>;
@@ -234,7 +254,7 @@ type CompanyPatch = z.infer<typeof companyPatchSchema>;
 function companyData(patch: CompanyPatch): Prisma.RelationshipCompanyUncheckedUpdateInput {
   const data: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
+    if (value === undefined || key === "customFields") continue;
     if (key === "owner") data.ownerUserId = value;
     else if (key === "domain") {
       const domain = normaliseDomain(value as string | null);
@@ -266,10 +286,11 @@ export const createCompany: CommandDefinition<CompanyPatch & { name: string; all
     if (!allowDuplicate) await refuseDuplicateCompany(ctx.tx, input.name, data.domain as string | null | undefined);
     const owner = patch.owner === undefined ? ctx.actor.userId : patch.owner;
     await requireMember(ctx.tx, owner);
+    const customFields = await mergeCustomFields(ctx.tx, ENTITY_COMPANY, {}, patch.customFields ?? {});
     const company = await ctx.tx.relationshipCompany.create({
       data: {
         ...(data as Prisma.RelationshipCompanyUncheckedCreateInput),
-        name: input.name, ownerUserId: owner, tenantId: ctx.actor.tenantId, createdById: ctx.actor.userId,
+        name: input.name, ownerUserId: owner, tenantId: ctx.actor.tenantId, createdById: ctx.actor.userId, customFields: customFields as object,
       },
     });
     await logCreated(ctx, ENTITY_COMPANY, company.id, "verity.relationship.create_company", company.name);
@@ -284,16 +305,19 @@ async function applyCompanyPatch(ctx: CommandContext, id: string, version: numbe
   const data = companyData(patch);
   if (data.ownerUserId !== undefined) await requireMember(ctx.tx, data.ownerUserId as string | null);
   if (patch.name !== undefined || data.domain) await refuseDuplicateCompany(ctx.tx, patch.name, data.domain as string | null | undefined, id);
+  if (patch.customFields) data.customFields = (await mergeCustomFields(ctx.tx, ENTITY_COMPANY, company.customFields, patch.customFields)) as object;
   const saved = await ctx.tx.relationshipCompany.update({ where: { id }, data: { ...data, version: { increment: 1 } } });
   const labels = data.ownerUserId !== undefined ? await userLabels(ctx.tx) : new Map<string, string>();
   const shown = (c: typeof company) => {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(patch)) {
+      if (key === "customFields") continue;
       out[key] = key === "owner" ? (c.ownerUserId ? (labels.get(c.ownerUserId) ?? null) : null) : (c as Record<string, unknown>)[key];
     }
     return out;
   };
-  await logChanges(ctx, ENTITY_COMPANY, id, commandKey, shown(company), shown(saved));
+  const [cfBefore, cfAfter] = customFieldChanges(Object.keys(patch.customFields ?? {}), company.customFields, saved.customFields);
+  await logChanges(ctx, ENTITY_COMPANY, id, commandKey, { ...shown(company), ...cfBefore }, { ...shown(saved), ...cfAfter });
   return saved;
 }
 
@@ -330,6 +354,7 @@ const personPatchSchema = z
     phones: listOf(z.string().max(40)),
     city: optionalText(120),
     owner: optionalUuid,
+    customFields: customFieldsPatch,
   })
   .partial();
 type PersonPatch = z.infer<typeof personPatchSchema>;
@@ -337,7 +362,7 @@ type PersonPatch = z.infer<typeof personPatchSchema>;
 function personData(patch: PersonPatch): Prisma.RelationshipPersonUncheckedUpdateInput {
   const data: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
+    if (value === undefined || key === "customFields") continue;
     if (key === "owner") data.ownerUserId = value;
     else if (key === "company") data.companyId = value;
     else data[key] = value;
@@ -380,10 +405,11 @@ export const createPerson: CommandDefinition<PersonPatch & { givenName: string; 
     }
     const owner = patch.owner === undefined ? ctx.actor.userId : patch.owner;
     await requireMember(ctx.tx, owner);
+    const customFields = await mergeCustomFields(ctx.tx, ENTITY_PERSON, {}, patch.customFields ?? {});
     const person = await ctx.tx.relationshipPerson.create({
       data: {
         ...(data as Prisma.RelationshipPersonUncheckedCreateInput),
-        givenName: input.givenName, ownerUserId: owner, tenantId: ctx.actor.tenantId, createdById: ctx.actor.userId,
+        givenName: input.givenName, ownerUserId: owner, tenantId: ctx.actor.tenantId, createdById: ctx.actor.userId, customFields: customFields as object,
       },
     });
     await logCreated(ctx, ENTITY_PERSON, person.id, "verity.relationship.create_person", personName(person));
@@ -398,11 +424,13 @@ async function applyPersonPatch(ctx: CommandContext, id: string, version: number
   const data = personData(patch);
   const company = data.companyId !== undefined ? await requireCompany(ctx.tx, data.companyId as string | null) : person.company;
   if (data.ownerUserId !== undefined) await requireMember(ctx.tx, data.ownerUserId as string | null);
+  if (patch.customFields) data.customFields = (await mergeCustomFields(ctx.tx, ENTITY_PERSON, person.customFields, patch.customFields)) as object;
   const saved = await ctx.tx.relationshipPerson.update({ where: { id }, data: { ...data, version: { increment: 1 } } });
   const labels = data.ownerUserId !== undefined ? await userLabels(ctx.tx) : new Map<string, string>();
   const shown = (p: Record<string, unknown> & { ownerUserId: string | null }, companyName: string | null) => {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(patch)) {
+      if (key === "customFields") continue;
       if (key === "owner") out.owner = p.ownerUserId ? (labels.get(p.ownerUserId) ?? null) : null;
       else if (key === "company") out.company = companyName;
       else {
@@ -412,7 +440,12 @@ async function applyPersonPatch(ctx: CommandContext, id: string, version: number
     }
     return out;
   };
-  await logChanges(ctx, ENTITY_PERSON, id, commandKey, shown(person, person.company?.name ?? null), shown(saved, company?.name ?? null));
+  const [cfBefore, cfAfter] = customFieldChanges(Object.keys(patch.customFields ?? {}), person.customFields, saved.customFields);
+  await logChanges(
+    ctx, ENTITY_PERSON, id, commandKey,
+    { ...shown(person, person.company?.name ?? null), ...cfBefore },
+    { ...shown(saved, company?.name ?? null), ...cfAfter },
+  );
   return saved;
 }
 
@@ -444,9 +477,74 @@ const opportunityPatchSchema = z
     owner: optionalUuid,
     lostReason: optionalChoice(LOST_REASONS),
     lostNote: optionalText(1000),
+    customFields: customFieldsPatch,
   })
   .partial();
 type OpportunityPatch = z.infer<typeof opportunityPatchSchema>;
+
+/* ================================ stage playbooks (Task 128 stage 4) ================================ */
+
+/** What a stage does when a deal enters it: follow-ups to plan, and whether to tell the deal's owner. */
+export const playbookSchema = z.object({
+  followUps: z.array(z.object({ title: z.string().trim().min(1).max(200), dueInDays: z.number().int().min(0).max(365) })).max(10).default([]),
+  notifyOwner: z.boolean().default(false),
+});
+export type Playbook = z.infer<typeof playbookSchema>;
+
+export function readPlaybook(config: unknown): Playbook {
+  const parsed = playbookSchema.safeParse(config ?? {});
+  return parsed.success ? parsed.data : { followUps: [], notifyOwner: false };
+}
+
+/**
+ * Runs a stage's playbook for a deal that just entered it, inside the command that moved it, so the follow-ups and
+ * the notice exist exactly when the move does and roll back with it. Each follow-up is for the deal's owner (or the
+ * person who moved it when it has none); the notice names the deal and the stage, nothing the owner cannot read.
+ */
+async function runPlaybook(
+  ctx: CommandContext,
+  stage: { id: string; label: string; config: unknown },
+  opp: { id: string; number: number; name: string; companyId: string | null; contactId: string | null; ownerUserId: string | null },
+) {
+  const playbook = readPlaybook(stage.config);
+  const assignee = opp.ownerUserId ?? ctx.actor.userId;
+  for (const step of playbook.followUps) {
+    const due = new Date(Date.now() + step.dueInDays * 86_400_000);
+    due.setUTCHours(6, 30, 0, 0); // 12:00 IST: due in the working day it names
+    await ctx.tx.relationshipFollowUp.create({
+      data: {
+        tenantId: ctx.actor.tenantId, opportunityId: opp.id, companyId: opp.companyId, personId: opp.contactId,
+        title: step.title, dueAt: due, assigneeId: assignee, createdById: ctx.actor.userId,
+      },
+    });
+  }
+  if (playbook.notifyOwner && opp.ownerUserId && opp.ownerUserId !== ctx.actor.userId) {
+    await notify(ctx.tx, {
+      tenantId: ctx.actor.tenantId,
+      recipientIds: [opp.ownerUserId],
+      key: "verity.relationship.opportunity_entered_stage",
+      entityKey: ENTITY_OPPORTUNITY,
+      entityId: opp.id,
+      variables: { ref: opportunityRef(opp.number), stage: stage.label },
+      fallback: { subject: `${opportunityRef(opp.number)} moved to ${stage.label}`, body: opp.name },
+    });
+  }
+}
+
+export const setStagePlaybook: CommandDefinition<{ id: string; playbook: z.input<typeof playbookSchema> }, { id: string }> = {
+  key: "verity.relationship.set_stage_playbook",
+  entity: ENTITY_STAGE,
+  verb: "Edit",
+  description: "Set what happens when a deal enters a stage: follow-ups to plan and whether to tell its owner.",
+  input: z.object({ id: z.string().uuid(), playbook: playbookSchema }),
+  handler: async (ctx, input) => {
+    const stage = await ctx.tx.relationshipStage.findUnique({ where: { id: input.id } });
+    if (!stage) throw new ValidationError("E_VALIDATION: no such stage");
+    const playbook = playbookSchema.parse(input.playbook);
+    await ctx.tx.relationshipStage.update({ where: { id: stage.id }, data: { config: playbook as object } });
+    return { result: { id: stage.id } };
+  },
+};
 
 async function nextOpportunityNumber(ctx: CommandContext): Promise<number> {
   await ctx.tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify(["relationship-opportunity-number", ctx.actor.tenantId])}, 0))`;
@@ -503,6 +601,7 @@ export const createOpportunity: CommandDefinition<OpportunityPatch & { name: str
     const effects = stageEffects(null, stage, input.lostReason, { lostReason: null, closedAt: null });
     const number = await nextOpportunityNumber(ctx);
     const top = await ctx.tx.relationshipOpportunity.aggregate({ where: { stageId: stage.id }, _min: { position: true } });
+    const customFields = await mergeCustomFields(ctx.tx, ENTITY_OPPORTUNITY, {}, input.customFields ?? {});
     const opportunity = await ctx.tx.relationshipOpportunity.create({
       data: {
         tenantId: ctx.actor.tenantId,
@@ -523,9 +622,11 @@ export const createOpportunity: CommandDefinition<OpportunityPatch & { name: str
         lostNote: stage.category === "Cancelled" ? (input.lostNote ?? null) : null,
         closedAt: effects.closedAt,
         createdById: ctx.actor.userId,
+        customFields: customFields as object,
       },
     });
     await logCreated(ctx, ENTITY_OPPORTUNITY, opportunity.id, "verity.relationship.create_opportunity", `${opportunityRef(number)} in ${stage.label}`);
+    await runPlaybook(ctx, stage, opportunity);
     return { result: { id: opportunity.id, number }, events: [{ name: "verity.relationship.opportunity_created", entityId: opportunity.id }] };
   },
 };
@@ -578,6 +679,7 @@ async function applyOpportunityPatch(
   if (patch.submissionDueOn !== undefined) data.submissionDueOn = asDay(patch.submissionDueOn);
   if (patch.source !== undefined) data.source = patch.source;
   if (position !== undefined) data.position = position;
+  if (patch.customFields) data.customFields = (await mergeCustomFields(ctx.tx, ENTITY_OPPORTUNITY, opp.customFields, patch.customFields)) as object;
 
   const saved = await ctx.tx.relationshipOpportunity.update({
     where: { id },
@@ -589,6 +691,7 @@ async function applyOpportunityPatch(
   const view = (o: typeof saved, names: { stage: string; company: string | null; contact: string | null }) => {
     const out: Record<string, unknown> = {};
     for (const key of Object.keys(patch)) {
+      if (key === "customFields") continue;
       if (key === "stage") out.stage = names.stage;
       else if (key === "company") out.company = names.company;
       else if (key === "contact") out.contact = names.contact;
@@ -601,11 +704,13 @@ async function applyOpportunityPatch(
     if (stageChanges) out.lostReason = reason(o.lostReason);
     return out;
   };
+  const [cfBefore, cfAfter] = customFieldChanges(Object.keys(patch.customFields ?? {}), opp.customFields, saved.customFields);
   await logChanges(
     ctx, ENTITY_OPPORTUNITY, id, commandKey,
-    view(opp, { stage: opp.stage.label, company: opp.company?.name ?? null, contact: opp.contact ? personName(opp.contact) : null }),
-    view(saved, { stage: stage.label, company: company?.name ?? null, contact: contact ? personName(contact) : null }),
+    { ...view(opp, { stage: opp.stage.label, company: opp.company?.name ?? null, contact: opp.contact ? personName(opp.contact) : null }), ...cfBefore },
+    { ...view(saved, { stage: stage.label, company: company?.name ?? null, contact: contact ? personName(contact) : null }), ...cfAfter },
   );
+  if (stageChanges) await runPlaybook(ctx, stage, saved);
   return { saved, events: stageChanges ? [stageEvent(stage, id)] : [] };
 }
 
@@ -743,6 +848,152 @@ export const bulkUpdateOpportunities: CommandDefinition<{ ids: string[]; patch: 
     return { result: { count: input.ids.length }, events };
   },
 };
+
+/* ================================ duplicates and merging (Task 128 stage 3) ================================ */
+
+export type DuplicateGroup = { reason: string; records: Array<{ id: string; label: string; sub: string | null; createdAt: string }> };
+
+/** Companies sharing a name or domain, and people sharing an email or the same name at the same company. */
+export const findDuplicates: QueryDefinition<{ object: "company" | "person" }, DuplicateGroup[]> = {
+  key: "verity.relationship.find_duplicates",
+  entity: ENTITY_COMPANY,
+  description: "Records that look like the same company or person entered twice.",
+  input: z.object({ object: z.enum(["company", "person"]) }),
+  handler: async (ctx, input) => {
+    const groups = new Map<string, DuplicateGroup>();
+    const add = (key: string, reason: string, r: DuplicateGroup["records"][number]) => {
+      const g = groups.get(key) ?? { reason, records: [] };
+      if (!g.records.some((x) => x.id === r.id)) g.records.push(r);
+      groups.set(key, g);
+    };
+    if (input.object === "company") {
+      const rows = await ctx.tx.relationshipCompany.findMany({ where: { archivedAt: null }, orderBy: { createdAt: "asc" } });
+      for (const c of rows) {
+        const r = { id: c.id, label: c.name, sub: c.domain ?? c.city, createdAt: c.createdAt.toISOString() };
+        add(`n:${c.name.trim().toLowerCase().replace(/\s+/g, " ")}`, `Same name: ${c.name}`, r);
+        if (c.domain) add(`d:${c.domain}`, `Same domain: ${c.domain}`, r);
+      }
+    } else {
+      const rows = await ctx.tx.relationshipPerson.findMany({ where: { archivedAt: null }, orderBy: { createdAt: "asc" }, include: { company: { select: { name: true } } } });
+      for (const p of rows) {
+        const r = { id: p.id, label: personName(p), sub: [p.jobTitle, p.company?.name].filter(Boolean).join(" · ") || null, createdAt: p.createdAt.toISOString() };
+        for (const e of p.emails) add(`e:${e}`, `Same email: ${e}`, r);
+        add(`n:${personName(p).toLowerCase()}|${p.companyId ?? ""}`, `Same name${p.company ? ` at ${p.company.name}` : ""}: ${personName(p)}`, r);
+      }
+    }
+    // One group per set of records, whichever rule found it first.
+    const seen = new Set<string>();
+    const out: DuplicateGroup[] = [];
+    for (const g of groups.values()) {
+      if (g.records.length < 2) continue;
+      const sig = g.records.map((r) => r.id).sort().join(",");
+      if (seen.has(sig)) continue;
+      seen.add(sig);
+      out.push(g);
+    }
+    return out.slice(0, 50);
+  },
+};
+
+const FILLABLE_COMPANY = ["domain", "industry", "sizeBand", "phone", "email", "taxId", "addressLine", "city", "region", "country", "postalCode", "ownerUserId", "source"] as const;
+const FILLABLE_PERSON = ["familyName", "jobTitle", "city", "companyId", "ownerUserId"] as const;
+
+/** Survivor values win; an empty survivor field takes the duplicate's. Custom fields merge the same way. */
+function fillFrom<T extends Record<string, unknown>>(survivor: T, duplicate: T, keys: readonly string[]): Record<string, unknown> {
+  const data: Record<string, unknown> = {};
+  for (const k of keys) if ((survivor[k] === null || survivor[k] === undefined || survivor[k] === "") && duplicate[k]) data[k] = duplicate[k];
+  const sc = (survivor.customFields ?? {}) as Record<string, unknown>;
+  const dc = (duplicate.customFields ?? {}) as Record<string, unknown>;
+  if (Object.keys(dc).some((k) => !(k in sc))) data.customFields = { ...dc, ...sc };
+  return data;
+}
+
+async function loadPair<T extends { id: string; mergedIntoId: string | null }>(
+  find: (id: string) => Promise<T | null>,
+  survivorId: string,
+  duplicateId: string,
+  what: string,
+): Promise<[T, T]> {
+  if (survivorId === duplicateId) throw new ValidationError(`E_VALIDATION: choose two different ${what}`);
+  const [survivor, duplicate] = await Promise.all([find(survivorId), find(duplicateId)]);
+  if (!survivor || !duplicate) throw new ValidationError(`E_VALIDATION: no such ${what}`);
+  if (duplicate.mergedIntoId || survivor.mergedIntoId) throw new ValidationError(`E_VALIDATION: one of these was already merged`);
+  return [survivor, duplicate];
+}
+
+export const mergeCompanies: CommandDefinition<{ survivorId: string; duplicateId: string }, { id: string }> = {
+  key: "verity.relationship.merge_companies",
+  entity: ENTITY_COMPANY,
+  verb: "Edit",
+  impact: "destructive",
+  description: "Merge a duplicate company into another: its people, deals, notes and follow-ups move across and it is archived.",
+  input: z.object({ survivorId: z.string().uuid(), duplicateId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const [survivor, duplicate] = await loadPair((id) => ctx.tx.relationshipCompany.findUnique({ where: { id } }), input.survivorId, input.duplicateId, "companies");
+    const move = { where: { companyId: duplicate.id }, data: { companyId: survivor.id } };
+    const moved = await Promise.all([
+      ctx.tx.relationshipPerson.updateMany(move),
+      ctx.tx.relationshipOpportunity.updateMany(move),
+      ctx.tx.relationshipNote.updateMany(move),
+      ctx.tx.relationshipFollowUp.updateMany(move),
+    ]);
+    // Anything merged into the duplicate earlier now points at the survivor, so chains never form.
+    await ctx.tx.relationshipCompany.updateMany({ where: { mergedIntoId: duplicate.id }, data: { mergedIntoId: survivor.id } });
+    await ctx.tx.relationshipCompany.update({
+      where: { id: survivor.id },
+      data: { ...(fillFrom(survivor, duplicate, FILLABLE_COMPANY) as Prisma.RelationshipCompanyUncheckedUpdateInput), version: { increment: 1 } },
+    });
+    await ctx.tx.relationshipCompany.update({
+      where: { id: duplicate.id },
+      data: { mergedIntoId: survivor.id, archivedAt: duplicate.archivedAt ?? new Date(), version: { increment: 1 } },
+    });
+    const counts = `${moved[0].count} people, ${moved[1].count} deals`;
+    await recordActivity(ctx, { entityKey: ENTITY_COMPANY, entityId: survivor.id, commandKey: "verity.relationship.merge_companies", changes: [{ field: "record", oldValue: duplicate.name, newValue: `Merged in ${duplicate.name} (${counts})` }] });
+    await recordActivity(ctx, { entityKey: ENTITY_COMPANY, entityId: duplicate.id, commandKey: "verity.relationship.merge_companies", changes: [{ field: "record", oldValue: "Active", newValue: `Merged into ${survivor.name}` }] });
+    return { result: { id: survivor.id }, events: [{ name: "verity.relationship.companies_merged", entityId: survivor.id, payload: { duplicateId: duplicate.id } }] };
+  },
+};
+
+export const mergePeople: CommandDefinition<{ survivorId: string; duplicateId: string }, { id: string }> = {
+  key: "verity.relationship.merge_people",
+  entity: ENTITY_PERSON,
+  verb: "Edit",
+  impact: "destructive",
+  description: "Merge a duplicate person into another: their emails, phones, deals, notes and follow-ups move across and they are archived.",
+  input: z.object({ survivorId: z.string().uuid(), duplicateId: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const [survivor, duplicate] = await loadPair((id) => ctx.tx.relationshipPerson.findUnique({ where: { id } }), input.survivorId, input.duplicateId, "people");
+    await ctx.tx.relationshipOpportunity.updateMany({ where: { contactId: duplicate.id }, data: { contactId: survivor.id } });
+    await ctx.tx.relationshipNote.updateMany({ where: { personId: duplicate.id }, data: { personId: survivor.id } });
+    await ctx.tx.relationshipFollowUp.updateMany({ where: { personId: duplicate.id }, data: { personId: survivor.id } });
+    await ctx.tx.relationshipPerson.updateMany({ where: { mergedIntoId: duplicate.id }, data: { mergedIntoId: survivor.id } });
+    await ctx.tx.relationshipPerson.update({
+      where: { id: survivor.id },
+      data: {
+        ...(fillFrom(survivor, duplicate, FILLABLE_PERSON) as Prisma.RelationshipPersonUncheckedUpdateInput),
+        emails: [...new Set([...survivor.emails, ...duplicate.emails])].slice(0, 10),
+        phones: [...new Set([...survivor.phones, ...duplicate.phones])].slice(0, 10),
+        version: { increment: 1 },
+      },
+    });
+    await ctx.tx.relationshipPerson.update({
+      where: { id: duplicate.id },
+      data: { mergedIntoId: survivor.id, archivedAt: duplicate.archivedAt ?? new Date(), version: { increment: 1 } },
+    });
+    await recordActivity(ctx, { entityKey: ENTITY_PERSON, entityId: survivor.id, commandKey: "verity.relationship.merge_people", changes: [{ field: "record", oldValue: personName(duplicate), newValue: `Merged in ${personName(duplicate)}` }] });
+    await recordActivity(ctx, { entityKey: ENTITY_PERSON, entityId: duplicate.id, commandKey: "verity.relationship.merge_people", changes: [{ field: "record", oldValue: "Active", newValue: `Merged into ${personName(survivor)}` }] });
+    return { result: { id: survivor.id }, events: [{ name: "verity.relationship.people_merged", entityId: survivor.id, payload: { duplicateId: duplicate.id } }] };
+  },
+};
+
+/** The record and everything merged into it, for timelines that must show the duplicates' history too. */
+export async function withMerged(tx: TenantScopedClient, kind: "company" | "person", id: string): Promise<string[]> {
+  const rows =
+    kind === "company"
+      ? await tx.relationshipCompany.findMany({ where: { mergedIntoId: id }, select: { id: true } })
+      : await tx.relationshipPerson.findMany({ where: { mergedIntoId: id }, select: { id: true } });
+  return [id, ...rows.map((r) => r.id)];
+}
 
 /* ================================ import ================================ */
 
@@ -922,7 +1173,7 @@ export const listCompanies: QueryDefinition<z.input<typeof listInputSchema>, Lis
   input: listInputSchema,
   handler: async (ctx: ReadContext, raw) => {
     const input = listInputSchema.parse(raw);
-    const where = { AND: [archivedFilter(input), buildWhere(COMPANY_OBJECT, input, { userId: ctx.actor.userId })] } as Prisma.RelationshipCompanyWhereInput;
+    const where = { AND: [archivedFilter(input), buildWhere(await withCustomFields(ctx.tx, COMPANY_OBJECT), input, { userId: ctx.actor.userId })] } as Prisma.RelationshipCompanyWhereInput;
     const [total, rows, labels] = await Promise.all([
       ctx.tx.relationshipCompany.count({ where }),
       ctx.tx.relationshipCompany.findMany({
@@ -961,6 +1212,7 @@ export const listCompanies: QueryDefinition<z.input<typeof listInputSchema>, Lis
         pipelineValue: decimal(openBy.get(c.id)?._sum.amount) ?? 0,
         lastActivity: instant(last.get(c.id)),
         createdAt: instant(c.createdAt), updatedAt: instant(c.updatedAt),
+        ...customFieldValues(c.customFields),
       })),
     };
   },
@@ -973,7 +1225,7 @@ export const listPeople: QueryDefinition<z.input<typeof listInputSchema>, ListRe
   input: listInputSchema,
   handler: async (ctx: ReadContext, raw) => {
     const input = listInputSchema.parse(raw);
-    const where = { AND: [archivedFilter(input), buildWhere(PERSON_OBJECT, input, { userId: ctx.actor.userId })] } as Prisma.RelationshipPersonWhereInput;
+    const where = { AND: [archivedFilter(input), buildWhere(await withCustomFields(ctx.tx, PERSON_OBJECT), input, { userId: ctx.actor.userId })] } as Prisma.RelationshipPersonWhereInput;
     const [total, rows, labels] = await Promise.all([
       ctx.tx.relationshipPerson.count({ where }),
       ctx.tx.relationshipPerson.findMany({
@@ -998,6 +1250,7 @@ export const listPeople: QueryDefinition<z.input<typeof listInputSchema>, ListRe
         owner: userRef(labels, p.ownerUserId),
         lastActivity: instant(last.get(p.id)),
         createdAt: instant(p.createdAt),
+        ...customFieldValues(p.customFields),
       })),
     };
   },
@@ -1024,6 +1277,7 @@ export function opportunityRow(o: OpportunityWithRefs, labels: Map<string, strin
     expectedCloseOn: dayText(o.expectedCloseOn), submissionDueOn: dayText(o.submissionDueOn),
     source: o.source, owner: userRef(labels, o.ownerUserId), lostReason: o.lostReason, lostNote: o.lostNote,
     position: o.position, createdAt: instant(o.createdAt), closedAt: instant(o.closedAt),
+    ...customFieldValues(o.customFields),
   };
 }
 
@@ -1034,7 +1288,7 @@ export const listOpportunities: QueryDefinition<z.input<typeof listInputSchema>,
   input: listInputSchema,
   handler: async (ctx: ReadContext, raw) => {
     const input = listInputSchema.parse(raw);
-    const where = { AND: [archivedFilter(input), buildWhere(OPPORTUNITY_OBJECT, input, { userId: ctx.actor.userId })] } as Prisma.RelationshipOpportunityWhereInput;
+    const where = { AND: [archivedFilter(input), buildWhere(await withCustomFields(ctx.tx, OPPORTUNITY_OBJECT), input, { userId: ctx.actor.userId })] } as Prisma.RelationshipOpportunityWhereInput;
     const [total, rows, labels] = await Promise.all([
       ctx.tx.relationshipOpportunity.count({ where }),
       ctx.tx.relationshipOpportunity.findMany({
