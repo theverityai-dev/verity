@@ -2213,6 +2213,9 @@ export type OrderDetail = {
     lineTotalMinor: number;
     state: string;
     lineNote: string | null;
+    /** The course it is served in, snapshotted when the line was added (ADR-041). */
+    courseName: string | null;
+    coursePriority: number | null;
   }>;
 };
 
@@ -2238,6 +2241,8 @@ export const getOrderDetail: QueryDefinition<{ orderId: string }, OrderDetail | 
       lineTotalMinor: line.unitPriceMinor * line.qty,
       state: line.state,
       lineNote: line.lineNote,
+      courseName: line.courseName,
+      coursePriority: line.coursePriority,
     }));
 
     return {
