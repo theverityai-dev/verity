@@ -341,6 +341,15 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 - **Source:** Task 127.
 - **Status:** IN PROGRESS. ADR-046 accepted; Phases 1 to 3 built and browser-checked on DSEW (tokens, shared components, 86 glyphs, shop floor, route detail, order, jobs, summary). Reachability baseline and pure-suite registration of `viz-geometry.test.ts` fixed. Manufacturing DB tests still unrun (no test database). Next: Phase 4 restaurant (Colonel Kebabz), then 5 to 9; redraw four look-alike glyphs; owner signs off hue values from `docs/reference/visual-language/swatches.html`.
 
+### P2-9b. CRM capability modelled on Twenty (Task 128), DSEW first
+
+- **What:** A generic B2B CRM inside Verity: companies, people, opportunity pipeline, notes, interactions, follow-ups with reminders, record timeline; then Twenty-style record table, Kanban board, saved views, Cmd-K and CSV import; later custom fields, automations, email/calendar sync.
+- **Why:** Product-owner request, 2026-10-20; DSEW gap matrix row "A CRM" (contacts per customer, RFQ/tender tracker, meeting log, reminders missing).
+- **How:** `taskplans/128_crm_capability_twenty_reference.md`. Stage 0 first: ADR-050 (companies and people are Party records; links `trading_customer`) and ADR-051 (saved views as a platform primitive), then the stage 1+2 design spec.
+- **Done when:** stages 1 and 2 are built, DB-proven, browser-walked on DSEW, and the owner has accepted ADR-050/051.
+- **Source:** Task 128.
+- **Status:** PROPOSED. Plan written; stage 1+2 design in brainstorming with the owner. No Twenty code may be copied (AGPL).
+
 ### P2-10. Wastage reasons are a restaurant's list (generic wording debt)
 
 - **What:** `WASTAGE_REASONS` (`src/server/capabilities/inventory/index.ts`) is a closed list that includes "Burnt" and "Preparation waste". A factory tenant sees them in the Waste form. `src/test/generic-wording.test.ts` names "Burnt" as known debt.
