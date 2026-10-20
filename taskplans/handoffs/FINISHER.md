@@ -349,10 +349,11 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 
 - **What:** A generic B2B CRM inside Verity: companies, people, opportunity pipeline, notes, interactions, follow-ups with reminders, record timeline; then Twenty-style record table, Kanban board, saved views, Cmd-K and CSV import; later custom fields, automations, email/calendar sync.
 - **Why:** Product-owner request, 2026-10-20; DSEW gap matrix row "A CRM" (contacts per customer, RFQ/tender tracker, meeting log, reminders missing).
-- **How:** `taskplans/128_crm_capability_twenty_reference.md`. Stage 0 first: ADR-050 (companies and people are Party records; links `trading_customer`) and ADR-051 (saved views as a platform primitive), then the stage 1+2 design spec.
-- **Done when:** stages 1 and 2 are built, DB-proven, browser-walked on DSEW, and the owner has accepted ADR-050/051.
+- **How:** `taskplans/128_crm_capability_twenty_reference.md`. ADR-050 (companies and people are tenant-owned rows, NOT Party: party is global) and ADR-051 (record objects and saved views, `views.ts`).
+- **Done when:** the owner accepts ADR-050/051 and the migration `20261020100000_capability_relationship` is applied where the client runs; then stages 3-5.
 - **Source:** Task 128.
-- **Status:** PROPOSED. Plan written; stage 1+2 design in brainstorming with the owner. No Twenty code may be copied (AGPL).
+- **Status:** STAGES 0-2 BUILT 2026-10-20 (`cd73c249`, `052ea283`, `cb87ec0d`, `b285fa3c`), local database only. 20 DB tests pass; browser-walked on the DSEW demo at 1440 and 390 px, light and dark: inline edit, filter, drag to Lost with reason, timeline note. Demo data: `prisma/seed-dsew-crm.ts` (run with local `DATABASE_URL`/`DIRECT_URL`, never `.env`). **Next:** owner accepts ADR-050/051; stage 3 custom fields (DSEW tender fields); "won -> open a job" in `project`; stage 5 needs its own ADR. No Twenty code may be copied (AGPL).
+- **Local database note (2026-10-20):** the old local test database `verity` on 127.0.0.1:55432 was wiped by a mistaken `prisma migrate diff` shadow run and is broken; `verity_crm` in the same container is fully migrated and seeded. Point `.env.test` at `verity_crm`, or reset `verity` (`npx prisma migrate reset --force --skip-seed` with the local URLs) and reseed.
 
 ### P2-10. Wastage reasons are a restaurant's list (generic wording debt)
 
