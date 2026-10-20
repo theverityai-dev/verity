@@ -20,7 +20,19 @@ some files under its commercial Enterprise licence. No Twenty source is copied i
 data model, its interaction patterns and its UI/UX only; every line here is written fresh against Verity's
 runtime.
 
-## Status: STAGES 0-2 BUILT 2026-10-20 (local database only; ADR-050 and ADR-051 PROPOSED)
+## Status: STAGES 0-4 BUILT 2026-10-21 (local database only; ADR-050, ADR-051 PROPOSED; stage 5 waits on ADR-052)
+
+**Stages 3-4, 2026-10-21** (`0d2cac89`, `237500af`): custom fields through new `verity.view.define_custom_field` /
+`retire_custom_field` (the `custom_field_schema` table and validator existed; nothing declared fields), shown in tables,
+filters, create sheets and record pages; duplicates found by name, domain or email and merged keep-one (interactions stay on
+the archived duplicate via `merged_into_id`; the survivor's timeline reads both); stage playbooks (follow-ups for the owner
+and an owner notice when a deal enters a stage, run inside the moving command); `/crm/insights` (funnel, lost reasons,
+won/lost by month, forecast by close month, ageing); "won -> open a job" in `project` (`open_job_from_opportunity`, once per
+deal, a command-owned integration). **Deviation from the plan:** automations are stage playbooks, not general triggers on the
+`WorkflowDefinition` engine; "record created" and "follow-up overdue" are covered by the default owner and the daily
+reminder. Custom **objects** are not built (each still needs a model). Stage 5 is written up as ADR-052 and stops there.
+
+**Earlier status (stages 0-2):**
 
 Owner said "go ahead complete it all" after the design sections; built the same day:
 

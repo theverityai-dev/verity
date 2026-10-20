@@ -62,6 +62,7 @@ async function InsightsPage() {
                   const kept = prev && prev.entered ? Math.round((f.entered / prev.entered) * 100) : null;
                   return (
                     <li key={f.label}>
+                      <p className="m-0 mb-1 text-[14px] font-medium text-text">{f.label}</p>
                       <ProgressBar
                         value={f.entered}
                         total={top}
@@ -82,6 +83,7 @@ async function InsightsPage() {
                 <ol className="m-0 flex list-none flex-col gap-3 p-0">
                   {insights.lostReasons.map((r) => (
                     <li key={r.reason}>
+                      <p className="m-0 mb-1 text-[14px] font-medium text-text">{r.reason}</p>
                       <ProgressBar value={r.count} total={lostTotal} label={r.reason} tone="blocked" figures={`${r.count} · ${moneyShort(r.value)}`} />
                     </li>
                   ))}
@@ -115,6 +117,7 @@ async function InsightsPage() {
               <ol className="m-0 flex list-none flex-col gap-3 p-0">
                 {insights.forecast.map((f) => (
                   <li key={f.month}>
+                      <p className="m-0 mb-1 text-[14px] font-medium text-text">{monthName(f.month)}</p>
                     <ProgressBar
                       value={f.value}
                       total={forecastMax}
@@ -131,6 +134,7 @@ async function InsightsPage() {
               <ol className="m-0 flex list-none flex-col gap-3 p-0">
                 {insights.ageing.map((a, i) => (
                   <li key={a.bucket}>
+                      <p className="m-0 mb-1 text-[14px] font-medium text-text">{a.bucket}</p>
                     <ProgressBar value={a.count} total={ageMax} label={a.bucket} tone={i >= 2 ? "pending" : "active"} figures={`${a.count} · ${moneyShort(a.value)}`} />
                   </li>
                 ))}
