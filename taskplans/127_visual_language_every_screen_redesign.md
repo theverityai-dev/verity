@@ -351,8 +351,15 @@ column, age ring against the SLA target, late count, per-dish and whole-docket m
 `/counter` (one queue, three filters with counts, channel tiles, live pane with the next step pinned, KPI
 tiles; "oldest bill" flags on the outlet's unpaid setting). Shared additions: glyphs `table`, `dish`,
 `takeaway`, `receipt`, `qr`; channel kinds and `channelKindFor`; `TABLE_STAGE` (also used by `/today`);
-`serviceStageOf` (one derivation for floor and Today); `ProgressRing.centre`; `ButtonLink`. Every other
-row below is not started.
+`serviceStageOf` (one derivation for floor and Today); `ProgressRing.centre`; `ButtonLink`.
+Also built, not yet browser-checked (2026-10-21): `/floor/[orderId]` (category and Specials chips with
+counts, dish cards, course lanes with served counts, a state pill per dish, served bar, large subtotal;
+`getOrderDetail` now returns each line's course) and `/counter/history` (range chips, Sales with a daily
+line, average bill, refunded, cancelled; says so when the 300-row cap clips the totals). Not started:
+`/floor/setup`, `/kitchen/setup`, `/kitchen/ticket/[ticketId]` (print layout, change with care),
+`/menu`, `/menu/prices`, `/recipes`, `/counter/[billId]` (payment flow, 587 lines), and every row from
+`/coupons` down. The tax donut on the order pad row is dropped on purpose: tax does not exist until the
+bill is raised, and a chart of a number nobody has computed breaks the honest-data rule.
 
 | Route | Target | Graphics | Data |
 |---|---|---|---|
