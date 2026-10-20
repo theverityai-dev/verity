@@ -369,12 +369,13 @@ export const createPerson: CommandDefinition<PersonPatch & { givenName: string; 
       }
     }
     await requireCompany(ctx.tx, data.companyId as string | null | undefined);
-    // A work email names the company when none was chosen.
+    // A work email names the company when none was chosen, but only when exactly one company has that domain:
+    // two candidates is a question for the person, not a guess for the system.
     if (data.companyId === undefined && emails.length) {
       const domain = emailDomain(emails[0]!);
       if (domain && !PERSONAL_EMAIL_DOMAINS.has(domain)) {
-        const match = await ctx.tx.relationshipCompany.findFirst({ where: { domain, archivedAt: null }, select: { id: true } });
-        if (match) data.companyId = match.id;
+        const matches = await ctx.tx.relationshipCompany.findMany({ where: { domain, archivedAt: null }, select: { id: true }, take: 2 });
+        if (matches.length === 1) data.companyId = matches[0]!.id;
       }
     }
     const owner = patch.owner === undefined ? ctx.actor.userId : patch.owner;
@@ -831,7 +832,10 @@ export const importRecords: CommandDefinition<
       const emails = new Set(people.flatMap((p) => p.emails));
       const companies = await ctx.tx.relationshipCompany.findMany({ where: { archivedAt: null }, select: { id: true, name: true, domain: true } });
       const byName = new Map(companies.map((c) => [c.name.toLowerCase(), c.id]));
-      const byDomain = new Map(companies.filter((c) => c.domain).map((c) => [c.domain!, c.id]));
+      // A domain held by two companies matches neither (see createPerson).
+      const domainCount = new Map<string, number>();
+      for (const c of companies) if (c.domain) domainCount.set(c.domain, (domainCount.get(c.domain) ?? 0) + 1);
+      const byDomain = new Map(companies.filter((c) => c.domain && domainCount.get(c.domain) === 1).map((c) => [c.domain!, c.id]));
       for (const [i, raw] of input.rows.entries()) {
         const parsed = personImportRow.safeParse(raw);
         if (!parsed.success) {
