@@ -178,6 +178,9 @@ describe("conformance: capability contracts (Phase E)", () => {
     // ADR-048 (PROPOSED). Controlled documents link to jobs, orders and BOMs by keyed reference (entity key and id),
     // the style Evidence uses, rather than by importing those capabilities, so it depends on none.
     document: [],
+    // Project (jobs) points a job at the trading customer master (`customerId`) and reads it in
+    // jobs.ts and index.ts; billing and order links hold keyed references only.
+    project: ["trading"],
     // Kent's Restaurant, the first real client. Depends on nothing: a menu, a
     // floor and a bill need no other capability, and declaring one it does not
     // use would make the graph a wish rather than a fact.
@@ -215,7 +218,8 @@ describe("conformance: capability contracts (Phase E)", () => {
     finance: ["dinein", "location"],
     loyalty: ["crm", "dinein"],
     outreach: [],
-    manufacturing: [],
+    // documents.ts imports the Evidence entity key, and QC results hold an evidence_id foreign key.
+    manufacturing: ["evidence"],
     recipe: ["dinein", "inventory"],
   };
 
@@ -436,7 +440,10 @@ describe("conformance: over-genericity (Phase G)", () => {
     // is domain_event, the dispatcher runs as a platform schedule (no capability
     // owns it) and what a notification may say is a platform rule: the kind of
     // record, never a figure the recipient could not already read.
-    expect(platformModules.length).toBeLessThanOrEqual(56);
+    // 57: readiness-status.ts (ef929e27) — readiness reports core versus dependency
+    // tiers (identity, storage, scheduler). Platform because readiness is a deployment
+    // property no capability owns, and every capability's health depends on it.
+    expect(platformModules.length).toBeLessThanOrEqual(57);
   });
 });
 

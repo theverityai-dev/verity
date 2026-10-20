@@ -165,7 +165,8 @@ describe("navigation speaks the business's language (§8)", () => {
     );
     // A sighted user was being given strictly less structure than a
     // screen-reader user, which is a strange way round.
-    expect(chrome).toMatch(/area\.items\.length > 1/);
+    // Every group after the first is headed, even with one link (ShellChrome.tsx navList).
+    expect(chrome).toMatch(/area\.items\.length > 0/);
     // ADR-033: iOS section header — footnote size, semibold, secondary label.
     expect(chrome).toMatch(/text-\[13px\] font-semibold text-text-secondary/);
   });

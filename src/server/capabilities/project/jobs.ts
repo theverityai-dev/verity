@@ -267,7 +267,9 @@ function move(
   description: string,
   extra?: () => Record<string, unknown>,
 ): CommandDefinition<{ jobId: string }, { id: string }> {
-  return {
+  // Bound to a typed const, not returned as a bare literal: write-confinement recognises a
+  // command by its declared CommandDefinition type, and a returned literal reads as a helper.
+  const command: CommandDefinition<{ jobId: string }, { id: string }> = {
     key,
     entity: ENTITY_PROJECT_JOB,
     verb: "ActionExecute",
@@ -287,6 +289,7 @@ function move(
       return { result: { id: job.id }, events: [moved.event] };
     },
   };
+  return command;
 }
 
 export const startJob = move("verity.project.start_job", "in_progress", ["approved"], "Start work on an approved job.", () => ({
