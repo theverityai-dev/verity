@@ -95,7 +95,7 @@ export const KIND_PRESENTATION: Record<string, KindPresentation> = {
   timesheet: { hue: "cyan", icon: "timesheet" },
   certificate: { hue: "cyan", icon: "certificate" },
 
-  // Restaurant (Task 127 §4.2). Kitchen and menu are brown; a bill is money (cyan). Order channels
+  // Restaurant (Task 127 §4.2). Tables and dishes are brown; a bill is money (cyan). Order channels
   // each get their own hue so a counter queue scans by channel at a glance.
   table: { hue: "brown", icon: "table" },
   dish: { hue: "brown", icon: "dish" },

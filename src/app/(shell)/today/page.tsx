@@ -8,7 +8,7 @@ import { ForbiddenError } from "@/server/platform/authorization";
 import { outletToday, type ServiceStage } from "@/server/capabilities/dinein";
 import { EmptyState, PageHeader, Panel, PermissionDenied, Row, RowList, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
 import { day } from "@/components/ui/business/format";
-import { TABLE_STAGE } from "@/components/ui/business/states";
+import { TABLE_STAGE } from "@/lib/table-stage";
 
 export const dynamic = "force-dynamic";
 
