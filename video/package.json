@@ -1,0 +1,26 @@
+{
+  "name": "verity-film",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Verity for Manufacturing: the flagship product film (Remotion).",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "audio": "python scripts/audio/build_audio.py",
+    "stills": "node scripts/stills.mjs",
+    "render:master": "remotion render src/index.ts ManufacturingFilm out/verity-manufacturing-master-1080p60.mp4 --crf=16 --x264-preset=slow --audio-bitrate=320k",
+    "render:review": "remotion render src/index.ts ManufacturingFilm out/review-540p30-captions.mp4 --scale=0.5 --props={\"fps\":30,\"captions\":true} --crf=24",
+    "master-audio": "node scripts/master-audio.mjs",
+    "validate": "node scripts/validate.mjs"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.534",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "remotion": "4.0.534"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

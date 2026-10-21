@@ -1,0 +1,371 @@
+1
+00:00:03,200 --> 00:00:05,000
+A manufacturing business can have skilled
+
+2
+00:00:05,000 --> 00:00:07,340
+engineers, good machines,
+
+3
+00:00:07,340 --> 00:00:09,220
+and suppliers it trusts.
+
+4
+00:00:09,720 --> 00:00:12,060
+And still, one person ends up holding it
+
+5
+00:00:12,060 --> 00:00:13,200
+all together.
+
+6
+00:00:20,600 --> 00:00:22,700
+When the answers live in phone calls,
+
+7
+00:00:22,700 --> 00:00:24,260
+spreadsheets and memory,
+
+8
+00:00:24,260 --> 00:00:26,840
+every question comes back to the owner.
+
+9
+00:00:28,940 --> 00:00:31,500
+Verity gives the work a record of its own.
+
+10
+00:00:31,500 --> 00:00:33,540
+So the answer is already there.
+
+11
+00:00:36,540 --> 00:00:38,540
+It starts with an enquiry.
+
+12
+00:00:38,540 --> 00:00:40,340
+A water board needs two booster pump
+
+13
+00:00:40,340 --> 00:00:43,380
+skids, built to its own specification.
+
+14
+00:00:44,380 --> 00:00:46,740
+The quote goes through revisions.
+
+15
+00:00:46,740 --> 00:00:48,480
+When the customer approves one,
+
+16
+00:00:48,480 --> 00:00:50,520
+its value is fixed on the job,
+
+17
+00:00:50,520 --> 00:00:52,360
+whatever changes later.
+
+18
+00:00:55,460 --> 00:00:57,900
+Approval opens the project.
+
+19
+00:00:57,900 --> 00:01:00,060
+Tasks wait for the work they depend on,
+
+20
+00:01:00,060 --> 00:01:01,900
+and milestones carry the dates the
+
+21
+00:01:01,900 --> 00:01:03,640
+customer was promised.
+
+22
+00:01:07,340 --> 00:01:09,020
+Engineering releases the general
+
+23
+00:01:09,020 --> 00:01:11,080
+arrangement drawing.
+
+24
+00:01:11,080 --> 00:01:13,520
+Revision two supersedes revision one,
+
+25
+00:01:13,520 --> 00:01:15,260
+and the order is linked to the exact
+
+26
+00:01:15,260 --> 00:01:17,700
+revision it is built from.
+
+27
+00:01:18,700 --> 00:01:21,240
+The bill of materials scales to the order,
+
+28
+00:01:21,240 --> 00:01:23,480
+and every line is copied onto it,
+
+29
+00:01:23,480 --> 00:01:25,560
+so a later change never rewrites work
+
+30
+00:01:25,560 --> 00:01:26,940
+already planned.
+
+31
+00:01:29,840 --> 00:01:31,200
+Before anything is cut,
+
+32
+00:01:31,200 --> 00:01:34,040
+Verity holds the stock the order needs.
+
+33
+00:01:34,040 --> 00:01:34,940
+One valve is short,
+
+34
+00:01:34,940 --> 00:01:36,500
+and it says so.
+
+35
+00:01:37,500 --> 00:01:39,100
+The purchase order is over the approval
+
+36
+00:01:39,100 --> 00:01:42,160
+limit, so it waits for a decision.
+
+37
+00:01:42,160 --> 00:01:44,180
+Two valves arrive, then the rest,
+
+38
+00:01:44,180 --> 00:01:45,760
+and the hold goes through.
+
+39
+00:01:49,060 --> 00:01:51,300
+On the floor, each team sees the stages
+
+40
+00:01:51,300 --> 00:01:53,160
+that are ready for them.
+
+41
+00:01:53,160 --> 00:01:55,540
+A stage cannot start until the one before
+
+42
+00:01:55,540 --> 00:01:56,740
+it is done.
+
+43
+00:02:00,040 --> 00:02:00,780
+Checks are measured,
+
+44
+00:02:00,780 --> 00:02:03,060
+with units and limits.
+
+45
+00:02:03,060 --> 00:02:05,680
+The pressure test finds a weeping flange.
+
+46
+00:02:05,680 --> 00:02:07,020
+The skid goes back to assembly,
+
+47
+00:02:07,020 --> 00:02:10,040
+and the failed result stays on record.
+
+48
+00:02:11,240 --> 00:02:14,000
+The retest passes. The photograph is taken
+
+49
+00:02:14,000 --> 00:02:16,260
+on a phone, and it belongs to this order,
+
+50
+00:02:16,260 --> 00:02:17,680
+and no other.
+
+51
+00:02:20,580 --> 00:02:23,420
+The test report leads with the summary.
+
+52
+00:02:23,420 --> 00:02:25,420
+Dispatch needs a packing photograph,
+
+53
+00:02:25,420 --> 00:02:27,740
+a vehicle, and a transporter.
+
+54
+00:02:28,840 --> 00:02:31,640
+Each skid carries a verification passport.
+
+55
+00:02:31,640 --> 00:02:34,020
+Scan it, and the customer sees what was
+
+56
+00:02:34,020 --> 00:02:36,340
+inspected, and nothing private.
+
+57
+00:02:39,640 --> 00:02:42,380
+Cost builds from the records themselves.
+
+58
+00:02:42,380 --> 00:02:43,300
+The approved quote,
+
+59
+00:02:43,300 --> 00:02:44,760
+the materials consumed,
+
+60
+00:02:44,760 --> 00:02:47,720
+the hours logged, the outside work.
+
+61
+00:02:47,720 --> 00:02:50,400
+Margin is worked out every time you look.
+
+62
+00:02:51,300 --> 00:02:53,520
+Invoices and payments are recorded against
+
+63
+00:02:53,520 --> 00:02:56,280
+the job, and one project file holds the
+
+64
+00:02:56,280 --> 00:02:58,700
+reports, the dispatch papers,
+
+65
+00:02:58,700 --> 00:03:00,080
+and the photographs.
+
+66
+00:03:03,280 --> 00:03:05,440
+Step back, and the operation reads on one
+
+67
+00:03:05,440 --> 00:03:07,800
+page. What is confirmed,
+
+68
+00:03:07,800 --> 00:03:09,700
+what is waiting, what is late,
+
+69
+00:03:09,700 --> 00:03:10,860
+what is on the floor,
+
+70
+00:03:10,860 --> 00:03:12,560
+and what is running short.
+
+71
+00:03:12,860 --> 00:03:15,780
+Every figure opens the record behind it.
+
+72
+00:03:18,880 --> 00:03:20,540
+Before work reaches the floor,
+
+73
+00:03:20,540 --> 00:03:22,440
+it is in the pipeline.
+
+74
+00:03:22,440 --> 00:03:24,440
+Every open deal shows its stage,
+
+75
+00:03:24,440 --> 00:03:27,140
+its value, and the follow-up that is due.
+
+76
+00:03:27,140 --> 00:03:28,400
+When a deal is won,
+
+77
+00:03:28,400 --> 00:03:30,980
+it opens a job, carrying its name,
+
+78
+00:03:30,980 --> 00:03:33,296
+contact and value across.
+
+79
+00:03:36,396 --> 00:03:38,876
+Ask a question in plain language.
+
+80
+00:03:38,876 --> 00:03:40,636
+The assistant answers from the records
+
+81
+00:03:40,636 --> 00:03:42,336
+your role can open,
+
+82
+00:03:42,336 --> 00:03:44,756
+flags anything it could not confirm,
+
+83
+00:03:44,756 --> 00:03:46,673
+and asks before it acts.
+
+84
+00:03:50,573 --> 00:03:52,793
+Every change is attributed.
+
+85
+00:03:52,793 --> 00:03:55,133
+Releasing a drawing is its own permission.
+
+86
+00:03:55,133 --> 00:03:57,533
+And every record keeps its history.
+
+87
+00:04:01,133 --> 00:04:02,953
+The questions still come.
+
+88
+00:04:02,953 --> 00:04:04,533
+They just no longer all come to one
+
+89
+00:04:04,533 --> 00:04:05,613
+person.
+
+90
+00:04:06,613 --> 00:04:09,293
+People work from clear responsibilities,
+
+91
+00:04:09,293 --> 00:04:11,013
+and leadership gets back to the decisions
+
+92
+00:04:11,013 --> 00:04:13,493
+only leadership can make.
+
+93
+00:04:17,293 --> 00:04:19,473
+Verity, for manufacturing.

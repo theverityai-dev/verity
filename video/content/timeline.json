@@ -1,0 +1,332 @@
+{
+ "overlap": 0.7,
+ "total": 266.573,
+ "scenes": [
+  {
+   "id": "s01",
+   "act": "I",
+   "chapter": null,
+   "title": "The work",
+   "start": 0.0,
+   "end": 14.0,
+   "cues": [
+    {
+     "id": "v01",
+     "start": 3.2,
+     "end": 8.82,
+     "text": "A manufacturing business can have skilled engineers, good machines, and suppliers it trusts."
+    },
+    {
+     "id": "v02",
+     "start": 9.72,
+     "end": 12.8,
+     "text": "And still, one person ends up holding it all together."
+    }
+   ]
+  },
+  {
+   "id": "s02",
+   "act": "I",
+   "chapter": null,
+   "title": "Every question, one person",
+   "start": 14.0,
+   "end": 28.04,
+   "cues": [
+    {
+     "id": "v03",
+     "start": 20.6,
+     "end": 26.44,
+     "text": "When the answers live in phone calls, spreadsheets and memory, every question comes back to the owner."
+    }
+   ]
+  },
+  {
+   "id": "s03",
+   "act": "I",
+   "chapter": null,
+   "title": "A record of its own",
+   "start": 28.04,
+   "end": 35.34,
+   "cues": [
+    {
+     "id": "v04",
+     "start": 28.94,
+     "end": 33.14,
+     "text": "Verity gives the work a record of its own. So the answer is already there."
+    }
+   ]
+  },
+  {
+   "id": "s04",
+   "act": "II",
+   "chapter": "01",
+   "title": "Enquiry to quote",
+   "start": 35.34,
+   "end": 54.56,
+   "cues": [
+    {
+     "id": "v05",
+     "start": 36.54,
+     "end": 42.98,
+     "text": "It starts with an enquiry. A water board needs two booster pump skids, built to its own specification."
+    },
+    {
+     "id": "v06",
+     "start": 44.38,
+     "end": 51.96,
+     "text": "The quote goes through revisions. When the customer approves one, its value is fixed on the job, whatever changes later."
+    }
+   ]
+  },
+  {
+   "id": "s05",
+   "act": "II",
+   "chapter": "02",
+   "title": "Order to project",
+   "start": 54.56,
+   "end": 66.44,
+   "cues": [
+    {
+     "id": "v07",
+     "start": 55.46,
+     "end": 63.24,
+     "text": "Approval opens the project. Tasks wait for the work they depend on, and milestones carry the dates the customer was promised."
+    }
+   ]
+  },
+  {
+   "id": "s06",
+   "act": "II",
+   "chapter": "03",
+   "title": "Engineering to BOM",
+   "start": 66.44,
+   "end": 88.94,
+   "cues": [
+    {
+     "id": "v08",
+     "start": 67.34,
+     "end": 77.3,
+     "text": "Engineering releases the general arrangement drawing. Revision two supersedes revision one, and the order is linked to the exact revision it is built from."
+    },
+    {
+     "id": "v09",
+     "start": 78.7,
+     "end": 86.54,
+     "text": "The bill of materials scales to the order, and every line is copied onto it, so a later change never rewrites work already planned."
+    }
+   ]
+  },
+  {
+   "id": "s07",
+   "act": "II",
+   "chapter": "04",
+   "title": "Procurement to stores",
+   "start": 88.94,
+   "end": 108.16,
+   "cues": [
+    {
+     "id": "v10",
+     "start": 89.84,
+     "end": 96.1,
+     "text": "Before anything is cut, Verity holds the stock the order needs. One valve is short, and it says so."
+    },
+    {
+     "id": "v11",
+     "start": 97.5,
+     "end": 105.36,
+     "text": "The purchase order is over the approval limit, so it waits for a decision. Two valves arrive, then the rest, and the hold goes through."
+    }
+   ]
+  },
+  {
+   "id": "s08",
+   "act": "II",
+   "chapter": "05",
+   "title": "Production",
+   "start": 108.16,
+   "end": 119.14,
+   "cues": [
+    {
+     "id": "v12",
+     "start": 109.06,
+     "end": 116.34,
+     "text": "On the floor, each team sees the stages that are ready for them. A stage cannot start until the one before it is done."
+    }
+   ]
+  },
+  {
+   "id": "s09",
+   "act": "II",
+   "chapter": "05",
+   "title": "Quality",
+   "start": 119.14,
+   "end": 139.68,
+   "cues": [
+    {
+     "id": "v13",
+     "start": 120.04,
+     "end": 129.64,
+     "text": "Checks are measured, with units and limits. The pressure test finds a weeping flange. The skid goes back to assembly, and the failed result stays on record."
+    },
+    {
+     "id": "v14",
+     "start": 131.24,
+     "end": 137.28,
+     "text": "The retest passes. The photograph is taken on a phone, and it belongs to this order, and no other."
+    }
+   ]
+  },
+  {
+   "id": "s10",
+   "act": "II",
+   "chapter": "06",
+   "title": "Testing to dispatch",
+   "start": 139.68,
+   "end": 158.74,
+   "cues": [
+    {
+     "id": "v15",
+     "start": 140.58,
+     "end": 147.34,
+     "text": "The test report leads with the summary. Dispatch needs a packing photograph, a vehicle, and a transporter."
+    },
+    {
+     "id": "v16",
+     "start": 148.84,
+     "end": 155.94,
+     "text": "Each skid carries a verification passport. Scan it, and the customer sees what was inspected, and nothing private."
+    }
+   ]
+  },
+  {
+   "id": "s11",
+   "act": "II",
+   "chapter": "07",
+   "title": "Cost",
+   "start": 158.74,
+   "end": 182.08,
+   "cues": [
+    {
+     "id": "v17",
+     "start": 159.64,
+     "end": 170.0,
+     "text": "Cost builds from the records themselves. The approved quote, the materials consumed, the hours logged, the outside work. Margin is worked out every time you look."
+    },
+    {
+     "id": "v18",
+     "start": 171.3,
+     "end": 179.68,
+     "text": "Invoices and payments are recorded against the job, and one project file holds the reports, the dispatch papers, and the photographs."
+    }
+   ]
+  },
+  {
+   "id": "s12",
+   "act": "III",
+   "chapter": "07",
+   "title": "Management",
+   "start": 182.08,
+   "end": 197.98,
+   "cues": [
+    {
+     "id": "v19",
+     "start": 183.28,
+     "end": 192.16,
+     "text": "Step back, and the operation reads on one page. What is confirmed, what is waiting, what is late, what is on the floor, and what is running short."
+    },
+    {
+     "id": "v20",
+     "start": 192.86,
+     "end": 195.38,
+     "text": "Every figure opens the record behind it."
+    }
+   ]
+  },
+  {
+   "id": "s12p",
+   "act": "III",
+   "chapter": "07",
+   "title": "Pipeline",
+   "start": 197.98,
+   "end": 215.496,
+   "cues": [
+    {
+     "id": "v26",
+     "start": 198.88,
+     "end": 212.896,
+     "text": "Before work reaches the floor, it is in the pipeline. Every open deal shows its stage, its value, and the follow-up that is due. When a deal is won, it opens a job, carrying its name, contact and value across."
+    }
+   ]
+  },
+  {
+   "id": "s13",
+   "act": "III",
+   "chapter": "08",
+   "title": "Search to decisions",
+   "start": 215.496,
+   "end": 229.673,
+   "cues": [
+    {
+     "id": "v21",
+     "start": 216.396,
+     "end": 226.273,
+     "text": "Ask a question in plain language. The assistant answers from the records your role can open, flags anything it could not confirm, and asks before it acts."
+    }
+   ]
+  },
+  {
+   "id": "s14",
+   "act": "III",
+   "chapter": null,
+   "title": "Accountability",
+   "start": 229.673,
+   "end": 239.533,
+   "cues": [
+    {
+     "id": "v22",
+     "start": 230.573,
+     "end": 237.133,
+     "text": "Every change is attributed. Releasing a drawing is its own permission. And every record keeps its history."
+    }
+   ]
+  },
+  {
+   "id": "s15",
+   "act": "IV",
+   "chapter": null,
+   "title": "Control without constant intervention",
+   "start": 239.533,
+   "end": 255.493,
+   "cues": [
+    {
+     "id": "v23",
+     "start": 241.133,
+     "end": 245.213,
+     "text": "The questions still come. They just no longer all come to one person."
+    },
+    {
+     "id": "v24",
+     "start": 246.613,
+     "end": 253.093,
+     "text": "People work from clear responsibilities, and leadership gets back to the decisions only leadership can make."
+    }
+   ]
+  },
+  {
+   "id": "s16",
+   "act": "V",
+   "chapter": null,
+   "title": "Verity for Manufacturing",
+   "start": 255.493,
+   "end": 266.573,
+   "cues": [
+    {
+     "id": "v25",
+     "start": 257.293,
+     "end": 259.073,
+     "text": "Verity, for manufacturing."
+    }
+   ]
+  }
+ ]
+}
