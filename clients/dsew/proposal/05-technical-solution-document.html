@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verity Technical Solution Document for DSEW</title>
+<style>
+  :root {
+    --ink: #1b1d22;
+    --ink-2: #4a4f58;
+    --ink-3: #6b7280;
+    --line: #d9dce1;
+    --fill: #f3f4f6;
+    --fill-2: #e8ecf2;
+    --accent: #0b4f9c;
+    --accent-soft: #e6eef8;
+    --warn: #8a5a00;
+  }
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-left { content: "PlotArmour · Verity technical solution document for D & S Electric Works"; font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7280; }
+    @bottom-right { content: "Page " counter(page); font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7280; }
+  }
+  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; color: var(--ink); background: #fff;
+    font: 9.6pt/1.55 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  }
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; color: var(--ink); letter-spacing: -0.01em; }
+  h1 { font-size: 21pt; line-height: 1.2; margin: 0 0 4mm; padding-bottom: 3mm; border-bottom: 2px solid var(--accent); break-after: avoid; }
+  h2 { font-size: 13.5pt; margin: 7mm 0 2.5mm; break-after: avoid; }
+  h3 { font-size: 10.8pt; margin: 5mm 0 1.5mm; color: var(--accent); break-after: avoid; font-family: "Segoe UI", Arial, sans-serif; font-weight: 700; }
+  p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5.2mm; }
+  li { margin-bottom: 1mm; }
+  .sec { break-before: page; }
+  .lead { font-size: 10.6pt; color: var(--ink-2); }
+  .kicker { font: 700 8pt "Segoe UI", Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 1.5mm; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1.5mm 0 4mm; font-size: 8.6pt; line-height: 1.4; }
+  th, td { text-align: left; vertical-align: top; padding: 1.7mm 2.2mm; border-bottom: 1px solid var(--line); }
+  thead th { background: var(--fill-2); font-weight: 700; color: var(--ink); border-bottom: 1.5px solid #b7bec9; }
+  tbody tr:nth-child(even) td { background: #fafbfc; }
+  tr { break-inside: avoid; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  table.kv td:first-child { width: 28%; font-weight: 600; color: var(--ink); background: var(--fill); }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 2.5mm 3.5mm; margin: 2mm 0 4mm; break-inside: avoid; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.note { border-left-color: var(--warn); background: #fbf3e2; }
+  .callout b.t { display: block; font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 1mm; }
+  .callout.note b.t { color: var(--warn); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 3mm; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+  .card { border: 1px solid var(--line); border-radius: 2mm; padding: 3mm 3.4mm; break-inside: avoid; }
+  .card h4 { margin: 0 0 1mm; font: 700 9.4pt "Segoe UI", Arial, sans-serif; color: var(--accent); }
+  .card p { margin: 0; font-size: 8.8pt; color: var(--ink-2); }
+  .stat .v { font: 700 16pt Georgia, serif; color: var(--accent); line-height: 1.1; }
+  .stat .l { font-size: 8pt; color: var(--ink-3); margin-top: 1mm; }
+  figure { margin: 3mm 0 4mm; break-inside: avoid; }
+  figcaption { font-size: 8pt; color: var(--ink-3); margin-top: 1mm; }
+  svg { width: 100%; height: auto; display: block; }
+
+  .cover { height: 297mm; padding: 24mm 20mm 18mm; display: flex; flex-direction: column; justify-content: space-between;
+           background: linear-gradient(180deg, #ffffff 0%, #ffffff 62%, #eef3fa 100%); position: relative; overflow: hidden; }
+  .cover .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 9mm; background: var(--accent); }
+  .cover h1 { font-size: 34pt; border: 0; padding: 0; line-height: 1.08; margin: 6mm 0 5mm; }
+  .cover .sub { font-size: 13pt; color: var(--ink-2); max-width: 135mm; }
+  .cover table { font-size: 9pt; max-width: 150mm; }
+  .cover .foot { font-size: 8.6pt; color: var(--ink-3); max-width: 150mm; }
+  .toc { columns: 2; column-gap: 10mm; font-size: 9.4pt; }
+  .toc div { break-inside: avoid; margin-bottom: 1.2mm; }
+  .toc b { color: var(--accent); display: inline-block; width: 8mm; }
+</style>
+</head>
+<body>
+
+<!-- ============================ COVER ============================ -->
+<section class="cover">
+  <div class="bar"></div>
+  <div style="padding-left:8mm">
+    <p class="kicker">Technical Solution Document · Document 5 of the DSEW proposal package</p>
+    <h1>Verity for<br>D &amp; S Electric Works</h1>
+    <p class="sub">The complete technical description of the solution: platform specification, installable web application,
+    server footprint and load, requirements, security, recovery, module-by-module design, AI options and the acceptance
+    evidence DSEW receives at go-live.</p>
+  </div>
+  <div style="padding-left:8mm">
+    <table class="kv">
+      <tbody>
+        <tr><td>Prepared for</td><td>D &amp; S Electric Works (DSEW), 109, Industrial Area Extension, Rau, Indore 453331, Madhya Pradesh</td></tr>
+        <tr><td>Prepared by</td><td>PlotArmour, 31/44 St 3, Block 17, Vishwas Nagar, Delhi 110032 · GSTIN 07TQDPS9711L1ZT</td></tr>
+        <tr><td>Contact</td><td>team@plotarmour.in · +91 87440 69597</td></tr>
+        <tr><td>Date</td><td>21 October 2026</td></tr>
+        <tr><td>Companion documents</td><td>1 Proposal · 2 Delivery and deployment · 3 Licence and ownership · 4 Company and platform</td></tr>
+        <tr><td>Classification</td><td>Confidential. Prepared for DSEW under the mutual confidentiality agreement</td></tr>
+      </tbody>
+    </table>
+    <p class="foot">Hardware figures for the Complete ERP with AI search are set in section 7 of this document. Figures stated as
+    targets are confirmed at the pre-deployment survey and proven by the acceptance tests in section 15.</p>
+  </div>
+</section>
+
+<!-- ============================ CONTENTS ============================ -->
+<section class="sec">
+  <h1>Contents</h1>
+  <div class="toc">
+    <div><b>1</b>Summary for DSEW management and IT</div>
+    <div><b>2</b>Design principles for a customer-hosted system</div>
+    <div><b>3</b>Solution architecture</div>
+    <div><b>4</b>Verity platform specification</div>
+    <div><b>5</b>Installable web application (PWA) and device reach</div>
+    <div><b>6</b>Server load and performance engineering</div>
+    <div><b>7</b>Minimum and recommended requirements</div>
+    <div><b>8</b>Data architecture and storage growth</div>
+    <div><b>9</b>Security and data protection</div>
+    <div><b>10</b>Availability, backup, recovery and upgrades</div>
+    <div><b>11</b>Module-by-module technical specification</div>
+    <div><b>12</b>Engineering, manufacturing and quality controls</div>
+    <div><b>13</b>Artificial intelligence: options by hardware tier</div>
+    <div><b>14</b>Deployment topology and installation sequence</div>
+    <div><b>15</b>Acceptance tests and go-live gates</div>
+    <div><b>16</b>Requirements traceability matrix</div>
+    <div><b>17</b>Support, continuity and handover</div>
+    <div><b>18</b>Risk register</div>
+    <div><b>19</b>Glossary</div>
+  </div>
+  <div class="callout">
+    <b class="t">How to read this document</b>
+    <p>Sections 1 to 3 give the shape of the solution. Sections 5 to 7 answer the question DSEW's IT team will ask first:
+    what does this ask of our server, and will it slow anything else down. Sections 4 and 8 to 12 are the platform and
+    module specification. Sections 13 to 17 describe what is optional, how it is proven, and how it is supported.</p>
+  </div>
+</section>
+
+<!-- ============================ 1. SUMMARY ============================ -->
+<section class="sec">
+  <p class="kicker">Section 1</p>
+  <h1>Summary for DSEW management and IT</h1>
+  <p class="lead">Verity is a modular business operating platform. For DSEW it is configured as an engineering and
+  manufacturing ERP that traces each engineered, one-off product from enquiry through approved drawing, bill of
+  materials, manufacture and testing to dispatch. It runs on one Linux virtual machine on DSEW's own premises, with
+  nothing leaving DSEW's network by default.</p>
+
+  <div class="grid3" style="margin:4mm 0">
+    <div class="card stat"><div class="v">1 VM</div><div class="l">One Linux virtual machine hosts the whole solution. No cluster, no cloud dependency</div></div>
+    <div class="card stat"><div class="v">4 vCPU · 16 GB</div><div class="l">Core ERP sizing for 15 named users. 32 GB when AI semantic search is enabled</div></div>
+    <div class="card stat"><div class="v">0 licences</div><div class="l">No paid third-party software. PostgreSQL, Keycloak, Next.js and the rest are open source</div></div>
+    <div class="card stat"><div class="v">Any device</div><div class="l">Installable web app (PWA) for office PCs, shop-floor phones and tablets</div></div>
+    <div class="card stat"><div class="v">Thin client</div><div class="l">All processing is on the server. User devices only display and capture</div></div>
+    <div class="card stat"><div class="v">19 modules</div><div class="l">On one shared foundation in the Complete ERP. 9 in the MVP</div></div>
+  </div>
+
+  <h2>What DSEW gets, in technical terms</h2>
+  <table class="kv">
+    <tbody>
+      <tr><td>Application</td><td>One web application (TypeScript, Next.js, React) served over HTTPS, installable on any device as a Progressive Web App</td></tr>
+      <tr><td>Database</td><td>PostgreSQL 16, with database-enforced data isolation, a least-privilege application account and an append-only audit trail</td></tr>
+      <tr><td>Sign-in</td><td>Keycloak identity provider on the same VM; password policy, optional multi-factor sign-in, session control</td></tr>
+      <tr><td>Files</td><td>S3-compatible object storage on a separate volume for drawings, certificates, test reports and photographs</td></tr>
+      <tr><td>Packaging</td><td>Containerised with scripted install, backup, restore, upgrade and rollback</td></tr>
+      <tr><td>Controls</td><td>Role-based permissions, approval workflows, revision control, quality gates that block release, immutable audit</td></tr>
+      <tr><td>Server load</td><td>Designed to a stated resource budget, protected by caching, pagination, indexing, background-job scheduling and rate limits, and proven by a load test on DSEW's own VM before go-live (sections 6 and 15)</td></tr>
+      <tr><td>AI</td><td>Optional tiers by hardware, from rule-based detection and full-text search on the same VM up to a separate on-premises GPU machine. AI never approves, releases or changes a record (section 13)</td></tr>
+      <tr><td>Ownership</td><td>DSEW owns its data and can export it at any time. Source code of the DSEW-specific deliverables is handed over on full payment (document 3)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <b class="t">The server-load answer in one paragraph</b>
+    <p>Verity is not a heavy system. It is one application process and one database, sized for a four-core, 16 GB VM and
+    not a data centre. User devices carry no processing load. Report generation, file indexing and any AI indexing run as
+    scheduled background work outside office hours, with limits so that a heavy job can never starve interactive users.
+    DSEW's other workloads on the same Hyper-V host are protected by fixed CPU and memory allocation to the VM. A load
+    test against agreed response-time targets on DSEW's actual VM is a go-live gate.</p>
+  </div>
+</section>
+
+<!-- ============================ 2. DESIGN PRINCIPLES ============================ -->
+<section class="sec">
+  <p class="kicker">Section 2</p>
+  <h1>Design principles for a customer-hosted system</h1>
+  <p>Most business software is built to run in a vendor's cloud, where capacity can be added at will. A system that runs on
+  the customer's own server has the opposite constraint: the hardware is fixed, it is shared with other work, and the
+  customer's IT team carries the operational risk. Verity's deployment design for DSEW follows eight principles.</p>
+
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:24%">Principle</th><th>What it means for DSEW's server</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Small, known footprint</td><td>A fixed set of five services on one VM, each with a memory budget (section 6). There is no message-broker cluster, no search cluster and no second database engine to feed.</td></tr>
+      <tr><td>2</td><td>Server does the work, device displays</td><td>Office PCs, phones and tablets render pages and capture input. Nothing computational is pushed to them, so old or low-end devices work.</td></tr>
+      <tr><td>3</td><td>Interactive work first</td><td>Anything slow (reports, exports, indexing, backups, AI) runs as scheduled background work with concurrency limits and runs outside shift hours by default.</td></tr>
+      <tr><td>4</td><td>Bounded queries</td><td>Every list is paginated and indexed. No screen loads an unbounded table. Search is database-indexed.</td></tr>
+      <tr><td>5</td><td>Fail closed</td><td>If tenant context or permission is missing, queries return nothing and writes are rejected. A fault never widens access.</td></tr>
+      <tr><td>6</td><td>Everything can be put back</td><td>Scripted backup, tested restore, versioned upgrades with rollback. Recovery is rehearsed before go-live, not merely described.</td></tr>
+      <tr><td>7</td><td>Data stays on the premises</td><td>No cloud service is required to run, and none receives DSEW data by default. Outbound access is needed only for install and update, and can be replaced by offline media.</td></tr>
+      <tr><td>8</td><td>Standardise the foundation, configure the behaviour</td><td>Identity, permissions, audit, numbering, workflow and storage are one shared foundation. DSEW's specific behaviour is configuration and modules on top, so later additions do not require redevelopment.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================ 3. ARCHITECTURE ============================ -->
+<section class="sec">
+  <p class="kicker">Section 3</p>
+  <h1>Solution architecture</h1>
+  <p class="lead">Verity is built as layers. Each layer has one job, and an upper layer cannot bypass the one below it. This
+  is what allows new capabilities to be added later without redesigning the foundation.</p>
+
+  <figure>
+    <svg viewBox="0 0 760 420" role="img" aria-label="Layered architecture of the Verity solution">
+      <defs>
+        <style>
+          .b{fill:#fff;stroke:#b7bec9;stroke-width:1}
+          .h{fill:#e8ecf2;stroke:#b7bec9;stroke-width:1}
+          .a{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
+          .t{font:600 12px 'Segoe UI',Arial,sans-serif;fill:#1b1d22}
+          .s{font:11px 'Segoe UI',Arial,sans-serif;fill:#4a4f58}
+          .k{font:700 10px 'Segoe UI',Arial,sans-serif;fill:#0b4f9c;letter-spacing:.08em}
+        </style>
+      </defs>
+      <text class="k" x="10" y="16">USER DEVICES (THIN CLIENT)</text>
+      <rect class="h" x="10" y="24" width="740" height="46" rx="6"/>
+      <text class="t" x="24" y="44">Installed web app (PWA) or browser</text>
+      <text class="s" x="24" y="60">Windows · macOS · Linux · Android · iOS · tablets · shop-floor phones with camera for QR scan and photo evidence</text>
+
+      <text class="k" x="10" y="94">TRANSPORT</text>
+      <rect class="b" x="10" y="102" width="740" height="34" rx="6"/>
+      <text class="t" x="24" y="124">HTTPS (TLS) over DSEW's LAN or VPN · reverse proxy with compression, caching headers and rate limits</text>
+
+      <text class="k" x="10" y="160">EXPERIENCE LAYER</text>
+      <rect class="a" x="10" y="168" width="740" height="44" rx="6"/>
+      <text class="t" x="24" y="188">Application shell · navigation · metadata-driven forms and tables · print templates · notifications</text>
+      <text class="s" x="24" y="204">Screens are generated from configuration, so DSEW fields and formats do not require code forks</text>
+
+      <text class="k" x="10" y="236">CAPABILITY LAYER (MODULES)</text>
+      <rect class="a" x="10" y="244" width="740" height="62" rx="6"/>
+      <text class="t" x="24" y="264">CRM · Quotation · Projects · Engineering/BOM · Documents · Procurement · Inventory · Manufacturing</text>
+      <text class="t" x="24" y="282">Travellers · Quality · Traceability · Testing · Dispatch · Contracts · Finance · HR · Dashboards · AI</text>
+      <text class="s" x="24" y="298">Each module registers its entities, workflows, permissions and events with the foundation</text>
+
+      <text class="k" x="10" y="330">PLATFORM FOUNDATION</text>
+      <rect class="h" x="10" y="338" width="740" height="72" rx="6"/>
+      <text class="t" x="24" y="358">Tenant isolation · Identity &amp; membership · Authorization · Entity runtime · Command / Query · State &amp; transition</text>
+      <text class="t" x="24" y="376">Event &amp; audit · Rules &amp; workflow · Configuration &amp; numbering · Files &amp; evidence · Scheduler</text>
+      <text class="s" x="24" y="396">Every write passes one policy gate. Every read is tenant-scoped by the database itself</text>
+    </svg>
+    <figcaption>Figure 1. Layers of the solution. Modules are added in the capability layer without changing the foundation.</figcaption>
+  </figure>
+
+  <h2>3.1 Runtime components</h2>
+  <table>
+    <thead><tr><th style="width:16%">Component</th><th style="width:22%">Technology</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td>Application</td><td>TypeScript, Next.js, React</td><td>Serves the interface and the permissioned API. Runs the business logic: commands, queries, state transitions, rules and events</td></tr>
+      <tr><td>Database</td><td>PostgreSQL 16</td><td>System of record. Row-level security enforces company isolation. Holds records, audit trail, the event log and full-text indexes</td></tr>
+      <tr><td>Identity</td><td>Keycloak (OpenID Connect)</td><td>Sign-in, password policy, optional multi-factor sign-in, session lifetime. Application roles remain in Verity</td></tr>
+      <tr><td>File storage</td><td>S3-compatible object store</td><td>Drawings, certificates, reports, photographs. Held on a separate volume so file growth never competes with the database</td></tr>
+      <tr><td>Reverse proxy</td><td>Standard TLS-terminating proxy</td><td>HTTPS, compression, static-asset caching, rate limiting, security headers</td></tr>
+      <tr><td>Packaging</td><td>Docker and Compose</td><td>Reproducible install; versioned images; scripted upgrade and rollback</td></tr>
+      <tr><td>Scheduler</td><td>Built in, one trigger</td><td>Runs background work (reminders, escalations, reports, indexing, backups) on a schedule with concurrency limits</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3.2 Path of a single request</h2>
+  <ol>
+    <li>The user's device sends an HTTPS request carrying a signed session issued after Keycloak sign-in.</li>
+    <li>The application derives the <b>company (tenant) context from the authenticated session</b>, never from anything the browser sends in the request body.</li>
+    <li>For a change, the request becomes a <b>command</b>. One policy gate checks the user's permission (action, entity, scope) and the record's current state.</li>
+    <li>Inside one database transaction the tenant is set, the state change is written, the <b>audit entry and event</b> are recorded, and the transaction commits or rolls back as a whole.</li>
+    <li>For a read, a <b>query</b> returns only the rows that tenant and scope permit; the database applies the same filter even if the application code were wrong.</li>
+    <li>The response returns a small payload. Large lists are paged; files are streamed from the object store.</li>
+  </ol>
+
+  <h2>3.3 Extension model</h2>
+  <p>A new capability is registered, not patched in. It declares its entities, workflows, permissions, events, screens and
+  the other capabilities it depends on. DSEW's later additions (a new product family, an inspection format, a new
+  department) are configuration or added modules; the foundation, the workflow engine and the authorisation model are not
+  modified, and no code is forked per client.</p>
+</section>
+
+<!-- ============================ 4. PLATFORM SPEC ============================ -->
+<section class="sec">
+  <p class="kicker">Section 4</p>
+  <h1>Verity platform specification</h1>
+  <p class="lead">This section defines the platform foundation on which all 19 modules rest. These are the building blocks that
+  make the system consistent, auditable and extensible.</p>
+
+  <h2>4.1 Identity and data model</h2>
+  <table>
+    <thead><tr><th style="width:18%">Concept</th><th>Definition</th></tr></thead>
+    <tbody>
+      <tr><td>Tenant</td><td>The root data-isolation boundary. DSEW is one tenant. Every record belongs to exactly one tenant and no record references another tenant's data</td></tr>
+      <tr><td>Organization</td><td>A business unit inside the tenant (for example a plant or a department). Permissions can be scoped to it</td></tr>
+      <tr><td>Party</td><td>One record per person or business: customer, supplier, employee, contact. A single identity, never duplicated across modules</td></tr>
+      <tr><td>User</td><td>A person who signs in. One-to-one with a Party</td></tr>
+      <tr><td>Membership</td><td>A user's place in an organization, which carries role assignments</td></tr>
+      <tr><td>Location</td><td>A site, store or bay. Distinct from an address and from a geofence</td></tr>
+      <tr><td>Resource</td><td>A schedulable unit backed by a person or an asset: a machine, a tester, a technician</td></tr>
+      <tr><td>Asset</td><td>Physical equipment: machines, test instruments, tools</td></tr>
+      <tr><td>Work</td><td>A unit of work to be executed: a manufacturing job, an inspection, a project task</td></tr>
+      <tr><td>Evidence</td><td>Immutable field data: photographs, measured values, signatures, scanned documents</td></tr>
+      <tr><td>Contract</td><td>An agreement with its terms, obligations and exposures</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4.2 Authorization</h2>
+  <ul>
+    <li><b>Permissions are Verb + Entity + Scope.</b> For example <i>approve · Quotation · Organization</i> or <i>release · BillOfMaterials · Tenant</i>. There are no hard-coded roles such as "manager" in the code; roles are named sets of permissions that DSEW defines.</li>
+    <li><b>Scopes</b> narrow where a permission applies: tenant-wide, one organization, or one location. Additional axes such as team or resource are handled by configuration.</li>
+    <li><b>One decision point.</b> Every command, from the screen, the API, a scheduled job or an AI assistant, passes the same policy check. There is no back door and no elevated service path.</li>
+    <li><b>Separation of duties</b> is configurable: DSEW chooses who drafts, reviews, approves and releases, and whether self-approval is ever allowed.</li>
+    <li><b>The AI channel acts as the calling user.</b> Whatever an AI feature does, it does with that user's own permissions and nothing more (section 13).</li>
+  </ul>
+
+  <h2>4.3 State and transition</h2>
+  <p>Business records move through configurable <b>state machines</b>. Every state belongs to one of six behavioural categories, so reports
+  and timers can read behaviour without depending on DSEW's own labels.</p>
+  <table>
+    <thead><tr><th style="width:16%">Category</th><th>Meaning</th><th style="width:34%">Example DSEW states</th></tr></thead>
+    <tbody>
+      <tr><td>Draft</td><td>Being prepared; not yet in force</td><td>Quotation draft, BOM draft</td></tr>
+      <tr><td>Pending</td><td>Waiting for a decision or input</td><td>Awaiting approval, awaiting material</td></tr>
+      <tr><td>Active</td><td>In progress</td><td>In winding, in assembly, in testing</td></tr>
+      <tr><td>Blocked</td><td>Cannot proceed until a condition clears</td><td>On hold for NCR, awaiting drawing revision</td></tr>
+      <tr><td>Completed</td><td>Execution finished (terminal)</td><td>Tested and passed</td></tr>
+      <tr><td>Cancelled</td><td>Abandoned (terminal)</td><td>Enquiry lost, order cancelled</td></tr>
+    </tbody>
+  </table>
+  <p><b>Completed and Closed are different.</b> Completed means the work is done. Closed is an administrative step that makes
+  the record <b>permanently read-only</b>. A closed record cannot be edited; later rework creates a linked child record. This is how
+  "what was approved is what was built" is enforced by the system and not by habit.</p>
+
+  <h2>4.4 Commands, queries, events and audit</h2>
+  <table class="kv">
+    <tbody>
+      <tr><td>Command</td><td>A request to do something: create a quotation, release a BOM, issue material. Validated, authorised, state-checked and applied in one transaction</td></tr>
+      <tr><td>Query</td><td>A read of current state, always tenant-scoped and permission-scoped</td></tr>
+      <tr><td>Event</td><td>A fact that something happened (<i>BOM released</i>, <i>inspection failed</i>). Other modules and notifications react to events, so modules stay loosely coupled</td></tr>
+      <tr><td>Projection</td><td>A derived read view (dashboards, ageing, stock balance) built from events and records</td></tr>
+      <tr><td>Audit trail</td><td>For every change: who, what, when, from which channel, previous and new values. Written in the same transaction as the change; the application cannot alter or delete it</td></tr>
+      <tr><td>Failed attempts</td><td>Refused commands are recorded as metadata, so repeated denied attempts are visible to the administrator</td></tr>
+    </tbody>
+  </table>
+
+  <h2>4.5 Rules, workflow and configuration</h2>
+  <ul>
+    <li><b>Workflow definitions</b> are data: nodes (steps), edges (transitions) and conditions (for example "approval required above a value", "all mandatory checks passed").</li>
+    <li><b>Custom fields</b> add DSEW-specific attributes (kVA rating, impedance, cooling class, customer drawing number) to any record without schema forks.</li>
+    <li><b>Document numbering</b> is configurable per document type with prefix, year, site and sequence, allocated safely under concurrent use so numbers are never duplicated.</li>
+    <li><b>Forms and tables</b> are generated from metadata, so adding a field or a column is configuration with permission, validation and audit already applied.</li>
+    <li><b>Print templates</b> produce DSEW's branded quotation, traveller, challan, packing list, certificate and report formats.</li>
+    <li><b>Capability activation</b>: modules are switched on per tenant, and version pins mean DSEW upgrades on its own schedule.</li>
+  </ul>
+
+  <h2>4.6 Application programming interface</h2>
+  <p>A permissioned REST API exposes the same commands and queries the screens use, under the same policy gate. DSEW can read
+  its data programmatically for reporting. No external system integration is included in scope (document 1, section 4).</p>
+</section>
+
+<!-- ============================ 5. PWA ============================ -->
+<section class="sec">
+  <p class="kicker">Section 5</p>
+  <h1>Installable web application (PWA) and device reach</h1>
+  <p class="lead">Verity is delivered as a Progressive Web App. It opens in any modern browser, and on any device it can also
+  be installed with one tap so it behaves like a native application, with no app store, no per-device installer and no
+  separate mobile build to maintain.</p>
+
+  <h2>5.1 Why this matters for DSEW</h2>
+  <div class="grid2">
+    <div class="card"><h4>One build, every device</h4><p>The same application serves office PCs, tablets and shop-floor phones. There is no Android build, iOS build and Windows build to keep in step, so every user sees the same version on the day it is upgraded.</p></div>
+    <div class="card"><h4>Zero client installation work</h4><p>Users open an internal address and choose "Install". IT does not push software to devices. Removing it is just as simple, and a lost phone holds nothing once its session is revoked.</p></div>
+    <div class="card"><h4>Light on the device</h4><p>Pages are server-rendered and compressed, so a modest phone or an older office PC performs well. The installed app is a shortcut to the same web application, not a second copy of the system.</p></div>
+    <div class="card"><h4>Light on the server</h4><p>The application shell, fonts, icons and scripts are cached on each device after the first visit. Later visits fetch only data, which cuts repeated traffic and CPU work on DSEW's server.</p></div>
+  </div>
+
+  <h2>5.2 What is delivered</h2>
+  <table>
+    <thead><tr><th style="width:24%">Capability</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>Web app manifest</td><td>Name, icons for all sizes, theme colour and standalone display, so the installed app opens in its own window without browser chrome</td></tr>
+      <tr><td>Service worker</td><td>Caches the application shell and static assets. Business data is never served stale from cache for a transaction; it is always read from the server</td></tr>
+      <tr><td>Secure by default</td><td>PWA features require HTTPS. The internal TLS certificate arranged in the pre-deployment check (document 2) satisfies this</td></tr>
+      <tr><td>Camera capture</td><td>Photograph upload for inspection evidence and QR scanning with the device camera. Keyboard-style hardware scanners also work as ordinary input</td></tr>
+      <tr><td>Responsive layouts</td><td>Phone, tablet and desktop layouts. Touch targets are sized for shop-floor use. Tables adapt to narrow screens</td></tr>
+      <tr><td>Update behaviour</td><td>When DSEW upgrades the server, the next load picks up the new version and the user is prompted to refresh. No device-by-device update</td></tr>
+      <tr><td>Connection state</td><td>If the network drops, the application shows a clear "reconnecting" state and protects unsaved entries from being lost. It does not silently queue business transactions that could conflict</td></tr>
+      <tr><td>Accessibility</td><td>Keyboard operation, visible focus, screen-reader labels, and text contrast checked to WCAG AA in light and dark appearance</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.3 Supported devices</h2>
+  <table>
+    <thead><tr><th>Device</th><th>Browsers</th><th>Install method</th><th>Typical DSEW use</th></tr></thead>
+    <tbody>
+      <tr><td>Windows PC / laptop</td><td>Chrome, Edge, Firefox</td><td>Install icon in the address bar (Chrome, Edge)</td><td>Office, engineering, stores, accounts</td></tr>
+      <tr><td>macOS / Linux</td><td>Chrome, Edge, Firefox, Safari (macOS)</td><td>Install from the browser menu</td><td>Engineering, management</td></tr>
+      <tr><td>Android phone / tablet</td><td>Chrome, Edge</td><td>"Install app" prompt</td><td>Shop floor, inspection, stores, QR scan</td></tr>
+      <tr><td>iPhone / iPad</td><td>Safari</td><td>Share → Add to Home Screen</td><td>Management, shop floor, inspection</td></tr>
+      <tr><td>Thin client / kiosk</td><td>Chrome or Edge, full-screen</td><td>Shortcut to the internal address</td><td>Shared terminal at a workstation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.4 Network use on the premises</h2>
+  <p>In-LAN use needs no internet after installation. Shop-floor phones reach the server over the premises Wi-Fi to the
+  internal HTTPS address. Remote use goes only through DSEW's VPN. Page weight after the first load is small, because the
+  shell is cached and responses are compressed, so ordinary Wi-Fi is sufficient.</p>
+</section>
+
+<!-- ============================ 6. SERVER LOAD ============================ -->
+<section class="sec">
+  <p class="kicker">Section 6</p>
+  <h1>Server load and performance engineering</h1>
+  <p class="lead">DSEW will host Verity on its own server, so the load Verity places on that server is a design requirement,
+  not an afterthought. This section sets out where load comes from, how it is held down, how much of the VM each part may
+  use, and how it is proven before go-live.</p>
+
+  <h2>6.1 Where load comes from, and how each source is controlled</h2>
+  <table>
+    <thead><tr><th style="width:20%">Source of load</th><th style="width:30%">Why it can be heavy</th><th>Control built into the solution</th></tr></thead>
+    <tbody>
+      <tr><td>Interactive screens</td><td>Large lists and joins across modules</td><td>Server-side pagination, indexed queries, bounded page size, selective columns. No screen loads an unbounded table</td></tr>
+      <tr><td>Search</td><td>Scanning free text across records and documents</td><td>PostgreSQL full-text indexes maintained on write; search never scans tables</td></tr>
+      <tr><td>Reports and dashboards</td><td>Aggregations over many records</td><td>Precomputed projections refreshed in the background; heavy reports queued to run off-hours; result caching</td></tr>
+      <tr><td>File upload and download</td><td>Large drawings and scans</td><td>Streamed to and from the object store, not buffered in memory; size limits per type; separate volume</td></tr>
+      <tr><td>Background jobs</td><td>Reminders, escalations, indexing, exports</td><td>One scheduler, concurrency caps, run windows outside shift hours, jobs yield to interactive traffic</td></tr>
+      <tr><td>Concurrency spikes</td><td>Many users at shift start or approval deadlines</td><td>Database connection pooling in transaction mode; request rate limits; short transactions</td></tr>
+      <tr><td>Backups</td><td>Disk and CPU during dump</td><td>Scheduled outside working hours, low priority, written to the separate backup target</td></tr>
+      <tr><td>AI indexing (optional)</td><td>Embedding generation is CPU-intensive</td><td>Background only, throttled, paused when interactive load is high (section 13)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 Resource budget for the core VM (4 vCPU, 16 GB)</h2>
+  <p>The VM is given fixed resources so it cannot grow into the memory or CPU that DSEW's other workloads on the Hyper-V host
+  need, and the budget below leaves headroom inside the VM so that peaks do not push it into swapping.</p>
+  <table>
+    <thead><tr><th>Service</th><th class="n">Planned memory</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Operating system and tools</td><td class="n">≈ 1.0 GB</td><td>Ubuntu Server LTS, no desktop environment</td></tr>
+      <tr><td>Application (Node runtime)</td><td class="n">≈ 1.5 to 2.5 GB</td><td>Worker count tuned to the cores; bounded heap</td></tr>
+      <tr><td>PostgreSQL 16</td><td class="n">≈ 3.0 to 4.0 GB</td><td>Shared buffers plus working memory, bounded per connection</td></tr>
+      <tr><td>Keycloak</td><td class="n">≈ 1.0 to 1.5 GB</td><td>Authentication only; light for 15 users</td></tr>
+      <tr><td>Object store and proxy</td><td class="n">≈ 0.5 to 1.0 GB</td><td>Stream-oriented</td></tr>
+      <tr><td><b>Planned total in use</b></td><td class="n"><b>≈ 7 to 10 GB</b></td><td>Remaining memory serves as the operating system's file cache, which speeds up database reads</td></tr>
+    </tbody>
+  </table>
+  <div class="callout note">
+    <b class="t">Planning figures</b>
+    <p>The values above are the design budget used to size the VM. The actual footprint is measured on DSEW's VM during
+    installation and recorded in the acceptance report (section 15).</p>
+  </div>
+
+  <h2>6.3 Workload model used for sizing</h2>
+  <table>
+    <thead><tr><th style="width:30%">Parameter</th><th>Planning value</th></tr></thead>
+    <tbody>
+      <tr><td>Named users</td><td>Up to 15 (scales with the sizing table in 6.4)</td></tr>
+      <tr><td>Concurrent active users</td><td>Up to 10 to 12 at peak, since not all named users are active together</td></tr>
+      <tr><td>Typical interaction</td><td>One page action every 20 to 40 seconds per active user; most are reads</td></tr>
+      <tr><td>Peak events</td><td>Shift start (many sign-ins and dashboard views); month-end (reports); approval cut-offs</td></tr>
+      <tr><td>Document volume</td><td>Drawings, certificates, reports and photographs attached to projects and jobs (section 8)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.4 Sizing by users and data</h2>
+  <table>
+    <thead><tr><th>Scenario</th><th>vCPU</th><th>Memory</th><th>Disk</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Up to 15 users, core ERP</td><td>4</td><td>16 GB</td><td>Within the 500 GB SSD</td><td>The offered configuration</td></tr>
+      <tr><td>Up to 15 users, with AI semantic search</td><td>4 to 6</td><td>32 GB</td><td>Within the 500 GB SSD, plus index storage</td><td>Embedding model and vector index compete for memory</td></tr>
+      <tr><td>Up to 30 users</td><td>6</td><td>24 to 32 GB</td><td>As above</td><td>Quoted separately; no redesign needed</td></tr>
+      <tr><td>Up to 60 users</td><td>8</td><td>32 GB</td><td>Larger SSD</td><td>Quoted separately; same architecture</td></tr>
+      <tr><td>Interactive AI drafting</td><td>n/a</td><td>n/a</td><td>n/a</td><td>Separate on-premises GPU machine on the LAN (section 13); the ERP VM is not resized for it</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.5 Response-time targets proven at acceptance</h2>
+  <p>These are the targets the load test is run against on DSEW's VM at 15 concurrent sessions with realistic mixed
+  actions. They are agreed with DSEW at requirements sign-off and the results are recorded in the acceptance report.</p>
+  <table>
+    <thead><tr><th>Action</th><th class="n">Target (95th percentile)</th></tr></thead>
+    <tbody>
+      <tr><td>Open a list page of up to 50 rows (filtered, sorted)</td><td class="n">under 1.5 s</td></tr>
+      <tr><td>Open a record with its linked data</td><td class="n">under 1.5 s</td></tr>
+      <tr><td>Save a record or transition a state</td><td class="n">under 1.0 s</td></tr>
+      <tr><td>Full-text search across records and documents</td><td class="n">under 2.0 s</td></tr>
+      <tr><td>Management dashboard load</td><td class="n">under 3.0 s</td></tr>
+      <tr><td>Upload of a 10 MB file over the LAN</td><td class="n">under 5 s</td></tr>
+      <tr><td>Sustained VM CPU during the test</td><td class="n">average under 60 %</td></tr>
+      <tr><td>Memory in use, no swapping</td><td class="n">within the planned budget</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.6 Protecting DSEW's other workloads</h2>
+  <ul>
+    <li><b>Fixed allocation:</b> the VM is created with static memory and a defined number of virtual processors, so Verity cannot take more of the host than agreed.</li>
+    <li><b>Disk separation:</b> database, files and backups are on separate volumes, so file growth or a backup cannot starve database input and output.</li>
+    <li><b>Quiet background:</b> backups, indexing and large reports run in a scheduled window that DSEW sets, at low priority.</li>
+    <li><b>Visibility:</b> a health view for the administrator shows CPU, memory, disk, database size, queue depth and slow queries, with alert thresholds, so capacity is a managed number and never a surprise.</li>
+    <li><b>Growth path:</b> if DSEW outgrows the VM, resources are increased on the same architecture. There is no re-platforming.</li>
+  </ul>
+</section>
+
+<!-- ============================ 7. REQUIREMENTS ============================ -->
+<section class="sec">
+  <p class="kicker">Section 7</p>
+  <h1>Minimum and recommended requirements</h1>
+  <p>Final figures are confirmed in the pre-deployment survey (document 2, section 6). Where this section differs from the
+  hardware line in document 2 for the Complete ERP with AI search, this section governs.</p>
+
+  <h2>7.1 Server (one virtual machine)</h2>
+  <table>
+    <thead><tr><th style="width:20%">Item</th><th>Minimum (core ERP, 15 users)</th><th>Recommended</th><th>Complete ERP with AI search</th></tr></thead>
+    <tbody>
+      <tr><td>Virtual processors</td><td>4</td><td>4 to 6</td><td>4 to 6</td></tr>
+      <tr><td>Memory</td><td>16 GB, static</td><td>16 GB</td><td><b>32 GB</b>, static</td></tr>
+      <tr><td>System and database disk</td><td>500 GB SSD</td><td>500 GB mirrored SSD</td><td>500 GB mirrored SSD plus index space</td></tr>
+      <tr><td>Document volume</td><td>Separate volume, sized with DSEW</td><td>Separate volume</td><td>Separate volume</td></tr>
+      <tr><td>Operating system</td><td colspan="3">Ubuntu Server LTS (Linux guest). Not run natively on Windows Server and not run through Docker Desktop or WSL</td></tr>
+      <tr><td>Host</td><td colspan="3">Hyper-V role enabled with hardware virtualisation on, or a small dedicated host</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.2 Network and security services</h2>
+  <table>
+    <thead><tr><th style="width:22%">Item</th><th>Requirement</th></tr></thead>
+    <tbody>
+      <tr><td>Address and name</td><td>A fixed IP address and an internal DNS name for the VM</td></tr>
+      <tr><td>LAN</td><td>Gigabit LAN between the server and office switches; reliable Wi-Fi coverage on the shop floor</td></tr>
+      <tr><td>TLS certificate</td><td>A certificate for the internal name, trusted by office PCs and phones (public CA or DSEW's internal CA). Required for sign-in security and for the installable web app</td></tr>
+      <tr><td>Remote access</td><td>DSEW's VPN, only if remote use is wanted</td></tr>
+      <tr><td>Internet</td><td>Controlled outbound access for installation and updates, or offline media. None at runtime</td></tr>
+      <tr><td>Time</td><td>Time synchronisation (NTP) so audit timestamps are correct</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.3 Backup and power</h2>
+  <table>
+    <thead><tr><th style="width:22%">Item</th><th>Requirement</th></tr></thead>
+    <tbody>
+      <tr><td>Backup target</td><td>A separate device or share, at least equal to the data size, ideally with a second off-site or offline copy</td></tr>
+      <tr><td>Power</td><td>UPS sized for a clean shutdown of the host and the VM</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.4 User devices</h2>
+  <table>
+    <thead><tr><th style="width:22%">Item</th><th>Requirement</th></tr></thead>
+    <tbody>
+      <tr><td>Office PC</td><td>Any PC from the last several years with a current Chrome, Edge or Firefox. No local software installation required</td></tr>
+      <tr><td>Phone / tablet</td><td>Android 9 or later with Chrome, or iOS 16 or later with Safari; rear camera for photographs and QR scan</td></tr>
+      <tr><td>Screen</td><td>1366 × 768 or larger recommended on desktop; any phone or tablet size is supported</td></tr>
+    </tbody>
+  </table>
+
+  <h2>7.5 People</h2>
+  <p>A named DSEW product owner (about 3 to 4 hours a week), leads for quality, engineering, stores and finance, and a named IT
+  contact with the rights needed during the survey and installation (document 2, section 12).</p>
+
+  <h2>7.6 Optional AI hardware</h2>
+  <p>Only if DSEW chooses interactive AI drafting: a separate small workstation with a 16 GB GPU on the LAN. It is not part of
+  the VM and not included in the fee. Details and tiers are in section 13.</p>
+</section>
+
+<!-- ============================ 8. DATA ============================ -->
+<section class="sec">
+  <p class="kicker">Section 8</p>
+  <h1>Data architecture and storage growth</h1>
+
+  <h2>8.1 Data domains</h2>
+  <table>
+    <thead><tr><th style="width:22%">Domain</th><th>Main records</th></tr></thead>
+    <tbody>
+      <tr><td>Identity and access</td><td>Tenant, Organization, Party, User, Membership, Role, Permission, Grant</td></tr>
+      <tr><td>Commercial</td><td>Customer, Contact, Enquiry, RFQ, Quotation and revisions, Sales Order, Contract, Retention, Liquidated-damages terms</td></tr>
+      <tr><td>Project</td><td>Project, Milestone, Task, Budget, Risk, Change request</td></tr>
+      <tr><td>Engineering</td><td>Product, Component, BOM and revision, Engineering Change Request and Order, Drawing</td></tr>
+      <tr><td>Documents</td><td>Controlled document, Revision, Transmittal, Acknowledgement, Numbering series</td></tr>
+      <tr><td>Supply chain</td><td>Supplier, Purchase Request, RFQ, Purchase Order, Goods Receipt, Stock ledger, Reservation, Warehouse and bin</td></tr>
+      <tr><td>Manufacturing</td><td>Manufacturing job, Operation, Route, Traveller, Work centre, Labour, WIP, Subcontract</td></tr>
+      <tr><td>Quality and test</td><td>Inspection plan, Checklist, Result, NCR, CAPA, Calibration, QAP/ITP, Test record, Certificate</td></tr>
+      <tr><td>Traceability</td><td>Batch, Heat, Serial, QR identity, Genealogy link</td></tr>
+      <tr><td>Logistics</td><td>Dispatch plan, Packing list, Challan, Shipment</td></tr>
+      <tr><td>Finance and HR</td><td>Invoice, Payment, Receivable, Payable, Profitability; Employee, Attendance, Leave, Payroll run, Payslip</td></tr>
+      <tr><td>Platform</td><td>Audit trail, Event log, Notification, Scheduled job, Configuration</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8.2 Where storage growth actually comes from</h2>
+  <p>Structured records are small. Storage growth is dominated by <b>files</b> (drawings, scans, photographs, test reports), which
+  is why files live on their own volume and not inside the database.</p>
+  <table>
+    <thead><tr><th>Store</th><th>Growth driver</th><th>Planning basis</th></tr></thead>
+    <tbody>
+      <tr><td>Database (records, audit, events, search indexes)</td><td>Transactions and revisions</td><td>Tens of thousands of records a year at DSEW's volume; a few gigabytes over five years including indexes and audit</td></tr>
+      <tr><td>Document volume</td><td>Files per project and job</td><td>Sized with DSEW from its sample documents; typically the largest consumer</td></tr>
+      <tr><td>Vector index (AI semantic search only)</td><td>Chunks of indexed documents</td><td>Proportional to indexed text, not to image or CAD file size</td></tr>
+      <tr><td>Backups</td><td>Retention policy</td><td>At least equal to data size on the backup target, plus retention copies</td></tr>
+    </tbody>
+  </table>
+  <div class="callout note">
+    <b class="t">Planning figures</b>
+    <p>Growth values are planning assumptions from typical engineering-order volumes. The document-volume size is
+    finalised in the survey from DSEW's real samples, and a capacity report is part of handover.</p>
+  </div>
+
+  <h2>8.3 Data lifecycle and export</h2>
+  <ul>
+    <li><b>Retention:</b> closed records stay readable and locked; retention periods for documents are configured per type.</li>
+    <li><b>Export:</b> a documented export of all records as CSV and all files in original form with an index, at handover and once on request during the 12-month period.</li>
+    <li><b>Data location:</b> all data is held on DSEW's server. Support access is audited and time-limited.</li>
+    <li><b>Deletion:</b> at the end of an engagement, PlotArmour deletes or returns any DSEW material it holds.</li>
+  </ul>
+</section>
+
+<!-- ============================ 9. SECURITY ============================ -->
+<section class="sec">
+  <p class="kicker">Section 9</p>
+  <h1>Security and data protection</h1>
+  <p class="lead">Security is part of the foundation. It is applied to every operation from the first release, not added as a layer afterwards.</p>
+
+  <h2>9.1 Controls by layer</h2>
+  <table>
+    <thead><tr><th style="width:20%">Layer</th><th>Control</th></tr></thead>
+    <tbody>
+      <tr><td>Transport</td><td>TLS for all traffic; HTTP redirected to HTTPS; modern protocol versions only; security headers (content security policy, frame protection, referrer policy)</td></tr>
+      <tr><td>Authentication</td><td>Keycloak with password policy and lockout; optional multi-factor sign-in, enabled on request; configurable session lifetime and idle timeout; immediate session revocation</td></tr>
+      <tr><td>Authorization</td><td>Verb + Entity + Scope permissions checked on the server for every command; no reliance on hidden screens; one policy gate for all channels</td></tr>
+      <tr><td>Tenant isolation</td><td>Company context comes from the authenticated session, never from the request. Row-level security in PostgreSQL enforces isolation even if application code were wrong; with no scope set, queries return nothing and writes are rejected</td></tr>
+      <tr><td>Database account</td><td>The application connects as a least-privilege account that cannot bypass row-level security. Start-up refuses a privileged account. A separate account is used only for schema migration</td></tr>
+      <tr><td>Audit</td><td>Append-only trail of every change with actor, time, channel and before/after values; cannot be edited or deleted by the application</td></tr>
+      <tr><td>Input handling</td><td>Server-side validation; parameterised queries; output encoding; protection against cross-site request forgery; upload type and size checks</td></tr>
+      <tr><td>Secrets</td><td>Held in a protected environment file (restricted permissions, owned by a named administrator), never in the database or in source. A sealed offline copy is held by DSEW's owner</td></tr>
+      <tr><td>Files</td><td>Access through the application's permission check; files are not publicly addressable</td></tr>
+      <tr><td>Backups</td><td>Encrypted at rest on the backup target; restore tested</td></tr>
+      <tr><td>Disk</td><td>Full-disk encryption recommended on the VM and backup target, confirmed at acceptance</td></tr>
+      <tr><td>Network exposure</td><td>Only the HTTPS port is exposed. Database, identity and object store are bound to the VM's internal network and not reachable from the LAN</td></tr>
+      <tr><td>Software supply</td><td>Pinned, versioned releases; dependency vulnerability review at each release; tested upgrade and rollback</td></tr>
+      <tr><td>Support access</td><td>Remote, time-limited, audited, and only with DSEW's permission</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9.2 Rule for every change to data</h2>
+  <p>For each state-changing operation the design records: who is acting, the permission required, the scope, the
+  preconditions, the state change, the audit entry, the event emitted, and the behaviour on failure. A change that
+  cannot answer all eight is not released.</p>
+
+  <h2>9.3 AI and data protection</h2>
+  <p>Nothing leaves DSEW's server to an external AI service unless DSEW explicitly enables that service. Local AI features run
+  inside the signed-in user's own permissions, so a user can never retrieve through AI what they could not open directly.
+  AI is never an approver and never changes a record on its own (section 13).</p>
+
+  <h2>9.4 Scope boundary</h2>
+  <p>Independent penetration testing and statutory certification are outside this scope. They can be arranged separately.</p>
+</section>
+
+<!-- ============================ 10. AVAILABILITY ============================ -->
+<section class="sec">
+  <p class="kicker">Section 10</p>
+  <h1>Availability, backup, recovery and upgrades</h1>
+
+  <h2>10.1 Backup design</h2>
+  <table>
+    <thead><tr><th style="width:22%">Component</th><th style="width:34%">Method</th><th>Frequency (default, agreed with DSEW)</th></tr></thead>
+    <tbody>
+      <tr><td>Database</td><td>Consistent logical dump; optional continuous log archiving for finer recovery</td><td>Nightly full; optional archiving for a shorter data-loss window</td></tr>
+      <tr><td>Files</td><td>Incremental copy of the document volume</td><td>Nightly</td></tr>
+      <tr><td>Identity configuration</td><td>Realm export</td><td>Nightly and before every change</td></tr>
+      <tr><td>Application configuration</td><td>Environment and version record</td><td>With every upgrade</td></tr>
+      <tr><td>Retention</td><td>Daily, weekly and monthly generations</td><td>Set with DSEW</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10.2 Recovery objectives (proposed, agreed with DSEW)</h2>
+  <table>
+    <thead><tr><th>Objective</th><th>Default target</th><th>Tighter option</th></tr></thead>
+    <tbody>
+      <tr><td>Data-loss window (RPO)</td><td>Up to 24 hours (nightly backup)</td><td>Up to 15 minutes with log archiving</td></tr>
+      <tr><td>Time to restore (RTO)</td><td>Within 4 hours on the same or a replacement VM</td><td>Agreed after the restore rehearsal</td></tr>
+    </tbody>
+  </table>
+  <p>A <b>combined restore</b> of database, files and identity configuration onto a clean environment is rehearsed during the
+  project (after Phase 2) and again as a final test before go-live. The restore time measured in the rehearsal replaces the
+  default target in the handover documents.</p>
+
+  <h2>10.3 Failure behaviour</h2>
+  <table>
+    <thead><tr><th style="width:30%">Failure</th><th>Behaviour</th></tr></thead>
+    <tbody>
+      <tr><td>Identity service unavailable</td><td>Existing sessions continue; new sign-ins fail with a clear message; quality gates remain enforced</td></tr>
+      <tr><td>Object store unavailable</td><td>Records remain usable; new uploads fail clearly; no record claims a file that was not stored</td></tr>
+      <tr><td>Application restart</td><td>Short interruption; no partial writes because every change is one transaction</td></tr>
+      <tr><td>Power loss</td><td>Database recovers to the last committed transaction on restart; UPS provides clean shutdown</td></tr>
+      <tr><td>Disk filling</td><td>Alerts at configured thresholds before the limit; document growth is on a separate volume</td></tr>
+      <tr><td>Network interruption on a device</td><td>The application shows connection state and protects unsaved input</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10.4 Upgrades and rollback</h2>
+  <ol>
+    <li>Release notes and the changes to DSEW's installation are shared in advance.</li>
+    <li>A backup is taken automatically before the upgrade.</li>
+    <li>The upgrade is applied with database migrations in a defined order.</li>
+    <li>Health checks confirm the new version. If they fail, the scripted <b>rollback</b> restores the previous version and data state.</li>
+    <li>Upgrades are applied at a time DSEW chooses, typically outside working hours.</li>
+  </ol>
+</section>
+
+<!-- ============================ 11. MODULES ============================ -->
+<section class="sec">
+  <p class="kicker">Section 11</p>
+  <h1>Module-by-module technical specification</h1>
+  <p>All modules share the foundation in section 4, so each inherits permissions, audit, numbering, search and event
+  notifications. The table lists the main records, workflow states, controls and links to other modules for the Complete ERP.
+  The MVP includes the basic layers described in document 1, sections 3 and 5.</p>
+
+  <table>
+    <thead><tr><th style="width:3%">#</th><th style="width:15%">Module</th><th style="width:25%">Main records and workflow</th><th style="width:33%">Controls and rules</th><th>Links to</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>CRM, enquiry, quotation, sales order</td><td>Customer, contact, enquiry, RFQ, tender, quotation with revisions, sales order. Draft → Pending approval → Active → Won / Lost</td><td>Revision history; approval above configured value; alternative offers; PO comparison; retention and LD terms captured; follow-up reminders</td><td>Project, BOM, finance, documents</td></tr>
+      <tr><td>2</td><td>Advanced project management</td><td>Project, work breakdown, milestone, task, budget, risk, change. Draft → Active → Blocked → Completed → Closed</td><td>Dependencies; budget versus actual; change control; status roll-up</td><td>Orders, manufacturing, finance, contracts</td></tr>
+      <tr><td>3</td><td>Engineering and product lifecycle</td><td>Product, component, multi-level BOM and revision, ECR and ECO. Draft → In review → Released → Superseded</td><td>A released revision cannot be edited; every order records its revision; changes follow ECR/ECO approval</td><td>Manufacturing, procurement, travellers</td></tr>
+      <tr><td>4</td><td>Document management and controlled workflows</td><td>Controlled document, revision, transmittal, acknowledgement. Draft → Review → Approved → Issued → Obsolete</td><td>Configurable numbering; drafter, reviewer, approver and releaser roles; full revision and distribution history; search by number, title, content</td><td>All modules</td></tr>
+      <tr><td>5</td><td>Manufacturing execution</td><td>Manufacturing job, operation, route stage, work centre. Planned → In progress → On hold → Completed</td><td>Job identifies its BOM; material availability shown; operations tracked; hold and resume with reason; WIP; subcontract tracking</td><td>BOM, inventory, traveller, quality</td></tr>
+      <tr><td>6</td><td>Travellers and process documentation</td><td>Traveller generated from job and route; checkpoints and sign-offs</td><td>BOM-driven content; QR code on printout; sign-off by role; customer-facing formats</td><td>Manufacturing, quality, traceability</td></tr>
+      <tr><td>7</td><td>Quality management system</td><td>Inspection plan, checklist, result, NCR, CAPA, calibration, audit, QAP/ITP</td><td>Mandatory checks block release; NCR closes only after CAPA verification; evidence attached to results</td><td>Manufacturing, dispatch, testing, suppliers</td></tr>
+      <tr><td>8</td><td>Barcode, QR and traceability</td><td>Batch, heat, serial, QR identity, genealogy</td><td>Unit-to-component genealogy; scan to open the record; QR verification page for a finished unit</td><td>Inventory, manufacturing, quality, dispatch</td></tr>
+      <tr><td>9</td><td>Procurement and vendor management</td><td>Supplier, purchase request, RFQ, comparative statement, PO, receipt. Draft → Approved → Ordered → Received</td><td>Approval workflow by value; supplier performance; subcontract orders; match to receipt</td><td>Inventory, finance, quality</td></tr>
+      <tr><td>10</td><td>Inventory and warehouse</td><td>Item, stock ledger, reservation, warehouse and bin, count</td><td>Ledger with reversal-only corrections (no silent edits); valuation; reconciliation; ageing; batch/heat/serial</td><td>Procurement, manufacturing, finance</td></tr>
+      <tr><td>11</td><td>Production planning and basic MRP</td><td>Demand, supply, planned order, shortage</td><td>BOM-based requirements; shortage recommendations; capacity view; scheduling by work centre</td><td>BOM, inventory, procurement, manufacturing</td></tr>
+      <tr><td>12</td><td>Testing and equipment</td><td>Test template, test record, certificate, instrument, calibration, maintenance</td><td>Tests per product family with acceptance limits; automated report; failed test blocks dispatch; calibration-due alerts</td><td>Quality, dispatch, assets</td></tr>
+      <tr><td>13</td><td>Finance and accounting</td><td>Invoice, payment, receivable, payable, GST rates, profitability</td><td>Invoices from orders and milestones; payments reduce balances; receivables reconcile; job profitability reconciles to costs</td><td>Sales, procurement, projects, payroll</td></tr>
+      <tr><td>14</td><td>HR and payroll</td><td>Employee, attendance, leave, shift, timesheet, salary structure, payroll run, payslip</td><td>Payroll from DSEW-supplied statutory components; a sample month reproduces DSEW's own calculation; competency tracking</td><td>Projects, manufacturing labour</td></tr>
+      <tr><td>15</td><td>Dispatch and logistics</td><td>Dispatch plan, packing list, challan, shipment. Ready → Packed → Dispatched</td><td>Dispatch released only after quality approval and test pass; partial deliveries; shipment tracking</td><td>Quality, inventory, finance</td></tr>
+      <tr><td>16</td><td>Contracts, compliance and risk</td><td>Contract, obligation, bank guarantee, LD exposure, insurance, NDA, risk register</td><td>Obligation due-date alerts; LD exposure tracking; expiry reminders</td><td>Orders, projects, finance</td></tr>
+      <tr><td>17</td><td>Dashboards and business intelligence</td><td>Role-based dashboards, KPI views</td><td>Precomputed projections; profitability, ageing, cash flow, supplier and resource analytics; respects permissions</td><td>All modules</td></tr>
+      <tr><td>18</td><td>Notifications and workflow automation</td><td>Rules, triggers, escalations, templates</td><td>Event-driven; in-app and e-mail through DSEW's mail server; escalation chains; automated documents</td><td>All modules</td></tr>
+      <tr><td>19</td><td>AI (documented use cases)</td><td>Search, retrieval, classification, gap detection, summaries, drafts</td><td>Inside the caller's permissions; never an approver; acceptance threshold per use case on agreed samples</td><td>Documents, quotation, quality</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================ 12. CONTROLS ============================ -->
+<section class="sec">
+  <p class="kicker">Section 12</p>
+  <h1>Engineering, manufacturing and quality controls</h1>
+  <p class="lead">DSEW builds engineered, one-off products. The central requirement is that what was approved is what is built,
+  and nothing leaves the factory without its checks. Verity enforces this through five connected controls.</p>
+
+  <h2>12.1 From enquiry to dispatch: the controlled chain</h2>
+  <figure>
+    <svg viewBox="0 0 760 130" role="img" aria-label="Controlled chain from enquiry to dispatch">
+      <defs><style>
+        .n{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
+        .g{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2}
+        .x{font:600 11px 'Segoe UI',Arial,sans-serif;fill:#1b1d22;text-anchor:middle}
+        .y{font:10px 'Segoe UI',Arial,sans-serif;fill:#4a4f58;text-anchor:middle}
+        .l{stroke:#6b7280;stroke-width:1.2;marker-end:url(#ar)}
+      </style>
+      <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#6b7280"/></marker></defs>
+      <rect class="n" x="6"   y="30" width="82" height="46" rx="5"/><text class="x" x="47"  y="51">Enquiry</text><text class="y" x="47"  y="66">RFQ / tender</text>
+      <rect class="n" x="104" y="30" width="82" height="46" rx="5"/><text class="x" x="145" y="51">Quotation</text><text class="y" x="145" y="66">revisions</text>
+      <rect class="n" x="202" y="30" width="82" height="46" rx="5"/><text class="x" x="243" y="51">Order</text><text class="y" x="243" y="66">+ project</text>
+      <rect class="g" x="300" y="30" width="82" height="46" rx="5"/><text class="x" x="341" y="51">BOM release</text><text class="y" x="341" y="66">approval gate</text>
+      <rect class="n" x="398" y="30" width="82" height="46" rx="5"/><text class="x" x="439" y="51">Material</text><text class="y" x="439" y="66">availability</text>
+      <rect class="n" x="496" y="30" width="82" height="46" rx="5"/><text class="x" x="537" y="51">Job + traveller</text><text class="y" x="537" y="66">operations</text>
+      <rect class="g" x="594" y="30" width="82" height="46" rx="5"/><text class="x" x="635" y="51">Quality</text><text class="y" x="635" y="66">release gate</text>
+      <rect class="n" x="692" y="30" width="62" height="46" rx="5"/><text class="x" x="723" y="51">Dispatch</text><text class="y" x="723" y="66">+ QR</text>
+      <path class="l" d="M88,53 L102,53"/><path class="l" d="M186,53 L200,53"/><path class="l" d="M284,53 L298,53"/><path class="l" d="M382,53 L396,53"/><path class="l" d="M480,53 L494,53"/><path class="l" d="M578,53 L592,53"/><path class="l" d="M676,53 L690,53"/>
+      <text class="y" x="380" y="108">Amber steps are gates: they block the next step until the condition is met</text>
+    </svg>
+    <figcaption>Figure 2. Linked records from enquiry to dispatch, with two blocking gates.</figcaption>
+  </figure>
+
+  <h2>12.2 The five controls</h2>
+  <table>
+    <thead><tr><th style="width:22%">Control</th><th>How it works</th></tr></thead>
+    <tbody>
+      <tr><td>Revision lock</td><td>A released drawing or BOM revision cannot be edited. A change creates a new revision through the approval path. A job records the revision it was built to.</td></tr>
+      <tr><td>Approval separation</td><td>Drafting, review, approval and release are different permissions. DSEW decides whether one person may hold more than one.</td></tr>
+      <tr><td>Quality gate</td><td>A failed or missing mandatory inspection or test blocks quality release. An NCR closes only after CAPA verification. Dispatch is blocked until release.</td></tr>
+      <tr><td>Immutable evidence</td><td>Measured values, photographs and signatures are stored as evidence that cannot be altered, with the user, time and device.</td></tr>
+      <tr><td>Closed means closed</td><td>When a job or order is closed, it is permanently read-only. Rework is a new linked record, so history is never rewritten.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12.3 Traceability</h2>
+  <p>Each finished unit carries a QR identity. Scanning it opens the unit's record: the sales order, BOM revision, components with
+  batch or heat numbers, route and operations, inspection and test results, and dispatch details. A forward trace answers "which
+  units used this batch"; a backward trace answers "what went into this unit". An optional public verification page shows a
+  controlled subset for the customer.</p>
+
+  <h2>12.4 Stock integrity</h2>
+  <p>Inventory is a ledger: every receipt, issue, transfer and adjustment is a posted entry. Corrections are made by reversal
+  with a reason, never by silently changing a balance, so the quantity on hand can always be explained from its history.</p>
+</section>
+
+<!-- ============================ 13. AI ============================ -->
+<section class="sec">
+  <p class="kicker">Section 13</p>
+  <h1>Artificial intelligence: options by hardware tier</h1>
+  <p class="lead">DSEW asked that confidential client data must not leave its server. The AI design therefore runs on DSEW's
+  premises, with capability that scales with the hardware DSEW chooses. DSEW can start with no extra hardware and add more
+  after seeing real search and rules working on its own documents.</p>
+
+  <h2>13.1 Tiers</h2>
+  <table>
+    <thead><tr><th style="width:9%">Tier</th><th style="width:20%">What it is</th><th style="width:20%">Where it runs</th><th>What it delivers</th></tr></thead>
+    <tbody>
+      <tr><td><b>Tier 0</b></td><td>No model. Search and rules</td><td>The ERP VM; no extra hardware</td><td>Full-text search across documents and records; rule-based detection of missing documents and incomplete records; template and pattern extraction of drawing number, revision and PO number. Finds past quotations, POs, BOMs and jobs quickly and flags gaps</td></tr>
+      <tr><td><b>Tier 1</b></td><td>Small embedding model with a vector index</td><td>The ERP VM at 32 GB memory</td><td>Semantic search, for example "find the 100 kVA cast resin jobs", across the documents DSEW is permitted to see. Indexing runs in the background</td></tr>
+      <tr><td><b>Tier 2</b></td><td>Small language model on CPU</td><td>The ERP VM, background only</td><td>Overnight management summaries and batch tagging. Not offered for interactive drafting, where response time would be too slow</td></tr>
+      <tr><td><b>Tier 3</b></td><td>Local language model on a GPU machine</td><td>A separate small workstation with a 16 GB GPU on DSEW's LAN</td><td>Interactive drafting of quotations, work instructions, inspection plans and reports from approved templates, at usable speed. Verity calls it over the LAN, so data stays on the premises</td></tr>
+      <tr><td><b>Tier 4</b></td><td>External AI service</td><td>Off DSEW's server</td><td>Higher quality for non-confidential text only. Off by default; enabled only by DSEW's explicit decision; usage is charged by the provider</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.2 What is included and what is optional</h2>
+  <ul>
+    <li><b>Included with the Complete ERP (module 19):</b> Tier 0 and Tier 1, the integration of AI into the platform, and the documented use cases with their acceptance thresholds.</li>
+    <li><b>Optional, chosen by DSEW:</b> Tier 2 background summaries; Tier 3 GPU machine for interactive drafting; Tier 4 external service.</li>
+    <li><b>Not in the fee:</b> GPU hardware and any external service charges. Tier 3 hardware is priced after the use-case survey, so DSEW chooses it with real results in hand.</li>
+    <li>The GPU machine is a <b>separate box</b>. Sharing a GPU with the Linux VM on the Windows host is not recommended, because it is fragile and complicates rollback.</li>
+  </ul>
+
+  <h2>13.3 Guardrails that apply at every tier</h2>
+  <table>
+    <thead><tr><th style="width:26%">Guardrail</th><th>Specification</th></tr></thead>
+    <tbody>
+      <tr><td>AI is never an approver</td><td>It does not approve quotations, release documents, alter records, authorise quality releases or act autonomously. No essential workflow depends on it</td></tr>
+      <tr><td>Inside the user's permissions</td><td>An AI feature acts as the calling user, with the same tenant, role and permissions, passing the same policy gate. It can never retrieve what the user could not open directly</td></tr>
+      <tr><td>Provenance</td><td>Results show the source records or documents they came from. Drafts are labelled and need a human to save and submit them</td></tr>
+      <tr><td>Acceptance thresholds</td><td>Each documented use case has defined inputs, outputs and an agreed threshold on DSEW's sample documents; it is accepted only if it meets the threshold</td></tr>
+      <tr><td>Data stays local</td><td>No document or record is sent off the server unless DSEW enables Tier 4</td></tr>
+      <tr><td>No training on DSEW data</td><td>Custom model training is excluded. DSEW's data is used only for retrieval at the moment of the request</td></tr>
+    </tbody>
+  </table>
+
+  <h2>13.4 Load control for AI</h2>
+  <p>Indexing and any CPU-based model work run as background jobs with a concurrency limit and a daily window. They pause when
+  interactive load rises, so AI can never slow the ERP for people working. Tier 3 inference runs on a different machine and adds
+  no load to the ERP VM.</p>
+
+  <div class="callout">
+    <b class="t">Go-live gate for AI</b>
+    <p>The selected AI tier must run within the latency agreed with DSEW, measured on the surveyed hardware, and each
+    documented use case must meet its acceptance threshold on the agreed sample documents.</p>
+  </div>
+</section>
+
+<!-- ============================ 14. DEPLOYMENT ============================ -->
+<section class="sec">
+  <p class="kicker">Section 14</p>
+  <h1>Deployment topology and installation sequence</h1>
+
+  <figure>
+    <svg viewBox="0 0 760 330" role="img" aria-label="Deployment topology on DSEW premises">
+      <defs><style>
+        .c1{fill:#fff;stroke:#b7bec9;stroke-width:1.2}
+        .c2{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
+        .c3{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2;stroke-dasharray:5 3}
+        .tt{font:600 11.5px 'Segoe UI',Arial,sans-serif;fill:#1b1d22}
+        .ss{font:10.5px 'Segoe UI',Arial,sans-serif;fill:#4a4f58}
+        .ll{stroke:#6b7280;stroke-width:1.2}
+        .kk{font:700 10px 'Segoe UI',Arial,sans-serif;fill:#0b4f9c;letter-spacing:.08em}
+      </style></defs>
+      <text class="kk" x="10" y="16">DSEW PREMISES</text>
+      <rect class="c1" x="6" y="22" width="748" height="300" rx="8" fill="none"/>
+
+      <rect class="c1" x="20" y="40" width="190" height="130" rx="6"/>
+      <text class="tt" x="32" y="62">User devices</text>
+      <text class="ss" x="32" y="82">Office PCs and laptops</text>
+      <text class="ss" x="32" y="98">Shop-floor phones and tablets</text>
+      <text class="ss" x="32" y="114">Shared terminals</text>
+      <text class="ss" x="32" y="136">Installed web app (PWA)</text>
+      <text class="ss" x="32" y="152">HTTPS only</text>
+
+      <rect class="c1" x="20" y="190" width="190" height="116" rx="6"/>
+      <text class="tt" x="32" y="212">Remote access</text>
+      <text class="ss" x="32" y="232">DSEW VPN only</text>
+      <text class="ss" x="32" y="248">No direct internet exposure</text>
+      <text class="ss" x="32" y="264">Optional: controlled outbound</text>
+      <text class="ss" x="32" y="280">for install and updates</text>
+
+      <rect class="c1" x="240" y="40" width="270" height="266" rx="6"/>
+      <text class="kk" x="252" y="58">HYPER-V HOST (DSEW SERVER)</text>
+      <rect class="c2" x="254" y="68" width="242" height="228" rx="6"/>
+      <text class="tt" x="266" y="90">Verity VM (Ubuntu Server LTS)</text>
+      <text class="ss" x="266" y="106">4 vCPU · 16 GB static (32 GB with AI search)</text>
+      <rect class="c1" x="266" y="118" width="218" height="26" rx="4"/><text class="ss" x="276" y="135">Reverse proxy · TLS · rate limits</text>
+      <rect class="c1" x="266" y="150" width="218" height="26" rx="4"/><text class="ss" x="276" y="167">Verity application · scheduler</text>
+      <rect class="c1" x="266" y="182" width="218" height="26" rx="4"/><text class="ss" x="276" y="199">PostgreSQL 16 · row-level security</text>
+      <rect class="c1" x="266" y="214" width="218" height="26" rx="4"/><text class="ss" x="276" y="231">Keycloak identity</text>
+      <rect class="c1" x="266" y="246" width="218" height="26" rx="4"/><text class="ss" x="276" y="263">S3-compatible object store (own volume)</text>
+
+      <rect class="c1" x="540" y="40" width="200" height="100" rx="6"/>
+      <text class="tt" x="552" y="62">Backup target</text>
+      <text class="ss" x="552" y="82">Separate device or share</text>
+      <text class="ss" x="552" y="98">Encrypted copies</text>
+      <text class="ss" x="552" y="114">Optional off-site / offline copy</text>
+
+      <rect class="c3" x="540" y="170" width="200" height="136" rx="6"/>
+      <text class="tt" x="552" y="192">AI GPU machine (optional)</text>
+      <text class="ss" x="552" y="212">Separate workstation, 16 GB GPU</text>
+      <text class="ss" x="552" y="228">On the LAN, called by Verity</text>
+      <text class="ss" x="552" y="244">Interactive drafting (Tier 3)</text>
+      <text class="ss" x="552" y="260">Data stays on the premises</text>
+
+      <path class="ll" d="M210,105 L254,160"/>
+      <path class="ll" d="M210,248 L254,200"/>
+      <path class="ll" d="M496,160 L540,100"/>
+      <path class="ll" d="M496,230 L540,238" stroke-dasharray="5 3"/>
+    </svg>
+    <figcaption>Figure 3. Deployment on DSEW's premises. The dashed AI machine is optional.</figcaption>
+  </figure>
+
+  <h2>14.1 Installation sequence</h2>
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:28%">Step</th><th>Outcome</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Pre-deployment compatibility check</td><td>Non-intrusive review of the host, virtualisation, network, certificate, backup target and policies. Pass or fail recorded per dependency; nothing on the host is changed</td></tr>
+      <tr><td>2</td><td>VM creation</td><td>Ubuntu Server LTS VM with the agreed static resources and volumes</td></tr>
+      <tr><td>3</td><td>Platform installation</td><td>Scripted install of the containers, database, identity provider and object store; secrets generated and sealed</td></tr>
+      <tr><td>4</td><td>HTTPS and DNS</td><td>Internal name and trusted certificate; PWA install verified from a real phone and a PC</td></tr>
+      <tr><td>5</td><td>Configuration</td><td>DSEW roles, numbering, workflows, custom fields, print templates and master-data import</td></tr>
+      <tr><td>6</td><td>Backup schedule</td><td>Jobs scheduled; first backup and restore rehearsal</td></tr>
+      <tr><td>7</td><td>Monitoring</td><td>Health view and alert thresholds set</td></tr>
+      <tr><td>8</td><td>Load and acceptance tests</td><td>Performance test against section 6.5 and UAT scripts, results recorded</td></tr>
+    </tbody>
+  </table>
+
+  <h2>14.2 Environments</h2>
+  <p>A company-hosted test environment serves demonstrations and early hands-on use. The DSEW VM is installed at kickoff, used
+  for UAT, and becomes production only after the gates in section 15 pass. A second production VM is not included.</p>
+</section>
+
+<!-- ============================ 15. ACCEPTANCE ============================ -->
+<section class="sec">
+  <p class="kicker">Section 15</p>
+  <h1>Acceptance tests and go-live gates</h1>
+  <p>Every claim in this document is backed by a test that DSEW sees run and signs off. Production use begins only when all the
+  gates pass, and the 12-month support period starts on the date they pass and the handover is signed.</p>
+
+  <h2>15.1 Go-live gates</h2>
+  <table>
+    <thead><tr><th style="width:5%">#</th><th style="width:28%">Gate</th><th>Evidence DSEW receives</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Server survey and compatibility</td><td>Written pass/fail record per dependency</td></tr>
+      <tr><td>2</td><td>Installation and HTTPS on DSEW's host</td><td>Working access from office PCs and a real-phone upload; installed web app confirmed on supported devices</td></tr>
+      <tr><td>3</td><td><b>Performance and resource acceptance</b></td><td>Load test on DSEW's VM at 15 concurrent sessions against section 6.5; measured CPU, memory, disk and response times; resource footprint recorded</td></tr>
+      <tr><td>4</td><td>Combined backup and restore</td><td>Restore of database, files and identity configuration onto a clean environment; measured restore time</td></tr>
+      <tr><td>5</td><td>Outage behaviour</td><td>Identity and object-store outage tests: sessions continue, new sign-ins or uploads fail clearly, quality gates stay enforced</td></tr>
+      <tr><td>6</td><td>UAT scripts</td><td>Signed scenario results with date, tester and outcome</td></tr>
+      <tr><td>7</td><td>Data export reconciliation</td><td>Export reconciles with the system</td></tr>
+      <tr><td>8</td><td>Security checks</td><td>Tenant-isolation test, permission test, audit-trail immutability test, TLS configuration check</td></tr>
+      <tr><td>9</td><td><b>AI latency and threshold</b> (if an AI tier is selected)</td><td>Selected tier runs within the agreed latency on the surveyed hardware; each documented use case meets its threshold on agreed samples</td></tr>
+    </tbody>
+  </table>
+
+  <h2>15.2 UAT scenarios</h2>
+  <ol>
+    <li>Enquiry to quotation to order to project.</li>
+    <li>BOM draft, review, approval and release; a released revision cannot be edited.</li>
+    <li>Material availability, purchase, receipt and issue to a job.</li>
+    <li>Manufacturing job with traveller; operations recorded; hold and resume.</li>
+    <li>Failed mandatory test blocks quality release and dispatch.</li>
+    <li>Dispatch released after approval; QR scan opens the unit record.</li>
+    <li>Data export, then backup and restore onto a clean environment.</li>
+  </ol>
+
+  <h2>15.3 Definition of done for every feature</h2>
+  <p>Server-side authorisation, tenant-isolation test, audit entry, validation and error states, automated tests, documentation
+  note, and demonstration in the review.</p>
+
+  <h2>15.4 Defects and change control</h2>
+  <table>
+    <thead><tr><th style="width:14%">Severity</th><th style="width:46%">Meaning</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Critical</td><td>Wrong data, a security issue, or work blocked with no workaround</td><td>Blocks go-live</td></tr>
+      <tr><td>High</td><td>Major function impaired</td><td>Blocks go-live</td></tr>
+      <tr><td>Medium</td><td>Function affected, workaround exists</td><td>Scheduled with DSEW</td></tr>
+      <tr><td>Low</td><td>Cosmetic or minor</td><td>Fixed in routine maintenance</td></tr>
+    </tbody>
+  </table>
+  <p>DSEW has 5 business days after each demonstration or delivery to accept it or report material deviations. A shared issue list,
+  visible from day one, shows severity, owner and status. Anything beyond the agreed scope follows a written change request
+  with a revised cost or schedule, approved before work (documents 1 and 2).</p>
+</section>
+
+<!-- ============================ 16. TRACEABILITY ============================ -->
+<section class="sec">
+  <p class="kicker">Section 16</p>
+  <h1>Requirements traceability matrix</h1>
+  <p>Each of the 19 modules in DSEW's enquiry is mapped to the platform capability that carries it, the evidence that proves it,
+  and the phase in which it is delivered under Option 3 (phases as in document 2).</p>
+
+  <table>
+    <thead><tr><th style="width:3%">#</th><th style="width:19%">Enquiry module</th><th style="width:24%">Platform capabilities used</th><th>Acceptance evidence</th><th style="width:7%" class="n">Phase</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>CRM, enquiry, quotation, sales order</td><td>Party, workflow, approval, numbering, revisions</td><td>Linked customer → enquiry → quotation → order; revision history; approval above threshold</td><td class="n">1</td></tr>
+      <tr><td>2</td><td>Project management</td><td>Work, state, milestones, budgets</td><td>Project with milestones and budget versus actual; change recorded</td><td class="n">1</td></tr>
+      <tr><td>3</td><td>Engineering / PLM</td><td>Entity revisions, release gate, ECR/ECO</td><td>Released revision locked; change via ECO; order records revision</td><td class="n">1, 2</td></tr>
+      <tr><td>4</td><td>Document management</td><td>Numbering, controlled workflow, files, search</td><td>Numbered document through draft to issued; distribution history; search</td><td class="n">1</td></tr>
+      <tr><td>5</td><td>Manufacturing execution</td><td>Work, state machine, operations, stock ledger</td><td>Job from BOM with material allocation and operation tracking</td><td class="n">2</td></tr>
+      <tr><td>6</td><td>Travellers</td><td>Templates, checkpoints, QR</td><td>Printed traveller with QR; sign-offs recorded</td><td class="n">3</td></tr>
+      <tr><td>7</td><td>Quality management</td><td>Inspection, evidence, gate, NCR/CAPA</td><td>Failed mandatory check blocks release; NCR closes after CAPA verification</td><td class="n">3</td></tr>
+      <tr><td>8</td><td>Barcode, QR, traceability</td><td>Batch/heat/serial, genealogy, QR identity</td><td>Forward and backward trace for a unit and a batch</td><td class="n">3</td></tr>
+      <tr><td>9</td><td>Procurement</td><td>Approval, supplier, PO, receipt</td><td>RFQ → comparison → PO → receipt; approval by value</td><td class="n">2</td></tr>
+      <tr><td>10</td><td>Inventory</td><td>Stock ledger, reservation, count</td><td>Balances reconcile to ledger; reversal-only correction</td><td class="n">2</td></tr>
+      <tr><td>11</td><td>Planning and MRP</td><td>BOM, demand, supply, rules</td><td>Shortage recommendations from a BOM-driven plan</td><td class="n">2</td></tr>
+      <tr><td>12</td><td>Testing and equipment</td><td>Test templates, instruments, calibration</td><td>Test per product family with limits; report generated; calibration alerts</td><td class="n">3</td></tr>
+      <tr><td>13</td><td>Finance and accounting</td><td>Ledger, invoices, payments, projections</td><td>Invoice with tax; payment reduces balance; receivables reconcile</td><td class="n">4</td></tr>
+      <tr><td>14</td><td>HR and payroll</td><td>Party, timesheets, payroll rules</td><td>Sample month reproduces DSEW's own calculation</td><td class="n">4</td></tr>
+      <tr><td>15</td><td>Dispatch and logistics</td><td>Gate, packing, challan</td><td>Dispatch blocked on failed test; released after approval</td><td class="n">3</td></tr>
+      <tr><td>16</td><td>Contracts and risk</td><td>Contract, obligations, alerts</td><td>Obligation and expiry alerts; LD exposure view</td><td class="n">3</td></tr>
+      <tr><td>17</td><td>Dashboards and BI</td><td>Projections, permissions</td><td>Role dashboards reconcile to source records</td><td class="n">4</td></tr>
+      <tr><td>18</td><td>Notifications and automation</td><td>Events, rules, scheduler</td><td>Trigger → escalation → notification demonstrated</td><td class="n">4</td></tr>
+      <tr><td>19</td><td>AI use cases</td><td>Search, rules, embeddings, policy gate</td><td>Each use case meets its threshold on agreed samples</td><td class="n">4</td></tr>
+    </tbody>
+  </table>
+  <p>The MVP covers the nine modules in document 1, section 3, at the basic depth described there.</p>
+</section>
+
+<!-- ============================ 17. SUPPORT ============================ -->
+<section class="sec">
+  <p class="kicker">Section 17</p>
+  <h1>Support, continuity and handover</h1>
+
+  <h2>17.1 Support during the 12-month period</h2>
+  <table class="kv">
+    <tbody>
+      <tr><td>Channels</td><td>team@plotarmour.in · +91 87440 69597</td></tr>
+      <tr><td>Hours</td><td>Business days, Monday to Saturday, 10:00 to 18:00 IST, remote</td></tr>
+      <tr><td>Acknowledgement</td><td>Within 1 business day</td></tr>
+      <tr><td>Defect plan</td><td>Fix or workaround plan for a reproducible defect within 3 business days</td></tr>
+      <tr><td>Included time</td><td>Up to 8 hours a month of testing assistance and maintenance</td></tr>
+      <tr><td>Escalation</td><td>Shubhankar Rakshit, CFO · team@plotarmour.in · +91 87440 69597</td></tr>
+      <tr><td>Covers</td><td>Defect warranty, testing and UAT assistance, routine maintenance (document 1, section 7)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>17.2 Continuity: if PlotArmour is unavailable</h2>
+  <ul>
+    <li><b>The system runs on DSEW's server</b> and keeps working day to day without PlotArmour.</li>
+    <li><b>Source code</b> of the DSEW-specific deliverables is in a repository DSEW controls from full payment.</li>
+    <li><b>Runbooks</b> let DSEW's IT team, or another developer, install, back up, restore, upgrade and roll back.</li>
+    <li><b>Open components</b> (PostgreSQL, Keycloak, Next.js and others) are standard technology that any competent engineer can maintain, and a licence inventory is provided.</li>
+    <li><b>Data portability:</b> a documented export is available at handover and on request during the 12-month period.</li>
+    <li>Updates to Verity's own components come from PlotArmour; the terms are in document 3.</li>
+  </ul>
+
+  <h2>17.3 Handover package</h2>
+  <ul>
+    <li>The working, tested application and the modules of the chosen option.</li>
+    <li>Source code of the DSEW-specific deliverables.</li>
+    <li>Architecture overview and database schema for the delivered scope.</li>
+    <li>Deployment and configuration instructions, and the runbooks for backup, restore, upgrade and rollback.</li>
+    <li>Administrator and user guides.</li>
+    <li>Document templates and the workflow configuration register.</li>
+    <li>API notes for what the scope uses.</li>
+    <li>Load-test report, backup and restore report, UAT sign-off records and the security check results.</li>
+    <li>Licence inventory of open components.</li>
+    <li>Training for administrators and users.</li>
+    <li>Credentials through a signed handover checklist, rotated at handover.</li>
+  </ul>
+
+  <h2>17.4 Training</h2>
+  <p>Role-based sessions for administrators, engineering, stores, production, quality, finance and management, with a quick-reference
+  guide for the shop floor. Training is delivered remotely unless on-site work is separately agreed.</p>
+</section>
+
+<!-- ============================ 18. RISKS ============================ -->
+<section class="sec">
+  <p class="kicker">Section 18</p>
+  <h1>Risk register</h1>
+  <table>
+    <thead><tr><th style="width:3%">#</th><th style="width:21%">Risk</th><th style="width:10%">Impact</th><th>Mitigation</th><th style="width:14%">Owner</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>The host cannot run the VM at the agreed resources</td><td>Schedule, cost</td><td>Pre-deployment compatibility check first; written alternative (second VM or small dedicated host) quoted before work proceeds</td><td>PlotArmour with DSEW IT</td></tr>
+      <tr><td>2</td><td>Server load higher than planned</td><td>Slow screens</td><td>Resource budget, background scheduling, load test at acceptance, health view; resources increased on the same architecture</td><td>PlotArmour</td></tr>
+      <tr><td>3</td><td>Other workloads on the host are affected</td><td>DSEW operations</td><td>Static VM allocation, separate disks, background work windows</td><td>DSEW IT, PlotArmour</td></tr>
+      <tr><td>4</td><td>Document volume larger than assumed</td><td>Storage</td><td>Separate volume sized from real samples; capacity report; alerts</td><td>DSEW, PlotArmour</td></tr>
+      <tr><td>5</td><td>Data loss or corruption</td><td>Business continuity</td><td>Nightly backups, encryption, restored and tested twice before go-live</td><td>PlotArmour, DSEW IT</td></tr>
+      <tr><td>6</td><td>Certificate or DNS not ready</td><td>Schedule</td><td>Raised at kickoff; internal CA option; tested early</td><td>DSEW IT</td></tr>
+      <tr><td>7</td><td>Delayed inputs (samples, decisions, formats)</td><td>Schedule</td><td>Named product owner; consolidated feedback; review windows; estimates revised for pending inputs</td><td>DSEW</td></tr>
+      <tr><td>8</td><td>Scope growth during delivery</td><td>Schedule, cost</td><td>Signed specification with module depth; written change requests</td><td>Both</td></tr>
+      <tr><td>9</td><td>AI results below expectation</td><td>Value</td><td>Tiered options, acceptance thresholds on DSEW samples, AI never essential to workflow, start with search and rules</td><td>PlotArmour</td></tr>
+      <tr><td>10</td><td>Confidential data exposure</td><td>Reputation</td><td>Local-only AI by default, isolation, permissions, audit, NDA</td><td>Both</td></tr>
+      <tr><td>11</td><td>User adoption on the shop floor</td><td>Value</td><td>Phone-first screens, role-based training, quick guide, early shop-floor trials</td><td>DSEW, PlotArmour</td></tr>
+      <tr><td>12</td><td>Dependence on the vendor after go-live</td><td>Continuity</td><td>Source handover, runbooks, open components, export (section 17.2)</td><td>PlotArmour</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================ 19. GLOSSARY ============================ -->
+<section class="sec">
+  <p class="kicker">Section 19</p>
+  <h1>Glossary</h1>
+  <table>
+    <thead><tr><th style="width:22%">Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>PWA</td><td>Progressive Web App. A web application that can be installed on a device and opens like a native application, from one build</td></tr>
+      <tr><td>Tenant</td><td>The data-isolation boundary. DSEW's company data is one tenant</td></tr>
+      <tr><td>Row-level security</td><td>A PostgreSQL feature that makes the database itself filter every row by tenant, independent of application code</td></tr>
+      <tr><td>Command / Query</td><td>A request to change data, and a request to read it, handled by separate paths</td></tr>
+      <tr><td>Event</td><td>A recorded fact that something happened, which other modules can react to</td></tr>
+      <tr><td>Audit trail</td><td>The append-only record of every change</td></tr>
+      <tr><td>BOM</td><td>Bill of materials</td></tr>
+      <tr><td>ECR / ECO</td><td>Engineering change request / order</td></tr>
+      <tr><td>NCR / CAPA</td><td>Non-conformance report / corrective and preventive action</td></tr>
+      <tr><td>QAP / ITP</td><td>Quality assurance plan / inspection and test plan</td></tr>
+      <tr><td>MRP</td><td>Material requirements planning</td></tr>
+      <tr><td>RPO / RTO</td><td>Recovery point objective (data-loss window) / recovery time objective (time to restore)</td></tr>
+      <tr><td>vCPU</td><td>Virtual processor assigned to a virtual machine</td></tr>
+      <tr><td>Embedding / vector index</td><td>A numeric representation of text meaning and the index that finds similar items, used for semantic search</td></tr>
+      <tr><td>p95</td><td>The response time within which 95 % of requests complete</td></tr>
+      <tr><td>UAT</td><td>User acceptance testing</td></tr>
+      <tr><td>Hyper-V</td><td>Microsoft's virtualisation role in Windows Server, which hosts the Linux VM</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout" style="margin-top:8mm">
+    <b class="t">Document control</b>
+    <p>Document 5 of the DSEW proposal package · Issued 21 October 2026 by PlotArmour · Confidential. Read with documents 1 to 4.
+    Commercial terms, scope boundaries and ownership wording are those of documents 1 and 3.</p>
+  </div>
+</section>
+
+</body>
+</html>
