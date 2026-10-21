@@ -92,6 +92,8 @@ const eslintConfig = defineConfig([
     // visual authority, never compiled or shipped. Linting them reports defects in
     // someone else's prototype as defects in the platform.
     "verity-app-ui-mockups/**",
+    // The Remotion film project has its own package.json, tsconfig and lint run.
+    "video/**",
   ]),
 ]);
 

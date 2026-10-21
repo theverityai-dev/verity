@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-20** (against `main` at `b285fa3c`)
+**Last updated: 2026-10-21** (against `main` at `73d76534`; P2-12 film added)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -374,6 +374,22 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 - **What:** DSEW now has Floor worker and Supervisor roles (grants only, `prisma/seed-dsew-roles.ts`) and phone work cards on the Shop floor. Still missing: (1) a worker sees every open stage, not only theirs, because permissions have no `own` scope and stages have no assignee (own scope needs an ADR, see CLAUDE.md "Open"); (2) photo evidence capture from the phone camera inside the checklist; (3) offline tolerance for a workshop with weak signal; (4) a tablet layout check.
 - **Why:** Workers use phones and tablets; the office uses PCs.
 - **How:** Decide assignment first (ADR for `own` scope or a stage assignee field), then build the checklist camera capture.
+- **Status:** NOT STARTED
+
+### P2-12. Verity for Manufacturing film: finishing items after the first master
+
+- **What:** The film in `video/` (4:09, 1080p60, branch `dsew`) is rendered and audited with a scratch
+  voice. Left: a professional voice-over, a person's playback review of sound and pacing, the 4K
+  render, and the short and vertical cuts.
+- **Why:** The scratch narration is synthetic (Kokoro, offline) and nobody has listened to the mix at
+  normal speed; checks so far are automated (word error rate 0 on every cue, loudness, format) and on
+  stills.
+- **How:** Record the 25 lines of `video/content/narration.json` and follow `video/docs/sound-design.md`
+  "Replacing the scratch narration"; render with `npm run render:master` then `master-audio.mjs`;
+  4K with `--scale=2`; cuts as new compositions reusing the scenes.
+- **Done when:** a person signs off playback in `video/docs/qa-report.md`, and the voiced master passes
+  `node scripts/validate.mjs`.
+- **Source:** product-owner brief, 2026-10-21 (session on branch `dsew`).
 - **Status:** NOT STARTED
 
 ## P3: verification, coverage, housekeeping

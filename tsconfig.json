@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "prisma", "scripts", "tmp_backup_verity", "playwright.config.ts", "playwright"]
+  "exclude": ["node_modules", "prisma", "scripts", "tmp_backup_verity", "playwright.config.ts", "playwright", "video"]
 }
