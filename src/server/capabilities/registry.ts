@@ -24,6 +24,7 @@ import { registerFinanceCapability } from "./finance";
 import { registerOutreachCapability } from "./outreach";
 import { registerDocumentCapability } from "./document";
 import { registerRelationshipCapability } from "./relationship";
+import { registerPieceworkCapability } from "./piecework";
 import { registerViewCommands } from "@/server/platform/views";
 import { installStorage } from "@/server/storage";
 
@@ -73,6 +74,8 @@ export function installCapabilities(): void {
   registerAttendanceCapability();
   registerFinanceCapability();
   registerOutreachCapability();
+  // Stylified demo (clients/stylified). Inert until a tenant activates the capability; no tenant has it by default.
+  registerPieceworkCapability();
   // ADR-048 (PROPOSED). Inert until a tenant activates the capability; no tenant has it by default.
   registerDocumentCapability();
   // ADR-051 (PROPOSED): saved views over any registered record object. Platform commands, not a capability.

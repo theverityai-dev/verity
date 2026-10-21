@@ -177,6 +177,18 @@ model Tenant {
   // Capability: inventory (Task 73). Back-relations only, as above.
   inventoryItemGroups     InventoryItemGroup[]
   inventoryItems          InventoryItem[]
+  pieceworkStages              PieceworkStage[]
+  pieceworkLots                PieceworkLot[]
+  pieceworkWorkers             PieceworkWorker[]
+  pieceworkWorkerRates         PieceworkWorkerRate[]
+  pieceworkEntries             PieceworkEntry[]
+  pieceworkPayments            PieceworkPayment[]
+  inventoryAttributes          InventoryAttribute[]
+  inventoryAttributeValues     InventoryAttributeValue[]
+  inventoryItemTemplates       InventoryItemTemplate[]
+  inventoryTemplateAxes        InventoryTemplateAxis[]
+  inventoryTemplateAxisValues  InventoryTemplateAxisValue[]
+  inventoryItemVariantValues   InventoryItemVariantValue[]
   inventoryStockBalances  InventoryStockBalance[]
   inventoryStockMovements InventoryStockMovement[]
   inventoryWastageRecords InventoryWastageRecord[]
@@ -4725,6 +4737,7 @@ model InventoryItemGroup {
 
   tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   items  InventoryItem[]
+  templates InventoryItemTemplate[]
 
   @@unique([tenantId, name])
   @@map("inventory_item_group")
@@ -4753,9 +4766,19 @@ model InventoryItem {
   updatedAt    DateTime @updatedAt @map("updated_at")
   version      Int      @default(1)
   customFields Json     @default("{}") @map("custom_fields")
+  /// Customs classification and GST rate in basis points (500 = 5%). Null until known:
+  /// "not yet classified" is a real state, never a sentinel zero.
+  hsnCode      String?  @map("hsn_code")
+  taxRateBp    Int?     @map("tax_rate_bp")
+  /// Set on a variant generated from a style (InventoryItemTemplate). `variantKey` is the
+  /// ordered value codes joined with "|", unique per template, so a combination exists once.
+  templateId   String?  @map("template_id") @db.Uuid
+  variantKey   String?  @map("variant_key")
 
   tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   itemGroup         InventoryItemGroup?      @relation(fields: [itemGroupId], references: [id], onDelete: SetNull)
+  template          InventoryItemTemplate?   @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  variantValues     InventoryItemVariantValue[]
   balances          InventoryStockBalance[]
   purchaseOrderLines InventoryPurchaseOrderLine[]
   stockRequests      InventoryStockRequest[]
@@ -4769,7 +4792,138 @@ model InventoryItem {
 
   @@unique([tenantId, sku])
   @@unique([tenantId, id], name: "inventory_item_tenant_scoped_id")
+  @@unique([templateId, variantKey])
+  @@index([tenantId, templateId])
   @@map("inventory_item")
+}
+
+/// A tenant-wide dimension a product can vary by: colour, size, fit, ... The tenant owns
+/// the list; the capability owns only the closed set of `kind`s (ATTRIBUTE_KINDS) that
+/// decide how the screens present it (swatch, ordered run). Retired, never deleted: a
+/// generated variant keeps pointing at the value it was made from.
+model InventoryAttribute {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  key       String
+  label     String
+  kind      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  tenant Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  values InventoryAttributeValue[]
+  axes   InventoryTemplateAxis[]
+  variantValues InventoryItemVariantValue[]
+
+  @@unique([tenantId, key])
+  @@map("inventory_attribute")
+}
+
+model InventoryAttributeValue {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  attributeId String   @map("attribute_id") @db.Uuid
+  /// Short stable code used in SKUs ("NVY", "XL"). Never reused for another meaning.
+  code        String
+  label       String
+  /// Position within the attribute: a size run reads S, M, L, XL in this order.
+  sortOrder   Int      @default(0) @map("sort_order")
+  swatchHex   String?  @map("swatch_hex")
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int      @default(1)
+
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  attribute InventoryAttribute @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  axisValues    InventoryTemplateAxisValue[]
+  variantValues InventoryItemVariantValue[]
+
+  @@unique([attributeId, code])
+  @@index([tenantId, attributeId])
+  @@map("inventory_attribute_value")
+}
+
+/// A style: one product that comes in combinations of attribute values. Variants are
+/// ordinary InventoryItems (stock, BOMs and orders need no new concept); the template is
+/// the master they were generated from. Archived, never deleted.
+model InventoryItemTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  code        String
+  name        String
+  itemGroupId String?  @map("item_group_id") @db.Uuid
+  unitLabel   String   @default("pcs") @map("unit_label")
+  hsnCode     String?  @map("hsn_code")
+  taxRateBp   Int?     @map("tax_rate_bp")
+  season      String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int      @default(1)
+  customFields Json    @default("{}") @map("custom_fields")
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  itemGroup InventoryItemGroup?     @relation(fields: [itemGroupId], references: [id], onDelete: SetNull)
+  axes      InventoryTemplateAxis[]
+  items     InventoryItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, active])
+  @@map("inventory_item_template")
+}
+
+/// One dimension of a style, in order. The order fixes the SKU suffix and the variant key.
+model InventoryTemplateAxis {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  templateId  String @map("template_id") @db.Uuid
+  attributeId String @map("attribute_id") @db.Uuid
+  sequence    Int
+
+  tenant    Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template  InventoryItemTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  attribute InventoryAttribute    @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  values    InventoryTemplateAxisValue[]
+
+  @@unique([templateId, sequence])
+  @@unique([templateId, attributeId])
+  @@map("inventory_template_axis")
+}
+
+/// The values a style is actually offered in (a style need not come in every colour).
+model InventoryTemplateAxisValue {
+  id       String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  axisId   String @map("axis_id") @db.Uuid
+  valueId  String @map("value_id") @db.Uuid
+
+  tenant Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  axis   InventoryTemplateAxis   @relation(fields: [axisId], references: [id], onDelete: Cascade)
+  value  InventoryAttributeValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@unique([axisId, valueId])
+  @@map("inventory_template_axis_value")
+}
+
+/// Which value of which attribute a generated variant carries. Queryable ("all navy").
+model InventoryItemVariantValue {
+  id          String @id @default(uuid()) @db.Uuid
+  tenantId    String @map("tenant_id") @db.Uuid
+  itemId      String @map("item_id") @db.Uuid
+  attributeId String @map("attribute_id") @db.Uuid
+  valueId     String @map("value_id") @db.Uuid
+
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  item      InventoryItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  attribute InventoryAttribute      @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+  value     InventoryAttributeValue @relation(fields: [valueId], references: [id], onDelete: Restrict)
+
+  @@unique([itemId, attributeId])
+  @@index([tenantId, valueId])
+  @@map("inventory_item_variant_value")
 }
 
 /// Current on-hand quantity per item per location. Only ever changed
@@ -7468,4 +7622,172 @@ model RelationshipFollowUp {
   @@index([tenantId, personId])
   @@index([tenantId, opportunityId])
   @@map("relationship_follow_up")
+}
+
+/// ============================================================================
+/// Capability: piecework (Stylified, Garment Lot and Karigar PRD).
+///
+/// Lot-based, piece-rate production: pieces are issued to a worker (karigar) at a stage and received back,
+/// and the worker is paid per piece. Generic on purpose: garments are the first client, jewellery karigars
+/// and embroidery job-work have the same shape.
+///
+/// Two ledgers carry every fact, and both are APPEND-ONLY (a database trigger refuses UPDATE and DELETE):
+///   - PieceworkEntry: pieces issued or received. A mistake is corrected by a reversal row, never an edit.
+///   - PieceworkPayment: an advance or a payment to a worker, corrected the same way.
+/// Everything a screen shows (pending, current stage, days in stage, wages, balance due) is DERIVED from
+/// these rows and never stored, so no cached number can drift from the ledger.
+/// Money is integer minor units (paise).
+/// ============================================================================
+
+/// A stage of the work chain, in order. Tenant data, never an enum (CLAUDE.md forbidden pattern 2). A lot is
+/// "ready" when its pieces have been received at the LAST stage; ready is derived, not a stage row.
+model PieceworkStage {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  /// Stable machine key (stitching), unique per tenant. The label is presentation.
+  stageKey  String   @map("stage_key")
+  label     String
+  sequence  Int
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rates   PieceworkWorkerRate[]
+  entries PieceworkEntry[]
+
+  @@unique([tenantId, stageKey])
+  @@unique([tenantId, sequence])
+  @@map("piecework_stage")
+}
+
+/// One batch of cloth cut and made into garments together, under one number. The number comes from a gapless
+/// per-tenant series and is never reused, even if the lot is cancelled.
+model PieceworkLot {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  /// LOT-0001. Unique per tenant.
+  number       String
+  sequenceNo   Int       @map("sequence_no")
+  /// Design name or code, as the business writes it.
+  design       String
+  totalPieces  Int       @map("total_pieces")
+  /// Pieces per bundle, snapshotted so a later change never recounts an old lot.
+  bundleSize   Int       @default(20) @map("bundle_size")
+  note         String?
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @map("cancel_reason")
+  createdById  String    @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  version      Int       @default(1)
+  customFields Json      @default("{}") @map("custom_fields")
+
+  tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entries PieceworkEntry[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, sequenceNo])
+  @@index([tenantId, cancelledAt])
+  @@map("piecework_lot")
+}
+
+/// A karigar: a worker paid per piece. No login. Deactivated, never deleted: the ledger refers to them forever.
+model PieceworkWorker {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  name      String
+  mobile    String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  version   Int      @default(1)
+
+  tenant   Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rates    PieceworkWorkerRate[]
+  entries  PieceworkEntry[]
+  payments PieceworkPayment[]
+
+  @@unique([tenantId, name])
+  @@map("piecework_worker")
+}
+
+/// The rate per piece a worker earns for the work of one stage, from a date. A change is a NEW row, never an
+/// edit. The rate in force on an entry's date is snapshotted onto that entry, so history never moves.
+model PieceworkWorkerRate {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  workerId      String   @map("worker_id") @db.Uuid
+  stageId       String   @map("stage_id") @db.Uuid
+  /// Paise per piece. Zero is allowed (unpaid in-house work) and is a decision, not a gap.
+  rateMinor     Int      @map("rate_minor")
+  effectiveFrom DateTime @map("effective_from") @db.Date
+  createdById   String   @map("created_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  worker PieceworkWorker @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  stage  PieceworkStage  @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@unique([workerId, stageId, effectiveFrom])
+  @@index([tenantId, workerId])
+  @@map("piecework_worker_rate")
+}
+
+/// APPEND-ONLY. One fact: pieces of a lot were issued to, or received back from, a worker at a stage.
+/// `reversesId` marks a reversal of an earlier entry (same kind, same pieces, counted negative). An entry is
+/// reversed at most once. `rateMinor` is the worker's rate when a RECEIVE was recorded; wages are
+/// pieces x rateMinor, derived. `entryDate` is the business day the work happened (may be back-dated);
+/// `createdAt` is when the munshi typed it.
+model PieceworkEntry {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  lotId       String   @map("lot_id") @db.Uuid
+  stageId     String   @map("stage_id") @db.Uuid
+  workerId    String   @map("worker_id") @db.Uuid
+  /// issue | receive
+  kind        String
+  pieces      Int
+  rateMinor   Int?     @map("rate_minor")
+  reversesId  String?  @unique @map("reverses_id") @db.Uuid
+  entryDate   DateTime @map("entry_date") @db.Date
+  note        String?
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot      PieceworkLot    @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  stage    PieceworkStage  @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  worker   PieceworkWorker @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  reverses PieceworkEntry? @relation("PieceworkEntryReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkEntry? @relation("PieceworkEntryReversal")
+
+  @@index([tenantId, lotId, stageId])
+  @@index([tenantId, workerId])
+  @@map("piecework_entry")
+}
+
+/// APPEND-ONLY. An advance given to, or a payment made to, a worker. Corrected by a reversal row.
+/// Balance due = wages earned - advances - payments (derived).
+model PieceworkPayment {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  workerId    String   @map("worker_id") @db.Uuid
+  /// advance | payment
+  kind        String
+  amountMinor Int      @map("amount_minor")
+  reversesId  String?  @unique @map("reverses_id") @db.Uuid
+  paidOn      DateTime @map("paid_on") @db.Date
+  note        String?
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  worker   PieceworkWorker   @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  reverses PieceworkPayment? @relation("PieceworkPaymentReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkPayment? @relation("PieceworkPaymentReversal")
+
+  @@index([tenantId, workerId])
+  @@map("piecework_payment")
 }

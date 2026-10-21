@@ -34,6 +34,7 @@ export default defineConfig({
       "src/lib/leave-calendar.test.ts",
       "src/lib/menu-availability.test.ts",
       "src/lib/export-formats.test.ts",
+      "src/server/capabilities/piecework/ledger.test.ts",
       "src/lib/labour-cost.test.ts",
       "src/lib/settlement-match.test.ts",
       "src/test/deploy-env-mode.test.ts",

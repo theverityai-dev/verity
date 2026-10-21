@@ -38,6 +38,8 @@ import { MOVEMENT_KINDS } from "./kinds";
 import { applyMovement } from "./ledger";
 import { ENTITY_INVENTORY_PURCHASE_ORDER, registerProcurement } from "./procurement";
 export * from "./procurement";
+import { ENTITY_INVENTORY_TEMPLATE, registerStyles } from "./styles";
+export * from "./styles";
 export type MovementKind = (typeof MOVEMENT_KINDS)[number];
 
 /* ============================== item groups ================================ */
@@ -735,6 +737,15 @@ export function registerInventoryCapability(): void {
         requiresEntity: ENTITY_INVENTORY_PURCHASE_ORDER,
         shells: ["platform", "operations"],
       },
+      {
+        href: "/styles",
+        label: "Styles",
+        group: "Inventory",
+        order: 33,
+        icon: "tag",
+        requiresEntity: ENTITY_INVENTORY_TEMPLATE,
+        shells: ["platform", "operations"],
+      },
     ],
   });
   registerCommand(createItemGroup);
@@ -749,6 +760,7 @@ export function registerInventoryCapability(): void {
   registerQuery(foodCostVariance);
   registerCommand(recordWastage);
   registerProcurement();
+  registerStyles();
   registerQuery(listItems);
   registerQuery(stockOnHand);
   registerQuery(stockLedger);
