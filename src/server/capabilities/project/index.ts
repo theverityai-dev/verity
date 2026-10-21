@@ -75,6 +75,9 @@ export * from "./work";
 export * from "./billing";
 export { jobBilling, jobCosting, jobDetail, listJobs, summaryData, taskProgress } from "./reads";
 export { jobForOrder, type OrderJob } from "./order-link";
+export { jobForOpportunity, openJobFromOpportunity } from "./opportunity-link";
+import { jobForOpportunity, openJobFromOpportunity } from "./opportunity-link";
+import { registerQuery } from "@/server/platform/query";
 
 /**
  * Where a person who can read jobs lands. The generic Overview is platform vocabulary, so a
@@ -146,7 +149,10 @@ export function registerProjectCapability(): void {
     voidInvoice,
     recordReceipt,
     voidReceipt,
+    openJobFromOpportunity,
   ]) {
     registerCommand(command as never);
   }
+  // Task 128: the job a won CRM opportunity was opened into. Inert for a tenant without the CRM.
+  registerQuery(jobForOpportunity as never);
 }

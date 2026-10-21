@@ -18,7 +18,7 @@ import { installCapabilities } from "../src/server/capabilities/registry";
 import { activateCapability, invalidateCapabilityCache } from "../src/server/platform/capability";
 import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import { executeQuery } from "../src/server/platform/query";
-import { ENTITY_SAVED_VIEW, saveView } from "../src/server/platform/views";
+import { ENTITY_CUSTOM_FIELD, ENTITY_SAVED_VIEW, defineCustomField, listCustomFields, saveView } from "../src/server/platform/views";
 import {
   ENTITY_COMPANY,
   ENTITY_FOLLOW_UP,
@@ -38,6 +38,8 @@ import {
   logInteraction,
   moveOpportunity,
   setupPipeline,
+  setStagePlaybook,
+  updateOpportunity,
 } from "../src/server/capabilities/relationship";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
@@ -93,6 +95,7 @@ async function main() {
       [ENTITY_INTERACTION, ["Read", "Create", "Edit"]],
       [ENTITY_FOLLOW_UP, ["Read", "Create", "Edit"]],
       [ENTITY_SAVED_VIEW, ["Read", "Create", "Edit"]],
+      [ENTITY_CUSTOM_FIELD, ["Edit"]],
     ];
     for (const [entity, verbs] of grants) {
       for (const verb of verbs) {
@@ -104,7 +107,8 @@ async function main() {
   invalidateCapabilityCache();
 
   if ((await withTenant(tenantId, (tx) => tx.relationshipCompany.count())) > 0) {
-    console.log("The demo CRM already has companies; nothing added (the capability is active for the demo tenant).");
+    console.log("The demo CRM already has companies; adding only what is new since (tender fields, playbook).");
+    await addStage3(owner, tenantId);
     return;
   }
 
@@ -232,6 +236,37 @@ async function main() {
   });
 
   console.log(`CRM demo: ${Object.keys(companies).length} companies, ${Object.keys(people).length} people, ${opps.length} opportunities.`);
+  await addStage3(owner, tenantId);
+}
+
+/**
+ * Task 128 stages 3-4 for the demo: DSEW's tender fields on opportunities, filled in on the tender deals, and a
+ * playbook on the technical quote stage. Idempotent: a field that exists is left alone.
+ */
+async function addStage3(owner: ActorContext, tenantId: string) {
+  const existing = new Set((await executeQuery(owner, listCustomFields, { entityKey: ENTITY_OPPORTUNITY })).map((f) => f.name));
+  if (existing.has("EMD status")) return;
+  if (!existing.has("Tender number")) await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Tender number", type: "String" });
+  if (!existing.has("EMD amount")) await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD amount", type: "Number" });
+  await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD status", type: "Select", options: ["Paid", "Exempt", "Pending"] });
+  const tenders = await withTenant(tenantId, (tx) =>
+    tx.relationshipOpportunity.findMany({ where: { source: { in: ["tender", "rfq"] } }, select: { id: true, number: true, amount: true } }),
+  );
+  for (const t of tenders) {
+    await executeCommand(owner, updateOpportunity, {
+      id: t.id,
+      patch: { customFields: { "Tender number": `DEMO/2026/${100 + t.number}`, "EMD amount": Math.round(Number(t.amount ?? 0) * 0.02), "EMD status": t.number % 2 ? "Paid" : "Pending" } },
+    });
+  }
+  const stages = await executeQuery(owner, listStages, {});
+  const quote = stages.find((s) => s.key === "quote");
+  if (quote) {
+    await executeCommand(owner, setStagePlaybook, {
+      id: quote.id,
+      playbook: { followUps: [{ title: "Send the technical offer and GA drawing", dueInDays: 2 }, { title: "Call to confirm they received the offer", dueInDays: 5 }], notifyOwner: true },
+    });
+  }
+  console.log(`CRM demo: tender fields on ${tenders.length} deals, playbook on Technical quote.`);
 }
 
 main()

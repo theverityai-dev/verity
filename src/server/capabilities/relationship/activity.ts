@@ -6,7 +6,7 @@ import { ConflictError } from "@/server/platform/entity";
 import { recordActivity } from "@/server/platform/audit";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
-import { getRecordObject, memberDirectory, type FieldOption, type RecordObject } from "@/server/platform/views";
+import { customFieldValues, getRecordObject, memberDirectory, withCustomFields, type FieldOption, type RecordObject } from "@/server/platform/views";
 import {
   ENTITY_COMPANY,
   ENTITY_FOLLOW_UP,
@@ -24,7 +24,7 @@ import {
   personName,
   type InteractionKind,
 } from "./shared";
-import { OPPORTUNITY_INCLUDE, decimal, instant, opportunityRow, userLabels, userRef } from "./records";
+import { OPPORTUNITY_INCLUDE, decimal, instant, opportunityRow, userLabels, userRef, withMerged } from "./records";
 
 /**
  * What happens around a record: notes, logged interactions and follow-ups, and the timeline that shows them with
@@ -360,12 +360,13 @@ export const timeline: QueryDefinition<{ kind: "company" | "person" | "opportuni
   handler: async (ctx, input) => {
     const limit = input.limit ?? 200;
     const column = input.kind === "company" ? "companyId" : input.kind === "person" ? "personId" : "opportunityId";
-    const itemWhere = { [column]: input.id, archivedAt: null };
+    const mergedIds = input.kind === "opportunity" ? [input.id] : await withMerged(ctx.tx, input.kind, input.id);
+    const itemWhere = { [column]: { in: mergedIds }, archivedAt: null };
 
     // Whose field changes belong here: the record itself, and for a company also its people and deals.
     const entities: Array<{ entityKey: string; entityId: { in: string[] } }> = [];
     const selfKey = input.kind === "company" ? ENTITY_COMPANY : input.kind === "person" ? ENTITY_PERSON : ENTITY_OPPORTUNITY;
-    entities.push({ entityKey: selfKey, entityId: { in: [input.id] } });
+    entities.push({ entityKey: selfKey, entityId: { in: mergedIds } });
     if (input.kind === "company") {
       const [people, opps] = await Promise.all([
         ctx.tx.relationshipPerson.findMany({ where: { companyId: input.id }, select: { id: true } }),
@@ -516,7 +517,7 @@ export const companyDetail: QueryDefinition<{ id: string }, Record<string, unkno
   description: "One company with its people, opportunities and totals.",
   input: z.object({ id: z.string().uuid() }),
   handler: async (ctx, input) => {
-    const c = await ctx.tx.relationshipCompany.findUnique({ where: { id: input.id } });
+    const c = await ctx.tx.relationshipCompany.findUnique({ where: { id: input.id }, include: { mergedInto: { select: { id: true, name: true } } } });
     if (!c) return null;
     const [people, opps, labels, openFollowUps] = await Promise.all([
       ctx.tx.relationshipPerson.findMany({ where: { companyId: c.id, archivedAt: null }, orderBy: [{ givenName: "asc" }] }),
@@ -532,6 +533,8 @@ export const companyDetail: QueryDefinition<{ id: string }, Record<string, unkno
       name: c.name, domain: c.domain, industry: c.industry, sizeBand: c.sizeBand, phone: c.phone, email: c.email, taxId: c.taxId,
       addressLine: c.addressLine, city: c.city, region: c.region, country: c.country, postalCode: c.postalCode, source: c.source,
       owner: userRef(labels, c.ownerUserId), createdAt: instant(c.createdAt), updatedAt: instant(c.updatedAt),
+      ...customFieldValues(c.customFields),
+      mergedInto: c.mergedInto ? { id: c.mergedInto.id, label: c.mergedInto.name } : null,
       people: people.map((p) => ({ id: p.id, name: personName(p), jobTitle: p.jobTitle, email: p.emails[0] ?? null, phone: p.phones[0] ?? null })),
       opportunities: opps.map((o) => opportunityRow(o, labels)),
       stats: { openCount: open.length, openValue: sum(open), wonCount: won.length, wonValue: sum(won), openFollowUps },
@@ -545,7 +548,7 @@ export const personDetail: QueryDefinition<{ id: string }, Record<string, unknow
   description: "One person with their company and the opportunities they are the contact for.",
   input: z.object({ id: z.string().uuid() }),
   handler: async (ctx, input) => {
-    const p = await ctx.tx.relationshipPerson.findUnique({ where: { id: input.id }, include: { company: true } });
+    const p = await ctx.tx.relationshipPerson.findUnique({ where: { id: input.id }, include: { company: true, mergedInto: { select: { id: true, givenName: true, familyName: true } } } });
     if (!p) return null;
     const [opps, labels, colleagues] = await Promise.all([
       ctx.tx.relationshipOpportunity.findMany({ where: { contactId: p.id, archivedAt: null }, include: OPPORTUNITY_INCLUDE, orderBy: { createdAt: "desc" } }),
@@ -560,6 +563,8 @@ export const personDetail: QueryDefinition<{ id: string }, Record<string, unknow
       emails: p.emails, phones: p.phones, city: p.city,
       company: p.company ? { id: p.company.id, label: p.company.name } : null,
       owner: userRef(labels, p.ownerUserId), createdAt: instant(p.createdAt), updatedAt: instant(p.updatedAt),
+      ...customFieldValues(p.customFields),
+      mergedInto: p.mergedInto ? { id: p.mergedInto.id, label: personName(p.mergedInto) } : null,
       opportunities: opps.map((o) => opportunityRow(o, labels)),
       colleagues: colleagues.map((c) => ({ id: c.id, name: personName(c), jobTitle: c.jobTitle })),
     };
@@ -693,10 +698,117 @@ export const pipelineSummary: QueryDefinition<Record<string, never>, PipelineSum
   },
 };
 
+export type PipelineInsights = {
+  funnel: Array<{ label: string; entered: number }>;
+  lostReasons: Array<{ reason: string; count: number; value: number }>;
+  months: Array<{ month: string; wonCount: number; wonValue: number; lostCount: number }>;
+  forecast: Array<{ month: string; value: number; weighted: number; count: number }>;
+  ageing: Array<{ bucket: string; count: number; value: number }>;
+  avgDaysToWin: number | null;
+};
+
+const monthKey = (d: Date) => d.toISOString().slice(0, 7);
+
+/**
+ * How the pipeline is really doing (Task 128 stage 4). Every figure comes from the deals and their logged stage
+ * changes: a funnel of how many deals ever reached each open stage, why deals were lost, won and lost by month, the
+ * open value expected to close in each coming month (raw and weighted by stage probability), and how old open deals are.
+ */
+export const pipelineInsights: QueryDefinition<Record<string, never>, PipelineInsights> = {
+  key: "verity.relationship.pipeline_insights",
+  entity: ENTITY_OPPORTUNITY,
+  description: "Funnel, lost reasons, won and lost by month, forecast by expected close, and ageing of open deals.",
+  input: z.object({}),
+  handler: async (ctx) => {
+    const now = new Date();
+    const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 5, 1));
+    const [stages, opps, moves] = await Promise.all([
+      ctx.tx.relationshipStage.findMany({ orderBy: { position: "asc" } }),
+      ctx.tx.relationshipOpportunity.findMany({ where: { archivedAt: null }, include: { stage: true } }),
+      ctx.tx.activity.findMany({ where: { entityKey: ENTITY_OPPORTUNITY, fieldChanged: "stage" }, select: { entityId: true, oldValue: true, newValue: true } }),
+    ]);
+    const value = (o: { amount: unknown }) => decimal(o.amount as never) ?? 0;
+
+    // Funnel: a deal "entered" every stage it was ever in, the first one included.
+    const reached = new Map<string, Set<string>>();
+    const reach = (id: string, label: string | null) => {
+      if (!label) return;
+      const s = reached.get(label) ?? new Set<string>();
+      s.add(id);
+      reached.set(label, s);
+    };
+    const live = new Set(opps.map((o) => o.id));
+    for (const m of moves) if (live.has(m.entityId)) { reach(m.entityId, m.oldValue); reach(m.entityId, m.newValue); }
+    for (const o of opps) reach(o.id, o.stage.label);
+    const funnel = stages.filter((s) => s.category !== "Cancelled").map((s) => ({ label: s.label, entered: reached.get(s.label)?.size ?? 0 }));
+
+    const closedSince = opps.filter((o) => o.closedAt && o.closedAt >= since);
+    const lost = closedSince.filter((o) => o.stage.category === "Cancelled");
+    const byReason = new Map<string, { count: number; value: number }>();
+    for (const o of lost) {
+      const r = LOST_REASONS.find((x) => x.value === o.lostReason)?.label ?? "Not given";
+      const cur = byReason.get(r) ?? { count: 0, value: 0 };
+      byReason.set(r, { count: cur.count + 1, value: cur.value + value(o) });
+    }
+
+    const months: PipelineInsights["months"] = [];
+    for (let i = 5; i >= 0; i--) {
+      const key = monthKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)));
+      const inMonth = closedSince.filter((o) => monthKey(o.closedAt!) === key);
+      const won = inMonth.filter((o) => o.stage.category === "Completed");
+      months.push({ month: key, wonCount: won.length, wonValue: won.reduce((s, o) => s + value(o), 0), lostCount: inMonth.filter((o) => o.stage.category === "Cancelled").length });
+    }
+
+    const open = opps.filter((o) => o.stage.category === "Active");
+    const forecast: PipelineInsights["forecast"] = [];
+    for (let i = 0; i < 6; i++) {
+      const key = monthKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i, 1)));
+      // Deals already past their expected close count in the current month: they are still expected, just late.
+      const due = open.filter((o) => o.expectedCloseOn && (i === 0 ? monthKey(o.expectedCloseOn) <= key : monthKey(o.expectedCloseOn) === key));
+      forecast.push({
+        month: key,
+        count: due.length,
+        value: due.reduce((s, o) => s + value(o), 0),
+        weighted: Math.round(due.reduce((s, o) => s + (value(o) * o.stage.probability) / 100, 0)),
+      });
+    }
+
+    const buckets = [
+      { bucket: "Under 30 days", max: 30 },
+      { bucket: "30 to 60 days", max: 60 },
+      { bucket: "60 to 90 days", max: 90 },
+      { bucket: "Over 90 days", max: Infinity },
+    ];
+    const ageing = buckets.map((b, i) => {
+      const min = i === 0 ? 0 : buckets[i - 1]!.max;
+      const inBucket = open.filter((o) => {
+        const days = (now.getTime() - o.createdAt.getTime()) / 86_400_000;
+        return days >= min && days < b.max;
+      });
+      return { bucket: b.bucket, count: inBucket.length, value: inBucket.reduce((s, o) => s + value(o), 0) };
+    });
+
+    const wonAll = opps.filter((o) => o.stage.category === "Completed" && o.closedAt);
+    const avgDaysToWin = wonAll.length
+      ? Math.round(wonAll.reduce((s, o) => s + (o.closedAt!.getTime() - o.createdAt.getTime()) / 86_400_000, 0) / wonAll.length)
+      : null;
+
+    return {
+      funnel,
+      lostReasons: [...byReason.entries()].map(([reason, v]) => ({ reason, ...v })).sort((a, b) => b.count - a.count),
+      months,
+      forecast,
+      ageing,
+      avgDaysToWin,
+    };
+  },
+};
+
 export type DescribedObject = RecordObject & {
   canCreate: boolean;
   canEdit: boolean;
   canShareViews: boolean;
+  canDefineFields: boolean;
   members: Array<{ id: string; label: string }>;
 };
 
@@ -712,15 +824,17 @@ export const describeObject: QueryDefinition<{ objectKey: string }, DescribedObj
   description: "The fields, options and permissions a CRM list screen is drawn from.",
   input: z.object({ objectKey: z.enum([ENTITY_COMPANY, ENTITY_PERSON, ENTITY_OPPORTUNITY]) }),
   handler: async (ctx: ReadContext, input) => {
-    const object = getRecordObject(input.objectKey);
-    if (!object) throw new ValidationError("E_VALIDATION: no such record object");
+    const base = getRecordObject(input.objectKey);
+    if (!base) throw new ValidationError("E_VALIDATION: no such record object");
+    const object = await withCustomFields(ctx.tx, base);
     const roleId = ctx.actor.roleId ?? null;
-    const [members, stages, canCreate, canEdit, canShareViews] = await Promise.all([
+    const [members, stages, canCreate, canEdit, canShareViews, canDefineFields] = await Promise.all([
       memberDirectory(ctx.tx),
       input.objectKey === ENTITY_OPPORTUNITY ? ctx.tx.relationshipStage.findMany({ orderBy: { position: "asc" } }) : Promise.resolve([]),
       hasTenantPermission(ctx.tx, roleId, "Create", object.entity),
       hasTenantPermission(ctx.tx, roleId, "Edit", object.entity),
       hasTenantPermission(ctx.tx, roleId, "Edit", "verity.platform.saved_view"),
+      hasTenantPermission(ctx.tx, roleId, "Edit", "verity.platform.custom_field"),
     ]);
     const fields = object.fields.map((f) =>
       f.key === "stage"
@@ -735,6 +849,7 @@ export const describeObject: QueryDefinition<{ objectKey: string }, DescribedObj
       canCreate,
       canEdit,
       canShareViews,
+      canDefineFields,
       members: members.map((m) => ({ id: m.userId, label: m.name })),
     };
   },

@@ -4,7 +4,7 @@ import Link from "next/link";
 import Papa from "papaparse";
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { runCommand } from "@/server/actions/platform";
+import { runCommand, runQuery } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Avatar } from "@/components/ui/Avatar";
@@ -14,7 +14,7 @@ import { FormModal, formOptional, formText, useCommand } from "@/components/ui/C
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { FieldDisplay, FieldEditor, Floating, OptionPill, ReasonSheet, RelationOptions, type ReasonRule } from "@/components/records/RecordView";
-import { dayLabel, daysFromToday, moneyShort, relativeDay, relativeTime, type Described, type RecordField, type Ref, type Row } from "@/components/records/model";
+import { dayLabel, daysFromToday, moneyShort, patchFor, relativeDay, relativeTime, type Described, type RecordField, type Ref, type Row } from "@/components/records/model";
 
 /**
  * The CRM's own parts around the shared record views (Task 128): create sheets, import, pipeline settings, the
@@ -97,6 +97,7 @@ export function NewCompanyButton({ described, compact }: { described: Described;
         taxId: formOptional(form, "taxId"),
         owner: formText(form, "owner") || null,
         allowDuplicate,
+        customFields: customFieldsFrom(form),
       },
       (data) => { setOpen(false); clear(); router.push(`/crm/companies/${data.id}`); },
     );
@@ -127,6 +128,7 @@ export function NewCompanyButton({ described, compact }: { described: Described;
           <Field label="GSTIN / tax ID" htmlFor="co-tax"><Input id="co-tax" name="taxId" autoComplete="off" /></Field>
         </div>
         <Field label="Account owner" htmlFor="co-owner"><MemberSelect id="co-owner" name="owner" members={described.members} /></Field>
+        <CustomFieldInputs described={described} />
         {duplicate && last && (
           <Button type="button" variant="secondary" onClick={() => submit(last, true)}>Save anyway</Button>
         )}
@@ -154,6 +156,7 @@ export function NewPersonButton({ described, company, compact }: { described: De
         ...(picked ? { company: picked.id } : {}),
         owner: formText(form, "owner") || null,
         allowDuplicate,
+        customFields: customFieldsFrom(form),
       },
       (data) => { setOpen(false); clear(); if (company) router.refresh(); else router.push(`/crm/people/${data.id}`); },
     );
@@ -187,6 +190,7 @@ export function NewPersonButton({ described, company, compact }: { described: De
         <Field label="Emails" htmlFor="pe-emails" hint="Separate several with commas; the first is the main one."><Input id="pe-emails" name="emails" autoComplete="off" inputMode="email" /></Field>
         <Field label="Phones" htmlFor="pe-phones" hint="Separate several with commas."><Input id="pe-phones" name="phones" type="tel" autoComplete="off" /></Field>
         <Field label="Owner" htmlFor="pe-owner"><MemberSelect id="pe-owner" name="owner" members={described.members} /></Field>
+        <CustomFieldInputs described={described} />
         {duplicate && last && <Button type="button" variant="secondary" onClick={() => submit(last, true)}>Save anyway</Button>}
       </FormModal>
     </>
@@ -238,6 +242,7 @@ export function NewOpportunityButton({
               source: formText(form, "source") || null,
               ...(formText(form, "stage") ? { stage: formText(form, "stage") } : {}),
               owner: formText(form, "owner") || null,
+              customFields: customFieldsFrom(form),
             },
             (data) => { setOpen(false); clear(); if (company || contact) router.refresh(); else router.push(`/crm/opportunities/${data.id}`); },
           )
@@ -273,6 +278,7 @@ export function NewOpportunityButton({
           )}
           <Field label="Owner" htmlFor="op-owner"><MemberSelect id="op-owner" name="owner" members={described.members} /></Field>
         </div>
+        <CustomFieldInputs described={described} />
       </FormModal>
     </>
   );
@@ -455,12 +461,13 @@ export function SetupPipelineButton() {
 
 /* ================================ pipeline settings ================================ */
 
-type StageRow = { id: string; label: string; category: string; probability: number; active: boolean };
+type StageRow = { id: string; label: string; category: string; probability: number; active: boolean; playbook: PlaybookStage["playbook"] };
 
 export function PipelineSettingsButton({ stages }: { stages: StageRow[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [list, setList] = useState(stages);
+  const [editing, setEditing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const run = (key: string, input: unknown) =>
@@ -515,6 +522,12 @@ export function PipelineSettingsButton({ stages }: { stages: StageRow[] }) {
               <button type="button" onClick={() => run("verity.relationship.save_stage", { id: s.id, label: s.label, category: s.category, probability: s.probability, active: !s.active })} className="min-h-9 rounded-[8px] px-2 text-[13px] font-medium text-accent-ink hover:bg-accent-subtle">
                 {s.active ? "Retire" : "Restore"}
               </button>
+              {s.category !== "Cancelled" && (
+                <button type="button" aria-expanded={editing === s.id} onClick={() => setEditing(editing === s.id ? null : s.id)} className="min-h-9 rounded-[8px] px-2 text-[13px] font-medium text-accent-ink hover:bg-accent-subtle">
+                  Playbook{s.playbook.followUps.length ? ` (${s.playbook.followUps.length})` : ""}
+                </button>
+              )}
+              {editing === s.id && <div className="basis-full"><PlaybookEditor stage={s} onSaved={() => router.refresh()} /></div>}
             </li>
           ))}
         </ol>
@@ -557,7 +570,7 @@ export function RecordFields({ described, row, fieldKeys }: { described: Describ
   const commit = async (field: RecordField, value: unknown) => {
     setEditing(null);
     if (!field.editCommand) return;
-    const result = await runCommand<{ version: number }>(field.editCommand, { id: local.id, version: local.version, patch: { [field.key]: value } });
+    const result = await runCommand<{ version: number }>(field.editCommand, { id: local.id, version: local.version, patch: patchFor(field, value) });
     if (!result.ok) return setError(clean(result.message));
     setError(null);
     setLocal((l) => ({ ...l, version: result.data.version }));
@@ -1132,6 +1145,335 @@ export function FactRow({ items }: { items: Array<{ label: string; value: ReactN
         </div>
       ))}
     </dl>
+  );
+}
+
+/* ================================ custom fields (stage 3) ================================ */
+
+type CustomFieldDef = { id: string; name: string; type: string; required: boolean; options: string[] };
+const TYPE_WORD: Record<string, string> = { String: "Text", Number: "Number", Boolean: "Yes / no", Select: "Choice", Date: "Date" };
+
+/** Inputs for a workspace's own fields inside a create sheet; their values are read back by `customFieldsFrom`. */
+export function CustomFieldInputs({ described }: { described: Described }) {
+  const custom = described.fields.filter((f) => f.custom);
+  if (!custom.length) return null;
+  return (
+    <fieldset className="m-0 grid gap-4 border-0 border-t border-[var(--color-separator)] p-0 pt-4 sm:grid-cols-2">
+      <legend className="mb-1 px-0 text-[13px] font-semibold uppercase tracking-[0.02em] text-text-secondary">Your fields</legend>
+      {custom.map((f) => {
+        const id = `cf-${f.custom!.replace(/[^a-z0-9]+/gi, "-")}`;
+        const name = `cf:${f.custom}`;
+        return (
+          <Field key={f.key} label={f.label} htmlFor={id}>
+            {f.type === "select" ? (
+              <Select id={id} name={name} defaultValue="">
+                <option value="">Not set</option>
+                {(f.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            ) : f.type === "boolean" ? (
+              <Select id={id} name={name} defaultValue="">
+                <option value="">Not set</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </Select>
+            ) : (
+              <Input id={id} name={name} type={f.type === "date" ? "date" : "text"} inputMode={f.type === "number" ? "decimal" : undefined} />
+            )}
+          </Field>
+        );
+      })}
+    </fieldset>
+  );
+}
+
+/** The `customFields` a create command takes, from the inputs `CustomFieldInputs` drew. Empty inputs are left out. */
+export function customFieldsFrom(form: FormData): Record<string, string> | undefined {
+  const out: Record<string, string> = {};
+  for (const [k, v] of form.entries()) if (k.startsWith("cf:") && String(v).trim()) out[k.slice(3)] = String(v).trim();
+  return Object.keys(out).length ? out : undefined;
+}
+
+/** Add and retire the workspace's own fields on one kind of record. Shown to people who may define fields. */
+export function CustomFieldsButton({ described }: { described: Described }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [fields, setFields] = useState<CustomFieldDef[]>([]);
+  const [type, setType] = useState("String");
+  const [error, setError] = useState<string | null>(null);
+  const [retiring, setRetiring] = useState<CustomFieldDef | null>(null);
+  const [pending, start] = useTransition();
+  const refresh = async () => {
+    const list = await runQuery<CustomFieldDef[]>("verity.view.list_custom_fields", { entityKey: described.entity });
+    if (list.ok) setFields(list.data);
+  };
+  const run = (key: string, input: unknown, after?: () => void) =>
+    start(async () => {
+      const r = await runCommand(key, input);
+      if (!r.ok) return setError(clean(r.message));
+      setError(null);
+      after?.();
+      await refresh();
+      router.refresh();
+    });
+  if (!described.canDefineFields) return null;
+  return (
+    <>
+      <Button variant="ghost" onClick={() => { setOpen(true); start(refresh); }}>Custom fields</Button>
+      <Modal open={open} onClose={() => setOpen(false)} title={`Fields for ${described.labelPlural.toLowerCase()}`} width="lg"
+        description="Add what your business tracks that the CRM does not, such as a tender number or EMD. They appear in tables, filters and record pages."
+        footer={<Button variant="primary" onClick={() => setOpen(false)}>Done</Button>}>
+        {error && <p role="alert" className="mb-3 mt-0 rounded-[10px] bg-[var(--color-danger-subtle)] px-3.5 py-2.5 text-[15px] text-[var(--color-danger-ink)]">{error}</p>}
+        {fields.length === 0 ? (
+          <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-surface-sunken)] px-4 py-5 text-center text-[15px] text-text-secondary">No fields of your own yet.</p>
+        ) : (
+          <ul className="glass-card m-0 mb-4 list-none overflow-hidden rounded-[12px] p-0">
+            {fields.map((f) => (
+              <li key={f.id} className="flex min-h-12 items-center gap-3 border-b border-[var(--color-separator)] px-4 py-2 last:border-b-0">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[15px] font-semibold text-text">{f.name}{f.required && <span className="text-[var(--color-danger-ink)]"> *</span>}</span>
+                  <span className="block truncate text-[13px] text-text-secondary">{TYPE_WORD[f.type] ?? f.type}{f.options.length ? `: ${f.options.join(", ")}` : ""}</span>
+                </span>
+                <Button variant="danger" size="sm" disabled={pending} onClick={() => setRetiring(f)}>Remove</Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          className="grid gap-3 sm:grid-cols-[1fr_160px]"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = new FormData(e.currentTarget);
+            const t = String(form.get("type"));
+            const target = e.currentTarget;
+            run(
+              "verity.view.define_custom_field",
+              {
+                entityKey: described.entity,
+                name: String(form.get("name") ?? "").trim(),
+                type: t,
+                ...(t === "Select" ? { options: String(form.get("options") ?? "").split(",").map((s) => s.trim()).filter(Boolean) } : {}),
+              },
+              () => target.reset(),
+            );
+          }}
+        >
+          <Field label="New field" htmlFor="cfd-name" required><Input id="cfd-name" name="name" required maxLength={60} placeholder="Tender number" /></Field>
+          <Field label="Kind" htmlFor="cfd-type">
+            <Select id="cfd-type" name="type" value={type} onChange={(e) => setType(e.target.value)}>
+              {Object.entries(TYPE_WORD).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </Select>
+          </Field>
+          {type === "Select" && (
+            <div className="sm:col-span-2">
+              <Field label="Choices" htmlFor="cfd-options" hint="Separate with commas: Paid, Exempt, Pending"><Input id="cfd-options" name="options" /></Field>
+            </div>
+          )}
+          <div className="flex justify-end sm:col-span-2"><Button type="submit" variant="secondary" disabled={pending}>Add field</Button></div>
+        </form>
+      </Modal>
+      <Modal open={Boolean(retiring)} onClose={() => setRetiring(null)} title={`Remove ${retiring?.name ?? ""}?`} width="sm"
+        description="It leaves forms, tables and saved views. Values already entered stay on the records, hidden."
+        footer={<><ModalCancel onClose={() => setRetiring(null)} /><Button variant="danger" disabled={pending} onClick={() => { const f = retiring!; setRetiring(null); run("verity.view.retire_custom_field", { id: f.id }); }}>Remove field</Button></>}>
+        <span />
+      </Modal>
+    </>
+  );
+}
+
+/* ================================ duplicates (stage 3) ================================ */
+
+type DuplicateGroup = { reason: string; records: Array<{ id: string; label: string; sub: string | null; createdAt: string }> };
+
+/** Finds records entered twice and merges each group into the one chosen to keep. */
+export function DuplicatesButton({ object, described }: { object: "company" | "person"; described: Described }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [groups, setGroups] = useState<DuplicateGroup[] | null>(null);
+  const [keep, setKeep] = useState<Record<number, string>>({});
+  const [confirm, setConfirm] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const plural = object === "company" ? "companies" : "people";
+  const mergeCommand = object === "company" ? "verity.relationship.merge_companies" : "verity.relationship.merge_people";
+  const load = async () => {
+    const r = await runQuery<DuplicateGroup[]>("verity.relationship.find_duplicates", { object });
+    if (!r.ok) return setError(clean(r.message));
+    setGroups(r.data);
+    setKeep(Object.fromEntries(r.data.map((g, i) => [i, g.records[0]!.id])));
+  };
+  const merge = (i: number) =>
+    start(async () => {
+      const g = groups![i]!;
+      const survivorId = keep[i]!;
+      for (const r of g.records) {
+        if (r.id === survivorId) continue;
+        const result = await runCommand(mergeCommand, { survivorId, duplicateId: r.id });
+        if (!result.ok) return setError(clean(result.message));
+      }
+      setError(null);
+      setConfirm(null);
+      router.refresh();
+      await load();
+    });
+  if (!described.canEdit) return null;
+  return (
+    <>
+      <Button variant="ghost" onClick={() => { setOpen(true); setGroups(null); start(load); }}>Find duplicates</Button>
+      <Modal open={open} onClose={() => setOpen(false)} title={`Possible duplicate ${plural}`} width="lg"
+        description={object === "company" ? "Companies with the same name or web domain." : "People with the same email, or the same name at the same company."}
+        footer={<Button variant="primary" onClick={() => setOpen(false)}>Done</Button>}>
+        {error && <p role="alert" className="mb-3 mt-0 rounded-[10px] bg-[var(--color-danger-subtle)] px-3.5 py-2.5 text-[15px] text-[var(--color-danger-ink)]">{error}</p>}
+        {groups === null ? (
+          <p className="m-0 py-6 text-center text-[15px] text-text-secondary">Looking…</p>
+        ) : groups.length === 0 ? (
+          <div className="py-6 text-center">
+            <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-ink)]"><Icon name="check" size={24} /></div>
+            <p className="m-0 text-[17px] font-semibold text-text">No duplicates found</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {groups.map((g, i) => (
+              <section key={g.records.map((r) => r.id).join()} className="glass-card rounded-[12px]">
+                <h3 className="m-0 px-4 pb-1 pt-3 text-[15px] font-semibold text-text">{g.reason}</h3>
+                <p className="m-0 px-4 pb-2 text-[13px] text-text-secondary">Choose the one to keep. The others&apos; people, deals, notes and calls move to it, and they are archived.</p>
+                <ul className="m-0 list-none p-0">
+                  {g.records.map((r) => (
+                    <li key={r.id} className="border-t border-[var(--color-separator)]">
+                      <label className="flex min-h-12 cursor-pointer items-center gap-3 px-4 py-2">
+                        <input type="radio" name={`keep-${i}`} checked={keep[i] === r.id} onChange={() => setKeep((k) => ({ ...k, [i]: r.id }))} className="size-4 accent-[var(--color-accent)]" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[15px] text-text">{r.label}</span>
+                          <span className="block truncate text-[13px] text-text-secondary">{[r.sub, `added ${dayLabel(r.createdAt)}`].filter(Boolean).join(" · ")}</span>
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex justify-end border-t border-[var(--color-separator)] px-4 py-2.5">
+                  <Button variant="secondary" size="sm" disabled={pending} onClick={() => setConfirm(i)}>Merge {g.records.length - 1} into the one kept</Button>
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </Modal>
+      <Modal open={confirm !== null} onClose={() => setConfirm(null)} title="Merge these records?" width="sm"
+        description="This cannot be undone from the screen. Their history is kept and shows on the record you keep."
+        footer={<><ModalCancel onClose={() => setConfirm(null)} /><Button variant="danger" disabled={pending} onClick={() => confirm !== null && merge(confirm)}>{pending ? "Merging…" : "Merge"}</Button></>}>
+        <span />
+      </Modal>
+    </>
+  );
+}
+
+/** The banner on a record that was merged into another. */
+export function MergedNotice({ into, href }: { into: Ref; href: string }) {
+  return (
+    <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-draft-fill)] px-4 py-3 text-[15px] text-[var(--color-state-draft-ink)]">
+      This record was merged into <Link href={href} className="font-semibold text-accent-ink">{into.label}</Link>. Its history shows there.
+    </p>
+  );
+}
+
+/* ================================ opening a job from a won deal ================================ */
+
+export function OpenJobButton({
+  opportunityId,
+  title,
+  customers,
+  suggestedCustomerId,
+}: {
+  opportunityId: string;
+  title: string;
+  customers: Array<{ id: string; displayName: string }>;
+  suggestedCustomerId?: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const { run, pending, failure, clear } = useCommand("/crm/opportunities");
+  return (
+    <>
+      <CommandButton commands="verity.project.open_job_from_opportunity" variant="primary" onClick={() => setOpen(true)}>Open a job</CommandButton>
+      <FormModal
+        title="Open a job"
+        description="The job starts as an enquiry with this deal's name, contact and value. Quotes, tasks and production carry on there."
+        open={open}
+        onClose={() => { setOpen(false); clear(); }}
+        submitLabel="Open job"
+        pending={pending}
+        failure={failure}
+        failureTitle="Could not open the job"
+        onSubmit={(form) =>
+          run<{ id: string }>(
+            "verity.project.open_job_from_opportunity",
+            { opportunityId, customerId: formText(form, "customer"), title: formText(form, "title"), dueDate: formOptional(form, "due") },
+            (data) => { setOpen(false); router.push(`/jobs/${data.id}`); },
+          )
+        }
+      >
+        <Field label="Job title" htmlFor="oj-title" required><Input id="oj-title" name="title" defaultValue={title} required minLength={3} maxLength={200} /></Field>
+        <Field label="Customer" htmlFor="oj-customer" required hint={customers.length ? "From your customer list; the job is billed to them." : "Add the customer under Customers first."}>
+          <Select id="oj-customer" name="customer" defaultValue={suggestedCustomerId ?? customers[0]?.id ?? ""} required>
+            {customers.map((c) => <option key={c.id} value={c.id}>{c.displayName}</option>)}
+          </Select>
+        </Field>
+        <Field label="Due" htmlFor="oj-due"><Input id="oj-due" name="due" type="date" /></Field>
+      </FormModal>
+    </>
+  );
+}
+
+/* ================================ stage playbooks (stage 4) ================================ */
+
+export type PlaybookStage = { id: string; label: string; playbook: { followUps: Array<{ title: string; dueInDays: number }>; notifyOwner: boolean } };
+
+/** What happens when a deal enters a stage: follow-ups planned for its owner, and an optional notice. */
+export function PlaybookEditor({ stage, onSaved }: { stage: PlaybookStage; onSaved: () => void }) {
+  const [steps, setSteps] = useState(stage.playbook.followUps);
+  const [notify, setNotify] = useState(stage.playbook.notifyOwner);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [pending, start] = useTransition();
+  const save = () =>
+    start(async () => {
+      const r = await runCommand("verity.relationship.set_stage_playbook", { id: stage.id, playbook: { followUps: steps.filter((s) => s.title.trim()), notifyOwner: notify } });
+      if (!r.ok) return setError(clean(r.message));
+      setError(null);
+      setSaved(true);
+      onSaved();
+    });
+  const change = (next: typeof steps) => { setSaved(false); setSteps(next); };
+  return (
+    <div className="flex flex-col gap-2 rounded-[10px] bg-[var(--color-surface-sunken)] p-3">
+      <p className="m-0 text-[13px] text-text-secondary">When a deal enters <strong className="text-text">{stage.label}</strong>:</p>
+      {steps.map((s, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <input aria-label="Follow-up" value={s.title} onChange={(e) => change(steps.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))} placeholder="Send the technical offer"
+            className="h-10 min-w-0 flex-1 rounded-[10px] border-0 bg-[var(--color-surface)] px-3 text-[15px] text-text" maxLength={200} />
+          <label className="flex items-center gap-1 text-[13px] text-text-secondary">
+            due in
+            <input aria-label="Due in days" type="number" min={0} max={365} value={s.dueInDays} onChange={(e) => change(steps.map((x, j) => (j === i ? { ...x, dueInDays: Math.max(0, Math.min(365, Number(e.target.value) || 0)) } : x)))}
+              className="tabular h-10 w-16 rounded-[10px] border-0 bg-[var(--color-surface)] px-2 text-right text-[15px] text-text" />
+            days
+          </label>
+          <button type="button" aria-label="Remove follow-up" onClick={() => change(steps.filter((_, j) => j !== i))} className="grid size-9 place-items-center rounded-[8px] text-text-secondary hover:bg-[var(--color-control)]"><Icon name="close" size={14} /></button>
+        </div>
+      ))}
+      {steps.length < 10 && (
+        <button type="button" onClick={() => change([...steps, { title: "", dueInDays: 1 }])} className="flex min-h-9 items-center gap-1.5 self-start rounded-[8px] px-2 text-[14px] font-medium text-accent-ink hover:bg-accent-subtle">
+          <Icon name="plus" size={14} /> Plan a follow-up
+        </button>
+      )}
+      <label className="flex min-h-9 items-center gap-2 text-[14px] text-text">
+        <input type="checkbox" checked={notify} onChange={(e) => { setSaved(false); setNotify(e.target.checked); }} className="size-4 accent-[var(--color-accent)]" />
+        Tell the deal&apos;s owner when someone else moves it here
+      </label>
+      {error && <p role="alert" className="m-0 text-[14px] text-[var(--color-danger-ink)]">{error}</p>}
+      <div className="flex items-center justify-end gap-2">
+        {saved && <span className="text-[13px] text-[var(--color-state-completed-ink)]">Saved</span>}
+        <Button variant="secondary" size="sm" disabled={pending} onClick={save}>Save playbook</Button>
+      </div>
+    </div>
   );
 }
 

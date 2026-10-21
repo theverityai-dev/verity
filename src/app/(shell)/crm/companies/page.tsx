@@ -4,7 +4,7 @@ import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { EmptyState, PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { RecordView } from "@/components/records/RecordView";
 import { loadRecordPage } from "../_parts/load";
-import { ImportButton, NewCompanyButton } from "../_parts/crm-ui";
+import { CustomFieldsButton, DuplicatesButton, ImportButton, NewCompanyButton } from "../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +25,8 @@ async function CompaniesPage({ searchParams }: { searchParams: Promise<{ view?: 
         description="Customers, prospects and partners, with the people and deals at each."
         actions={
           <>
+            <CustomFieldsButton described={described} />
+            <DuplicatesButton object="company" described={described} />
             <ImportButton object="company" label="companies" />
             <NewCompanyButton described={described} />
           </>

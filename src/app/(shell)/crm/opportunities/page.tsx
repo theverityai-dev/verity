@@ -8,7 +8,7 @@ import { StackedBar } from "@/components/ui/viz";
 import { RecordView } from "@/components/records/RecordView";
 import { moneyShort } from "@/components/records/model";
 import { loadRecordPage } from "../_parts/load";
-import { NewOpportunityButton, PipelineSettingsButton, SetupPipelineButton } from "../_parts/crm-ui";
+import { CustomFieldsButton, NewOpportunityButton, PipelineSettingsButton, SetupPipelineButton } from "../_parts/crm-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,7 @@ async function OpportunitiesPage({ searchParams }: { searchParams: Promise<{ vie
         description="Every open deal by stage, what it is worth, and what to move next."
         actions={
           <>
+            <CustomFieldsButton described={described} />
             {stages.length > 0 && <PipelineSettingsButton stages={stages} />}
             <NewOpportunityButton described={described} />
           </>

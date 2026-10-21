@@ -231,6 +231,9 @@ describe("conformance: capability contracts (Phase E)", () => {
   // because those capabilities already depend on dine-in for their data model.
   const COMMAND_OWNED_INTEGRATIONS: Record<string, Set<string>> = {
     dinein: new Set(["recipe", "crm", "loyalty"]),
+    // Task 128: opening a job from a won opportunity reads it inside the project command; a tenant with jobs
+    // but no CRM is unaffected, so this is not an activation dependency.
+    project: new Set(["relationship"]),
   };
 
   const capabilityDirs = readdirSync(join(ROOT, "src/server/capabilities")).filter((entry) =>

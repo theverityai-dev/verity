@@ -36,6 +36,10 @@ import {
   restoreOpportunities,
   restorePeople,
   saveStage,
+  setStagePlaybook,
+  mergeCompanies,
+  mergePeople,
+  findDuplicates,
   setupPipeline,
   updateCompany,
   updateOpportunity,
@@ -58,6 +62,7 @@ import {
   opportunityDetail,
   personDetail,
   pipelineSummary,
+  pipelineInsights,
   reopenFollowUp,
   searchRecords,
   timeline,
@@ -87,7 +92,8 @@ export * from "./records";
 export * from "./activity";
 
 const COMMANDS = [
-  setupPipeline, saveStage, reorderStages,
+  setupPipeline, saveStage, reorderStages, setStagePlaybook,
+  mergeCompanies, mergePeople,
   createCompany, updateCompany, archiveCompanies, restoreCompanies, bulkUpdateCompanies,
   createPerson, updatePerson, archivePeople, restorePeople, bulkUpdatePeople,
   createOpportunity, updateOpportunity, moveOpportunity, archiveOpportunities, restoreOpportunities, bulkUpdateOpportunities,
@@ -98,7 +104,7 @@ const COMMANDS = [
 ];
 
 const QUERIES = [
-  listStages, listCompanies, listPeople, listOpportunities, lookupRecords,
+  listStages, listCompanies, listPeople, listOpportunities, lookupRecords, findDuplicates, pipelineInsights,
   timeline, listFollowUps, companyDetail, personDetail, opportunityDetail, searchRecords, pipelineSummary, describeObject,
 ];
 
@@ -116,6 +122,7 @@ export function registerRelationshipCapability(): void {
       { href: "/crm/companies", label: "Companies", group: "Trade", order: 6, icon: "building", requiresEntity: ENTITY_COMPANY, shells: ["platform", "operations"] },
       { href: "/crm/people", label: "People", group: "Trade", order: 7, icon: "people", requiresEntity: ENTITY_PERSON, shells: ["platform", "operations"] },
       { href: "/crm/follow-ups", label: "Follow-ups", group: "Trade", order: 8, icon: "clock", requiresEntity: ENTITY_FOLLOW_UP, shells: ["platform", "operations"] },
+      { href: "/crm/insights", label: "Pipeline insights", group: "Insights", order: 30, icon: "overview", requiresEntity: ENTITY_OPPORTUNITY, shells: ["platform", "operations"] },
     ],
     workspace: [
       {

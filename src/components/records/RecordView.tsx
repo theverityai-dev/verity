@@ -33,6 +33,7 @@ import {
   money,
   moneyShort,
   normaliseConfig,
+  patchFor,
   optionFor,
   relativeDay,
   sameConfig,
@@ -1549,7 +1550,7 @@ export function RecordView({
     }
     const before = { [field.key]: row[field.key], version: row.version };
     patchRow(row.id, { [field.key]: displayValue(field, value) });
-    const result = await runCommand<{ id: string; version: number }>(field.editCommand, { id: row.id, version: row.version, patch: { [field.key]: value, ...extra } });
+    const result = await runCommand<{ id: string; version: number }>(field.editCommand, { id: row.id, version: row.version, patch: { ...patchFor(field, value), ...extra } });
     if (!result.ok) {
       patchRow(row.id, before);
       toast(cleanMessage(result.message));

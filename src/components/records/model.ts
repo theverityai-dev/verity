@@ -28,9 +28,12 @@ export type Described = {
   lookupQuery?: string;
   boardMove?: { command: string; groupParam: string };
   quickCreate?: { command: string; titleParam: string; groupParam: string };
+  customFieldsCommand?: string;
   canCreate: boolean;
   canEdit: boolean;
   canShareViews: boolean;
+  /** May declare and retire this workspace's custom fields. */
+  canDefineFields?: boolean;
   members: Ref[];
 };
 
@@ -71,6 +74,11 @@ export const AGGREGATE_LABEL: Record<string, string> = {
 };
 
 export const hrefFor = (pattern: string, id: string) => pattern.replace("{id}", encodeURIComponent(id));
+
+/** The `patch` an edit command receives for one field: a custom field goes inside `customFields` by its name. */
+export function patchFor(field: RecordField, value: unknown): Record<string, unknown> {
+  return field.custom ? { customFields: { [field.custom]: value } } : { [field.key]: value };
+}
 
 export function isRef(v: unknown): v is Ref {
   return typeof v === "object" && v !== null && "id" in v && "label" in v;

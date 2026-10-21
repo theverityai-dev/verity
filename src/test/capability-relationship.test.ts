@@ -11,7 +11,12 @@ import { clearTransitionGuards } from "@/server/platform/state";
 import { clearContributions, contributionFor } from "@/server/platform/contribution";
 import { clearExportables } from "@/server/platform/data-export";
 import { provisionIdentity } from "@/server/platform/identity";
+import { registerProjectCapability, openJobFromOpportunity, jobForOpportunity } from "@/server/capabilities/project";
 import {
+  ENTITY_CUSTOM_FIELD,
+  defineCustomField,
+  listCustomFields,
+  retireCustomField,
   ENTITY_SAVED_VIEW,
   buildOrderBy,
   buildWhere,
@@ -66,6 +71,11 @@ import {
   updateOpportunity,
   updatePerson,
   bulkUpdateOpportunities,
+  findDuplicates,
+  mergeCompanies,
+  mergePeople,
+  pipelineInsights,
+  setStagePlaybook,
 } from "@/server/capabilities/relationship";
 
 /**
@@ -164,11 +174,16 @@ describeDb("capability: Relationship (CRM)", () => {
     clearRecordObjects();
     registerViewCommands();
     registerRelationshipCapability();
+    registerProjectCapability();
 
     const setUp = async (id: string, name: string, people: Array<{ name: string; role: "seller" | "manager" | "viewer" }>) =>
       withTenant(id, async (tx) => {
         await tx.tenant.create({ data: { id, name, timeZone: "Asia/Kolkata" } });
         await activateCapability(tx, id, RELATIONSHIP_CAPABILITY);
+        // Jobs, for opening a job from a won deal, with the capabilities it requires.
+        for (const key of ["verity.capability.trading", "verity.capability.location", "verity.capability.inventory", "verity.capability.manufacturing", "verity.capability.project"]) {
+          await activateCapability(tx, id, key);
+        }
         const organizationId = (await tx.organization.create({ data: { tenantId: id, name } })).id;
         const grant = async (roleId: string, entities: string[], verbs: Array<"Read" | "Create" | "Edit">) =>
           tx.permission.createMany({ data: entities.flatMap((entity) => verbs.map((verb) => ({ tenantId: id, roleId, verb, entity, scope: "Tenant" as const }))) });
@@ -181,6 +196,8 @@ describeDb("capability: Relationship (CRM)", () => {
         await grant(roles.seller, [ENTITY_SAVED_VIEW], ["Read", "Create"]);
         await grant(roles.manager, ALL, ["Read", "Create", "Edit"]);
         await grant(roles.manager, [ENTITY_SAVED_VIEW], ["Read", "Create", "Edit"]);
+        await grant(roles.manager, [ENTITY_CUSTOM_FIELD], ["Edit"]);
+        await grant(roles.seller, ["verity.project.job"], ["Read", "Create"]);
         await grant(roles.viewer, ALL, ["Read"]);
         const out: ActorContext[] = [];
         for (const p of people) {
@@ -447,5 +464,108 @@ describeDb("capability: Relationship (CRM)", () => {
     await expect(executeCommand(outsider, addNote, { companyId: bhel, body: "x" })).rejects.toThrow(/no such company/);
     await expect(executeCommand(outsider, createPerson, { givenName: "Spy", company: bhel })).rejects.toThrow(/no such company/);
     expect((await executeQuery(outsider, listViews, { objectKey: ENTITY_OPPORTUNITY })).map((v) => v.name)).toEqual(["All opportunities", "Board"]);
+  });
+
+  /* ---------------------------- stage 3: custom fields and merging ---------------------------- */
+
+  it("lets an administrator add custom fields that list, filter, edit, validate and retire like built-in ones", async () => {
+    await expect(executeCommand(seller, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Tender number", type: "String" })).rejects.toThrow(/E_FORBIDDEN|permission/i);
+    await expect(executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Amount", type: "Number" })).rejects.toThrow(/already have a field called Amount/);
+    await expect(executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD paid", type: "Select", options: ["Yes"] })).rejects.toThrow(/at least two choices/);
+    await expect(executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Portal", type: "String", required: true })).rejects.toThrow(/cannot start out required/);
+    const tender = await executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Tender number", type: "String" });
+    await executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD", type: "Number" });
+    await executeCommand(manager, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD status", type: "Select", options: ["Paid", "Exempt", "Pending"] });
+    expect((await executeQuery(seller, listCustomFields, { entityKey: ENTITY_OPPORTUNITY })).map((f) => f.name)).toEqual(["Tender number", "EMD", "EMD status"]);
+
+    const described = await executeQuery(seller, describeObject, { objectKey: ENTITY_OPPORTUNITY });
+    expect(described.fields.find((f) => f.key === "cf:EMD status")).toMatchObject({ type: "select", custom: "EMD status", sortable: false });
+
+    const opp = await executeCommand(seller, createOpportunity, { name: "Bus duct for metro depot", amount: 900000, customFields: { "Tender number": "CIMR/2026/114", EMD: "18,000" } });
+    await expect(executeCommand(seller, updateOpportunity, { id: opp.id, patch: { customFields: { "EMD status": "Lost" } } })).rejects.toThrow(/EMD status is not valid/);
+    await expect(executeCommand(seller, updateOpportunity, { id: opp.id, patch: { customFields: { Nope: "x" } } })).rejects.toThrow(/no field called "Nope"/);
+    await executeCommand(seller, updateOpportunity, { id: opp.id, patch: { customFields: { "EMD status": "Paid" } } });
+
+    const byTender = await executeQuery(seller, listOpportunities, { filters: [{ field: "cf:Tender number", op: "contains", value: "2026/114" }] });
+    expect(byTender.rows.map((r) => r.name)).toEqual(["Bus duct for metro depot"]);
+    expect(byTender.rows[0]!["cf:EMD"]).toBe(18000);
+    expect((await executeQuery(seller, listOpportunities, { filters: [{ field: "cf:EMD", op: "gte", value: 10000 }] })).total).toBe(1);
+    expect((await executeQuery(seller, listOpportunities, { filters: [{ field: "cf:EMD status", op: "is_any_of", value: ["Exempt"] }] })).total).toBe(0);
+
+    // The change shows on the timeline under the field's own name.
+    const changes = await withTenant(tenantId, (tx) => tx.activity.findMany({ where: { entityId: opp.id, fieldChanged: "EMD status" } }));
+    expect(changes[0]?.newValue).toBe("Paid");
+
+    // A saved view naming the field survives the field's retirement, minus the field; the values stay on the record.
+    const view = await executeCommand(seller, saveView, { objectKey: ENTITY_OPPORTUNITY, name: "Tenders", type: "table", visibility: "personal", config: { columns: [{ key: "name" }, { key: "cf:Tender number" }] } });
+    await executeCommand(manager, retireCustomField, { id: tender.id });
+    const views = await executeQuery(seller, listViews, { objectKey: ENTITY_OPPORTUNITY });
+    expect(views.find((v) => v.id === view.id)!.config.columns.map((c) => c.key)).toEqual(["name"]);
+    await executeCommand(seller, updateOpportunity, { id: opp.id, patch: { customFields: { EMD: 20000 } } });
+    const stored = await withTenant(tenantId, (tx) => tx.relationshipOpportunity.findUniqueOrThrow({ where: { id: opp.id } }));
+    expect(stored.customFields).toMatchObject({ "Tender number": "CIMR/2026/114", EMD: 20000, "EMD status": "Paid" });
+  });
+
+  it("finds duplicates and merges them without losing a note, deal or logged call", async () => {
+    const groups = await executeQuery(seller, findDuplicates, { object: "company" });
+    const bhelGroup = groups.find((g) => g.records.some((r) => r.id === bhel))!;
+    expect(bhelGroup.records).toHaveLength(2);
+    const duplicate = bhelGroup.records.find((r) => r.id !== bhel)!.id;
+    await executeCommand(seller, addNote, { companyId: duplicate, body: "Note left on the duplicate." });
+    await executeCommand(seller, logInteraction, { companyId: duplicate, kind: "call", subject: "Called the Bhopal office" });
+    await executeCommand(seller, createOpportunity, { name: "Spares for Bhopal", company: duplicate, amount: 50000 });
+
+    await expect(executeCommand(seller, mergeCompanies, { survivorId: bhel, duplicateId: bhel })).rejects.toThrow(/two different/);
+    await executeCommand(seller, mergeCompanies, { survivorId: bhel, duplicateId: duplicate });
+    await expect(executeCommand(seller, mergeCompanies, { survivorId: bhel, duplicateId: duplicate })).rejects.toThrow(/already merged/);
+
+    const detail = (await executeQuery(seller, companyDetail, { id: bhel }))!;
+    expect((detail.opportunities as Array<{ name: string }>).map((o) => o.name)).toContain("Spares for Bhopal");
+    const merged = (await executeQuery(seller, companyDetail, { id: duplicate }))!;
+    expect(merged).toMatchObject({ archived: true, mergedInto: { id: bhel } });
+    const titles = (await executeQuery(seller, timeline, { kind: "company", id: bhel })).map((e) => `${e.title} ${e.body ?? ""}`).join("\n");
+    expect(titles).toMatch(/Note left on the duplicate/);
+    expect(titles).toMatch(/Called the Bhopal office/);
+    expect((await executeQuery(seller, findDuplicates, { object: "company" })).some((g) => g.records.some((r) => r.id === duplicate))).toBe(false);
+
+    const twin = await executeCommand(seller, createPerson, { givenName: "Ravi", familyName: "Kumar", company: bhel, phones: ["+91 90000 00001"], allowDuplicate: true });
+    await executeCommand(seller, mergePeople, { survivorId: ravi, duplicateId: twin.id });
+    const ravis = await withTenant(tenantId, (tx) => tx.relationshipPerson.findUniqueOrThrow({ where: { id: ravi } }));
+    expect(ravis.phones).toContain("+91 90000 00001");
+  });
+
+  /* ---------------------------- stage 4: playbooks and insights ---------------------------- */
+
+  it("runs a stage's playbook when a deal enters it: follow-ups for the owner, and a notice", async () => {
+    const quote = stages.find((s) => s.key === "quote")!;
+    await executeCommand(seller, setStagePlaybook, { id: quote.id, playbook: { followUps: [{ title: "Send the technical offer", dueInDays: 2 }], notifyOwner: true } });
+    const deal2 = await executeCommand(seller, createOpportunity, { name: "Playbook check", owner: manager.userId });
+    await executeCommand(seller, moveOpportunity, { id: deal2.id, stageId: quote.id, position: 1 });
+    const planned = await executeQuery(manager, listFollowUps, { scope: "mine" });
+    expect(planned.find((f) => f.title === "Send the technical offer")?.on.map((o) => o.kind)).toContain("opportunity");
+    const notice = await withTenant(tenantId, (tx) => tx.notification.findFirst({ where: { recipientId: manager.userId, key: "verity.relationship.opportunity_entered_stage" } }));
+    expect(notice?.subject).toMatch(/moved to Technical quote/);
+  });
+
+  it("reports the funnel, lost reasons, forecast and ageing from real deals", async () => {
+    const insights = await executeQuery(seller, pipelineInsights, {});
+    expect(insights.funnel.map((f) => f.label)).toEqual(expect.arrayContaining(["Enquiry", "Qualified", "Technical quote", "Won"]));
+    expect(insights.funnel.find((f) => f.label === "Enquiry")!.entered).toBeGreaterThanOrEqual(insights.funnel.find((f) => f.label === "Technical quote")!.entered);
+    expect(insights.forecast).toHaveLength(6);
+    expect(insights.ageing.reduce((n, b) => n + b.count, 0)).toBeGreaterThan(0);
+  });
+
+  it("opens one job from a won deal, through the jobs capability, and the deal's timeline says so", async () => {
+    const won = stages.find((s) => s.key === "won")!;
+    const deal3 = await executeCommand(seller, createOpportunity, { name: "Furnace transformer", contact: ravi, amount: 1200000 });
+    const customerId = await withTenant(tenantId, async (tx) => (await tx.tradingCustomer.create({ data: { tenantId, displayName: "Bharat Heavy Electricals" } })).id);
+    await expect(executeCommand(seller, openJobFromOpportunity, { opportunityId: deal3.id, customerId })).rejects.toThrow(/only a won opportunity/);
+    await executeCommand(seller, moveOpportunity, { id: deal3.id, stageId: won.id, position: 0 });
+    const job = await executeCommand(seller, openJobFromOpportunity, { opportunityId: deal3.id, customerId });
+    await expect(executeCommand(seller, openJobFromOpportunity, { opportunityId: deal3.id, customerId })).rejects.toThrow(/already opened/);
+    const linked = await executeQuery(seller, jobForOpportunity, { opportunityId: deal3.id });
+    expect(linked).toMatchObject({ id: job.id, title: "Furnace transformer" });
+    const feed = await executeQuery(seller, timeline, { kind: "opportunity", id: deal3.id });
+    expect(feed.some((e) => e.title.startsWith("Opened job J-"))).toBe(true);
   });
 });

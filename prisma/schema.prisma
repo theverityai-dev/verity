@@ -6800,6 +6800,9 @@ model ProjectJob {
   approvedQuoteId  String?   @map("approved_quote_id") @db.Uuid
   lostReasonId     String?   @map("lost_reason_id") @db.Uuid
   lostNote         String?   @map("lost_note")
+  /// The won CRM opportunity this job was opened from (Task 128). A keyed reference, not a foreign key: a job
+  /// never needs the CRM to be active, and the CRM never knows about jobs.
+  opportunityId    String?   @map("opportunity_id") @db.Uuid
   createdById      String?   @map("created_by_id") @db.Uuid
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
@@ -6821,6 +6824,7 @@ model ProjectJob {
   @@unique([tenantId, number])
   @@index([tenantId, state])
   @@index([tenantId, customerId])
+  @@index([tenantId, opportunityId])
   @@map("project_job")
 }
 
@@ -7241,6 +7245,8 @@ model RelationshipStage {
   /// Likelihood of winning at this stage, 0 to 100, for the weighted forecast.
   probability Int      @default(0)
   active      Boolean  @default(true)
+  /// The stage's playbook: { followUps: [{ title, dueInDays }], notifyOwner } run when a deal enters it.
+  config      Json     @default("{}")
   createdAt   DateTime @default(now()) @map("created_at")
 
   tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -7271,6 +7277,8 @@ model RelationshipCompany {
   postalCode   String?   @map("postal_code")
   ownerUserId  String?   @map("owner_user_id") @db.Uuid
   source       String?
+  /// Set when this company was merged into another as a duplicate; it is then archived and its history shows there.
+  mergedIntoId String?   @map("merged_into_id") @db.Uuid
   archivedAt   DateTime? @map("archived_at")
   createdById  String?   @map("created_by_id") @db.Uuid
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -7279,6 +7287,8 @@ model RelationshipCompany {
   customFields Json      @default("{}") @map("custom_fields")
 
   tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mergedInto    RelationshipCompany?      @relation("CompanyMerge", fields: [tenantId, mergedIntoId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  mergedFrom    RelationshipCompany[]     @relation("CompanyMerge")
   people        RelationshipPerson[]
   opportunities RelationshipOpportunity[]
   notes         RelationshipNote[]
@@ -7303,6 +7313,8 @@ model RelationshipPerson {
   phones       String[]  @default([])
   city         String?
   ownerUserId  String?   @map("owner_user_id") @db.Uuid
+  /// Set when this person was merged into another as a duplicate; it is then archived and its history shows there.
+  mergedIntoId String?   @map("merged_into_id") @db.Uuid
   archivedAt   DateTime? @map("archived_at")
   createdById  String?   @map("created_by_id") @db.Uuid
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -7311,6 +7323,8 @@ model RelationshipPerson {
   customFields Json      @default("{}") @map("custom_fields")
 
   tenant        Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mergedInto    RelationshipPerson?       @relation("PersonMerge", fields: [tenantId, mergedIntoId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
+  mergedFrom    RelationshipPerson[]      @relation("PersonMerge")
   company       RelationshipCompany?      @relation(fields: [tenantId, companyId], references: [tenantId, id], onDelete: NoAction, onUpdate: NoAction)
   opportunities RelationshipOpportunity[]
   notes         RelationshipNote[]
