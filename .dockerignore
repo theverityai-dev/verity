@@ -13,6 +13,7 @@ taskplans
 docs
 *.md
 temporary screenshots
+video
 e2e
 playwright-report
 test-results

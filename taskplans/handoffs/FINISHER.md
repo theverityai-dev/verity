@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-20** (against `main` at `b285fa3c`)
+**Last updated: 2026-10-21** (against `main` at `73d76534`; P2-12 film added)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -376,6 +376,52 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 - **Why:** Workers use phones and tablets; the office uses PCs.
 - **How:** Decide assignment first (ADR for `own` scope or a stage assignee field), then build the checklist camera capture.
 - **Status:** NOT STARTED
+
+### P2-12. Verity for Manufacturing film: finishing items after the first master
+
+- **What:** The film in `video/` (4:27, 1080p60, branch `dsew`, includes the Task 128 CRM pipeline) is rendered and audited with a scratch
+  voice. Left: a professional voice-over, a person's playback review of sound and pacing, the 4K
+  render, and the short and vertical cuts.
+- **Why:** The scratch narration is synthetic (Kokoro, offline) and nobody has listened to the mix at
+  normal speed; checks so far are automated (word error rate 0 on every cue, loudness, format) and on
+  stills.
+- **How:** Record the 26 lines of `video/content/narration.json` and follow `video/docs/sound-design.md`
+  "Replacing the scratch narration"; render with `npm run render:master` then `master-audio.mjs`;
+  4K with `--scale=2`; cuts as new compositions reusing the scenes.
+- **Done when:** a person signs off playback in `video/docs/qa-report.md`, and the voiced master passes
+  `node scripts/validate.mjs`.
+- **Source:** product-owner brief, 2026-10-21 (session on branch `dsew`).
+- **Status:** IN PROGRESS. 2026-10-21: the final master (4:27, 17 scenes, includes the Task 128 CRM
+  pipeline scene `s12p`) is rendered, loudness-mastered and passes `scripts/validate.mjs` (24/24:
+  1920×1080, 60 fps, -16.04 LUFS, -1.46 dBTP); one frame per scene checked from the encode; results in
+  `video/docs/qa-report.md`. The file is at `video/out/verity-manufacturing-1080p60.mp4` on the build
+  machine only (git-ignored, too large for git). Branch `dsew`, not yet merged to `main`.
+- **Still open:** (1) a person watches and listens to the whole film and signs off in the QA report;
+  (2) professional voice-over; (3) 4K and short or vertical cuts; (4) merge `dsew` into `main`, and
+  re-render after any change with `cd video && npm run audio && npm run render:master`, then
+  `node scripts/master-audio.mjs <master> <final>` and `node scripts/validate.mjs <final>` (about 35
+  min on a 6-core laptop; set `TEMP`/`TMP` to a drive with space if C: is full).
+- **Gotcha:** stopping a background render must also kill `remotion`, `ffmpeg.exe` and
+  `chrome-headless-shell.exe` under `video/node_modules`; stopping only the shell leaves them running and
+  a second render then crashes ffmpeg.
+- **Status:** IN PROGRESS, paused 2026-10-21 by the product owner. Branch `dsew` (not merged to `main`;
+  `origin/main` at `2087a34a` is already merged into it).
+- **Where it stopped (resume here):**
+  1. A first master (4:09, before the CRM scene) rendered and passed `scripts/validate.mjs` (24/24:
+     1920×1080, 60 fps, -16.04 LUFS, -1.49 dBTP), then two defects were fixed (s11 statement under the
+     window; s11 values cropped). That file is superseded and was deleted.
+  2. The owner asked for the Task 128 CRM in the film: scene `s12p` "Pipeline" added
+     (`video/src/scenes/S12Pipeline.tsx`, cue v26, WER 0.02). Runtime is now 4:27 (266.57 s), 17 scenes.
+     Stills checked; music and ambience regenerated for the new timeline.
+  3. **The final master is NOT rendered.** One render failed (ffmpeg `0xC0000142`) because an earlier
+     stopped render left its ffmpeg and Chrome running; the clean re-render was paused. Next:
+     `cd video && npm run audio` (beds are git-ignored), `npm run render:master` (about 27 min; set
+     `TEMP`/`TMP` to a drive with space if C: is full), then
+     `node scripts/master-audio.mjs out/verity-manufacturing-master-1080p60.mp4 out/verity-manufacturing-1080p60.mp4`,
+     `node scripts/validate.mjs out/verity-manufacturing-1080p60.mp4`, check frames from the encode, write
+     `video/docs/qa-report.md` (not written yet), then merge `dsew` into `main`.
+  4. Stopping a background render must also kill `remotion`, `ffmpeg.exe` and `chrome-headless-shell.exe`
+     under `video/node_modules`; stopping only the shell leaves them running.
 
 ## P3: verification, coverage, housekeeping
 
