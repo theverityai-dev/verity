@@ -5,7 +5,7 @@ used, so there is nothing to license or attribute beyond the narration voice mod
 
 | Layer | Source | File | Mix |
 |---|---|---|---|
-| Narration | Kokoro v1.0 (Apache-2.0), voice `af_heart`, speed 0.94, rendered offline by `scripts/audio/build_vo.py` | `public/audio/vo/v01..v25.wav` | 1.0, each cue matched to -20 dBFS RMS, peak ≤ -3 dBFS |
+| Narration | Kokoro v1.0 (Apache-2.0), voice `af_heart`, speed 0.94, rendered offline by `scripts/audio/build_vo.py` | `public/audio/vo/v01..v26.wav` | 1.0, each cue matched to -20 dBFS RMS, peak ≤ -3 dBFS |
 | Music bed | `scripts/audio/build_audio.py` (additive synthesis, FFT reverb) | `public/audio/music.wav` | 0.62, ducked to 42% under every cue with 0.35 s ramps (`src/film/audio.tsx`) |
 | Ambience | same script: filtered noise room tone, 100 Hz mains hum, distant metallic clanks | `public/audio/ambience.wav` | 0.5; full in Act I, 12% in Acts II-III, 30% in Act IV |
 | Sound effects | same script: buzz, tick, press, confirm, refuse, shutter, whoosh, paper, stamp, swell, low | `public/audio/sfx/*.wav` | per event in `src/film/sfx.ts`, 0.22-0.55 |
@@ -18,13 +18,13 @@ used, so there is nothing to license or attribute beyond the narration voice mod
 | I (0:00-0:28) | D minor drone widening; a low pulse every 1.25 s from s02, growing | factory room tone and distant metal; phone buzz on each of the six questions |
 | Turn (s03, 0:28) | harmony turns to D major; a swell as the window assembles | ambience falls away over 2.5 s; whoosh as the questions lift |
 | II (0:35-3:02) | Dmaj9 – Bm7 – Gmaj7 – A, 4.8 s a chord at 100 bpm; soft plucked eighth-notes and a sub root from s04 | interface ticks, presses, a confirm chime on decisions, a low two-note "refuse" on the stock shortage and the failed check, paper on documents, a shutter on photos |
-| III (3:02-3:42) | the same progression opened up with a high pad | fewer effects |
-| IV (3:42-3:58) | pad and sparse high notes only | room tone returns a little; soft ticks as each answer appears |
-| V (3:58-4:09) | resolves on Dmaj9 with a long decay | one low note under the mark |
+| III (3:02-3:59) | the same progression opened up with a high pad | fewer effects |
+| IV (3:59-4:15) | pad and sparse high notes only | room tone returns a little; soft ticks as each answer appears |
+| V (4:15-4:27) | resolves on Dmaj9 with a long decay | one low note under the mark |
 
 ## Replacing the scratch narration
 
 The Kokoro voice is a scratch track, rendered offline because no voice-over service key was available.
-To replace it, record the 25 lines of `content/narration.json` as `public/audio/vo/<id>.wav`, then run
+To replace it, record the 26 lines of `content/narration.json` as `public/audio/vo/<id>.wav`, then run
 `python scripts/audio/build_vo.py --measure-only`, `python scripts/audio/check_vo.py`,
 `python scripts/audio/build_timeline.py` and `npm run audio`. Every scene re-times to the new voice.

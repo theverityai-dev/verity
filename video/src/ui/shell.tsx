@@ -36,7 +36,16 @@ export const VerityLockup: React.FC<{ size: number; color?: string }> = ({ size,
 type NavItem = { label: string; icon: IconName; key: string };
 const NAV: Array<{ group?: string; items: NavItem[] }> = [
   { items: [{ label: "Summary", icon: "home", key: "summary" }] },
-  { group: "Trade", items: [{ label: "Customers", icon: "people", key: "customers" }, { label: "Jobs", icon: "list", key: "jobs" }] },
+  {
+    group: "Trade",
+    items: [
+      { label: "Pipeline", icon: "enquiry", key: "pipeline" },
+      { label: "Companies", icon: "building", key: "companies" },
+      { label: "Follow-ups", icon: "clock", key: "followups" },
+      { label: "Customers", icon: "people", key: "customers" },
+      { label: "Jobs", icon: "list", key: "jobs" },
+    ],
+  },
   {
     group: "Production",
     items: [

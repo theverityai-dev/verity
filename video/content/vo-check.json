@@ -2079,6 +2079,217 @@
    }
   ]
  },
+ "v26": {
+  "heard": "Before work reaches the floor, it is in the pipeline. Every open deal shows its stage, its value, and the follow-up that is due. When a deal is one, it opens a job carrying its name, contact, and value across.",
+  "wer": 0.024,
+  "words": [
+   {
+    "w": "Before",
+    "s": 0.0,
+    "e": 0.24
+   },
+   {
+    "w": "work",
+    "s": 0.24,
+    "e": 0.52
+   },
+   {
+    "w": "reaches",
+    "s": 0.52,
+    "e": 0.88
+   },
+   {
+    "w": "the",
+    "s": 0.88,
+    "e": 1.12
+   },
+   {
+    "w": "floor,",
+    "s": 1.12,
+    "e": 1.36
+   },
+   {
+    "w": "it",
+    "s": 1.66,
+    "e": 1.76
+   },
+   {
+    "w": "is",
+    "s": 1.76,
+    "e": 1.86
+   },
+   {
+    "w": "in",
+    "s": 1.86,
+    "e": 2.02
+   },
+   {
+    "w": "the",
+    "s": 2.02,
+    "e": 2.12
+   },
+   {
+    "w": "pipeline.",
+    "s": 2.12,
+    "e": 2.36
+   },
+   {
+    "w": "Every",
+    "s": 3.56,
+    "e": 3.56
+   },
+   {
+    "w": "open",
+    "s": 3.56,
+    "e": 3.94
+   },
+   {
+    "w": "deal",
+    "s": 3.94,
+    "e": 4.2
+   },
+   {
+    "w": "shows",
+    "s": 4.2,
+    "e": 4.54
+   },
+   {
+    "w": "its",
+    "s": 4.54,
+    "e": 4.76
+   },
+   {
+    "w": "stage,",
+    "s": 4.76,
+    "e": 5.1
+   },
+   {
+    "w": "its",
+    "s": 5.56,
+    "e": 5.68
+   },
+   {
+    "w": "value,",
+    "s": 5.68,
+    "e": 6.06
+   },
+   {
+    "w": "and",
+    "s": 6.32,
+    "e": 6.36
+   },
+   {
+    "w": "the",
+    "s": 6.36,
+    "e": 6.46
+   },
+   {
+    "w": "follow",
+    "s": 6.46,
+    "e": 6.74
+   },
+   {
+    "w": "-up",
+    "s": 6.74,
+    "e": 7.04
+   },
+   {
+    "w": "that",
+    "s": 7.04,
+    "e": 7.18
+   },
+   {
+    "w": "is",
+    "s": 7.18,
+    "e": 7.32
+   },
+   {
+    "w": "due.",
+    "s": 7.32,
+    "e": 7.5
+   },
+   {
+    "w": "When",
+    "s": 8.26,
+    "e": 8.38
+   },
+   {
+    "w": "a",
+    "s": 8.38,
+    "e": 8.46
+   },
+   {
+    "w": "deal",
+    "s": 8.46,
+    "e": 8.62
+   },
+   {
+    "w": "is",
+    "s": 8.62,
+    "e": 8.86
+   },
+   {
+    "w": "one,",
+    "s": 8.86,
+    "e": 9.12
+   },
+   {
+    "w": "it",
+    "s": 9.52,
+    "e": 9.58
+   },
+   {
+    "w": "opens",
+    "s": 9.58,
+    "e": 9.9
+   },
+   {
+    "w": "a",
+    "s": 9.9,
+    "e": 10.08
+   },
+   {
+    "w": "job",
+    "s": 10.08,
+    "e": 10.36
+   },
+   {
+    "w": "carrying",
+    "s": 10.36,
+    "e": 10.98
+   },
+   {
+    "w": "its",
+    "s": 10.98,
+    "e": 11.4
+   },
+   {
+    "w": "name,",
+    "s": 11.4,
+    "e": 11.74
+   },
+   {
+    "w": "contact,",
+    "s": 12.1,
+    "e": 12.48
+   },
+   {
+    "w": "and",
+    "s": 12.78,
+    "e": 12.94
+   },
+   {
+    "w": "value",
+    "s": 12.94,
+    "e": 13.26
+   },
+   {
+    "w": "across.",
+    "s": 13.26,
+    "e": 13.5
+   }
+  ]
+ },
  "v21": {
   "heard": "Ask a question in plain language. The assistant answers from the records your role can open, flags anything it could not confirm, and asks before it acts.",
   "wer": 0.0,

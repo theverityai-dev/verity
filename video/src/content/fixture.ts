@@ -330,3 +330,51 @@ export const QUESTIONS = [
   { from: "Accounts", text: "Has the advance come in?", answer: `Advance · ${inr(Math.round(AGREED * 0.3))} received`, state: "completed" as const },
   { from: "Shop floor", text: "Are both skids packed?", answer: "Packing · Completed 17 Dec", state: "completed" as const },
 ];
+
+/* ------------------------------ the pipeline (CRM), 19 Dec ------------------------------ */
+
+/**
+ * Open deals in the CRM pipeline (`relationship` capability, Task 128). Stage names and chances are
+ * the capability's DEFAULT_STAGES; references are `OPP-<n>`. All fictional.
+ */
+export const PIPELINE_STAGES = [
+  { key: "enquiry", label: "Enquiry", chance: 10 },
+  { key: "qualified", label: "Qualified", chance: 25 },
+  { key: "quote", label: "Technical quote", chance: 50 },
+  { key: "negotiation", label: "Negotiation", chance: 75 },
+  { key: "won", label: "Won", chance: 100 },
+] as const;
+
+export const DEALS = [
+  { ref: "OPP-64", name: "Booster set, 3 × 22 kW", company: "Talvane Estates", value: rupees(14_20_000), stage: "enquiry" },
+  { ref: "OPP-66", name: "Fire pump retrofit", company: "Orion Cold Chain", value: rupees(9_80_000), stage: "enquiry" },
+  { ref: "OPP-59", name: "Transfer skid, 2 × 30 kW", company: "Ostra Chemicals", value: rupees(12_60_000), stage: "qualified" },
+  { ref: "OPP-57", name: "Cooling water skid", company: "Velan Textiles", value: rupees(18_40_000), stage: "quote" },
+  { ref: "OPP-62", name: "Dosing package", company: "Corvel Foods", value: rupees(6_90_000), stage: "quote" },
+  { ref: "OPP-61", name: "Fire pump set, 2 × 90 kW", company: "Marrow Ridge Hospital", value: rupees(28_60_000), stage: "negotiation" },
+  { ref: "OPP-55", name: "Booster pump skid, 1 × 37 kW", company: CUSTOMER.name, value: rupees(8_90_000), stage: "won" },
+];
+
+/** The deal the scene follows, and the job it opens (the next job number after J-0151). */
+export const HERO_DEAL = {
+  ref: "OPP-61",
+  contact: "R. Menon",
+  contactEmail: "r.menon@marrowridge.example",
+  source: "Tender",
+  closes: "2026-12-24",
+  job: "J-0152",
+  timeline: [
+    { what: "Stage moved", detail: "Technical quote → Negotiation", who: "Meera Iyer", at: "15 Dec 2026" },
+    { what: "Call logged", detail: "R. Menon asked for the layout with a jockey pump", who: "Kabir Shah", at: "17 Dec 2026" },
+    { what: "Follow-up", detail: "Send the revised layout", who: "Kabir Shah", at: "due 19 Dec 2026" },
+  ],
+};
+
+const openDeals = DEALS.filter((d) => d.stage !== "won");
+const chance = (k: string) => PIPELINE_STAGES.find((s) => s.key === k)?.chance ?? 0;
+export const PIPELINE_TILES = {
+  open: openDeals.reduce((s, d) => s + d.value, 0),
+  weighted: openDeals.reduce((s, d) => s + (d.value * chance(d.stage)) / 100, 0),
+  wonThisMonth: DEALS.filter((d) => d.stage === "won").reduce((s, d) => s + d.value, 0),
+  overdue: 2,
+};

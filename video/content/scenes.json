@@ -2,24 +2,273 @@
   "note": "Scene order and pacing. Each scene is: lead (seconds before its first cue), its cues with the gap after each, and a tail. Lengths come from content/vo-timing.json, so the film re-times when the voice changes. Built into content/timeline.json by scripts/audio/build_timeline.py.",
   "overlap": 0.7,
   "scenes": [
-    { "id": "s01", "act": "I", "title": "The work", "lead": 3.2, "cues": [["v01", 0.9], ["v02", 0]], "tail": 1.2 },
-    { "id": "s02", "act": "I", "title": "Every question, one person", "lead": 6.6, "cues": [["v03", 0]], "tail": 1.6 },
-    { "id": "s03", "act": "I", "title": "A record of its own", "lead": 0.9, "cues": [["v04", 0]], "tail": 2.2 },
-
-    { "id": "s04", "act": "II", "chapter": "01", "title": "Enquiry to quote", "lead": 1.2, "cues": [["v05", 1.4], ["v06", 0]], "tail": 2.6 },
-    { "id": "s05", "act": "II", "chapter": "02", "title": "Order to project", "lead": 0.9, "cues": [["v07", 0]], "tail": 3.2 },
-    { "id": "s06", "act": "II", "chapter": "03", "title": "Engineering to BOM", "lead": 0.9, "cues": [["v08", 1.4], ["v09", 0]], "tail": 2.4 },
-    { "id": "s07", "act": "II", "chapter": "04", "title": "Procurement to stores", "lead": 0.9, "cues": [["v10", 1.4], ["v11", 0]], "tail": 2.8 },
-    { "id": "s08", "act": "II", "chapter": "05", "title": "Production", "lead": 0.9, "cues": [["v12", 0]], "tail": 2.8 },
-    { "id": "s09", "act": "II", "chapter": "05", "title": "Quality", "lead": 0.9, "cues": [["v13", 1.6], ["v14", 0]], "tail": 2.4 },
-    { "id": "s10", "act": "II", "chapter": "06", "title": "Testing to dispatch", "lead": 0.9, "cues": [["v15", 1.5], ["v16", 0]], "tail": 2.8 },
-    { "id": "s11", "act": "II", "chapter": "07", "title": "Cost", "lead": 0.9, "cues": [["v17", 1.3], ["v18", 0]], "tail": 2.4 },
-
-    { "id": "s12", "act": "III", "chapter": "07", "title": "Management", "lead": 1.2, "cues": [["v19", 0.7], ["v20", 0]], "tail": 2.6 },
-    { "id": "s13", "act": "III", "chapter": "08", "title": "Search to decisions", "lead": 0.9, "cues": [["v21", 0]], "tail": 3.4 },
-    { "id": "s14", "act": "III", "title": "Accountability", "lead": 0.9, "cues": [["v22", 0]], "tail": 2.4 },
-
-    { "id": "s15", "act": "IV", "title": "Control without constant intervention", "lead": 1.6, "cues": [["v23", 1.4], ["v24", 0]], "tail": 2.4 },
-    { "id": "s16", "act": "V", "title": "Verity for Manufacturing", "lead": 1.8, "cues": [["v25", 0]], "tail": 7.5 }
+    {
+      "id": "s01",
+      "act": "I",
+      "title": "The work",
+      "lead": 3.2,
+      "cues": [
+        [
+          "v01",
+          0.9
+        ],
+        [
+          "v02",
+          0
+        ]
+      ],
+      "tail": 1.2
+    },
+    {
+      "id": "s02",
+      "act": "I",
+      "title": "Every question, one person",
+      "lead": 6.6,
+      "cues": [
+        [
+          "v03",
+          0
+        ]
+      ],
+      "tail": 1.6
+    },
+    {
+      "id": "s03",
+      "act": "I",
+      "title": "A record of its own",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v04",
+          0
+        ]
+      ],
+      "tail": 2.2
+    },
+    {
+      "id": "s04",
+      "act": "II",
+      "chapter": "01",
+      "title": "Enquiry to quote",
+      "lead": 1.2,
+      "cues": [
+        [
+          "v05",
+          1.4
+        ],
+        [
+          "v06",
+          0
+        ]
+      ],
+      "tail": 2.6
+    },
+    {
+      "id": "s05",
+      "act": "II",
+      "chapter": "02",
+      "title": "Order to project",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v07",
+          0
+        ]
+      ],
+      "tail": 3.2
+    },
+    {
+      "id": "s06",
+      "act": "II",
+      "chapter": "03",
+      "title": "Engineering to BOM",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v08",
+          1.4
+        ],
+        [
+          "v09",
+          0
+        ]
+      ],
+      "tail": 2.4
+    },
+    {
+      "id": "s07",
+      "act": "II",
+      "chapter": "04",
+      "title": "Procurement to stores",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v10",
+          1.4
+        ],
+        [
+          "v11",
+          0
+        ]
+      ],
+      "tail": 2.8
+    },
+    {
+      "id": "s08",
+      "act": "II",
+      "chapter": "05",
+      "title": "Production",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v12",
+          0
+        ]
+      ],
+      "tail": 2.8
+    },
+    {
+      "id": "s09",
+      "act": "II",
+      "chapter": "05",
+      "title": "Quality",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v13",
+          1.6
+        ],
+        [
+          "v14",
+          0
+        ]
+      ],
+      "tail": 2.4
+    },
+    {
+      "id": "s10",
+      "act": "II",
+      "chapter": "06",
+      "title": "Testing to dispatch",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v15",
+          1.5
+        ],
+        [
+          "v16",
+          0
+        ]
+      ],
+      "tail": 2.8
+    },
+    {
+      "id": "s11",
+      "act": "II",
+      "chapter": "07",
+      "title": "Cost",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v17",
+          1.3
+        ],
+        [
+          "v18",
+          0
+        ]
+      ],
+      "tail": 2.4
+    },
+    {
+      "id": "s12",
+      "act": "III",
+      "chapter": "07",
+      "title": "Management",
+      "lead": 1.2,
+      "cues": [
+        [
+          "v19",
+          0.7
+        ],
+        [
+          "v20",
+          0
+        ]
+      ],
+      "tail": 2.6
+    },
+    {
+      "id": "s12p",
+      "act": "III",
+      "chapter": "07",
+      "title": "Pipeline",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v26",
+          0
+        ]
+      ],
+      "tail": 2.6
+    },
+    {
+      "id": "s13",
+      "act": "III",
+      "chapter": "08",
+      "title": "Search to decisions",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v21",
+          0
+        ]
+      ],
+      "tail": 3.4
+    },
+    {
+      "id": "s14",
+      "act": "III",
+      "title": "Accountability",
+      "lead": 0.9,
+      "cues": [
+        [
+          "v22",
+          0
+        ]
+      ],
+      "tail": 2.4
+    },
+    {
+      "id": "s15",
+      "act": "IV",
+      "title": "Control without constant intervention",
+      "lead": 1.6,
+      "cues": [
+        [
+          "v23",
+          1.4
+        ],
+        [
+          "v24",
+          0
+        ]
+      ],
+      "tail": 2.4
+    },
+    {
+      "id": "s16",
+      "act": "V",
+      "title": "Verity for Manufacturing",
+      "lead": 1.8,
+      "cues": [
+        [
+          "v25",
+          0
+        ]
+      ],
+      "tail": 7.5
+    }
   ]
 }

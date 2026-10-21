@@ -117,6 +117,7 @@ const P: Record<string, React.ReactNode> = {
   wrench: <path d="M12.5 3.2a3.8 3.8 0 0 0-3.6 5L3.6 13.5a1.6 1.6 0 0 0 2.3 2.3l5.3-5.3a3.8 3.8 0 0 0 5-3.6l-2.3 2.3-2.4-.6-.6-2.4z" />,
   plus: <path d="M10 4.5v11M4.5 10h11" />,
   x: <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />,
+  building: <path d="M4 17V4.5h7.5V17M11.5 8.5H16V17M2.5 17h15M6.5 7.5h2M6.5 10.5h2M6.5 13.5h2M13.5 11.5h.5M13.5 14h.5" />,
   key: (
     <>
       <circle cx="7" cy="12.5" r="3.2" />

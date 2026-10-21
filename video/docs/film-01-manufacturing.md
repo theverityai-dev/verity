@@ -1,6 +1,6 @@
 # Film 01 — Verity for Manufacturing
 
-Master: 1920×1080, 60 fps, 4:09 (249.06 s), H.264 + AAC stereo. Built to the `verity-motion-design`
+Master: 1920×1080, 60 fps, 4:27 (266.57 s), H.264 + AAC stereo. Built to the `verity-motion-design`
 skill (grid, type, camera, material, audit). Data: fictional (`src/content/fixture.ts`). Claims:
 `docs/coverage-matrix.md`. Timing source of truth: `content/timeline.json`, generated from the
 measured narration, so the times below move if the voice is replaced.
@@ -32,18 +32,19 @@ One line per shot: *focal point / statement / camera / hand-off.* Times are the 
 | s10 | 2:19.7 | II·06 | Summary-first test report → dispatch form → phone scans nameplate → passport | Proof travels / with the product. | push; window blurs away for the phone | the job's money |
 | s11 | 2:38.7 | II·07 | Cost tiles counting up from records → margin → billing → project file pages | Margin, from what / actually happened. | push, macro 1.12 on margin, pull back | step back |
 | s12 | 3:02.1 | III·07 | Summary, each figure lit as named → Late deliveries opens J-0139 | Exceptions / first. | arrive 0.92→1.0, small push | the assistant |
-| s13 | 3:18.0 | III·08 | Assistant dock: question, answer, "Double-check" warning, confirm-before-acting | Answers you / can check. | push from the window's left edge | roles and history |
-| s14 | 3:32.2 | III | Release grants by role; attributed history | Every handoff / has a name. | small push | back to the phone |
-| s15 | 3:42.0 | IV | The same phone, each question answered by its record | Back to the work / only you can do. | slow pull-back | brand |
-| s16 | 3:58.0 | V | Mark assembles, wordmark, "for Manufacturing", positioning line, next step | From enquiry to dispatch, every handoff on record. | none (centred) | fade to black |
+| s12p | 3:18.0 | III·07 | Pipeline board by stage, tiles; one deal's stage track and timeline; won → "Open a job" sheet → J-0152 as an enquiry | Tomorrow's work, / already in view. | small pushes from the window's left edge; two page changes | the assistant |
+| s13 | 3:35.5 | III·08 | Assistant dock: question, answer, "Double-check" warning, confirm-before-acting | Answers you / can check. | push from the window's left edge | roles and history |
+| s14 | 3:49.7 | III | Release grants by role; attributed history | Every handoff / has a name. | small push | back to the phone |
+| s15 | 3:59.5 | IV | The same phone, each question answered by its record | Back to the work / only you can do. | slow pull-back | brand |
+| s16 | 4:15.5 | V | Mark assembles, wordmark, "for Manufacturing", positioning line, next step | From enquiry to dispatch, every handoff on record. | none (centred) | fade to black |
 
 Eyebrows (chapter labels) number the eight lifecycle chapters of the brief: 01 Enquiry to quote,
 02 Order to project, 03 Engineering to BOM, 04 Procurement to stores, 05 Production / Quality,
-06 Testing to dispatch, 07 Cost / Management, 08 Search to decisions.
+06 Testing to dispatch, 07 Cost / Management / Pipeline, 08 Search to decisions.
 
 ## Narration
 
-`content/narration.json` (25 cues, 168 s of speech). Every visual beat inside a scene is anchored to
+`content/narration.json` (26 cues, 182 s of speech). Every visual beat inside a scene is anchored to
 the spoken word it illustrates through `word()` in `src/film/timeline.ts`, using the recogniser's
 word timings (`content/vo-check.json`); a re-recorded line with different words fails the render
 instead of silently drifting.

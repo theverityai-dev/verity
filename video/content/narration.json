@@ -3,34 +3,135 @@
   "speed": 0.94,
   "note": "Scratch narration rendered offline with Kokoro v1.0 (Apache-2.0). Each line is one cue; scenes are timed to the measured length of each cue, so a professional voice-over can replace the files one-for-one. Every claim here is checked against docs/coverage-matrix.md.",
   "lines": [
-    { "id": "v01", "scene": "s01", "text": "A manufacturing business can have skilled engineers, good machines, and suppliers it trusts." },
-    { "id": "v02", "scene": "s01", "text": "And still, one person ends up holding it all together." },
-    { "id": "v03", "scene": "s02", "text": "When the answers live in phone calls, spreadsheets and memory, every question comes back to the owner." },
-    { "id": "v04", "scene": "s03", "text": "Verity gives the work a record of its own. So the answer is already there." },
-
-    { "id": "v05", "scene": "s04", "text": "It starts with an enquiry. A water board needs two booster pump skids, built to its own specification." },
-    { "id": "v06", "scene": "s04", "text": "The quote goes through revisions. When the customer approves one, its value is fixed on the job, whatever changes later." },
-    { "id": "v07", "scene": "s05", "text": "Approval opens the project. Tasks wait for the work they depend on, and milestones carry the dates the customer was promised." },
-    { "id": "v08", "scene": "s06", "text": "Engineering releases the general arrangement drawing. Revision two supersedes revision one, and the order is linked to the exact revision it is built from." },
-    { "id": "v09", "scene": "s06", "text": "The bill of materials scales to the order, and every line is copied onto it, so a later change never rewrites work already planned." },
-    { "id": "v10", "scene": "s07", "text": "Before anything is cut, Verity holds the stock the order needs. One valve is short, and it says so." },
-    { "id": "v11", "scene": "s07", "text": "The purchase order is over the approval limit, so it waits for a decision. Two valves arrive, then the rest, and the hold goes through." },
-    { "id": "v12", "scene": "s08", "text": "On the floor, each team sees the stages that are ready for them. A stage cannot start until the one before it is done." },
-    { "id": "v13", "scene": "s09", "text": "Checks are measured, with units and limits. The pressure test finds a weeping flange. The skid goes back to assembly, and the failed result stays on record." },
-    { "id": "v14", "scene": "s09", "text": "The retest passes. The photograph is taken on a phone, and it belongs to this order, and no other." },
-    { "id": "v15", "scene": "s10", "text": "The test report leads with the summary. Dispatch needs a packing photograph, a vehicle, and a transporter." },
-    { "id": "v16", "scene": "s10", "text": "Each skid carries a verification passport. Scan it, and the customer sees what was inspected, and nothing private." },
-    { "id": "v17", "scene": "s11", "text": "Cost builds from the records themselves. The approved quote, the materials consumed, the hours logged, the outside work. Margin is worked out every time you look." },
-    { "id": "v18", "scene": "s11", "text": "Invoices and payments are recorded against the job, and one project file holds the reports, the dispatch papers, and the photographs." },
-
-    { "id": "v19", "scene": "s12", "text": "Step back, and the operation reads on one page. What is confirmed, what is waiting, what is late, what is on the floor, and what is running short." },
-    { "id": "v20", "scene": "s12", "text": "Every figure opens the record behind it." },
-    { "id": "v21", "scene": "s13", "text": "Ask a question in plain language. The assistant answers from the records your role can open, flags anything it could not confirm, and asks before it acts." },
-    { "id": "v22", "scene": "s14", "text": "Every change is attributed. Releasing a drawing is its own permission. And every record keeps its history." },
-
-    { "id": "v23", "scene": "s15", "text": "The questions still come. They just no longer all come to one person." },
-    { "id": "v24", "scene": "s15", "text": "People work from clear responsibilities, and leadership gets back to the decisions only leadership can make." },
-
-    { "id": "v25", "scene": "s16", "text": "Verity, for manufacturing." }
+    {
+      "id": "v01",
+      "scene": "s01",
+      "text": "A manufacturing business can have skilled engineers, good machines, and suppliers it trusts."
+    },
+    {
+      "id": "v02",
+      "scene": "s01",
+      "text": "And still, one person ends up holding it all together."
+    },
+    {
+      "id": "v03",
+      "scene": "s02",
+      "text": "When the answers live in phone calls, spreadsheets and memory, every question comes back to the owner."
+    },
+    {
+      "id": "v04",
+      "scene": "s03",
+      "text": "Verity gives the work a record of its own. So the answer is already there."
+    },
+    {
+      "id": "v05",
+      "scene": "s04",
+      "text": "It starts with an enquiry. A water board needs two booster pump skids, built to its own specification."
+    },
+    {
+      "id": "v06",
+      "scene": "s04",
+      "text": "The quote goes through revisions. When the customer approves one, its value is fixed on the job, whatever changes later."
+    },
+    {
+      "id": "v07",
+      "scene": "s05",
+      "text": "Approval opens the project. Tasks wait for the work they depend on, and milestones carry the dates the customer was promised."
+    },
+    {
+      "id": "v08",
+      "scene": "s06",
+      "text": "Engineering releases the general arrangement drawing. Revision two supersedes revision one, and the order is linked to the exact revision it is built from."
+    },
+    {
+      "id": "v09",
+      "scene": "s06",
+      "text": "The bill of materials scales to the order, and every line is copied onto it, so a later change never rewrites work already planned."
+    },
+    {
+      "id": "v10",
+      "scene": "s07",
+      "text": "Before anything is cut, Verity holds the stock the order needs. One valve is short, and it says so."
+    },
+    {
+      "id": "v11",
+      "scene": "s07",
+      "text": "The purchase order is over the approval limit, so it waits for a decision. Two valves arrive, then the rest, and the hold goes through."
+    },
+    {
+      "id": "v12",
+      "scene": "s08",
+      "text": "On the floor, each team sees the stages that are ready for them. A stage cannot start until the one before it is done."
+    },
+    {
+      "id": "v13",
+      "scene": "s09",
+      "text": "Checks are measured, with units and limits. The pressure test finds a weeping flange. The skid goes back to assembly, and the failed result stays on record."
+    },
+    {
+      "id": "v14",
+      "scene": "s09",
+      "text": "The retest passes. The photograph is taken on a phone, and it belongs to this order, and no other."
+    },
+    {
+      "id": "v15",
+      "scene": "s10",
+      "text": "The test report leads with the summary. Dispatch needs a packing photograph, a vehicle, and a transporter."
+    },
+    {
+      "id": "v16",
+      "scene": "s10",
+      "text": "Each skid carries a verification passport. Scan it, and the customer sees what was inspected, and nothing private."
+    },
+    {
+      "id": "v17",
+      "scene": "s11",
+      "text": "Cost builds from the records themselves. The approved quote, the materials consumed, the hours logged, the outside work. Margin is worked out every time you look."
+    },
+    {
+      "id": "v18",
+      "scene": "s11",
+      "text": "Invoices and payments are recorded against the job, and one project file holds the reports, the dispatch papers, and the photographs."
+    },
+    {
+      "id": "v19",
+      "scene": "s12",
+      "text": "Step back, and the operation reads on one page. What is confirmed, what is waiting, what is late, what is on the floor, and what is running short."
+    },
+    {
+      "id": "v20",
+      "scene": "s12",
+      "text": "Every figure opens the record behind it."
+    },
+    {
+      "id": "v26",
+      "scene": "s12p",
+      "text": "Before work reaches the floor, it is in the pipeline. Every open deal shows its stage, its value, and the follow-up that is due. When a deal is won, it opens a job, carrying its name, contact and value across."
+    },
+    {
+      "id": "v21",
+      "scene": "s13",
+      "text": "Ask a question in plain language. The assistant answers from the records your role can open, flags anything it could not confirm, and asks before it acts."
+    },
+    {
+      "id": "v22",
+      "scene": "s14",
+      "text": "Every change is attributed. Releasing a drawing is its own permission. And every record keeps its history."
+    },
+    {
+      "id": "v23",
+      "scene": "s15",
+      "text": "The questions still come. They just no longer all come to one person."
+    },
+    {
+      "id": "v24",
+      "scene": "s15",
+      "text": "People work from clear responsibilities, and leadership gets back to the decisions only leadership can make."
+    },
+    {
+      "id": "v25",
+      "scene": "s16",
+      "text": "Verity, for manufacturing."
+    }
   ]
 }

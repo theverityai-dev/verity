@@ -22,7 +22,7 @@ const check = (ok, name, detail = "") => {
 // Timeline.
 const tl = read("content/timeline.json");
 const narration = read("content/narration.json");
-check(tl.scenes.length === 16, "16 scenes", `${tl.scenes.length}`);
+check(tl.scenes.length === 17, "17 scenes", `${tl.scenes.length}`);
 check(tl.scenes.every((s, i) => s.end > s.start && (i === 0 || Math.abs(s.start - tl.scenes[i - 1].end) < 1e-6)), "scenes are contiguous and positive");
 check(tl.scenes.every((s) => s.cues.every((c) => c.start >= s.start && c.end <= s.end)), "every cue sits inside its scene");
 const cueIds = tl.scenes.flatMap((s) => s.cues.map((c) => c.id));

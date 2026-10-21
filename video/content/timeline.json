@@ -1,6 +1,6 @@
 {
  "overlap": 0.7,
- "total": 249.057,
+ "total": 266.573,
  "scenes": [
   {
    "id": "s01",
@@ -243,17 +243,33 @@
    ]
   },
   {
+   "id": "s12p",
+   "act": "III",
+   "chapter": "07",
+   "title": "Pipeline",
+   "start": 197.98,
+   "end": 215.496,
+   "cues": [
+    {
+     "id": "v26",
+     "start": 198.88,
+     "end": 212.896,
+     "text": "Before work reaches the floor, it is in the pipeline. Every open deal shows its stage, its value, and the follow-up that is due. When a deal is won, it opens a job, carrying its name, contact and value across."
+    }
+   ]
+  },
+  {
    "id": "s13",
    "act": "III",
    "chapter": "08",
    "title": "Search to decisions",
-   "start": 197.98,
-   "end": 212.157,
+   "start": 215.496,
+   "end": 229.673,
    "cues": [
     {
      "id": "v21",
-     "start": 198.88,
-     "end": 208.757,
+     "start": 216.396,
+     "end": 226.273,
      "text": "Ask a question in plain language. The assistant answers from the records your role can open, flags anything it could not confirm, and asks before it acts."
     }
    ]
@@ -263,13 +279,13 @@
    "act": "III",
    "chapter": null,
    "title": "Accountability",
-   "start": 212.157,
-   "end": 222.017,
+   "start": 229.673,
+   "end": 239.533,
    "cues": [
     {
      "id": "v22",
-     "start": 213.057,
-     "end": 219.617,
+     "start": 230.573,
+     "end": 237.133,
      "text": "Every change is attributed. Releasing a drawing is its own permission. And every record keeps its history."
     }
    ]
@@ -279,19 +295,19 @@
    "act": "IV",
    "chapter": null,
    "title": "Control without constant intervention",
-   "start": 222.017,
-   "end": 237.977,
+   "start": 239.533,
+   "end": 255.493,
    "cues": [
     {
      "id": "v23",
-     "start": 223.617,
-     "end": 227.697,
+     "start": 241.133,
+     "end": 245.213,
      "text": "The questions still come. They just no longer all come to one person."
     },
     {
      "id": "v24",
-     "start": 229.097,
-     "end": 235.577,
+     "start": 246.613,
+     "end": 253.093,
      "text": "People work from clear responsibilities, and leadership gets back to the decisions only leadership can make."
     }
    ]
@@ -301,13 +317,13 @@
    "act": "V",
    "chapter": null,
    "title": "Verity for Manufacturing",
-   "start": 237.977,
-   "end": 249.057,
+   "start": 255.493,
+   "end": 266.573,
    "cues": [
     {
      "id": "v25",
-     "start": 239.777,
-     "end": 241.557,
+     "start": 257.293,
+     "end": 259.073,
      "text": "Verity, for manufacturing."
     }
    ]

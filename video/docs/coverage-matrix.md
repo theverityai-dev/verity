@@ -21,7 +21,11 @@ Wording rule used throughout: if the code does not do it, no frame, caption or l
 | Brief | Capability | Status | Scene | Evidence (source) | Notes |
 |---|---|---|---|---|---|
 | A | Customer record, enquiry opens a job | Shown | s03, s04 | `project/jobs.ts` (`createJob`, enquiry state), `trading` customer master | The job starts in `enquiry`. |
-| A | CRM pipeline (companies, people, opportunities, follow-ups) | Not shown, omitted | — | `relationship/index.ts` (Task 128) | Built, local only; no "won → job" link exists, so it is not shown leading into the job. |
+| A | CRM pipeline: deals by stage with value, weighted forecast, overdue follow-ups | Shown | s12p | `relationship/index.ts`, `/crm/opportunities` (Task 128, `DEFAULT_STAGES`) | Task 128 stages 0-4 are built and tested on the local database; not yet on production (Task 128 status). |
+| A | A deal's stage track and logged timeline (calls, follow-ups, stage moves) | Shown | s12p | `relationship/activity.ts`, `/crm/opportunities/[id]` | Interactions are never rewritten, only archived. |
+| A | A won deal opens a job carrying name, contact and value | Shown | s12p | `project/opportunity-link.ts` `openJobFromOpportunity`; sheet copy from `crm-ui.tsx` `OpenJobButton` | Once per deal; the job starts as an enquiry. J-0142 itself is shown from its enquiry, so its chronology is unchanged. |
+| A | Custom fields, duplicate merge, stage playbooks, pipeline insights | Not shown, omitted | — | Task 128 stages 3-4 | Left out for length. |
+| A | Email and calendar sync | Not shown, not built | — | ADR-052 PROPOSED | |
 | A | Customer communication history, customer portal | Not shown, not built | — | `clients/dsew/gap-matrix.md` row "Client accounts, tickets" | |
 | B | Quote revisions, earlier revision replaced | Shown | s04 | `project/jobs.ts` `addQuoteRevision` | |
 | B | Approved value fixed on the job | Shown | s04 | `project/jobs.ts` `approveQuote` (snapshot) | "Order value · From the approved quote" is the product's tile wording. |
@@ -80,7 +84,7 @@ DSEW (D & S Electric Works) is not named, depicted or imitated. Its categories m
 engineering documentation and revision control → s06; BOM → s06; procurement → s07; inventory →
 s07; shop-floor execution → s08; QC and testing with measured readings → s09, s10; dispatch and
 passport → s10; project costing → s11; reporting → s12; AI-assisted search → s13 (assistant over
-records, not document search). Not covered because not built: Tally, attendance devices, Hindi
+records, not document search); enquiries and tender tracking → s12p (the CRM pipeline). Not covered because not built: Tally, attendance devices, Hindi
 labels, lot/heat genealogy, client portal, BOM revisions.
 
 ## On-screen data that is invented, by design

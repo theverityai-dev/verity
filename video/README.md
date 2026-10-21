@@ -1,6 +1,6 @@
 # Verity for Manufacturing — product film
 
-A 4:09 product film (1920×1080, 60 fps) following one engineered order through Verity, built in
+A 4:27 product film (1920×1080, 60 fps) following one engineered order through Verity, built in
 Remotion from the product's own screens, words and rules. It is a separate package: nothing here
 is imported by the Verity application, and `video/` is excluded from the app's TypeScript, lint and
 Docker builds.
@@ -11,7 +11,7 @@ Docker builds.
 | `docs/coverage-matrix.md` | Every capability the brief asked about: shown, illustrative, or not built, with the source file |
 | `docs/sound-design.md` | Narration, music, ambience, effects and mix |
 | `docs/qa-report.md` | What was checked, how, and the results |
-| `content/narration.json` | The script (25 cues) |
+| `content/narration.json` | The script (26 cues) |
 | `deliverables/captions.srt`, `.vtt` | Caption sidecars |
 
 ## Rendering
@@ -67,7 +67,7 @@ src/film/         grid and tokens (layout.ts), easing (ease.ts), camera, stateme
 src/ui/           Verity UI rebuilt at the product's measurements (kit, icons, shell, job page parts)
 src/props/        the isometric skid (iso.ts, Skid.tsx), drawing sheet, phone, QR symbol
 src/content/      fixture.ts: the one fictional dataset; derived numbers are computed
-src/scenes/       S01..S16, one file each; index.ts maps scene ids to components
+src/scenes/       S01..S16 plus S12Pipeline, one file each; index.ts maps scene ids to components
 src/Film.tsx      sequences the scenes on the narration's clock with 0.7 s cross-fades
 scripts/          audio builders, stills, contact sheets, validation, loudness mastering
 ```
