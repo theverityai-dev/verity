@@ -57,7 +57,7 @@ export default async function SignInPage({
           )}
           <a
             href={destination === "/" ? "/api/auth/oidc/start" : `/api/auth/oidc/start?returnTo=${encodeURIComponent(destination)}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-[var(--brand)] px-4 text-[14px] font-medium text-white no-underline transition-opacity hover:opacity-90"
+            className="inline-flex min-h-11 items-center justify-center rounded-[10px] bg-accent px-4 text-[15px] font-semibold text-accent-on no-underline transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_var(--color-accent-subtle)]"
           >
             Continue with organization sign-in
           </a>
