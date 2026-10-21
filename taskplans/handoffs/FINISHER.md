@@ -391,6 +391,19 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 - **Done when:** a person signs off playback in `video/docs/qa-report.md`, and the voiced master passes
   `node scripts/validate.mjs`.
 - **Source:** product-owner brief, 2026-10-21 (session on branch `dsew`).
+- **Status:** IN PROGRESS. 2026-10-21: the final master (4:27, 17 scenes, includes the Task 128 CRM
+  pipeline scene `s12p`) is rendered, loudness-mastered and passes `scripts/validate.mjs` (24/24:
+  1920×1080, 60 fps, -16.04 LUFS, -1.46 dBTP); one frame per scene checked from the encode; results in
+  `video/docs/qa-report.md`. The file is at `video/out/verity-manufacturing-1080p60.mp4` on the build
+  machine only (git-ignored, too large for git). Branch `dsew`, not yet merged to `main`.
+- **Still open:** (1) a person watches and listens to the whole film and signs off in the QA report;
+  (2) professional voice-over; (3) 4K and short or vertical cuts; (4) merge `dsew` into `main`, and
+  re-render after any change with `cd video && npm run audio && npm run render:master`, then
+  `node scripts/master-audio.mjs <master> <final>` and `node scripts/validate.mjs <final>` (about 35
+  min on a 6-core laptop; set `TEMP`/`TMP` to a drive with space if C: is full).
+- **Gotcha:** stopping a background render must also kill `remotion`, `ffmpeg.exe` and
+  `chrome-headless-shell.exe` under `video/node_modules`; stopping only the shell leaves them running and
+  a second render then crashes ffmpeg.
 - **Status:** IN PROGRESS, paused 2026-10-21 by the product owner. Branch `dsew` (not merged to `main`;
   `origin/main` at `2087a34a` is already merged into it).
 - **Where it stopped (resume here):**
