@@ -18,17 +18,34 @@ export function shortDate(iso: string | null): string {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-export const PHASE_LABEL: Record<string, string> = {
-  not_started: "Not started",
-  in_progress: "In progress",
-  ready: "Ready",
+export const STATUS_LABEL: Record<string, string> = {
+  draft: "Draft",
+  active: "Active",
+  hold: "On hold",
+  completed: "Completed",
+  closed: "Closed",
   cancelled: "Cancelled",
 };
 
-/** The ADR-009 state category a lot phase reads as, for the state pill. */
-export const PHASE_CATEGORY: Record<string, string> = {
-  not_started: "Draft",
-  in_progress: "Active",
-  ready: "Completed",
+/** The ADR-009 state category a lot status reads as, for the state pill. */
+export const STATUS_CATEGORY: Record<string, string> = {
+  draft: "Draft",
+  active: "Active",
+  hold: "Blocked",
+  completed: "Completed",
+  closed: "Completed",
   cancelled: "Cancelled",
+};
+
+export const BASIS_LABEL: Record<string, string> = {
+  issued: "Issued pieces",
+  good: "Accepted good pieces",
+  returned: "Returned pieces",
+};
+
+export const PAYMENT_LABEL: Record<string, string> = {
+  advance: "Advance",
+  recovery: "Advance recovered",
+  deduction: "Deduction",
+  payment: "Payment",
 };

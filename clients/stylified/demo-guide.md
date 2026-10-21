@@ -1,85 +1,87 @@
 # Stylified demo guide
 
-**Date:** 2026-10-21. Companion to `prd-review-and-replan.md` (why it is built this way) and `Garment_Lot_PRD.docx` (what the
-client asked for). Everything below ran on a throwaway local database and a local Keycloak. No production data was touched,
-and nothing here is on production. Every name, number and rupee is fictional.
+**Date:** 2026-10-22 (rewritten for the bundle-level build). Companion to `requirement-sheet-review.md` (what the client's
+developer requirement workbook asks and what is built) and `prd-review-and-replan.md` (history). Everything below ran on a
+throwaway local database and a local Keycloak. Nothing here is on production. Every name, number and rupee is fictional.
 
 ## 1. What the demo shows
 
-A lot and karigar piece-rate business: pieces go out to a karigar at a stage and come back, wages follow from the pieces
-returned, and the owner reads one dashboard and four reports. Two logins make the "only the munshi enters data" rule visible.
+A shirt-factory piece-rate business at the unit the workbook specifies: the **bundle**. A lot is cut into numbered bundles
+(B-0001...), each bundle moves through the stages (Pasting, Collar & Cuff, Stitching, Button / Kaj, Finishing / Press), each
+stage is given to a karigar or an outside unit and comes back split into good, rejected, rework and short, and wages follow from
+the wage basis agreed for that karigar. Two logins make "only the munshi enters data" visible.
 
 | Screen | Route | Who | What it proves |
 |---|---|---|---|
-| Lots | `/lots` | both | Every lot with number, design, stage, location, days there, pending, ready progress; New lot (munshi only) |
-| Lot detail | `/lots/{id}` | both | The stage journey with issued, received and pending at each stage; who holds what; every entry, with Reverse for a mistake |
-| Daily entry | `/lots/entry` | munshi | One screen: date, lot, issue or receive, stage, karigar, pieces; bundles appear automatically; today's entries listed |
-| Karigars | `/karigars` | both | Rate per piece, pieces held, wages earned, balance due; New karigar with rates |
-| Karigar card | `/karigars/{id}` | both | Account of work, rate per piece, advances and payments with Reverse, balance due; Record advance or payment, Set a rate |
-| Owner dashboard | `/lots/dashboard` | both | The PRD's seven items: active lots, pending pieces at every stage, material with karigars, ready bundles, lot-wise costing, karigars' dues, days since each lot last moved |
-| Lot reports | `/lots/reports` | both | Lot-wise production, worker-wise payment (with a period), costing, ready inventory; each downloads as a file that opens in Excel |
+| Lots | `/lots` | both | Every lot with stage, location, bundles, cut of planned, pending, good ready, reject / rework / short, due date, status |
+| Lot detail | `/lots/{id}` | both | Status buttons (activate, hold, complete, close), the stage journey for the whole lot, every bundle, every entry with Reverse |
+| Bundle | `/lots/bundles/{id}` | both | One bundle's position at every stage, each issue with what came back and what is still open, slip link |
+| Slip | `/lots/bundles/{id}/slip` | both | Bilingual (Hindi and English) slip: bundle number, net pieces, lot name and number, QR; prints on its own |
+| Daily entry | `/lots/entry` | munshi | Give out (bundle, stage, karigar, pieces, wage basis, due date) or take back (which issue; good, rejected, rework, short), with a live "accounted for X of Y" line |
+| Karigars | `/karigars` | both | Kind (in-house or outside), rate and wage basis per stage, pieces held, balance due |
+| Karigar card | `/karigars/{id}` | both | Work in hand, account of work, rates, advance / recovery / deduction / payment (mode, reference) with Reverse |
+| Owner dashboard | `/lots/dashboard` | both | Quality totals, pending by stage, material with karigars, dues and unrecovered advances, overdue returns, wages by lot |
+| Lot reports | `/lots/reports` | both | Lot status, bundle location, work in hand, wage ledger, short / reject / rework, production by process, lot cost so far, ready stock; each downloads for Excel |
 
-Seeded sample (the PRD's own): **LOT-0001, design D-101, 500 pieces**, at Stitching 500 issued, 320 received, 180 pending;
-Button / Kaj 320/200/120; Finishing 200/150/50; Press 150/100/50; 100 ready (5 bundles of 20). **Karigar A at ₹12 a piece.**
-Plus LOT-0002 (with one karigar for nine days), LOT-0003 (just given to the cutter), LOT-0004 (finished, 200 ready, 10 bundles),
-LOT-0005 (created today, not started). Seven karigars, five stages, an advance and three payments.
+Seeded sample: **LOT-0001 Spring formals** (500 planned, 400 cut in four bundles) carries the workbook's own reconciliation
+**100 = 94 good + 2 rejected + 1 rework + 2 short + 1 still open** on B-0001, the rework reissued and redone, B-0002 with 37
+still at Stitching, B-0003 with 98 at an outside collar unit past its return date, and B-0004 waiting to be issued. LOT-0002 is a
+draft, LOT-0003 is closed (50 ready), LOT-0004 is on hold. Six karigars: C pastes at ₹2 on pieces issued, Sharma Collar Works
+(outside) at ₹5 on pieces returned, A stitches at ₹12 on good pieces, D (button and kaj) ₹3, E (finishing) ₹4, F ₹11; an advance,
+a recovery, a deduction and payments with mode and reference.
 
-## 2. Walkthrough (about ten minutes)
+## 2. Walkthrough (about twelve minutes)
 
-1. **Munshi, Lots.** Point at LOT-0001: Stitching, with Karigar A and Karigar B, 12 days, 100 of 500 ready.
-2. **Open LOT-0001.** The journey shows issued, received and pending at every stage, the same numbers as page 2 of the blueprint.
-   "Who holds what" shows A with 100 and B with 80 pending at Stitching.
-3. **Daily entry.** Choose LOT-0001, Receive, Stitching, Karigar A, 60 pieces. Bundles show 3 without being typed.
-   Save. Then try 500: the screen refuses with "Karigar A has only 40 pieces pending at Stitching".
-4. **Karigar card for A.** Wages rose by 60 x ₹12 = ₹720. Record a payment larger than the balance: it is refused and says
-   to record the extra as an advance. Record a smaller one and watch the balance fall.
-5. **Reverse** the 60-piece entry from the lot page. Both rows stay; the pending count and the wage return to what they were.
-6. **Owner login, Owner dashboard.** The seven items on one page. Costing says wages only and "to be confirmed".
-7. **Owner, Lots.** There is no New lot button, no Daily entry menu item, and typing `/lots/entry` shows a plain refusal.
-8. **Lot reports, Download for Excel** on any report; the file opens in Excel with the same rows as the screen.
-9. **Phone.** The same pages at phone width: the sidebar becomes a tab bar.
+1. **Munshi, Lots.** Four lots in four statuses. Open LOT-0001.
+2. **Lot detail.** The journey shows issued, good and pending at every stage; losses are shown beside the stage, never netted
+   into good. Four bundles listed with where each one is.
+3. **Bundle B-0001, then its slip.** The same 100 pieces accounted five ways. The slip has Hindi beside each label and a QR; Print
+   prints only the slip.
+4. **Daily entry, Take back.** Choose B-0003 at the collar unit (98 open). Good 90, rejected 3, rework 2, short 1: the line reads
+   "accounted for 96 of 98, 2 will stay open". Save. Try a number that is over the open quantity: refused with the figures.
+5. **Daily entry, Give out.** Rework waiting at a stage is reissued from the same screen and keeps its own flag.
+6. **Karigar card for A.** Wage is on good pieces: 88 good at ₹12 is ₹1,056 although 90 came back. Record a deduction (a reason is
+   required) and a payment larger than the balance (refused, with what to do instead).
+7. **Reverse** an entry from the lot page. Both rows stay; counts and wage return to what they were. A reversal that would strand
+   a later stage is refused.
+8. **Complete the lot.** Refused while any bundle has pending or rework pieces; allowed when clear. Closed lots are locked.
+9. **Owner login.** Dashboard and every report, no write buttons, no Daily entry menu item, a plain refusal at `/lots/entry`.
+10. **Reports, Download for Excel** on any report; same rows as the screen.
 
 ## 3. Status, in the project's vocabulary
 
-**BUILT and PROVEN (database tests, 22 in `src/test/capability-piecework.test.ts`, 27 pure in `ledger.test.ts`):** the lot and
-stage ledger, refusal of over-issue and over-receive (also per karigar), rate snapshot on every receive, payment guard,
-reversal that cannot strand a later stage, gapless never-reused lot numbers, the stage chain frozen once work exists,
-back-dating limits, serialised concurrent entries, tenant isolation, append-only ledgers at the database, the owner role
-refused every write, and the dashboard and reports derived from the same ledger.
+**BUILT and PROVEN** (28 pure tests in `ledger.test.ts`, 23 database tests in `src/test/capability-piecework.test.ts`): the
+bundle ledger and the sheet's reconciliation; over-issue, over-return and over-rework refusal; the split enforced by a database
+CHECK; rework pool and reissue; the three wage bases; rate snapshot; no-rate refusal; payment, recovery and deduction guards;
+reversal that cannot strand a later stage; gapless never-reused lot and bundle numbers; lot status moves; concurrent entries
+serialised; tenant isolation; append-only tables at the database; the owner role refused every write; reports derived from the
+same ledger.
 
-**BUILT, opened in a browser and checked on the local stack:** Lots, lot detail, Daily entry (an entry was saved through the
-screen), Karigars, Owner dashboard, Reports (all four with their download button), the owner login (no write controls,
-refused entry screen). Checked at desktop and a phone-width window.
+**BUILT, opened in a browser (2026-10-22):** Lots, lot detail, bundle slip, Daily entry return (saved through the screen),
+Owner dashboard, all reports, Karigar card. Two links found wrong during that pass (karigar work-in-hand and bundle issue rows)
+were fixed.
 
-**BUILT, not clicked through:** New lot, New karigar, Record payment, Set a rate, Reverse (entry and payment), Retire and
-Restore a karigar, Cancel lot, the stage set-up form, the actual CSV file contents, and the period filter. Each calls a command
-that the database tests cover; the forms themselves were not exercised.
+**BUILT, not clicked through:** New lot, Cut a bundle, status buttons, Record money, Set a rate, Retire / Restore, Cancel lot,
+the owner login against these screens (proven by test), and the CSV contents.
 
-**NOT YET BUILT (and not claimed):**
-- A native `.xlsx` file. The download is CSV, which Excel opens. A true Excel file is a later build.
-- Hindi, or any language switch. The client's requirement is in Hindi; the screens are English.
-- Offline entry, and notifications.
-- Shortage, rejection and rework recording, lot split or merge. These are open questions to the client (PRD section 12).
-- Full lot costing. Costing here is wages only; cloth and other costs wait for the client to say what costing includes.
-- A way for ready stock to leave. Dispatch is excluded by the client, so the ready figure never falls; the screens say so.
-- Fabric Inward as a record. The PRD leaves what it captures open (question 1), so it is not built.
-- Printing a lot slip or a QR for a lot.
+**NOT YET BUILT (and not claimed):** fabric inward and the decimal-metre ledger; the twelve-category costing and allocation
+(costing is wages only and says so); packing, ready-stock exit and dispatch; bundle and lot split or join; Hindi UI beyond the
+slip; native `.xlsx` and PDF export (CSV opens in Excel); the other roles and thresholds from the workbook (Manager,
+Supervisor, Store Manager); alerts; an owner audit viewer; backup and restore evidence. See `requirement-sheet-review.md` for
+the stage plan.
 
-## 4. Open questions that change the build (from the PRD, section 12)
+## 4. Decisions made from the workbook's suggested defaults
 
-Bundle rule (sample: 20 pieces, a part-bundle counts as one); how wages are worked out and how advances are recovered
-(built as: wage on pieces returned at the rate in force that day; advance is netted at the balance); what costing includes;
-what "location" means (shown as "with the karigar"); short, rejected or reworked pieces; whether one karigar can work several
-stages (allowed); lot split or merge (not allowed); fabric inward fields; who logs in; device and internet; language;
-existing registers to import.
+Recorded in `requirement-sheet-review.md` section 4 (D-01 to D-14). The client confirms them in UAT; none is hidden.
 
 ## 5. Running it locally
 
 Needs Docker, Node and this repository. Database: a copy of a migrated local Postgres (`verity_stylified` on port 55432 was made
-from `verity_clean` and brought up to date with `npx prisma migrate deploy`; the two new migrations are
-`20261021200000_inventory_style_master` and `20261021300000_capability_piecework`). Identity: the local Keycloak realm `dsew`
-with two logins for this demo, `stylified-munshi` and `stylified-owner`. Seed (never through the npm `seed:*` scripts or any
-shell that has the production `.env` loaded, and with the Supabase variables blank):
+from `verity_clean` and brought up to date with `npx prisma migrate deploy`; the migrations are
+`20261021200000_inventory_style_master`, `20261021300000_capability_piecework` and
+`20261022100000_piecework_bundles_quality`). The last one refuses to run if any piecework rows exist; reset the demo tenant first
+where they do. Identity: the local Keycloak realm `dsew` with two logins, `stylified-munshi` and `stylified-owner`. Seed (never
+through the npm `seed:*` scripts or any shell that has the production `.env` loaded, and with the Supabase variables blank):
 
 ```
 DATABASE_URL, DIRECT_URL   the local database
@@ -91,24 +93,23 @@ node prisma/run-seed.cjs seed-stylified.ts
 Reset to clean: `DEMO_TENANT_NAME=Stylified npx tsx prisma/reset-demo.ts --yes` (it deletes only a tenant flagged `demo` with that
 exact name), then seed again. Putting the demo on production is a separate decision for the product owner: it creates a login.
 
-**Two things that trip people:** `next dev` allows one server per folder, so a second one for this demo needs another copy of
+**Things that trip people:** a running dev server keeps the Prisma client it started with, so restart it after `prisma generate`
+or a migration (otherwise "column does not exist"); `next dev` allows one server per folder, so a second one needs another copy of
 the source; and Turbopack refuses a linked `node_modules`, so that copy runs with `next dev --webpack`.
 
 ## 6. Completeness gate
 
-Not run in the formal sense (`obvious-basics-checklist` and the Odoo and ERPNext cross-check). A first pass against what a
-piece-rate and job-work user treats as obvious:
+Not run in the formal sense (`obvious-basics-checklist` and the Odoo and ERPNext cross-check). A first pass:
 
 | Basic | State |
 |---|---|
-| Search and filter on every list | Lots and karigar tables use the shared table (sort, filter, paging); no status chips on the lot list yet. Deferred |
-| A row opens its detail; detail links back | Included (lot and karigar links everywhere, dashboard rows open the lot or karigar) |
+| Search and filter on every list | Shared table (sort, filter, paging); no status chips on the lot list yet |
+| A row opens its detail; detail links back | Included; lot, bundle and karigar links throughout |
 | Corrections without losing history | Included: reversal for entries and payments, never edit or delete |
-| Empty, error and denied states | Included: set-up empty state, plain refusals with the figures, permission-denied pages |
-| Export | CSV for four reports; `.xlsx` deferred |
-| Per-karigar statement to hand over | Not built: the card is on screen and the report downloads, but there is no print layout. Deferred |
-| Date of entry vs time typed | Included: both recorded, back-dating allowed within limits |
-| Roles | Included: munshi writes, owner reads, proven by test and by login |
-| Audit of who did what | Included: every line shows who entered it; the platform audit trail also records commands |
+| Empty, error and denied states | Included: plain refusals with the figures, permission-denied pages |
+| Export | CSV for the reports; `.xlsx` and PDF deferred |
+| Per-karigar statement to hand over | Not built: on screen and as CSV, no print layout |
+| Roles | Munshi writes, owner reads; the workbook's four roles are a later stage |
+| Audit of who did what | Every line shows who entered it; the platform audit records commands; no owner viewer yet |
 
 This is a first pass by the builder, not the formal gate.

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
+import { DateField } from "@/components/ui/DateTimePicker";
 import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
 import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
@@ -15,18 +16,20 @@ const DEFINE_STAGE = "verity.piecework.define_stage";
 const keyOf = (label: string) =>
   label.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/^(\d)/, "s_$1").slice(0, 40);
 
-export function NewLotForm({ defaultBundleSize = 20 }: { defaultBundleSize?: number }) {
+export function NewLotForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [pending, startTransition] = useTransition();
+  const [start, setStart] = useState("");
+  const [due, setDue] = useState("");
 
   return (
     <>
       <CommandButton commands={CREATE_LOT} variant="primary" onClick={() => setOpen(true)}>
         New lot
       </CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="New lot" description="The system gives the lot its own number. Pieces are counted as numbers; there is no size.">
+      <Modal open={open} onClose={() => setOpen(false)} title="New lot" description="The system gives the lot its own number. It starts as a draft; start it when cutting begins. Bundles are cut from it afterwards." width="lg">
         <form
           className="flex flex-col gap-4"
           action={(formData) => {
@@ -35,7 +38,10 @@ export function NewLotForm({ defaultBundleSize = 20 }: { defaultBundleSize?: num
             startTransition(async () => {
               const result = await runCommand<{ id: string; number: string }>(
                 CREATE_LOT,
-                { design: text("design"), totalPieces: Number(text("pieces")), bundleSize: Number(text("bundle")) || undefined, note: text("note") || undefined },
+                {
+                  design: text("design"), name: text("name") || undefined, plannedPieces: Number(text("planned")),
+                  fabricType: text("fabric") || undefined, startDate: start || undefined, dueDate: due || undefined, note: text("note") || undefined,
+                },
                 "/lots",
               );
               if (result.ok) {
@@ -47,16 +53,25 @@ export function NewLotForm({ defaultBundleSize = 20 }: { defaultBundleSize?: num
         >
           {failure && <ErrorState title="Could not create the lot" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Design" htmlFor="lot-design" required hint="The design name or code, as you write it.">
-              <Input id="lot-design" name="design" required maxLength={120} autoFocus />
+            <Field label="Lot name" htmlFor="lot-name" hint="What the factory calls it, for example Spring formals.">
+              <Input id="lot-name" name="name" maxLength={120} autoFocus />
             </Field>
-            <Field label="Total pieces" htmlFor="lot-pieces" required>
-              <Input id="lot-pieces" name="pieces" type="number" inputMode="numeric" min={1} max={1000000} step={1} required />
+            <Field label="Style or design" htmlFor="lot-design" required>
+              <Input id="lot-design" name="design" required maxLength={120} />
+            </Field>
+            <Field label="Planned pieces" htmlFor="lot-planned" required>
+              <Input id="lot-planned" name="planned" type="number" inputMode="numeric" min={1} max={1000000} step={1} required />
+            </Field>
+            <Field label="Fabric type" htmlFor="lot-fabric">
+              <Input id="lot-fabric" name="fabric" maxLength={80} />
+            </Field>
+            <Field label="Start date" htmlFor="lot-start">
+              <DateField id="lot-start" value={start} onChange={setStart} />
+            </Field>
+            <Field label="Due date" htmlFor="lot-due">
+              <DateField id="lot-due" value={due} onChange={setDue} min={start || undefined} />
             </Field>
           </div>
-          <Field label="Pieces in one bundle" htmlFor="lot-bundle" hint="Bundles are counted for you from this. Change it only if this lot is bundled differently.">
-            <Input id="lot-bundle" name="bundle" type="number" inputMode="numeric" min={1} step={1} defaultValue={defaultBundleSize} />
-          </Field>
           <Field label="Note" htmlFor="lot-note">
             <Input id="lot-note" name="note" maxLength={500} />
           </Field>
@@ -84,7 +99,7 @@ export function DefineStageForm({ next }: { next: number }) {
       <CommandButton commands={DEFINE_STAGE} variant="primary" onClick={() => setOpen(true)}>
         {next === 1 ? "Set up the first stage" : "Add a stage"}
       </CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title={`Stage ${next}`} description="Stages run in the order you add them, for example Cutting, Stitching, Button / Kaj, Finishing, Press. They cannot change once work is recorded.">
+      <Modal open={open} onClose={() => setOpen(false)} title={`Stage ${next}`} description="Stages run in the order you add them, for example Pasting, Collar & Cuff, Stitching, Button / Kaj, Finishing. They cannot change once work is recorded.">
         <form
           className="flex flex-col gap-4"
           action={(formData) => {

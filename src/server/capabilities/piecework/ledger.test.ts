@@ -1,241 +1,254 @@
 import { describe, expect, it } from "vitest";
 import {
-  bundlesOf,
-  computePosition,
+  canMoveLot,
+  computeBundle,
+  costPerGoodPiece,
   daysBetween,
   daysInStage,
   daysSinceMovement,
   findViolation,
   rateOn,
+  sumStages,
+  wageOf,
   workerMoney,
   type LedgerEntry,
   type StageRef,
 } from "./ledger";
 
 /**
- * The numbers below are the client PRD's own sample (Garment_Visual_Blueprint pages 2 and 6): a 500-piece lot moving
- * through five working stages, and Karigar A at Rs 12 a piece. If these derive correctly, the screens built on them
- * show what the client was promised.
+ * The numbers are the requirement sheet's own samples (Sample Calculations): issued 100 = good 94 + rejected 2 +
+ * rework 1 + short 2 + open 1; wage on issued 100 x Rs 12 = Rs 1,200 against accepted 94 x Rs 12 = Rs 1,128; cost per
+ * good piece Rs 48,000 / 960 = Rs 50. If these derive correctly, the screens show what the client specified.
  */
 
 const STAGES: StageRef[] = [
-  { id: "cut", sequence: 1, label: "Cutting" },
-  { id: "stitch", sequence: 2, label: "Stitching" },
-  { id: "kaj", sequence: 3, label: "Button / Kaj" },
-  { id: "finish", sequence: 4, label: "Finishing" },
-  { id: "press", sequence: 5, label: "Press" },
+  { id: "pasting", sequence: 1, label: "Pasting" },
+  { id: "collar", sequence: 2, label: "Collar & Cuff" },
+  { id: "stitch", sequence: 3, label: "Stitching" },
 ];
 
 let n = 0;
-const entry = (
-  stageId: string,
-  kind: "issue" | "receive",
-  pieces: number,
-  entryDate: string,
-  workerId = "A",
-  extra: Partial<LedgerEntry> = {},
-): LedgerEntry => ({ id: `e${++n}`, stageId, workerId, kind, pieces, reversesId: null, entryDate, rateMinor: kind === "receive" ? 1200 : null, ...extra });
-
-const reversal = (original: LedgerEntry, entryDate: string): LedgerEntry => ({ ...original, id: `r${++n}`, reversesId: original.id, entryDate });
-
-/** The PRD's page-2 lot: cutting 500/500, stitching 500/320, kaj 320/200, finishing 200/150, press 150/100. */
-function prdLot(): LedgerEntry[] {
-  return [
-    entry("cut", "issue", 500, "2026-10-14", "cutter"),
-    entry("cut", "receive", 500, "2026-10-16", "cutter"),
-    entry("stitch", "issue", 500, "2026-10-16", "A"),
-    entry("stitch", "receive", 320, "2026-10-22", "A"),
-    entry("kaj", "issue", 320, "2026-10-22", "B"),
-    entry("kaj", "receive", 200, "2026-10-26", "B"),
-    entry("finish", "issue", 200, "2026-10-26", "C"),
-    entry("finish", "receive", 150, "2026-10-29", "C"),
-    entry("press", "issue", 150, "2026-10-29", "D"),
-    entry("press", "receive", 100, "2026-10-31", "D"),
-  ];
-}
-
+const issue = (stageId: string, pieces: number, date: string, workerId = "A", extra: Partial<LedgerEntry> = {}): LedgerEntry => ({
+  id: `i${++n}`, bundleId: "b1", stageId, workerId, kind: "issue", pieces, good: 0, rejected: 0, rework: 0, short: 0,
+  issueId: null, isRework: false, wageBasis: "good", reversesId: null, entryDate: date, rateMinor: null, ...extra,
+});
+const ret = (of: LedgerEntry, split: { good?: number; rejected?: number; rework?: number; short?: number }, date: string, extra: Partial<LedgerEntry> = {}): LedgerEntry => {
+  const { good = 0, rejected = 0, rework = 0, short = 0 } = split;
+  return {
+    id: `r${++n}`, bundleId: of.bundleId, stageId: of.stageId, workerId: of.workerId, kind: "receive", pieces: good + rejected + rework + short,
+    good, rejected, rework, short, issueId: of.id, isRework: false, wageBasis: of.wageBasis, reversesId: null, entryDate: date, rateMinor: 1200, ...extra,
+  };
+};
+const reversal = (e: LedgerEntry, date: string): LedgerEntry => ({ ...e, id: `x${++n}`, reversesId: e.id, entryDate: date });
 const names = (id: string) => `Karigar ${id}`;
+const pos = (net: number, rows: LedgerEntry[]) => computeBundle("b1", net, STAGES, rows);
 
-describe("computePosition", () => {
-  const p = computePosition(500, STAGES, prdLot());
-  const stage = (id: string) => p.stages.find((s) => s.stageId === id)!;
-
-  it("derives issued, received and pending at every stage exactly as the blueprint shows", () => {
-    expect(p.stages.map((s) => [s.issued, s.received, s.pending])).toEqual([
-      [500, 500, 0],
-      [500, 320, 180],
-      [320, 200, 120],
-      [200, 150, 50],
-      [150, 100, 50],
-    ]);
+describe("reconciliation of one issue", () => {
+  it("accounts for every piece: 100 = 94 good + 2 rejected + 1 rework + 2 short + 1 open", () => {
+    const i = issue("pasting", 100, "2026-10-01");
+    const p = pos(100, [i, ret(i, { good: 94, rejected: 2, rework: 1, short: 2 }, "2026-10-03")]);
+    const s = p.stages[0]!;
+    expect(s.issues[0]).toMatchObject({ issued: 100, good: 94, rejected: 2, rework: 1, short: 2, open: 1 });
+    expect(s.accounted).toBe(99);
+    expect(s.pending).toBe(1);
+    expect(s.good + s.rejected + s.rework + s.short + s.pending).toBe(100);
   });
 
-  it("feeds each stage from the one before, and the first from the lot total", () => {
-    expect(p.stages.map((s) => s.available)).toEqual([500, 500, 320, 200, 150]);
-    expect(p.stages.map((s) => s.toIssue)).toEqual([0, 0, 0, 0, 0]);
-  });
-
-  it("holds ready stock as what has been received at the last stage", () => {
-    expect(p.ready).toBe(100);
-  });
-
-  it("names the current stage as the earliest still holding pieces", () => {
-    expect(p.currentStageId).toBe("stitch");
-  });
-
-  it("splits a stage's pieces by worker", () => {
-    expect(stage("stitch").byWorker.get("A")).toEqual({ issued: 500, received: 320, pending: 180 });
-  });
-
-  it("falls back to the first stage with pieces waiting when nothing is out, and to none when all is ready", () => {
-    expect(computePosition(500, STAGES, []).currentStageId).toBe("cut");
-    const done = computePosition(40, STAGES, STAGES.flatMap((s) => [entry(s.id, "issue", 40, "2026-10-01"), entry(s.id, "receive", 40, "2026-10-02")]));
-    expect(done.ready).toBe(40);
-    expect(done.currentStageId).toBeNull();
+  it("lets a second return settle the open piece", () => {
+    const i = issue("pasting", 100, "2026-10-01");
+    const p = pos(100, [i, ret(i, { good: 94, rejected: 2, rework: 1, short: 2 }, "2026-10-03"), ret(i, { good: 1 }, "2026-10-04")]);
+    expect(p.stages[0]!.issues[0]!.open).toBe(0);
+    expect(p.stages[0]!.pending).toBe(0);
   });
 });
 
-describe("days", () => {
-  const p = computePosition(500, STAGES, prdLot());
-  const stage = (id: string) => p.stages.find((s) => s.stageId === id)!;
+describe("flow between stages", () => {
+  const i1 = issue("pasting", 20, "2026-10-01");
+  const r1 = ret(i1, { good: 18, rejected: 1, short: 1 }, "2026-10-02");
 
-  it("counts calendar days between business dates", () => {
-    expect(daysBetween("2026-10-14", "2026-10-16")).toBe(2);
-    expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  it("hands only good pieces to the next stage; rejected and short leave the flow but stay visible", () => {
+    const p = pos(20, [i1, r1]);
+    expect(p.stages[1]!.intake).toBe(18);
+    expect(p.rejected).toBe(1);
+    expect(p.short).toBe(1);
+    expect(p.ready).toBe(0);
   });
 
-  it("runs a finished stage from first issue to last receive", () => {
-    expect(daysInStage(stage("cut"), "2026-12-31")).toBe(2);
+  it("holds rework in the stage's pool until it is issued again, and rework is not output until accepted", () => {
+    const i = issue("pasting", 20, "2026-10-01");
+    const r = ret(i, { good: 15, rework: 3, short: 2 }, "2026-10-02");
+    const p = pos(20, [i, r]);
+    expect(p.stages[0]!.reworkPool).toBe(3);
+    expect(p.reworkOpen).toBe(3);
+    expect(p.stages[1]!.intake).toBe(15);
+
+    const again = issue("pasting", 3, "2026-10-03", "A", { isRework: true });
+    const back = ret(again, { good: 3 }, "2026-10-04");
+    const done = pos(20, [i, r, again, back]);
+    expect(done.stages[0]!.reworkPool).toBe(0);
+    expect(done.stages[0]!.good).toBe(18);
+    expect(done.stages[1]!.intake).toBe(18);
   });
 
-  it("runs an open stage up to today", () => {
-    expect(daysInStage(stage("stitch"), "2026-10-28")).toBe(12);
+  it("keeps conserving pieces: net = ready + rejected + short + open + rework pool + pieces waiting between stages", () => {
+    const i = issue("pasting", 20, "2026-10-01");
+    const r = ret(i, { good: 15, rejected: 2, rework: 3 }, "2026-10-02");
+    const p = pos(20, [i, r]);
+    const s = p.stages[0]!;
+    expect(s.good + s.rejected + s.short + s.reworkPool + s.pending + s.toIssue).toBe(20);
   });
 
-  it("has no days for a stage nothing ever reached", () => {
-    const empty = computePosition(10, STAGES, []);
-    expect(daysInStage(empty.stages[0]!, "2026-10-28")).toBeNull();
+  it("names the current stage as the earliest still holding pieces or rework", () => {
+    expect(pos(20, [i1]).currentStageId).toBe("pasting");
+    expect(pos(20, [i1, r1]).currentStageId).toBe("collar");
+    expect(pos(20, []).currentStageId).toBe("pasting");
   });
 
-  it("measures the stuck time from the last movement", () => {
-    expect(daysSinceMovement(p, "2026-11-04")).toBe(4);
-    expect(daysSinceMovement(computePosition(10, STAGES, []), "2026-11-04")).toBeNull();
-  });
-});
-
-describe("reversal, not edit", () => {
-  it("cancels an entry exactly and leaves the original in the ledger", () => {
-    const rows = prdLot();
-    const wrong = entry("stitch", "receive", 30, "2026-10-23");
-    const after = computePosition(500, STAGES, [...rows, wrong, reversal(wrong, "2026-10-23")]);
-    expect(after.stages[1]).toMatchObject({ issued: 500, received: 320, pending: 180 });
-  });
-
-  it("does not move first-issue or last-receive dates", () => {
-    const rows = prdLot();
-    const wrong = entry("stitch", "receive", 30, "2026-12-01");
-    const after = computePosition(500, STAGES, [...rows, wrong, reversal(wrong, "2026-12-02")]);
-    expect(after.stages[1]!.lastReceiveDate).toBe("2026-12-01");
-    // The reversal is dated later and still never becomes "the last receive"; movement dates do see it.
-    expect(after.lastMovementDate).toBe("2026-12-02");
+  it("sums a lot's stages over its bundles", () => {
+    const a = pos(20, [i1, r1]);
+    const bi = { ...issue("pasting", 10, "2026-10-01"), bundleId: "b2" };
+    const b = computeBundle("b2", 10, STAGES, [bi, { ...ret(bi, { good: 10 }, "2026-10-02"), bundleId: "b2" }]);
+    const totals = sumStages([a, b], STAGES);
+    expect(totals[0]).toMatchObject({ issued: 30, good: 28, rejected: 1, short: 1 });
   });
 });
 
 describe("findViolation", () => {
-  it("accepts a consistent lot", () => {
-    expect(findViolation(computePosition(500, STAGES, prdLot()), names)).toBeNull();
+  it("accepts a consistent bundle", () => {
+    const i = issue("pasting", 20, "2026-10-01");
+    expect(findViolation(pos(20, [i, ret(i, { good: 20 }, "2026-10-02")]), names)).toBeNull();
   });
 
-  it("refuses issuing more than the previous stage has handed on", () => {
-    const rows = [...prdLot(), entry("kaj", "issue", 1, "2026-11-01", "B")];
-    const v = findViolation(computePosition(500, STAGES, rows), names);
-    expect(v).toMatchObject({ code: "over_issue", stageId: "kaj" });
-    expect(v!.message).toContain("Button / Kaj");
+  it("refuses issuing more than reached the stage", () => {
+    const v = findViolation(pos(20, [issue("pasting", 21, "2026-10-01")]), names);
+    expect(v).toMatchObject({ code: "over_issue", stageId: "pasting" });
   });
 
-  it("refuses a receive beyond what was issued", () => {
-    const rows = [...prdLot(), entry("stitch", "receive", 181, "2026-11-01", "A")];
-    expect(findViolation(computePosition(500, STAGES, rows), names)).toMatchObject({ code: "over_receive", stageId: "stitch" });
+  it("refuses a return that accounts for more than the issue", () => {
+    const i = issue("pasting", 10, "2026-10-01");
+    const v = findViolation(pos(10, [i, ret(i, { good: 8, rejected: 3 }, "2026-10-02")]), names);
+    expect(v).toMatchObject({ code: "over_account", workerId: "A" });
   });
 
-  it("refuses one worker returning more than that worker was given, even if the stage total allows it", () => {
-    const rows = [
-      entry("cut", "issue", 100, "2026-10-01", "A"),
-      entry("cut", "issue", 100, "2026-10-01", "B"),
-      entry("cut", "receive", 150, "2026-10-02", "A"),
-    ];
-    expect(findViolation(computePosition(200, STAGES, rows), names)).toMatchObject({ code: "worker_over_receive", workerId: "A" });
+  it("refuses issuing more rework than was returned for rework", () => {
+    const i = issue("pasting", 10, "2026-10-01");
+    const r = ret(i, { good: 8, rework: 2 }, "2026-10-02");
+    const v = findViolation(pos(10, [i, r, issue("pasting", 3, "2026-10-03", "A", { isRework: true })]), names);
+    expect(v).toMatchObject({ code: "over_rework" });
   });
 
   it("refuses a reversal that would strand the next stage", () => {
-    const rows = prdLot();
-    const cutReceive = rows.find((r) => r.stageId === "cut" && r.kind === "receive")!;
-    const v = findViolation(computePosition(500, STAGES, [...rows, reversal(cutReceive, "2026-11-01")]), names);
-    expect(v).toMatchObject({ code: "over_issue", stageId: "stitch" });
+    const i = issue("pasting", 20, "2026-10-01");
+    const r = ret(i, { good: 20 }, "2026-10-02");
+    const next = issue("collar", 20, "2026-10-03");
+    expect(findViolation(pos(20, [i, r, next, reversal(r, "2026-10-04")]), names)).toMatchObject({ code: "over_issue", stageId: "collar" });
   });
 
-  it("allows reversing a receive nobody has issued from", () => {
-    const rows = prdLot();
-    const pressReceive = rows.find((r) => r.stageId === "press" && r.kind === "receive")!;
-    expect(findViolation(computePosition(500, STAGES, [...rows, reversal(pressReceive, "2026-11-01")]), names)).toBeNull();
+  it("allows reversing a return nobody has issued from, and an issue nothing was returned against", () => {
+    const i = issue("pasting", 20, "2026-10-01");
+    const r = ret(i, { good: 20 }, "2026-10-02");
+    expect(findViolation(pos(20, [i, r, reversal(r, "2026-10-03")]), names)).toBeNull();
+    expect(findViolation(pos(20, [i, reversal(i, "2026-10-03")]), names)).toBeNull();
   });
-});
 
-describe("bundles", () => {
-  it("counts from pieces at the lot's bundle size, a part bundle counting as one", () => {
-    expect(bundlesOf(100, 20)).toBe(5);
-    expect(bundlesOf(40, 20)).toBe(2);
-    expect(bundlesOf(45, 20)).toBe(3);
-    expect(bundlesOf(0, 20)).toBe(0);
+  it("refuses reversing an issue that has returns against it", () => {
+    const i = issue("pasting", 20, "2026-10-01");
+    expect(findViolation(pos(20, [i, ret(i, { good: 5 }, "2026-10-02"), reversal(i, "2026-10-03")]), names)).toMatchObject({ code: "over_account" });
   });
 });
 
-describe("worker money", () => {
-  it("reproduces the PRD's Karigar A card: Rs 3,000 earned, Rs 500 advance, Rs 1,000 paid, Rs 1,500 due", () => {
-    const entries = [entry("stitch", "receive", 150, "2026-10-12"), entry("stitch", "receive", 100, "2026-10-14")];
-    const money = workerMoney(entries, [
-      { kind: "advance", amountMinor: 50_000, reversesId: null },
-      { kind: "payment", amountMinor: 100_000, reversesId: null },
+describe("days", () => {
+  const i = issue("pasting", 20, "2026-10-01");
+  const p = pos(20, [i, ret(i, { good: 20 }, "2026-10-03")]);
+  it("counts calendar days", () => {
+    expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  });
+  it("runs a finished stage from first issue to last return, an open stage to today", () => {
+    expect(daysInStage(p.stages[0]!, "2026-12-31")).toBe(2);
+    const open = pos(20, [i]);
+    expect(daysInStage(open.stages[0]!, "2026-10-08")).toBe(7);
+  });
+  it("has no days for a stage nothing reached, and measures stuck time from the last movement", () => {
+    expect(daysInStage(p.stages[2]!, "2026-10-08")).toBeNull();
+    expect(daysSinceMovement(p, "2026-10-13")).toBe(10);
+    expect(daysSinceMovement(pos(20, []), "2026-10-13")).toBeNull();
+  });
+});
+
+describe("wages follow the basis the work was issued under", () => {
+  const i = issue("pasting", 100, "2026-10-01", "A", { wageBasis: "issued", rateMinor: 1200 });
+  const r = (basis: "issued" | "good" | "returned") => ret({ ...i, wageBasis: basis }, { good: 94, rejected: 2, rework: 1, short: 2 }, "2026-10-03");
+
+  it("pays on issued pieces: 100 x Rs 12 = Rs 1,200", () => {
+    expect(wageOf(i)).toBe(120_000);
+    expect(wageOf(r("issued"))).toBe(0);
+  });
+  it("pays on accepted good pieces: 94 x Rs 12 = Rs 1,128", () => {
+    expect(wageOf({ ...i, wageBasis: "good" })).toBe(0);
+    expect(wageOf(r("good"))).toBe(94 * 1200);
+  });
+  it("pays on everything brought back when the basis is returned: (94 + 2 + 1) x Rs 12", () => {
+    expect(wageOf(r("returned"))).toBe(97 * 1200);
+  });
+  it("cancels a reversed entry's wage exactly", () => {
+    const e = r("good");
+    expect(wageOf(e) + wageOf(reversal(e, "2026-10-04"))).toBe(0);
+    expect(wageOf(i) + wageOf(reversal(i, "2026-10-04"))).toBe(0);
+  });
+  it("earns nothing without a snapshotted rate or basis", () => {
+    expect(wageOf({ ...r("good"), rateMinor: null })).toBe(0);
+    expect(wageOf({ ...r("good"), wageBasis: null })).toBe(0);
+  });
+});
+
+describe("the karigar ledger", () => {
+  const i = issue("pasting", 200, "2026-10-01");
+  const earn = ret(i, { good: 200 }, "2026-10-02", { rateMinor: 1000 });
+
+  it("keeps advance given apart from advance recovered: Rs 2,000 earned, Rs 1,000 recovered, Rs 500 paid = Rs 500 due", () => {
+    const m = workerMoney([earn], [
+      { kind: "advance", amountMinor: 100_000, reversesId: null },
+      { kind: "recovery", amountMinor: 100_000, reversesId: null },
+      { kind: "payment", amountMinor: 50_000, reversesId: null },
     ]);
-    expect(money).toEqual({ wagesMinor: 300_000, advanceMinor: 50_000, paidMinor: 100_000, balanceMinor: 150_000 });
+    expect(m).toMatchObject({ wagesMinor: 200_000, advanceGivenMinor: 100_000, recoveredMinor: 100_000, paidMinor: 50_000, balanceMinor: 50_000, advanceOutstandingMinor: 0 });
   });
-
-  it("earns nothing on an issue and cancels a reversed receive's wage exactly", () => {
-    const received = entry("stitch", "receive", 100, "2026-10-12");
-    const entries = [entry("stitch", "issue", 100, "2026-10-11"), received, reversal(received, "2026-10-13")];
-    expect(workerMoney(entries, []).wagesMinor).toBe(0);
+  it("shows an unrecovered advance as outstanding without touching the wage balance", () => {
+    const m = workerMoney([earn], [{ kind: "advance", amountMinor: 80_000, reversesId: null }]);
+    expect(m.balanceMinor).toBe(200_000);
+    expect(m.advanceOutstandingMinor).toBe(80_000);
   });
-
-  it("pays at the rate snapshotted on each entry, so a later rate change never rewrites old work", () => {
-    const entries = [entry("stitch", "receive", 100, "2026-10-12", "A", { rateMinor: 1200 }), entry("stitch", "receive", 100, "2026-11-12", "A", { rateMinor: 1500 })];
-    expect(workerMoney(entries, []).wagesMinor).toBe(100 * 1200 + 100 * 1500);
-  });
-
-  it("lets a reversed payment restore the balance", () => {
-    const money = workerMoney([entry("stitch", "receive", 10, "2026-10-12")], [
-      { kind: "payment", amountMinor: 12_000, reversesId: null },
-      { kind: "payment", amountMinor: 12_000, reversesId: "p1" },
+  it("subtracts approved deductions, and restores the balance when a payment is reversed", () => {
+    const m = workerMoney([earn], [
+      { kind: "deduction", amountMinor: 10_000, reversesId: null },
+      { kind: "payment", amountMinor: 30_000, reversesId: null },
+      { kind: "payment", amountMinor: 30_000, reversesId: "p" },
     ]);
-    expect(money.balanceMinor).toBe(12_000);
+    expect(m).toMatchObject({ deductionMinor: 10_000, paidMinor: 0, balanceMinor: 190_000 });
   });
+});
 
-  it("shows an unrecovered advance as a negative balance", () => {
-    expect(workerMoney([], [{ kind: "advance", amountMinor: 50_000, reversesId: null }]).balanceMinor).toBe(-50_000);
+describe("cost per good piece and lot status", () => {
+  it("is total cost over good finished pieces: Rs 48,000 / 960 = Rs 50, blank when there are none", () => {
+    expect(costPerGoodPiece(4_800_000, 960)).toBe(5000);
+    expect(costPerGoodPiece(4_800_000, 0)).toBeNull();
+  });
+  it("moves a lot only along the allowed statuses", () => {
+    expect(canMoveLot("draft", "active")).toBe(true);
+    expect(canMoveLot("draft", "closed")).toBe(false);
+    expect(canMoveLot("active", "hold")).toBe(true);
+    expect(canMoveLot("hold", "active")).toBe(true);
+    expect(canMoveLot("active", "completed")).toBe(true);
+    expect(canMoveLot("completed", "closed")).toBe(true);
+    expect(canMoveLot("closed", "active")).toBe(false);
   });
 });
 
 describe("rateOn", () => {
-  const rates = [
-    { effectiveFrom: "2026-01-01", rateMinor: 1000 },
-    { effectiveFrom: "2026-10-01", rateMinor: 1200 },
-    { effectiveFrom: "2026-12-01", rateMinor: 1500 },
-  ];
-  it("picks the newest rate on or before the date", () => {
+  const rates = [{ effectiveFrom: "2026-01-01", rateMinor: 1000 }, { effectiveFrom: "2026-10-01", rateMinor: 1200 }];
+  it("picks the newest rate on or before the date, and none before the first", () => {
     expect(rateOn(rates, "2026-10-01")!.rateMinor).toBe(1200);
-    expect(rateOn(rates, "2026-11-30")!.rateMinor).toBe(1200);
-    expect(rateOn(rates, "2027-01-01")!.rateMinor).toBe(1500);
-  });
-  it("has none before the first rate", () => {
+    expect(rateOn(rates, "2026-09-30")!.rateMinor).toBe(1000);
     expect(rateOn(rates, "2025-12-31")).toBeNull();
   });
 });

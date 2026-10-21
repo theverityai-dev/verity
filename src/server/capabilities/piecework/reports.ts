@@ -1,91 +1,66 @@
 import { z } from "zod";
 import type { QueryDefinition } from "@/server/platform/query";
-import {
-  bundlesOf,
-  computePosition,
-  daysInStage,
-  daysSinceMovement,
-  signedPieces,
-  workerMoney,
-  wageOf,
-  type LedgerEntry,
-  type LotPosition,
-  type PaymentRow,
-} from "./ledger";
-import { activeStages, isoOf, todayFor, toLedger, type Tx } from "./shared";
+import { costPerGoodPiece, daysInStage, wageOf, workerMoney, type PaymentRow } from "./ledger";
+import { activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
+import { bundleRow, summariseLot, type BundleRow, type LotRow } from "./index";
 
 /**
- * The owner's dashboard and the four reports (PRD S6, S7). Every figure is derived from the ledgers by
- * `./ledger.ts`; nothing is stored. Where the PRD leaves a definition open the figure is labelled, not guessed:
- * costing here is WAGES ONLY (cloth and other costs are "to confirm" with the client), and "stuck" is days since
- * the lot last moved with no alert threshold.
+ * The owner's dashboard and the reports (requirement sheet RP-03 to RP-07, RP-09, and costing and ready stock as far as
+ * they can go before the later stages). Every figure is derived from the ledgers by `./ledger.ts`; nothing is stored.
+ * Where the sheet leaves a definition open the figure is labelled, not guessed: costing here is WAGES ONLY, and a lot
+ * is "overdue" when its due date has passed and it is not completed.
  */
 
 const ENTITY_LOT = "verity.piecework.lot";
 const ENTITY_WORKER = "verity.piecework.worker";
-
-type LoadedLot = {
-  id: string; number: string; design: string; totalPieces: number; bundleSize: number; cancelledAt: Date | null; createdAt: Date;
-  entries: LedgerEntry[]; position: LotPosition;
-};
+const ENTITY_BUNDLE = "verity.piecework.bundle";
+const dateInput = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 async function loadAll(tx: Tx) {
-  const [stages, lots, entries, workers, payments, today] = await Promise.all([
+  const [stages, lots, workers, payments, allEntries, today] = await Promise.all([
     activeStages(tx),
     tx.pieceworkLot.findMany({ orderBy: { sequenceNo: "asc" } }),
-    tx.pieceworkEntry.findMany(),
     tx.pieceworkWorker.findMany({ orderBy: { name: "asc" } }),
     tx.pieceworkPayment.findMany(),
+    tx.pieceworkEntry.findMany(),
     todayFor(tx),
   ]);
-  const byLot = new Map<string, LedgerEntry[]>();
-  for (const e of entries) byLot.set(e.lotId, [...(byLot.get(e.lotId) ?? []), toLedger(e)]);
-  const loaded: LoadedLot[] = lots.map((l) => {
-    const rows = byLot.get(l.id) ?? [];
-    return { ...l, entries: rows, position: computePosition(l.totalPieces, stages, rows) };
-  });
+  const bundles = await loadBundles(tx, stages);
   const names = new Map(workers.map((w) => [w.id, w.name]));
-  return { stages, lots: loaded, entries: entries.map(toLedger), workers, payments, names, today };
+  const lotNo = new Map(lots.map((l) => [l.id, l.number]));
+  const ledger = allEntries.map((e) => toLedger(e));
+  return { stages, lots, bundles, workers, payments, ledger, names, lotNo, today };
 }
 
-const isOpen = (l: LoadedLot) => !l.cancelledAt && l.position.ready < l.position.totalPieces;
-
-const toPayment = (p: { kind: string; amountMinor: number; reversesId: string | null }): PaymentRow => ({
-  kind: p.kind as PaymentRow["kind"],
-  amountMinor: p.amountMinor,
-  reversesId: p.reversesId,
-});
+const toPayment = (p: { kind: string; amountMinor: number; reversesId: string | null }): PaymentRow => ({ kind: p.kind as PaymentRow["kind"], amountMinor: p.amountMinor, reversesId: p.reversesId });
 
 /* ============================== today's entries ============================= */
 
 export type RecentEntry = {
-  id: string; time: string; lotNumber: string; karigar: string; stage: string;
-  kind: "issue" | "receive"; pieces: number; bundles: number; isReversal: boolean;
+  id: string; time: string; lotNumber: string; bundleNumber: string; karigar: string; stage: string;
+  kind: "issue" | "receive"; pieces: number; good: number; rejected: number; rework: number; short: number; isReversal: boolean;
 };
 
 /** What the munshi has entered for one business day (default today), newest first. */
 export const recentEntries: QueryDefinition<{ date?: string }, RecentEntry[]> = {
   key: "verity.piecework.recent_entries",
   entity: ENTITY_LOT,
-  input: z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  input: z.object({ date: dateInput.optional() }),
   handler: async (ctx, input) => {
     const date = input.date ?? (await todayFor(ctx.tx));
     const rows = await ctx.tx.pieceworkEntry.findMany({
       where: { entryDate: new Date(`${date}T00:00:00.000Z`) },
       orderBy: { createdAt: "desc" },
-      include: { lot: { select: { number: true, bundleSize: true } }, worker: { select: { name: true } }, stage: { select: { label: true } } },
+      include: { lot: { select: { number: true } }, bundle: { select: { number: true } }, worker: { select: { name: true } }, stage: { select: { label: true } } },
     });
-    return rows.map((r): RecentEntry => ({
-      id: r.id,
-      time: r.createdAt.toISOString(),
-      lotNumber: r.lot.number,
-      karigar: r.worker.name,
-      stage: r.stage.label,
-      kind: r.kind as "issue" | "receive",
-      pieces: signedPieces(r),
-      bundles: bundlesOf(r.pieces, r.lot.bundleSize) * (r.reversesId ? -1 : 1),
-      isReversal: r.reversesId !== null,
-    }));
+    return rows.map((r): RecentEntry => {
+      const s = r.reversesId ? -1 : 1;
+      return {
+        id: r.id, time: r.createdAt.toISOString(), lotNumber: r.lot.number, bundleNumber: r.bundle.number, karigar: r.worker.name, stage: r.stage.label,
+        kind: r.kind as "issue" | "receive", pieces: s * r.pieces, good: s * (r.goodPieces ?? 0), rejected: s * (r.rejectedPieces ?? 0), rework: s * (r.reworkPieces ?? 0), short: s * (r.shortPieces ?? 0),
+        isReversal: r.reversesId !== null,
+      };
+    });
   },
 };
 
@@ -93,16 +68,17 @@ export const recentEntries: QueryDefinition<{ date?: string }, RecentEntry[]> = 
 
 export type Dashboard = {
   today: string;
-  /** Lots not yet fully in ready stock, with where they are. */
-  activeLots: Array<{ id: string; number: string; design: string; totalPieces: number; stageLabel: string | null; location: string }>;
-  pendingByStage: Array<{ stageId: string; label: string; pending: number }>;
+  activeLots: Array<{ id: string; number: string; name: string | null; design: string; status: string; stageLabel: string | null; location: string; plannedPieces: number; bundledPieces: number; overdue: boolean }>;
+  /** Bundles whose current stage is each stage, and the pieces pending there. */
+  byStage: Array<{ stageId: string; label: string; bundles: number; pending: number }>;
   withWorkers: Array<{ workerId: string; name: string; pieces: number }>;
   ready: { pieces: number; bundles: number; lots: number };
-  /** Wages earned per lot. Cloth and other costs are not known yet; this is not a full lot cost. */
+  /** The four quantity classes, kept apart as the sheet requires. */
+  quality: { good: number; rejected: number; short: number; reworkOpen: number };
   lotWages: Array<{ lotId: string; number: string; wagesMinor: number }>;
-  dues: { totalMinor: number; workers: Array<{ workerId: string; name: string; balanceMinor: number }> };
-  /** Days since each open lot last moved, longest first. No alert threshold is applied. */
+  dues: { totalMinor: number; advanceOutstandingMinor: number; workers: Array<{ workerId: string; name: string; balanceMinor: number }> };
   stuck: Array<{ lotId: string; number: string; days: number | null }>;
+  overdue: { lots: number; issues: number };
 };
 
 export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
@@ -111,177 +87,230 @@ export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
-    const open = d.lots.filter(isOpen);
+    const live = d.lots.filter((l) => !l.cancelledAt);
+    const open = live.filter((l) => ["draft", "active", "hold"].includes(l.status));
+    const bundlesOf = (lotId: string) => d.bundles.filter((b) => b.lotId === lotId && !b.cancelledAt);
 
     const activeLots = open.map((l) => {
-      const current = l.position.stages.find((s) => s.stageId === l.position.currentStageId) ?? null;
-      const holders = current ? [...current.byWorker].filter(([, w]) => w.pending > 0).map(([id]) => d.names.get(id) ?? "A worker") : [];
-      return {
-        id: l.id, number: l.number, design: l.design, totalPieces: l.totalPieces,
-        stageLabel: current?.label ?? null,
-        location: holders.length > 0 ? `With ${holders.join(", ")}` : l.position.stages.every((s) => s.issued === 0) ? "Not started" : "Waiting to be issued",
-      };
+      const row = summariseLot(l, d.bundles.filter((b) => b.lotId === l.id), d.stages, d.names, d.today);
+      return { id: l.id, number: l.number, name: l.name, design: l.design, status: row.status, stageLabel: row.stageLabel, location: row.location, plannedPieces: l.plannedPieces, bundledPieces: row.bundledPieces, overdue: row.overdue };
     });
 
-    const pendingByStage = d.stages.map((s) => ({
-      stageId: s.id,
-      label: s.label,
-      pending: open.reduce((sum, l) => sum + (l.position.stages.find((p) => p.stageId === s.id)?.pending ?? 0), 0),
+    const openBundles = open.flatMap((l) => bundlesOf(l.id));
+    const byStage = d.stages.map((s) => ({
+      stageId: s.id, label: s.label,
+      bundles: openBundles.filter((b) => b.position.currentStageId === s.id).length,
+      pending: openBundles.reduce((sum, b) => sum + (b.position.stages.find((p) => p.stageId === s.id)?.pending ?? 0), 0),
     }));
 
     const held = new Map<string, number>();
-    for (const l of open) for (const s of l.position.stages) for (const [id, w] of s.byWorker) held.set(id, (held.get(id) ?? 0) + w.pending);
-    const withWorkers = [...held]
-      .filter(([, pieces]) => pieces > 0)
-      .map(([workerId, pieces]) => ({ workerId, name: d.names.get(workerId) ?? "A worker", pieces }))
-      .sort((a, b) => b.pieces - a.pieces);
+    for (const b of openBundles) for (const s of b.position.stages) for (const [id, w] of s.byWorker) held.set(id, (held.get(id) ?? 0) + w.pending);
+    const withWorkers = [...held].filter(([, pieces]) => pieces > 0).map(([workerId, pieces]) => ({ workerId, name: d.names.get(workerId) ?? "A worker", pieces })).sort((a, b) => b.pieces - a.pieces);
 
-    const live = d.lots.filter((l) => !l.cancelledAt);
+    const liveBundles = live.flatMap((l) => bundlesOf(l.id));
     const ready = {
-      pieces: live.reduce((sum, l) => sum + l.position.ready, 0),
-      bundles: live.reduce((sum, l) => sum + bundlesOf(l.position.ready, l.bundleSize), 0),
-      lots: live.filter((l) => l.position.ready > 0).length,
+      pieces: liveBundles.reduce((s, b) => s + b.position.ready, 0),
+      bundles: liveBundles.filter((b) => b.position.ready > 0).length,
+      lots: live.filter((l) => bundlesOf(l.id).some((b) => b.position.ready > 0)).length,
+    };
+    const quality = {
+      good: ready.pieces,
+      rejected: liveBundles.reduce((s, b) => s + b.position.rejected, 0),
+      short: liveBundles.reduce((s, b) => s + b.position.short, 0),
+      reworkOpen: liveBundles.reduce((s, b) => s + b.position.reworkOpen, 0),
     };
 
     const lotWages = live
-      .map((l) => ({ lotId: l.id, number: l.number, wagesMinor: l.entries.reduce((sum, e) => sum + wageOf(e), 0) }))
+      .map((l) => ({ lotId: l.id, number: l.number, wagesMinor: d.ledger.filter((e) => e.bundleId && bundlesOf(l.id).some((b) => b.id === e.bundleId)).reduce((s, e) => s + wageOf(e), 0) }))
       .filter((l) => l.wagesMinor !== 0);
 
-    const dueWorkers = d.workers
-      .map((w) => ({
-        workerId: w.id,
-        name: w.name,
-        balanceMinor: workerMoney(
-          d.entries.filter((e) => e.workerId === w.id && e.kind === "receive"),
-          d.payments.filter((p) => p.workerId === w.id).map(toPayment),
-        ).balanceMinor,
-      }))
-      .filter((w) => w.balanceMinor !== 0)
-      .sort((a, b) => b.balanceMinor - a.balanceMinor);
+    const people = d.workers.map((w) => ({
+      workerId: w.id, name: w.name,
+      money: workerMoney(d.ledger.filter((e) => e.workerId === w.id), d.payments.filter((p) => p.workerId === w.id).map(toPayment)),
+    }));
+    const dueWorkers = people.filter((p) => p.money.balanceMinor !== 0).map((p) => ({ workerId: p.workerId, name: p.name, balanceMinor: p.money.balanceMinor })).sort((a, b) => b.balanceMinor - a.balanceMinor);
 
     const stuck = open
-      .map((l) => ({ lotId: l.id, number: l.number, days: daysSinceMovement(l.position, d.today) }))
+      .map((l) => ({ lotId: l.id, number: l.number, days: summariseLot(l, d.bundles.filter((b) => b.lotId === l.id), d.stages, d.names, d.today).daysSinceMovement }))
       .sort((a, b) => (b.days ?? -1) - (a.days ?? -1));
 
+    const overdueIssues = openBundles.reduce((sum, b) => sum + b.position.stages.reduce((s, p) => s + p.issues.filter((i) => i.open > 0 && i.dueDate !== null && i.dueDate < d.today).length, 0), 0);
+
     return {
-      today: d.today,
-      activeLots,
-      pendingByStage,
-      withWorkers,
-      ready,
-      lotWages,
-      dues: { totalMinor: dueWorkers.reduce((sum, w) => sum + w.balanceMinor, 0), workers: dueWorkers },
-      stuck,
+      today: d.today, activeLots, byStage, withWorkers, ready, quality, lotWages,
+      dues: { totalMinor: dueWorkers.reduce((s, w) => s + w.balanceMinor, 0), advanceOutstandingMinor: people.reduce((s, p) => s + p.money.advanceOutstandingMinor, 0), workers: dueWorkers },
+      stuck, overdue: { lots: activeLots.filter((l) => l.overdue).length, issues: overdueIssues },
     };
   },
 };
 
 /* ================================== reports ================================= */
 
-export type ProductionRow = {
-  lotNumber: string; design: string; totalPieces: number; stage: string;
-  issued: number; received: number; pending: number; stageStart: string | null; daysInStage: number | null; location: string;
-};
-
-export const reportLotProduction: QueryDefinition<Record<string, never>, ProductionRow[]> = {
-  key: "verity.piecework.report_lot_production",
+/** RP-03 Lot status: planned against actual, stage, due date, ageing. */
+export const reportLotStatus: QueryDefinition<Record<string, never>, Array<LotRow & { ageDays: number }>> = {
+  key: "verity.piecework.report_lot_status",
   entity: ENTITY_LOT,
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
-    return d.lots
-      .filter((l) => !l.cancelledAt)
-      .flatMap((l) =>
-        l.position.stages.map((s) => {
-          const holders = [...s.byWorker].filter(([, w]) => w.pending > 0).map(([id]) => d.names.get(id) ?? "A worker");
-          return {
-            lotNumber: l.number, design: l.design, totalPieces: l.totalPieces, stage: s.label,
-            issued: s.issued, received: s.received, pending: s.pending,
-            stageStart: s.firstIssueDate, daysInStage: daysInStage(s, d.today),
-            location: holders.length > 0 ? `With ${holders.join(", ")}` : s.issued === 0 ? "Not reached" : "All received",
-          };
-        }),
-      );
+    return d.lots.filter((l) => !l.cancelledAt).map((l) => {
+      const row = summariseLot(l, d.bundles.filter((b) => b.lotId === l.id), d.stages, d.names, d.today);
+      return { ...row, ageDays: Math.max(0, Math.round((Date.parse(`${d.today}T00:00:00Z`) - Date.parse(`${isoOf(l.createdAt)}T00:00:00Z`)) / 86_400_000)) };
+    });
   },
 };
 
-export type WorkerPaymentRow = {
-  karigar: string; mobile: string | null; workTypes: string; given: number; returned: number;
-  wagesMinor: number; advanceMinor: number; paidMinor: number; balanceMinor: number;
+/** RP-04 Bundle location: current stage, who holds it, last movement and ageing. */
+export const reportBundleLocation: QueryDefinition<Record<string, never>, BundleRow[]> = {
+  key: "verity.piecework.report_bundle_location",
+  entity: ENTITY_BUNDLE,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const d = await loadAll(ctx.tx);
+    return d.bundles.filter((b) => !b.cancelledAt).map((b) => bundleRow(b, d.lotNo.get(b.lotId) ?? "", d.stages, d.names, d.today));
+  },
 };
 
-const dateInput = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
+export type WorkInHandRow = { karigar: string; lotNumber: string; bundleNumber: string; stage: string; issued: number; returned: number; open: number; dueDate: string | null; overdue: boolean; isRework: boolean };
 
-export const reportWorkerPayment: QueryDefinition<
-  { from?: string; to?: string },
-  { rows: WorkerPaymentRow[]; period: { from: string | null; to: string | null } }
-> = {
-  key: "verity.piecework.report_worker_payment",
+/** RP-05 Karigar work in hand: issued, returned (accounted for) and still out, by worker, lot, bundle and stage. */
+export const reportWorkInHand: QueryDefinition<Record<string, never>, WorkInHandRow[]> = {
+  key: "verity.piecework.report_work_in_hand",
+  entity: ENTITY_WORKER,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const d = await loadAll(ctx.tx);
+    return d.bundles.filter((b) => !b.cancelledAt).flatMap((b) =>
+      b.position.stages.flatMap((s) =>
+        s.issues.filter((i) => i.open > 0).map((i) => ({
+          karigar: d.names.get(i.workerId) ?? "A worker", lotNumber: d.lotNo.get(b.lotId) ?? "", bundleNumber: b.number, stage: s.label,
+          issued: i.issued, returned: i.issued - i.open, open: i.open, dueDate: i.dueDate, overdue: i.dueDate !== null && i.dueDate < d.today, isRework: i.isRework,
+        })),
+      ),
+    );
+  },
+};
+
+export type WagePaymentRow = {
+  karigar: string; mobile: string | null; workTypes: string; wagesMinor: number; advanceGivenMinor: number; recoveredMinor: number; deductionMinor: number; paidMinor: number; balanceMinor: number; advanceOutstandingMinor: number;
+};
+
+/** RP-06 Karigar wage ledger: gross wages, advances, recoveries, deductions, payments and balance, for a period. */
+export const reportWagePayment: QueryDefinition<{ from?: string; to?: string }, { rows: WagePaymentRow[]; period: { from: string | null; to: string | null } }> = {
+  key: "verity.piecework.report_wage_payment",
   entity: ENTITY_WORKER,
   input: z.object({ from: dateInput.optional(), to: dateInput.optional() }),
   handler: async (ctx, input) => {
     const d = await loadAll(ctx.tx);
     const within = (date: string) => (!input.from || date >= input.from) && (!input.to || date <= input.to);
-    const rows = d.workers.map((w): WorkerPaymentRow => {
-      const mine = d.entries.filter((e) => e.workerId === w.id && within(e.entryDate));
+    const rows = d.workers.map((w): WagePaymentRow => {
+      const mine = d.ledger.filter((e) => e.workerId === w.id && within(e.entryDate));
       const pays = d.payments.filter((p) => p.workerId === w.id && within(isoOf(p.paidOn))).map(toPayment);
-      const money = workerMoney(mine.filter((e) => e.kind === "receive"), pays);
       const stageIds = new Set(mine.filter((e) => e.kind === "receive").map((e) => e.stageId));
-      return {
-        karigar: w.name,
-        mobile: w.mobile,
-        workTypes: d.stages.filter((s) => stageIds.has(s.id)).map((s) => s.label).join(", "),
-        given: mine.reduce((s, e) => s + (e.kind === "issue" ? signedPieces(e) : 0), 0),
-        returned: mine.reduce((s, e) => s + (e.kind === "receive" ? signedPieces(e) : 0), 0),
-        ...money,
-      };
+      return { karigar: w.name, mobile: w.mobile, workTypes: d.stages.filter((s) => stageIds.has(s.id)).map((s) => s.label).join(", "), ...workerMoney(mine, pays) };
     });
+    const touched = (r: WagePaymentRow) => r.wagesMinor !== 0 || r.advanceGivenMinor !== 0 || r.recoveredMinor !== 0 || r.deductionMinor !== 0 || r.paidMinor !== 0;
+    return { rows: rows.filter(touched), period: { from: input.from ?? null, to: input.to ?? null } };
+  },
+};
+
+export type QualityRow = { date: string; lotNumber: string; bundleNumber: string; karigar: string; stage: string; rejected: number; rework: number; short: number; note: string | null };
+
+/** RP-07 Short, reject and rework: separate totals, by line, with the rework still waiting. */
+export const reportQuality: QueryDefinition<{ from?: string; to?: string }, { rows: QualityRow[]; totals: { rejected: number; rework: number; short: number; reworkOpen: number } }> = {
+  key: "verity.piecework.report_quality",
+  entity: ENTITY_LOT,
+  input: z.object({ from: dateInput.optional(), to: dateInput.optional() }),
+  handler: async (ctx, input) => {
+    const d = await loadAll(ctx.tx);
+    const within = (date: string) => (!input.from || date >= input.from) && (!input.to || date <= input.to);
+    const bundleById = new Map(d.bundles.map((b) => [b.id, b]));
+    const stageLabel = new Map(d.stages.map((s) => [s.id, s.label]));
+    const raw = await ctx.tx.pieceworkEntry.findMany({ where: { kind: "receive" }, orderBy: { entryDate: "desc" } });
+    const rows = raw
+      .filter((r) => r.reversesId === null && ((r.rejectedPieces ?? 0) + (r.reworkPieces ?? 0) + (r.shortPieces ?? 0)) > 0 && within(isoOf(r.entryDate)))
+      .map((r): QualityRow => ({
+        date: isoOf(r.entryDate), lotNumber: d.lotNo.get(r.lotId) ?? "", bundleNumber: bundleById.get(r.bundleId)?.number ?? "", karigar: d.names.get(r.workerId) ?? "A worker",
+        stage: stageLabel.get(r.stageId) ?? "", rejected: r.rejectedPieces ?? 0, rework: r.reworkPieces ?? 0, short: r.shortPieces ?? 0, note: r.note,
+      }));
+    const live = d.bundles.filter((b) => !b.cancelledAt);
     return {
-      rows: rows.filter((r) => r.given !== 0 || r.returned !== 0 || r.wagesMinor !== 0 || r.advanceMinor !== 0 || r.paidMinor !== 0),
-      period: { from: input.from ?? null, to: input.to ?? null },
+      rows,
+      totals: {
+        rejected: live.reduce((s, b) => s + b.position.rejected, 0),
+        rework: live.reduce((s, b) => s + b.position.stages.reduce((x, p) => x + p.rework, 0), 0),
+        short: live.reduce((s, b) => s + b.position.short, 0),
+        reworkOpen: live.reduce((s, b) => s + b.position.reworkOpen, 0),
+      },
     };
   },
 };
 
-export type CostingRow = {
-  lotNumber: string; design: string; totalPieces: number; wagesMinor: number;
-  /** Not known until the client says what costing includes. Null, never zero. */
-  clothMinor: null; otherMinor: null; totalMinor: number; wagePerReadyPieceMinor: number | null;
+export type ProcessRow = { stage: string; sent: number; received: number; accepted: number; pending: number; avgCycleDays: number | null };
+
+/** RP-09 Production by process: sent, received (accounted for), accepted (good), pending, and the average days a closed issue took. */
+export const reportProductionByProcess: QueryDefinition<Record<string, never>, ProcessRow[]> = {
+  key: "verity.piecework.report_production_by_process",
+  entity: ENTITY_LOT,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const d = await loadAll(ctx.tx);
+    const live = d.bundles.filter((b) => !b.cancelledAt);
+    return d.stages.map((s) => {
+      const ps = live.map((b) => b.position.stages.find((p) => p.stageId === s.id)!);
+      const closed = ps.filter((p) => p.pending === 0 && p.issuedNormal + p.issuedRework > 0).map((p) => daysInStage(p, d.today)).filter((x): x is number => x !== null);
+      return {
+        stage: s.label,
+        sent: ps.reduce((x, p) => x + p.issuedNormal + p.issuedRework, 0), received: ps.reduce((x, p) => x + p.accounted, 0),
+        accepted: ps.reduce((x, p) => x + p.good, 0), pending: ps.reduce((x, p) => x + p.pending, 0),
+        avgCycleDays: closed.length === 0 ? null : Math.round((closed.reduce((a, b) => a + b, 0) / closed.length) * 10) / 10,
+      };
+    });
+  },
 };
 
+export type CostingRow = {
+  lotNumber: string; design: string; plannedPieces: number; goodPieces: number; rejectedPieces: number; reworkPieces: number; shortPieces: number;
+  wagesMinor: number;
+  /** Not recorded yet (the other cost categories arrive with the costing stage). Null, never zero. */
+  otherMinor: null; totalMinor: number; perGoodPieceMinor: number | null;
+};
+
+/** Lot cost so far: WAGES ONLY. Cost per good piece = cost / good finished pieces, with the losses shown beside it. */
 export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]> = {
   key: "verity.piecework.report_costing",
   entity: ENTITY_LOT,
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
-    return d.lots
-      .filter((l) => !l.cancelledAt)
-      .map((l): CostingRow => {
-        const wagesMinor = l.entries.reduce((sum, e) => sum + wageOf(e), 0);
-        return {
-          lotNumber: l.number, design: l.design, totalPieces: l.totalPieces, wagesMinor,
-          clothMinor: null, otherMinor: null, totalMinor: wagesMinor,
-          wagePerReadyPieceMinor: l.position.ready > 0 ? Math.round(wagesMinor / l.position.ready) : null,
-        };
-      });
+    return d.lots.filter((l) => !l.cancelledAt).map((l): CostingRow => {
+      const mine = d.bundles.filter((b) => b.lotId === l.id && !b.cancelledAt);
+      const ids = new Set(mine.map((b) => b.id));
+      const wagesMinor = d.ledger.filter((e) => ids.has(e.bundleId)).reduce((s, e) => s + wageOf(e), 0);
+      const good = mine.reduce((s, b) => s + b.position.ready, 0);
+      return {
+        lotNumber: l.number, design: l.design, plannedPieces: l.plannedPieces, goodPieces: good,
+        rejectedPieces: mine.reduce((s, b) => s + b.position.rejected, 0), reworkPieces: mine.reduce((s, b) => s + b.position.reworkOpen, 0), shortPieces: mine.reduce((s, b) => s + b.position.short, 0),
+        wagesMinor, otherMinor: null, totalMinor: wagesMinor, perGoodPieceMinor: costPerGoodPiece(wagesMinor, good),
+      };
+    });
   },
 };
 
 export type ReadyRow = { lotNumber: string; design: string; readyPieces: number; readyBundles: number; readySince: string | null };
 
+/** Ready stock by lot. Packing and dispatch arrive with their own stage; until then this is "reached ready". */
 export const reportReadyInventory: QueryDefinition<Record<string, never>, ReadyRow[]> = {
   key: "verity.piecework.report_ready_inventory",
   entity: ENTITY_LOT,
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
-    return d.lots
-      .filter((l) => !l.cancelledAt && l.position.ready > 0)
-      .map((l): ReadyRow => ({
-        lotNumber: l.number, design: l.design, readyPieces: l.position.ready,
-        readyBundles: bundlesOf(l.position.ready, l.bundleSize),
-        readySince: l.position.stages.at(-1)?.lastReceiveDate ?? null,
-      }));
+    return d.lots.filter((l) => !l.cancelledAt).flatMap((l): ReadyRow[] => {
+      const mine = d.bundles.filter((b) => b.lotId === l.id && !b.cancelledAt && b.position.ready > 0);
+      if (mine.length === 0) return [];
+      const since = mine.map((b) => b.position.stages.at(-1)?.lastReceiveDate ?? null).filter((x): x is string => x !== null).sort().at(-1) ?? null;
+      return [{ lotNumber: l.number, design: l.design, readyPieces: mine.reduce((s, b) => s + b.position.ready, 0), readyBundles: mine.length, readySince: since }];
+    });
   },
 };

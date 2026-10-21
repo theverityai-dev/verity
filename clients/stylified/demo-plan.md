@@ -1,6 +1,8 @@
 # Stylified demo: build plan and status
 
-**Date:** 2026-10-21. Read `veda-carxen-audit-and-adaptation.md` first; this file is the work order that follows from it.
+**Date:** 2026-10-21. **Update 2026-10-22:** the build plan now follows the client's developer requirement workbook, see
+`requirement-sheet-review.md` (stages 1 and 2 built; fabric, costing, dispatch, split/join, Hindi layer, roles/alerts pending);
+the lot-level status below is historical. Read `veda-carxen-audit-and-adaptation.md` first; this file is the work order that follows from it.
 The demo is a flagged disposable tenant (`customFields.demo = true`, `demoFor = stylified`) on the DSEW pattern
 (`clients/dsew/demo-guide.md`, `prisma/seed-dsew.ts`). All data is fictional.
 

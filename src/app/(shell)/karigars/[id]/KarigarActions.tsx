@@ -7,11 +7,12 @@ import { Button, ErrorState, Field, Input, Row, RowList, Select } from "@/compon
 import { Modal } from "@/components/ui/Modal";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
-import { rupees, shortDate, toPaise } from "../../lots/format";
+import { BASIS_LABEL, PAYMENT_LABEL, rupees, shortDate, toPaise } from "../../lots/format";
 
 const PAY = "verity.piecework.record_payment";
 const RATE = "verity.piecework.set_worker_rate";
 const REVERSE = "verity.piecework.reverse_payment";
+const ACTIVE = "verity.piecework.set_worker_active";
 
 function useAction(path: string, onDone: () => void) {
   const router = useRouter();
@@ -30,35 +31,44 @@ function useAction(path: string, onDone: () => void) {
   return { failure, pending, run, clear: () => setFailure(null) };
 }
 
-export function RecordMoney({ workerId, name, balanceMinor }: { workerId: string; name: string; balanceMinor: number }) {
+export function RecordMoney({ workerId, name, balanceMinor, advanceOutstandingMinor }: { workerId: string; name: string; balanceMinor: number; advanceOutstandingMinor: number }) {
   const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState("payment");
   const { failure, pending, run, clear } = useAction(`/karigars/${workerId}`, () => setOpen(false));
+  const moves = kind === "advance" || kind === "payment";
   return (
     <>
-      <CommandButton commands={PAY} variant="primary" onClick={() => setOpen(true)}>Record advance or payment</CommandButton>
-      <Modal open={open} onClose={() => { clear(); setOpen(false); }} title={`Money for ${name}`} description={`Balance due now: ${rupees(balanceMinor)}. A payment cannot be more than the balance due; record anything extra as an advance.`}>
+      <CommandButton commands={PAY} variant="primary" onClick={() => setOpen(true)}>Advance, payment or deduction</CommandButton>
+      <Modal open={open} onClose={() => { clear(); setOpen(false); }} title={`Money for ${name}`} description={`Balance due now: ${rupees(balanceMinor)}. Advance not yet recovered: ${rupees(advanceOutstandingMinor)}. A payment cannot be more than the balance due.`}>
         <form
           className="flex flex-col gap-4"
           action={(formData) => {
             const amount = toPaise(String(formData.get("amount") ?? ""));
-            run(PAY, { workerId, kind: String(formData.get("kind")), amountMinor: amount ?? 0, note: String(formData.get("note") ?? "").trim() || undefined });
+            const text = (n: string) => String(formData.get(n) ?? "").trim();
+            run(PAY, { workerId, kind, amountMinor: amount ?? 0, mode: moves ? text("mode") || undefined : undefined, reference: text("reference") || undefined, note: text("note") || undefined });
           }}
         >
           {failure && <ErrorState title="Could not record it" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Type" htmlFor="money-kind" required>
-              <Select id="money-kind" name="kind" defaultValue="payment">
+              <Select id="money-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
                 <option value="payment">Payment (settles wages)</option>
                 <option value="advance">Advance (given before wages are earned)</option>
+                <option value="recovery">Advance recovered (taken out of wages)</option>
+                <option value="deduction">Other approved deduction</option>
               </Select>
             </Field>
-            <Field label="Amount in rupees" htmlFor="money-amount" required>
-              <Input id="money-amount" name="amount" type="number" inputMode="decimal" min={0.01} step="0.01" required autoFocus />
-            </Field>
+            <Field label="Amount in rupees" htmlFor="money-amount" required><Input id="money-amount" name="amount" type="number" inputMode="decimal" min={0.01} step="0.01" required autoFocus /></Field>
+            {moves && (
+              <Field label="Paid by" htmlFor="money-mode">
+                <Select id="money-mode" name="mode" defaultValue="cash">
+                  <option value="cash">Cash</option><option value="bank">Bank transfer</option><option value="upi">UPI</option><option value="cheque">Cheque</option><option value="other">Other</option>
+                </Select>
+              </Field>
+            )}
+            <Field label="Reference" htmlFor="money-ref"><Input id="money-ref" name="reference" maxLength={120} /></Field>
           </div>
-          <Field label="Note" htmlFor="money-note">
-            <Input id="money-note" name="note" maxLength={300} />
-          </Field>
+          <Field label={kind === "deduction" ? "Reason (required)" : "Note"} htmlFor="money-note" required={kind === "deduction"}><Input id="money-note" name="note" maxLength={300} required={kind === "deduction"} /></Field>
           <div className="flex gap-2">
             <CommandButton commands={PAY} type="submit" variant="primary" disabled={pending}>{pending ? "Saving…" : "Save"}</CommandButton>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
@@ -80,18 +90,17 @@ export function ChangeRate({ workerId, name, stages }: { workerId: string; name:
           className="flex flex-col gap-4"
           action={(formData) => {
             const paise = toPaise(String(formData.get("rate") ?? ""));
-            run(RATE, { workerId, stageId: String(formData.get("stage")), rateMinor: paise ?? -1 });
+            run(RATE, { workerId, stageId: String(formData.get("stage")), rateMinor: paise ?? -1, wageBasis: String(formData.get("basis")) });
           }}
         >
           {failure && <ErrorState title="Could not set the rate" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Work" htmlFor="rate-stage" required>
-              <Select id="rate-stage" name="stage" defaultValue={stages[0]?.id}>
-                {stages.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-              </Select>
+              <Select id="rate-stage" name="stage" defaultValue={stages[0]?.id}>{stages.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</Select>
             </Field>
-            <Field label="Rate per piece, in rupees" htmlFor="rate-amount" required hint="0 means the work is unpaid.">
-              <Input id="rate-amount" name="rate" type="number" inputMode="decimal" min={0} step="0.01" required autoFocus />
+            <Field label="Rate per piece (₹)" htmlFor="rate-amount" required hint="0 means unpaid."><Input id="rate-amount" name="rate" type="number" inputMode="decimal" min={0} step="0.01" required autoFocus /></Field>
+            <Field label="Paid on" htmlFor="rate-basis" required>
+              <Select id="rate-basis" name="basis" defaultValue="good">{Object.entries(BASIS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
             </Field>
           </div>
           <div className="flex gap-2">
@@ -104,28 +113,20 @@ export function ChangeRate({ workerId, name, stages }: { workerId: string; name:
   );
 }
 
-const ACTIVE = "verity.piecework.set_worker_active";
-
-/** Retire or restore a karigar. A karigar who still holds pieces cannot be retired; the refusal says how many. */
+/** Retire or restore a karigar. One who still holds pieces cannot be retired; the refusal says how many. */
 export function ActiveToggle({ workerId, active }: { workerId: string; active: boolean }) {
   const { failure, pending, run } = useAction(`/karigars/${workerId}`, () => undefined);
   return (
     <>
-      <CommandButton commands={ACTIVE} variant="ghost" disabled={pending} onClick={() => run(ACTIVE, { workerId, active: !active })}>
-        {active ? "Retire" : "Restore"}
-      </CommandButton>
-      {failure && (
-        <div className="basis-full">
-          <ErrorState title="Could not change this karigar" message={failure.message} issues={failure.issues} retryable={failure.retryable} />
-        </div>
-      )}
+      <CommandButton commands={ACTIVE} variant="ghost" disabled={pending} onClick={() => run(ACTIVE, { workerId, active: !active })}>{active ? "Retire" : "Restore"}</CommandButton>
+      {failure && <div className="basis-full"><ErrorState title="Could not change this karigar" message={failure.message} issues={failure.issues} retryable={failure.retryable} /></div>}
     </>
   );
 }
 
-export type MoneyLine = { id: string; paidOn: string; kind: "advance" | "payment"; amountMinor: number; isReversal: boolean; reversed: boolean; note: string | null };
+export type MoneyLine = { id: string; paidOn: string; kind: string; amountMinor: number; mode: string | null; reference: string | null; isReversal: boolean; reversed: boolean; note: string | null };
 
-/** Advances and payments, newest first. A wrong one is reversed here, never edited; both stay in the record. */
+/** Advances, recoveries, deductions and payments, newest first. A wrong one is reversed here, never edited. */
 export function PaymentLedger({ workerId, lines }: { workerId: string; lines: MoneyLine[] }) {
   const [confirm, setConfirm] = useState<string | null>(null);
   const { failure, pending, run } = useAction(`/karigars/${workerId}`, () => setConfirm(null));
@@ -133,25 +134,22 @@ export function PaymentLedger({ workerId, lines }: { workerId: string; lines: Mo
     <div className="flex flex-col gap-3">
       {failure && <ErrorState title="Could not reverse that" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
       {lines.length === 0 ? (
-        <p className="m-0 px-5 pb-4 text-[14px] text-text-secondary">No advances or payments yet.</p>
+        <p className="m-0 px-5 pb-4 text-[14px] text-text-secondary">No advances, deductions or payments yet.</p>
       ) : (
         <RowList>
           {lines.map((l) => (
             <Row key={l.id} className={l.reversed || l.isReversal ? "opacity-70" : ""}>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-[14px] font-medium text-text">
-                  {l.isReversal ? "Reversal: " : ""}
-                  {l.kind === "advance" ? "Advance" : "Payment"} {rupees(Math.abs(l.amountMinor))}
+                  {l.isReversal ? "Reversal: " : ""}{PAYMENT_LABEL[l.kind] ?? l.kind} {rupees(Math.abs(l.amountMinor))}
                   {l.reversed && <span className="ml-2 text-[12px] font-normal text-text-tertiary">Reversed</span>}
                 </span>
-                <span className="text-[13px] text-text-secondary">{shortDate(l.paidOn)}{l.note ? ` · ${l.note}` : ""}</span>
+                <span className="text-[13px] text-text-secondary">{shortDate(l.paidOn)}{l.mode ? ` · ${l.mode}` : ""}{l.reference ? ` · ${l.reference}` : ""}{l.note ? ` · ${l.note}` : ""}</span>
               </div>
               {!l.isReversal && !l.reversed && (
                 confirm === l.id ? (
                   <span className="flex items-center gap-2">
-                    <CommandButton commands={REVERSE} variant="danger" size="sm" disabled={pending} onClick={() => run(REVERSE, { paymentId: l.id })}>
-                      {pending ? "Reversing…" : "Yes, reverse"}
-                    </CommandButton>
+                    <CommandButton commands={REVERSE} variant="danger" size="sm" disabled={pending} onClick={() => run(REVERSE, { paymentId: l.id })}>{pending ? "Reversing…" : "Yes, reverse"}</CommandButton>
                     <Button variant="ghost" size="sm" onClick={() => setConfirm(null)} disabled={pending}>No</Button>
                   </span>
                 ) : (

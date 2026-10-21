@@ -7,15 +7,19 @@ import {
   ENTITY_PIECEWORK_LOT,
   ENTITY_PIECEWORK_PAYMENT,
   PIECEWORK_CAPABILITY,
+  reportBundleLocation,
   reportCosting,
-  reportLotProduction,
+  reportLotStatus,
+  reportProductionByProcess,
+  reportQuality,
   reportReadyInventory,
-  reportWorkerPayment,
+  reportWagePayment,
+  reportWorkInHand,
 } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { ReportTable } from "./ReportTable";
-import { rupees, shortDate } from "../format";
+import { STATUS_LABEL, rupees, shortDate } from "../format";
 
 export const dynamic = "force-dynamic";
 
@@ -35,111 +39,126 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
   }));
   if (!allowed) return <PermissionDenied what="the lot reports" />;
 
-  const [production, ready, costing, payments] = await Promise.all([
-    executeQuery(actor, reportLotProduction, {}),
+  const [lotStatus, location, hand, quality, process, ready, costing, wages] = await Promise.all([
+    executeQuery(actor, reportLotStatus, {}),
+    executeQuery(actor, reportBundleLocation, {}),
+    executeQuery(actor, reportWorkInHand, {}),
+    executeQuery(actor, reportQuality, { from, to }),
+    executeQuery(actor, reportProductionByProcess, {}),
     executeQuery(actor, reportReadyInventory, {}),
     canWage ? executeQuery(actor, reportCosting, {}) : Promise.resolve(null),
-    canWage ? executeQuery(actor, reportWorkerPayment, { from, to }) : Promise.resolve(null),
+    canWage ? executeQuery(actor, reportWagePayment, { from, to }) : Promise.resolve(null),
   ]);
 
   return (
     <>
-      <PageHeader title="Lot reports" description="Four reports. Each shows on screen and downloads as a file that opens in Excel." />
+      <PageHeader title="Lot reports" description="Each report shows on screen and downloads as a file that opens in Excel. Totals match the entries they are built from." />
+      <form method="get" className="mb-6 flex flex-wrap items-end gap-3" aria-label="Choose the period for the wage and quality reports">
+        <label className="flex flex-col gap-1 text-[13px] text-text-secondary">From
+          <input name="from" defaultValue={from ?? ""} placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" className="h-11 w-40 rounded-[10px] border-0 bg-[var(--color-control)] px-3.5 text-[15px] text-text" />
+        </label>
+        <label className="flex flex-col gap-1 text-[13px] text-text-secondary">To
+          <input name="to" defaultValue={to ?? ""} placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" className="h-11 w-40 rounded-[10px] border-0 bg-[var(--color-control)] px-3.5 text-[15px] text-text" />
+        </label>
+        <button type="submit" className="h-11 rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink">Show period</button>
+      </form>
+
       <div className="flex flex-col gap-6">
         <ReportTable
-          title="Lot-wise production"
-          filename="lot-wise-production.csv"
+          title="Lot status"
+          filename="lot-status.csv"
           columns={[
-            { key: "lot", header: "Lot", subKey: "design" },
-            { key: "stage", header: "Stage" },
-            { key: "total", header: "Total pieces", numeric: true },
-            { key: "issued", header: "Issued", numeric: true },
-            { key: "received", header: "Received", numeric: true },
-            { key: "pending", header: "Pending", numeric: true },
-            { key: "start", header: "Stage start" },
-            { key: "days", header: "Days in stage", numeric: true },
-            { key: "location", header: "Location" },
+            { key: "lot", header: "Lot", subKey: "title" }, { key: "status", header: "Status" }, { key: "planned", header: "Planned", numeric: true }, { key: "cut", header: "Cut", numeric: true },
+            { key: "good", header: "Good", numeric: true }, { key: "stage", header: "Stage" }, { key: "due", header: "Due" }, { key: "age", header: "Age (days)", numeric: true },
           ]}
-          rows={production.map((r, i) => ({
-            id: String(i), lot: r.lotNumber, design: r.design, stage: r.stage, total: r.totalPieces, issued: r.issued, received: r.received,
-            pending: r.pending, start: shortDate(r.stageStart), days: r.daysInStage, location: r.location,
-          }))}
-          csvHeader={["Lot", "Design", "Total pieces", "Stage", "Issued", "Received", "Pending", "Stage start date", "Days in stage", "Location"]}
-          csvRows={production.map((r) => [r.lotNumber, r.design, r.totalPieces, r.stage, r.issued, r.received, r.pending, r.stageStart, r.daysInStage, r.location])}
+          rows={lotStatus.map((l, i) => ({ id: String(i), lot: l.number, title: l.name ?? l.design, status: STATUS_LABEL[l.status], planned: l.plannedPieces, cut: l.bundledPieces, good: l.readyPieces, stage: l.stageLabel ?? "—", due: l.dueDate ? `${shortDate(l.dueDate)}${l.overdue ? " (overdue)" : ""}` : "—", age: l.ageDays }))}
+          csvHeader={["Lot", "Name", "Design", "Status", "Planned pieces", "Cut pieces", "Good pieces", "Rejected", "Rework", "Short", "Stage", "Due date", "Overdue", "Age in days"]}
+          csvRows={lotStatus.map((l) => [l.number, l.name, l.design, STATUS_LABEL[l.status] ?? l.status, l.plannedPieces, l.bundledPieces, l.readyPieces, l.rejectedPieces, l.reworkPieces, l.shortPieces, l.stageLabel, l.dueDate, l.overdue ? "Yes" : "No", l.ageDays])}
         />
 
-        {payments && (
-          <div className="flex flex-col gap-2">
-            <form method="get" className="flex flex-wrap items-end gap-3" aria-label="Choose the period for the payment report">
-              <label className="flex flex-col gap-1 text-[13px] text-text-secondary">
-                From
-                <input name="from" defaultValue={from ?? ""} placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" className="h-11 w-40 rounded-[10px] border-0 bg-[var(--color-control)] px-3.5 text-[15px] text-text" />
-              </label>
-              <label className="flex flex-col gap-1 text-[13px] text-text-secondary">
-                To
-                <input name="to" defaultValue={to ?? ""} placeholder="YYYY-MM-DD" pattern="\d{4}-\d{2}-\d{2}" className="h-11 w-40 rounded-[10px] border-0 bg-[var(--color-control)] px-3.5 text-[15px] text-text" />
-              </label>
-              <button type="submit" className="h-11 rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink">Show period</button>
-            </form>
-            <ReportTable
-              title="Worker-wise payment"
-              filename="worker-wise-payment.csv"
-              note={from || to ? `Period: ${from ?? "the start"} to ${to ?? "today"}. Balance is for this period's entries and payments only.` : "Whole history. Balance due is wages earned, minus advances, minus payments."}
-              columns={[
-                { key: "karigar", header: "Karigar", subKey: "mobile" },
-                { key: "work", header: "Work" },
-                { key: "given", header: "Given", numeric: true },
-                { key: "returned", header: "Returned", numeric: true },
-                { key: "wages", header: "Wages", numeric: true },
-                { key: "advance", header: "Advance", numeric: true },
-                { key: "paid", header: "Paid", numeric: true },
-                { key: "balance", header: "Balance due", numeric: true },
-              ]}
-              rows={payments.rows.map((r, i) => ({
-                id: String(i), karigar: r.karigar, mobile: r.mobile ?? "", work: r.workTypes || "—", given: r.given, returned: r.returned,
-                wages: rupees(r.wagesMinor), advance: rupees(r.advanceMinor), paid: rupees(r.paidMinor), balance: rupees(r.balanceMinor),
-              }))}
-              csvHeader={["Karigar", "Mobile", "Work type", "Pieces given", "Pieces returned", "Total wages (Rs)", "Advance (Rs)", "Paid (Rs)", "Balance due (Rs)", "Period from", "Period to"]}
-              csvRows={payments.rows.map((r) => [r.karigar, r.mobile, r.workTypes, r.given, r.returned, rs(r.wagesMinor), rs(r.advanceMinor), rs(r.paidMinor), rs(r.balanceMinor), from ?? "", to ?? ""])}
-            />
-          </div>
-        )}
+        <ReportTable
+          title="Bundle location"
+          filename="bundle-location.csv"
+          columns={[
+            { key: "bundle", header: "Bundle", subKey: "lot" }, { key: "net", header: "Net pieces", numeric: true }, { key: "stage", header: "Stage" }, { key: "location", header: "Location" },
+            { key: "last", header: "Last movement" }, { key: "days", header: "Days at stage", numeric: true },
+          ]}
+          rows={location.map((b) => ({ id: b.id, bundle: b.number, lot: b.lotNumber, net: b.netPieces, stage: b.stageLabel ?? "—", location: b.location, last: shortDate(b.lastMovement), days: b.daysHere }))}
+          csvHeader={["Bundle", "Lot", "Net pieces", "Stage", "Location", "Last movement", "Days at stage"]}
+          csvRows={location.map((b) => [b.number, b.lotNumber, b.netPieces, b.stageLabel, b.location, b.lastMovement, b.daysHere])}
+        />
 
-        {costing && (
+        <ReportTable
+          title="Karigar work in hand"
+          filename="karigar-work-in-hand.csv"
+          columns={[
+            { key: "karigar", header: "Karigar" }, { key: "bundle", header: "Bundle", subKey: "lot" }, { key: "stage", header: "Stage" }, { key: "issued", header: "Issued", numeric: true },
+            { key: "returned", header: "Returned", numeric: true }, { key: "open", header: "Still out", numeric: true }, { key: "due", header: "Due" },
+          ]}
+          rows={hand.map((h, i) => ({ id: String(i), karigar: h.karigar, bundle: h.bundleNumber, lot: h.lotNumber, stage: h.stage + (h.isRework ? " (rework)" : ""), issued: h.issued, returned: h.returned, open: h.open, due: h.dueDate ? `${shortDate(h.dueDate)}${h.overdue ? " (overdue)" : ""}` : "—" }))}
+          csvHeader={["Karigar", "Lot", "Bundle", "Stage", "Rework", "Issued", "Returned", "Still out", "Due date", "Overdue"]}
+          csvRows={hand.map((h) => [h.karigar, h.lotNumber, h.bundleNumber, h.stage, h.isRework ? "Yes" : "No", h.issued, h.returned, h.open, h.dueDate, h.overdue ? "Yes" : "No"])}
+        />
+
+        {wages && (
           <ReportTable
-            title="Costing"
-            filename="lot-costing.csv"
-            note="Wages only. Cloth and other costs are shown as to confirm until the business says what a lot's cost includes."
+            title="Karigar wage ledger"
+            filename="karigar-wage-ledger.csv"
+            note={from || to ? `Period: ${from ?? "the start"} to ${to ?? "today"}. Balances are for this period's entries and payments only.` : "Whole history. Balance due = wages − advances recovered − deductions − payments. An advance given stays owed back until it is recovered."}
             columns={[
-              { key: "lot", header: "Lot", subKey: "design" },
-              { key: "total", header: "Total pieces", numeric: true },
-              { key: "cloth", header: "Cloth" },
-              { key: "wages", header: "Wages", numeric: true },
-              { key: "other", header: "Other" },
-              { key: "sum", header: "Total so far", numeric: true },
-              { key: "perPiece", header: "Wage per ready piece", numeric: true },
+              { key: "karigar", header: "Karigar", subKey: "mobile" }, { key: "work", header: "Work" }, { key: "wages", header: "Wages", numeric: true }, { key: "advance", header: "Advance given", numeric: true },
+              { key: "recovered", header: "Recovered", numeric: true }, { key: "deduction", header: "Deductions", numeric: true }, { key: "paid", header: "Paid", numeric: true }, { key: "balance", header: "Balance due", numeric: true },
             ]}
-            rows={costing.map((r, i) => ({
-              id: String(i), lot: r.lotNumber, design: r.design, total: r.totalPieces, cloth: "To confirm", wages: rupees(r.wagesMinor), other: "To confirm",
-              sum: rupees(r.totalMinor), perPiece: r.wagePerReadyPieceMinor === null ? "—" : rupees(r.wagePerReadyPieceMinor),
-            }))}
-            csvHeader={["Lot", "Design", "Total pieces", "Cloth cost (Rs)", "Wages (Rs)", "Other costs (Rs)", "Total so far (Rs)", "Wage per ready piece (Rs)"]}
-            csvRows={costing.map((r) => [r.lotNumber, r.design, r.totalPieces, "To confirm", rs(r.wagesMinor), "To confirm", rs(r.totalMinor), r.wagePerReadyPieceMinor === null ? "" : rs(r.wagePerReadyPieceMinor)])}
+            rows={wages.rows.map((r, i) => ({ id: String(i), karigar: r.karigar, mobile: r.mobile ?? "", work: r.workTypes || "—", wages: rupees(r.wagesMinor), advance: rupees(r.advanceGivenMinor), recovered: rupees(r.recoveredMinor), deduction: rupees(r.deductionMinor), paid: rupees(r.paidMinor), balance: rupees(r.balanceMinor) }))}
+            csvHeader={["Karigar", "Mobile", "Work type", "Gross wages (Rs)", "Advance given (Rs)", "Advance recovered (Rs)", "Deductions (Rs)", "Paid (Rs)", "Balance due (Rs)", "Advance outstanding (Rs)", "Period from", "Period to"]}
+            csvRows={wages.rows.map((r) => [r.karigar, r.mobile, r.workTypes, rs(r.wagesMinor), rs(r.advanceGivenMinor), rs(r.recoveredMinor), rs(r.deductionMinor), rs(r.paidMinor), rs(r.balanceMinor), rs(r.advanceOutstandingMinor), from ?? "", to ?? ""])}
           />
         )}
 
         <ReportTable
-          title="Ready inventory"
-          filename="ready-inventory.csv"
-          note="Pieces that have reached ready, lot by lot. Dispatch is not part of this software, so the figure does not fall when garments leave."
+          title="Short, reject and rework"
+          filename="short-reject-rework.csv"
+          note={`Totals: rejected ${quality.totals.rejected} · rework returned ${quality.totals.rework} (still waiting ${quality.totals.reworkOpen}) · short ${quality.totals.short}. Each is its own figure; rework is not counted as output until it is accepted.`}
           columns={[
-            { key: "lot", header: "Lot", subKey: "design" },
-            { key: "pieces", header: "Ready pieces", numeric: true },
-            { key: "bundles", header: "Ready bundles", numeric: true },
-            { key: "since", header: "Ready since" },
+            { key: "date", header: "Date" }, { key: "bundle", header: "Bundle", subKey: "lot" }, { key: "karigar", header: "Karigar" }, { key: "stage", header: "Stage" },
+            { key: "rejected", header: "Rejected", numeric: true }, { key: "rework", header: "Rework", numeric: true }, { key: "short", header: "Short", numeric: true },
           ]}
+          rows={quality.rows.map((r, i) => ({ id: String(i), date: shortDate(r.date), bundle: r.bundleNumber, lot: r.lotNumber, karigar: r.karigar, stage: r.stage, rejected: r.rejected, rework: r.rework, short: r.short }))}
+          csvHeader={["Date", "Lot", "Bundle", "Karigar", "Stage", "Rejected", "Rework", "Short", "Note"]}
+          csvRows={quality.rows.map((r) => [r.date, r.lotNumber, r.bundleNumber, r.karigar, r.stage, r.rejected, r.rework, r.short, r.note])}
+        />
+
+        <ReportTable
+          title="Production by process"
+          filename="production-by-process.csv"
+          columns={[{ key: "stage", header: "Stage" }, { key: "sent", header: "Sent", numeric: true }, { key: "received", header: "Received", numeric: true }, { key: "accepted", header: "Accepted", numeric: true }, { key: "pending", header: "Pending", numeric: true }, { key: "cycle", header: "Avg days", numeric: true }]}
+          rows={process.map((p, i) => ({ id: String(i), stage: p.stage, sent: p.sent, received: p.received, accepted: p.accepted, pending: p.pending, cycle: p.avgCycleDays }))}
+          csvHeader={["Stage", "Sent", "Received (accounted for)", "Accepted good", "Pending", "Average days per closed issue"]}
+          csvRows={process.map((p) => [p.stage, p.sent, p.received, p.accepted, p.pending, p.avgCycleDays])}
+        />
+
+        {costing && (
+          <ReportTable
+            title="Lot cost so far"
+            filename="lot-cost.csv"
+            note="Wages only. The other cost categories are recorded in a later stage. Cost per good piece = cost so far ÷ good finished pieces; it is blank when there are none, and the losses stay visible beside it."
+            columns={[
+              { key: "lot", header: "Lot", subKey: "design" }, { key: "planned", header: "Planned", numeric: true }, { key: "good", header: "Good", numeric: true },
+              { key: "losses", header: "Rejected · rework · short" }, { key: "wages", header: "Wages", numeric: true }, { key: "per", header: "Per good piece", numeric: true },
+            ]}
+            rows={costing.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, planned: r.plannedPieces, good: r.goodPieces, losses: `${r.rejectedPieces} · ${r.reworkPieces} · ${r.shortPieces}`, wages: rupees(r.wagesMinor), per: r.perGoodPieceMinor === null ? "—" : rupees(r.perGoodPieceMinor) }))}
+            csvHeader={["Lot", "Design", "Planned pieces", "Good pieces", "Rejected", "Rework waiting", "Short", "Wages (Rs)", "Other costs (Rs)", "Total so far (Rs)", "Cost per good piece (Rs)"]}
+            csvRows={costing.map((r) => [r.lotNumber, r.design, r.plannedPieces, r.goodPieces, r.rejectedPieces, r.reworkPieces, r.shortPieces, rs(r.wagesMinor), "Not recorded yet", rs(r.totalMinor), r.perGoodPieceMinor === null ? "" : rs(r.perGoodPieceMinor)])}
+          />
+        )}
+
+        <ReportTable
+          title="Ready stock"
+          filename="ready-stock.csv"
+          note="Good pieces that reached the last stage, lot by lot. Packing and dispatch are not recorded yet, so the figure does not fall when garments leave."
+          columns={[{ key: "lot", header: "Lot", subKey: "design" }, { key: "pieces", header: "Good pieces", numeric: true }, { key: "bundles", header: "Bundles", numeric: true }, { key: "since", header: "Ready since" }]}
           rows={ready.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, pieces: r.readyPieces, bundles: r.readyBundles, since: shortDate(r.readySince) }))}
-          csvHeader={["Lot", "Design", "Ready pieces", "Ready bundles", "Ready since"]}
+          csvHeader={["Lot", "Design", "Good pieces", "Bundles", "Ready since"]}
           csvRows={ready.map((r) => [r.lotNumber, r.design, r.readyPieces, r.readyBundles, r.readySince])}
         />
       </div>

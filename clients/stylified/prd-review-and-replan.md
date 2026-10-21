@@ -85,7 +85,13 @@ The stage list in `demo-plan.md` §2 is replaced by this one. Each stage lands a
 | E. Dashboard and four reports | The seven owner items (costing shown as "to confirm") and the four reports with CSV download now and `.xlsx` as a later build | DSH-01..07, RPT-01..05 |
 | F. Seed, walkthrough, completeness gate | A Stylified demo tenant on the local database with the PRD's own sample (LOT-0001, 500 pieces, D-101, Karigars A to D) | all |
 
-**Status, 2026-10-21 (late):**
+> **Superseded 2026-10-22.** The client's developer requirement workbook (`Shirt_Factory_Developer_Requirement_Sheet.xlsx`)
+> replaces the lot-level model below with a bundle-level one (bundle records, return split into good / rejected / rework / short,
+> wage basis, lot status workflow). The stage table below describes the first lot-level build, which migration
+> `20261022100000_piecework_bundles_quality` reshaped. Current plan and status: `requirement-sheet-review.md`; current demo:
+> `demo-guide.md`.
+
+**Status, 2026-10-21 (late), historical, lot-level build:**
 
 | Stage | State |
 |---|---|

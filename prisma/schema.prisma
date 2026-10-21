@@ -179,6 +179,7 @@ model Tenant {
   inventoryItems          InventoryItem[]
   pieceworkStages              PieceworkStage[]
   pieceworkLots                PieceworkLot[]
+  pieceworkBundles             PieceworkBundle[]
   pieceworkWorkers             PieceworkWorker[]
   pieceworkWorkerRates         PieceworkWorkerRate[]
   pieceworkEntries             PieceworkEntry[]
@@ -7670,11 +7671,17 @@ model PieceworkLot {
   /// LOT-0001. Unique per tenant.
   number       String
   sequenceNo   Int       @map("sequence_no")
-  /// Design name or code, as the business writes it.
+  /// The lot's working name, as the factory calls it.
+  name         String?
+  /// Design or style name or code, as the business writes it.
   design       String
-  totalPieces  Int       @map("total_pieces")
-  /// Pieces per bundle, snapshotted so a later change never recounts an old lot.
-  bundleSize   Int       @default(20) @map("bundle_size")
+  /// What was planned. The ACTUAL pieces are the net pieces of the bundles cut from it (derived).
+  plannedPieces Int      @map("planned_pieces")
+  fabricType   String?   @map("fabric_type")
+  startDate    DateTime? @map("start_date") @db.Date
+  dueDate      DateTime? @map("due_date") @db.Date
+  /// draft | active | hold | completed | closed. Closed set owned by the capability (LOT_STATUSES).
+  status       String    @default("draft")
   note         String?
   cancelledAt  DateTime? @map("cancelled_at")
   cancelReason String?   @map("cancel_reason")
@@ -7685,6 +7692,7 @@ model PieceworkLot {
   customFields Json      @default("{}") @map("custom_fields")
 
   tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  bundles PieceworkBundle[]
   entries PieceworkEntry[]
 
   @@unique([tenantId, number])
@@ -7693,12 +7701,45 @@ model PieceworkLot {
   @@map("piecework_lot")
 }
 
-/// A karigar: a worker paid per piece. No login. Deactivated, never deleted: the ledger refers to them forever.
+/// One bundle: a counted pack of pieces cut from a lot, with its own numbered slip. The unit every issue and return
+/// refers to. Net pieces are what was cut into it (a bundle may mix sizes; size is never tracked). A split makes
+/// children that point at their parent; nothing is ever edited or deleted.
+model PieceworkBundle {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  lotId         String    @map("lot_id") @db.Uuid
+  /// B-0001, from a gapless per-tenant series. Unique per tenant; printed on the slip.
+  number        String
+  sequenceNo    Int       @map("sequence_no")
+  netPieces     Int       @map("net_pieces")
+  /// Free note about the size mix. Never a size breakdown.
+  sizeNote      String?   @map("size_note")
+  parentBundleId String?  @map("parent_bundle_id") @db.Uuid
+  cancelledAt   DateTime? @map("cancelled_at")
+  createdById   String    @map("created_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot     PieceworkLot      @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  parent  PieceworkBundle?  @relation("PieceworkBundleSplit", fields: [parentBundleId], references: [id], onDelete: Restrict)
+  children PieceworkBundle[] @relation("PieceworkBundleSplit")
+  entries PieceworkEntry[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, sequenceNo])
+  @@index([tenantId, lotId])
+  @@map("piecework_bundle")
+}
+
+/// A karigar or an outside unit: paid per piece. No login. Deactivated, never deleted: the ledger refers to them forever.
 model PieceworkWorker {
   id        String   @id @default(uuid()) @db.Uuid
   tenantId  String   @map("tenant_id") @db.Uuid
   name      String
   mobile    String?
+  /// in_house | outside. Closed set owned by the capability (WORKER_KINDS).
+  kind      String   @default("in_house")
+  address   String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -7722,6 +7763,8 @@ model PieceworkWorkerRate {
   stageId       String   @map("stage_id") @db.Uuid
   /// Paise per piece. Zero is allowed (unpaid in-house work) and is a decision, not a gap.
   rateMinor     Int      @map("rate_minor")
+  /// What the rate is paid on: issued | good | returned. Overridable on each issue.
+  wageBasis     String   @default("good") @map("wage_basis")
   effectiveFrom DateTime @map("effective_from") @db.Date
   createdById   String   @map("created_by_id") @db.Uuid
   createdAt     DateTime @default(now()) @map("created_at")
@@ -7744,11 +7787,26 @@ model PieceworkEntry {
   id          String   @id @default(uuid()) @db.Uuid
   tenantId    String   @map("tenant_id") @db.Uuid
   lotId       String   @map("lot_id") @db.Uuid
+  /// Every entry names its own bundle, stage and worker (the sheet's rule: Lot + Bundle + process + karigar).
+  bundleId    String   @map("bundle_id") @db.Uuid
   stageId     String   @map("stage_id") @db.Uuid
   workerId    String   @map("worker_id") @db.Uuid
-  /// issue | receive
+  /// issue | receive. A receive settles part or all of ONE issue (`issueId`).
   kind        String
+  /// Issue: pieces given. Receive: pieces accounted for = good + rejected + rework + short.
   pieces      Int
+  /// Receive only: where the accounted pieces went. Short means unaccounted-for (never silently classified).
+  goodPieces     Int?    @map("good_pieces")
+  rejectedPieces Int?    @map("rejected_pieces")
+  reworkPieces   Int?    @map("rework_pieces")
+  shortPieces    Int?    @map("short_pieces")
+  /// The issue a receive settles.
+  issueId     String?  @map("issue_id") @db.Uuid
+  /// An issue of pieces sent back to the same stage to be redone, drawn from that stage's rework pool.
+  isRework    Boolean  @default(false) @map("is_rework")
+  /// issued | good | returned: what this entry's wage is paid on, copied from the issue.
+  wageBasis   String?  @map("wage_basis")
+  dueDate     DateTime? @map("due_date") @db.Date
   rateMinor   Int?     @map("rate_minor")
   reversesId  String?  @unique @map("reverses_id") @db.Uuid
   entryDate   DateTime @map("entry_date") @db.Date
@@ -7758,25 +7816,33 @@ model PieceworkEntry {
 
   tenant   Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lot      PieceworkLot    @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  bundle   PieceworkBundle @relation(fields: [bundleId], references: [id], onDelete: Restrict)
   stage    PieceworkStage  @relation(fields: [stageId], references: [id], onDelete: Restrict)
   worker   PieceworkWorker @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  issue    PieceworkEntry? @relation("PieceworkEntrySettles", fields: [issueId], references: [id], onDelete: Restrict)
+  returns  PieceworkEntry[] @relation("PieceworkEntrySettles")
   reverses PieceworkEntry? @relation("PieceworkEntryReversal", fields: [reversesId], references: [id], onDelete: Restrict)
   reversal PieceworkEntry? @relation("PieceworkEntryReversal")
 
   @@index([tenantId, lotId, stageId])
+  @@index([tenantId, bundleId])
   @@index([tenantId, workerId])
   @@map("piecework_entry")
 }
 
 /// APPEND-ONLY. An advance given to, or a payment made to, a worker. Corrected by a reversal row.
-/// Balance due = wages earned - advances - payments (derived).
+/// Balance due = wages earned - advances recovered - deductions - payments. An advance GIVEN is money out that stays
+/// owed back until it is recovered, so it is tracked separately: advance outstanding = given - recovered (derived).
 model PieceworkPayment {
   id          String   @id @default(uuid()) @db.Uuid
   tenantId    String   @map("tenant_id") @db.Uuid
   workerId    String   @map("worker_id") @db.Uuid
-  /// advance | payment
+  /// advance (given) | recovery (an advance taken back out of wages) | deduction (any other approved cut) | payment
   kind        String
   amountMinor Int      @map("amount_minor")
+  /// cash | bank | upi | cheque | other, for money that moved. Null for a recovery or deduction.
+  mode        String?
+  reference   String?
   reversesId  String?  @unique @map("reverses_id") @db.Uuid
   paidOn      DateTime @map("paid_on") @db.Date
   note        String?
