@@ -6,8 +6,12 @@ import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY, listStages, workerLedger } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
+import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
 import { DataTable } from "@/components/ui/DataTable";
-import { DefinitionList, PageHeader, Panel, PermissionDenied, Stat, StatRow } from "@/components/ui/primitives";
+import { MoneyBar } from "@/components/ui/PieceFlow";
+import { PageHeader, Panel, PermissionDenied, Surface } from "@/components/ui/primitives";
+import { ProgressBar } from "@/components/ui/viz";
 import { ActiveToggle, ChangeRate, PaymentLedger, RecordMoney } from "./KarigarActions";
 import { BASIS_LABEL, rupees, shortDate } from "../../lots/format";
 
@@ -37,6 +41,7 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
   return (
     <>
       <PageHeader
+        back={{ href: "/karigars", label: "Karigars" }}
         title={ledger.worker.name}
         description={[ledger.worker.kind === "outside" ? "Outside unit" : "In the factory", ledger.worker.mobile ? `Mobile ${ledger.worker.mobile}` : null, ledger.worker.address].filter(Boolean).join(" · ")}
         actions={
@@ -48,26 +53,72 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
         }
       />
 
-      <StatRow cols={canMoney ? 4 : 2} className="mb-6">
-        <Stat label="Pieces given" value={ledger.piecesGiven} />
-        <Stat label="Pieces accounted for" value={ledger.piecesReturned} hint={`${out} still out`} />
-        {canMoney && <Stat label="Gross wages" value={rupees(money.wagesMinor)} hint={`Recovered ${rupees(money.recoveredMinor)} · Deductions ${rupees(money.deductionMinor)} · Paid ${rupees(money.paidMinor)}`} />}
-        {canMoney && <Stat label="Balance due" value={rupees(money.balanceMinor)} hint={`Advance not yet recovered ${rupees(money.advanceOutstandingMinor)}`} />}
-      </StatRow>
+      <Surface className="mb-6 p-5">
+        <div className="mb-5 flex items-center gap-3.5">
+          <Avatar name={ledger.worker.name} size={48} />
+          <div className="min-w-0">
+            <p className="m-0 text-[13px] leading-[18px] text-text-secondary">{ledger.worker.active ? (out > 0 ? `Holding ${out} pieces now` : "Holding nothing now") : "Retired"}</p>
+            {canMoney && (
+              <p className="tabular m-0 text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-text">
+                {rupees(money.balanceMinor)} <span className="text-[15px] font-normal text-text-secondary">owed</span>
+              </p>
+            )}
+          </div>
+        </div>
+        <div className={`grid gap-6 ${canMoney ? "lg:grid-cols-2 lg:gap-10" : ""}`}>
+          <div className="min-w-0">
+            <h2 className="m-0 mb-3 text-[15px] font-semibold leading-[20px] text-text">Pieces</h2>
+            <ProgressBar
+              label="Pieces accounted for"
+              value={ledger.piecesReturned}
+              total={Math.max(ledger.piecesGiven, 1)}
+              tone={out === 0 ? "completed" : "active"}
+              figures={`${ledger.piecesReturned} of ${ledger.piecesGiven} accounted for`}
+            />
+            <p className="m-0 mt-2 text-[13px] leading-[18px] text-text-secondary">{out} still out.</p>
+          </div>
+          {canMoney && (
+            <div className="min-w-0">
+              <h2 className="m-0 mb-3 text-[15px] font-semibold leading-[20px] text-text">Wages {rupees(money.wagesMinor)}, where they went</h2>
+              <MoneyBar label="Wages split" format={rupees} parts={money} />
+              {money.advanceOutstandingMinor > 0 && (
+                <p className="m-0 mt-2 text-[13px] leading-[18px] text-text-secondary">Advance not yet recovered {rupees(money.advanceOutstandingMinor)}.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </Surface>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div className="flex flex-col gap-6">
-          <Panel title="Work in hand" flush>
-            <DataTable
-              caption="Issues this karigar still holds"
-              rows={ledger.workInHand.map((w) => ({ id: w.issueId, bundleId: w.bundleId, bundle: w.bundleNumber, lot: w.lotNumber, stage: `${w.stageLabel}${w.isRework ? " (rework)" : ""}`, issued: w.issued, open: w.open, date: shortDate(w.entryDate), due: w.dueDate ? `${shortDate(w.dueDate)}${w.overdue ? " (overdue)" : ""}` : "—" }))}
-              columns={[
-                { key: "bundle", header: "Bundle", variant: "link", href: "/lots/bundles/{bundleId}", subKey: "lot" }, { key: "stage", header: "Stage" }, { key: "date", header: "Issued" }, { key: "due", header: "Due" },
-                { key: "issued", header: "Pieces", numeric: true }, { key: "open", header: "Still out", numeric: true, sortable: true },
-              ]}
-              emptyTitle="Nothing out"
-              emptyDescription="This karigar holds no pieces."
-            />
+          <Panel title="Work in hand">
+            {ledger.workInHand.length === 0 ? (
+              <p className="m-0 text-[15px] text-text-secondary">Nothing out. This karigar holds no pieces.</p>
+            ) : (
+              <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
+                {ledger.workInHand.map((w) => (
+                  <li key={w.issueId} className="list-none">
+                    <Link href={`/lots/bundles/${w.bundleId}`} className="block rounded-[10px] bg-[var(--color-surface-sunken)] px-3.5 py-3 no-underline transition-colors hover:bg-[var(--color-control)]">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="text-[16px] font-semibold text-text">
+                          {w.bundleNumber} <span className="font-normal text-text-secondary">· {w.lotNumber}</span>
+                          {w.isRework && <span className="ml-2 rounded-full bg-[var(--color-control)] px-2 py-0.5 text-[12px] font-semibold text-text-secondary">Rework</span>}
+                        </span>
+                        <span className="tabular shrink-0 text-[15px] font-semibold text-text">{w.open} out</span>
+                      </span>
+                      <span className="mt-1 flex items-baseline justify-between gap-3 text-[13px] leading-[18px] text-text-secondary">
+                        <span>{w.stageLabel} · {w.issued} given {shortDate(w.entryDate)}</span>
+                        {w.dueDate && (
+                          <span style={w.overdue ? { color: "var(--color-state-blocked)", fontWeight: 600 } : undefined}>
+                            {w.overdue ? "Late, was due " : "Due "}{shortDate(w.dueDate)}
+                          </span>
+                        )}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Panel>
 
           <Panel title="Account of work" flush>
@@ -94,7 +145,24 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
             {stages.length === 0 ? (
               <p className="m-0 text-[14px] text-text-secondary">No stages are set up.</p>
             ) : (
-              <DefinitionList items={stages.map((s) => { const r = current.get(s.id); return { term: s.label, value: r ? `${rupees(r.rateMinor)} on ${BASIS_LABEL[r.wageBasis]?.toLowerCase()}, from ${shortDate(r.effectiveFrom)}` : "No rate set" }; })} />
+              <ul className="m-0 flex list-none flex-col p-0">
+                {stages.map((s) => {
+                  const r = current.get(s.id);
+                  return (
+                    <li key={s.id} className="flex list-none items-center justify-between gap-3 border-t border-[var(--color-line)] py-2.5 first:border-t-0 first:pt-0 last:pb-0">
+                      <span className="text-[15px] text-text">{s.label}</span>
+                      {r ? (
+                        <span className="text-right">
+                          <span className="tabular block text-[15px] font-semibold text-text">{rupees(r.rateMinor)} <span className="text-[13px] font-normal text-text-secondary">per piece</span></span>
+                          <span className="block text-[12px] leading-[16px] text-text-tertiary">on {BASIS_LABEL[r.wageBasis]?.toLowerCase()}, from {shortDate(r.effectiveFrom)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[13px] text-text-tertiary">No rate set</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </Panel>
           {canMoney && (

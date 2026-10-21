@@ -674,12 +674,51 @@ export type BundleRow = {
   readyPieces: number; rejectedPieces: number; shortPieces: number; reworkPieces: number; pendingPieces: number; daysHere: number | null; lastMovement: string | null;
   /** The business day the bundle was cut, for the slip. */
   cutOn: string;
+  /** An issue of this bundle is past its expected return date and still has pieces out. */
+  overdue: boolean;
 };
+
+/**
+ * One bundle standing in one stage of the factory floor. A bundle is usually spread over several stages at once (most
+ * pieces finished, a few still out), so it appears once per stage that holds some of its pieces, plus once in Ready.
+ */
+export type Placement = {
+  /** Stage id, or "ready". */
+  laneKey: string;
+  bundleId: string; number: string; lotNumber: string; lotName: string; netPieces: number;
+  /** Pieces of this bundle in this lane: out with karigars + waiting to be issued + rework waiting; or the good pieces in Ready. */
+  here: number;
+  out: number; waiting: number; rework: number;
+  /** Who holds the pieces out here; empty when none are out. */
+  holders: string[];
+  daysHere: number | null; late: boolean;
+};
+
+export function placementsOf(
+  b: LoadedBundle, lotNumber: string, lotName: string, names: Map<string, string>, today: string,
+): Placement[] {
+  if (b.cancelledAt) return [];
+  const base = { bundleId: b.id, number: b.number, lotNumber, lotName, netPieces: b.netPieces };
+  const rows: Placement[] = [];
+  for (const s of b.position.stages) {
+    const here = s.pending + s.toIssue + s.reworkPool;
+    if (here === 0) continue;
+    const holders = [...s.byWorker].filter(([, v]) => v.pending > 0).map(([w]) => names.get(w) ?? "A worker");
+    rows.push({
+      ...base, laneKey: s.stageId, here, out: s.pending, waiting: s.toIssue, rework: s.reworkPool, holders, daysHere: daysInStage(s, today),
+      late: s.issues.some((i) => i.open > 0 && i.dueDate !== null && i.dueDate < today),
+    });
+  }
+  if (b.position.ready > 0) rows.push({ ...base, laneKey: "ready", here: b.position.ready, out: 0, waiting: 0, rework: 0, holders: [], daysHere: null, late: false });
+  return rows;
+}
 
 export type LotDetail = LotRow & {
   note: string | null; cancelReason: string | null; startDate: string | null;
   stages: ReturnType<typeof sumStages>;
   bundleRows: BundleRow[];
+  /** Where every bundle's pieces stand, one row per bundle per stage, for the floor board. */
+  placements: Placement[];
   entries: Array<{
     id: string; entryDate: string; createdAt: string; bundleNumber: string; stageLabel: string; workerName: string; kind: "issue" | "receive"; pieces: number;
     good: number; rejected: number; rework: number; short: number; wageMinor: number; isReversal: boolean; reversed: boolean; isRework: boolean; enteredBy: string; note: string | null;
@@ -694,6 +733,7 @@ export function bundleRow(b: LoadedBundle, lotNumber: string, stages: Array<{ id
     readyPieces: b.position.ready, rejectedPieces: b.position.rejected, shortPieces: b.position.short, reworkPieces: b.position.reworkOpen,
     pendingPieces: b.position.stages.reduce((s, x) => s + x.pending, 0), daysHere: current ? daysInStage(current, today) : null, lastMovement: b.position.lastMovementDate,
     cutOn: isoOf(b.createdAt),
+    overdue: b.position.stages.some((s) => s.issues.some((i) => i.open > 0 && i.dueDate !== null && i.dueDate < today)),
   };
 }
 
@@ -722,6 +762,7 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
       note: lot.note, cancelReason: lot.cancelReason, startDate: isoOrNull(lot.startDate),
       stages: sumStages(live.map((b) => b.position), stages),
       bundleRows: bundles.map((b) => bundleRow(b, lot.number, stages, names, today)),
+      placements: bundles.flatMap((b) => placementsOf(b, lot.number, lot.name ?? lot.design, names, today)),
       entries: rows.map((r) => {
         const e = toLedger(r);
         const s = e.reversesId ? -1 : 1;
@@ -737,6 +778,8 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
 
 export type BundleDetail = BundleRow & {
   lotName: string | null; lotDesign: string; lotStatus: string;
+  /** The tenant's business day, so a screen can say which issues are late without reading the server clock. */
+  today: string;
   stages: Array<{
     stageId: string; label: string; intake: number; issued: number; good: number; rejected: number; rework: number; short: number; pending: number; toIssue: number; reworkPool: number; days: number | null;
     issues: Array<{ issueId: string; workerId: string; workerName: string; issued: number; good: number; rejected: number; rework: number; short: number; open: number; isRework: boolean; entryDate: string; dueDate: string | null }>;
@@ -755,7 +798,7 @@ export const bundleDetail: QueryDefinition<{ bundleId: string }, BundleDetail | 
     const names = await workerNames(ctx.tx, [...new Set(loaded!.entries.map((e) => e.workerId))]);
     return {
       ...bundleRow(loaded!, bundle.lot.number, stages, names, today),
-      lotName: bundle.lot.name, lotDesign: bundle.lot.design, lotStatus: bundle.lot.status,
+      lotName: bundle.lot.name, lotDesign: bundle.lot.design, lotStatus: bundle.lot.status, today,
       stages: loaded!.position.stages.map((s) => ({
         stageId: s.stageId, label: s.label, intake: s.intake, issued: s.issuedNormal + s.issuedRework, good: s.good, rejected: s.rejected, rework: s.rework, short: s.short,
         pending: s.pending, toIssue: s.toIssue, reworkPool: s.reworkPool, days: daysInStage(s, today),

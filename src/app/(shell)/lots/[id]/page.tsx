@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
@@ -8,9 +9,11 @@ import { ENTITY_PIECEWORK_LOT, PIECEWORK_CAPABILITY, lotDetail } from "@/server/
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
 import { DataTable } from "@/components/ui/DataTable";
-import { JourneyMap, type JourneyStep } from "@/components/ui/JourneyMap";
-import { ButtonLink, PageHeader, Panel, PermissionDenied, Stat, StatRow, StateBadge } from "@/components/ui/primitives";
+import { FloorBoard, PieceBar } from "@/components/ui/PieceFlow";
+import { ButtonLink, DefinitionList, EmptyState, PageHeader, Panel, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
+import { ProgressBar } from "@/components/ui/viz";
 import { CancelLot, EntryLedger, NewBundleForm, StatusActions } from "./LotActions";
+import { floorLanes } from "../floor";
 import { STATUS_CATEGORY, STATUS_LABEL, shortDate } from "../format";
 
 export const dynamic = "force-dynamic";
@@ -26,24 +29,22 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const lot = await executeQuery(actor, lotDetail, { lotId: id });
   if (!lot) notFound();
 
-  const steps: JourneyStep[] = lot.stages.map((s) => {
-    const losses = [s.rejected && `${s.rejected} rejected`, s.rework && `${s.rework} rework`, s.short && `${s.short} short`].filter(Boolean).join(" · ");
-    return {
-      key: s.stageId,
-      label: s.label,
-      kind: "stage",
-      description: `Issued ${s.issued} · Good ${s.good} · Pending ${s.pending}`,
-      chip: losses ? { icon: "flag", label: losses } : undefined,
-      status: s.issued === 0 ? "pending" : s.pending === 0 && s.reworkPool === 0 ? "done" : "active",
-    };
-  });
   const cancelled = lot.status === "cancelled";
+  const lanes = floorLanes(lot.stages.map((s) => ({ id: s.stageId, label: s.label })), lot.placements, false);
+  const facts: Array<{ term: string; value: ReactNode }> = [
+    { term: "Design", value: lot.design },
+    ...(lot.fabricType ? [{ term: "Fabric", value: lot.fabricType }] : []),
+    ...(lot.startDate ? [{ term: "Started", value: shortDate(lot.startDate) }] : []),
+    { term: "Due", value: lot.dueDate ? <span className={lot.overdue ? "font-semibold text-[var(--color-state-blocked)]" : undefined}>{shortDate(lot.dueDate)}{lot.overdue ? " · overdue" : ""}</span> : "Not set" },
+    { term: "Now", value: lot.stageLabel ? `${lot.stageLabel} · ${lot.location}` : lot.location },
+  ];
 
   return (
     <>
       <PageHeader
+        back={{ href: "/lots", label: "Lots" }}
         title={`${lot.number} · ${lot.name ?? lot.design}`}
-        description={[lot.name ? lot.design : null, lot.fabricType, lot.dueDate ? `Due ${shortDate(lot.dueDate)}${lot.overdue ? " (overdue)" : ""}` : null].filter(Boolean).join(" · ") || lot.note || undefined}
+        description={lot.note ?? undefined}
         actions={
           cancelled ? null : (
             <>
@@ -60,47 +61,75 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
         }
       />
 
-      <StatRow cols={4} className="mb-6">
-        <div className="flex flex-col px-5 py-4">
-          <span className="flex h-[26px] items-center text-[15px]"><StateBadge category={STATUS_CATEGORY[lot.status]!} label={STATUS_LABEL[lot.status]} /></span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">Status</span>
-        </div>
-        <Stat label="Cut of planned" value={`${lot.bundledPieces} of ${lot.plannedPieces}`} hint={`${lot.bundles} bundle${lot.bundles === 1 ? "" : "s"}`} />
-        <Stat label="Good ready" value={lot.readyPieces} hint={lot.stageLabel ? `${lot.stageLabel} · ${lot.location}` : lot.location} />
-        <Stat label="Rejected · rework · short" value={`${lot.rejectedPieces} · ${lot.reworkPieces} · ${lot.shortPieces}`} hint="Kept apart, never counted as good" />
-      </StatRow>
-
       {cancelled && (
         <p role="status" className="mb-6 mt-0 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[14px] text-text-secondary">
           This lot was cancelled{lot.cancelReason ? `: ${lot.cancelReason}` : ""}. Its number is not reused.
         </p>
       )}
 
-      {steps.length > 0 && lot.bundles > 0 && (
-        <section aria-label="All bundles of this lot by stage" className="mb-6">
-          <JourneyMap steps={steps} label={`${lot.number} through the stages`} perRow={5} />
+      <Surface className="mb-6 p-5">
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:gap-10">
+          <div className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <StateBadge category={STATUS_CATEGORY[lot.status]!} label={STATUS_LABEL[lot.status]} />
+              <span className="text-[15px] text-text-secondary">
+                {lot.bundles === 0 ? "No bundle cut yet" : `${lot.bundles} bundle${lot.bundles === 1 ? "" : "s"}, ${lot.bundledPieces} pieces`}
+              </span>
+            </div>
+            {lot.bundledPieces > 0 ? (
+              <PieceBar
+                size="lg"
+                label={`${lot.number} pieces`}
+                total={lot.bundledPieces}
+                counts={{ ready: lot.readyPieces, out: lot.pendingPieces, rework: lot.reworkPieces, rejected: lot.rejectedPieces, short: lot.shortPieces }}
+              />
+            ) : (
+              <p className="m-0 text-[15px] text-text-secondary">{lot.status === "draft" ? "Start the lot, then cut its bundles." : "Cut a bundle to give it a number and a slip."}</p>
+            )}
+            <div className="mt-5">
+              <ProgressBar
+                label="Cut against planned"
+                value={lot.bundledPieces}
+                total={Math.max(lot.plannedPieces, 1)}
+                tone={lot.bundledPieces >= lot.plannedPieces ? "completed" : "active"}
+                figures={`${lot.bundledPieces} of ${lot.plannedPieces} planned pieces cut`}
+              />
+            </div>
+          </div>
+          <DefinitionList items={facts} />
+        </div>
+      </Surface>
+
+      {lot.bundles > 0 && (
+        <section aria-labelledby="floor-heading" className="mb-6">
+          <h2 id="floor-heading" className="m-0 mb-3 px-1 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Where every bundle is</h2>
+          <FloorBoard lanes={lanes} label={`${lot.number} bundles by stage`} />
         </section>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <Panel title="Bundles" flush>
+      {lot.bundles === 0 && !cancelled && (
+        <div className="mb-6">
+          <EmptyState title="No bundles yet" description={lot.status === "draft" ? "Start the lot, then cut its bundles." : "Cut a bundle to give it a number and a slip."} />
+        </div>
+      )}
+
+      <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
+        <Panel title="Stage by stage" flush>
           <DataTable
-            caption="Bundles cut from this lot"
-            rows={lot.bundleRows.map((b) => ({
-              id: b.id, number: b.number, net: b.netPieces, stage: b.stageLabel ?? "—", location: b.location, ready: b.readyPieces,
-              pending: b.pendingPieces, losses: b.rejectedPieces + b.shortPieces + b.reworkPieces === 0 ? "—" : `${b.rejectedPieces} · ${b.reworkPieces} · ${b.shortPieces}`,
+            caption="What each stage has taken and returned"
+            rows={lot.stages.map((s) => ({
+              id: s.stageId, stage: s.label, issued: s.issued, good: s.good, pending: s.pending,
+              losses: s.rejected + s.rework + s.short === 0 ? "—" : `${s.rejected} · ${s.rework} · ${s.short}`,
             }))}
             columns={[
-              { key: "number", header: "Bundle", variant: "link", href: "/lots/bundles/{id}", sortable: true },
-              { key: "net", header: "Net pieces", numeric: true },
               { key: "stage", header: "Stage" },
-              { key: "location", header: "Location" },
-              { key: "ready", header: "Good ready", numeric: true },
+              { key: "issued", header: "Issued", numeric: true },
+              { key: "good", header: "Good", numeric: true },
               { key: "pending", header: "Pending", numeric: true },
               { key: "losses", header: "Rej · rework · short" },
             ]}
-            emptyTitle="No bundles yet"
-            emptyDescription={lot.status === "draft" ? "Start the lot, then cut its bundles." : "Cut a bundle to give it a number and a slip."}
+            emptyTitle="No stages"
+            emptyDescription="Add the stages first."
           />
         </Panel>
         <Panel title="Every entry" flush>

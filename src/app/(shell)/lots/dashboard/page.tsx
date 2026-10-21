@@ -6,12 +6,15 @@ import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_LOT, ENTITY_PIECEWORK_PAYMENT, PIECEWORK_CAPABILITY, dashboard } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { DataTable } from "@/components/ui/DataTable";
-import { PageHeader, Panel, PermissionDenied, StatTile, StatTileRow } from "@/components/ui/primitives";
-import { ProgressBar, StackedBar } from "@/components/ui/viz";
-import { STATUS_LABEL, rupees } from "../format";
+import { Icon } from "@/components/ui/icons";
+import { BarList, FloorBoard, PieceBar } from "@/components/ui/PieceFlow";
+import { PageHeader, Panel, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
+import { STATUS_CATEGORY, STATUS_LABEL, rupees, shortDate } from "../format";
+import { floorLanes } from "../floor";
 
 export const dynamic = "force-dynamic";
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 async function OwnerDashboardPage() {
   installCapabilities();
@@ -24,117 +27,155 @@ async function OwnerDashboardPage() {
   if (!allowed) return <PermissionDenied what="the owner dashboard" />;
 
   const d = await executeQuery(actor, dashboard, {});
-  const totalPending = d.byStage.reduce((sum, s) => sum + s.pending, 0);
-  const longest = Math.max(1, ...d.stuck.map((s) => s.days ?? 0));
+  const out = d.byStage.reduce((sum, s) => sum + s.pending, 0);
+  const inWork = d.floor.reduce((s, b) => s + b.netPieces, 0);
+  const onFloor = {
+    ready: d.floor.reduce((s, b) => s + b.readyPieces, 0), out: d.floor.reduce((s, b) => s + b.pendingPieces, 0), rework: d.floor.reduce((s, b) => s + b.reworkPieces, 0),
+    rejected: d.floor.reduce((s, b) => s + b.rejectedPieces, 0), short: d.floor.reduce((s, b) => s + b.shortPieces, 0),
+  };
+  const lanes = floorLanes(d.byStage.map((s) => ({ id: s.stageId, label: s.label })), d.placements, true);
+
+  // Per-lot pieces for the lots-in-work list, from the same floor rows the board draws.
+  const byLot = d.activeLots.map((l) => {
+    const rows = d.floor.filter((b) => b.lotNumber === l.number);
+    const sum = (f: (b: (typeof rows)[number]) => number) => rows.reduce((s, b) => s + f(b), 0);
+    return { lot: l, total: sum((b) => b.netPieces), counts: { ready: sum((b) => b.readyPieces), out: sum((b) => b.pendingPieces), rework: sum((b) => b.reworkPieces), rejected: sum((b) => b.rejectedPieces), short: sum((b) => b.shortPieces) }, bundles: rows.length };
+  });
+  const idle = d.stuck.filter((s) => s.days !== null && s.days > 0).slice(0, 3);
 
   return (
     <>
-      <PageHeader title="Owner dashboard" description={`The state of the work on ${d.today}. Every figure is worked out from the entries recorded; good, rejected, rework and short are never mixed.`} />
+      <PageHeader
+        title="Factory today"
+        description={`${shortDate(d.today)}. ${plural(d.activeLots.length, "lot")} in work, ${plural(d.floor.length, "bundle")} on the floor, ${plural(out, "piece")} out with karigars.`}
+      />
 
-      <StatTileRow cols={4} className="mb-6">
-        <StatTile icon="batch" hue="teal" label="Open lots" value={d.activeLots.length} />
-        <StatTile state="pending" icon="clock" label="Pieces out with karigars" value={totalPending} />
-        <StatTile state="completed" icon="check" label="Good pieces ready" value={d.ready.pieces} />
-        {canWage ? <StatTile icon="wallet" hue="purple" label="Owed to karigars" value={rupees(d.dues.totalMinor)} /> : <StatTile state="blocked" icon="flag" label="Overdue lots" value={d.overdue.lots} />}
-      </StatTileRow>
+      <div className="mb-6 grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <Surface className="p-5">
+          <h2 className="m-0 mb-4 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Where the pieces are</h2>
+          {inWork === 0 ? (
+            <p className="m-0 text-[15px] text-text-secondary">No bundle is on the floor.</p>
+          ) : (
+            <PieceBar
+              size="lg"
+              label="Every piece on the floor"
+              total={inWork}
+              counts={onFloor}
+            />
+          )}
+          <p className="m-0 mt-4 max-w-[60ch] text-[13px] leading-[18px] text-text-tertiary">
+            Rework is not output until it is accepted. Short means pieces that did not come back and cannot be found. Good, rejected, rework and short are never mixed.
+          </p>
+        </Surface>
+
+        <Surface className="p-5">
+          <h2 className="m-0 mb-3 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Needs attention</h2>
+          {d.lateIssues.length === 0 && idle.length === 0 ? (
+            <p className="m-0 flex items-center gap-2 text-[15px] text-text-secondary">
+              <span aria-hidden="true" style={{ color: "var(--color-state-completed)" }}><Icon name="check" size={18} /></span>
+              Nothing is late. Every issue is inside its return date.
+            </p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-3 p-0">
+              {d.lateIssues.slice(0, 4).map((l) => (
+                <li key={`${l.bundleId}-${l.workerId}-${l.stageLabel}`} className="list-none">
+                  <Link href={`/lots/bundles/${l.bundleId}`} className="block rounded-[10px] bg-[var(--color-surface-sunken)] px-3 py-2.5 no-underline transition-colors hover:bg-[var(--color-control)]">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-[15px] font-semibold text-text">{l.bundleNumber} · {l.workerName}</span>
+                      <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{plural(l.daysLate, "day")} late</span>
+                    </span>
+                    <span className="block text-[13px] leading-[18px] text-text-secondary">{l.open} pieces still out at {l.stageLabel}, due {shortDate(l.dueDate)}</span>
+                  </Link>
+                </li>
+              ))}
+              {idle.map((s) => (
+                <li key={s.lotId} className="list-none">
+                  <Link href={`/lots/${s.lotId}`} className="block rounded-[10px] bg-[var(--color-surface-sunken)] px-3 py-2.5 no-underline transition-colors hover:bg-[var(--color-control)]">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-[15px] font-semibold text-text">{s.number}</span>
+                      <span className="shrink-0 text-[13px] text-text-secondary">{plural(s.days ?? 0, "day")} since it moved</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Surface>
+      </div>
+
+      <section aria-labelledby="floor-heading" className="mb-6">
+        <h2 id="floor-heading" className="m-0 mb-3 px-1 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">The floor, stage by stage</h2>
+        <FloorBoard lanes={lanes} label="Every bundle by stage" empty={<Surface className="p-5"><p className="m-0 text-[15px] text-text-secondary">No bundle is in work. Start a lot and cut its bundles.</p></Surface>} />
+      </section>
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
-        <Panel title="Good, rejected, rework and short">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {([["Good", d.quality.good], ["Rejected", d.quality.rejected], ["Rework waiting", d.quality.reworkOpen], ["Short", d.quality.short]] as const).map(([label, value]) => (
-              <div key={label} className="flex flex-col">
-                <span className="tabular text-[26px] font-bold leading-[1.1] text-text">{value}</span>
-                <span className="text-[13px] text-text-secondary">{label}</span>
-              </div>
-            ))}
-          </div>
-          <p className="m-0 mt-3 text-[13px] text-text-tertiary">Rework is not output until it is accepted. Short means pieces that did not come back and cannot be found.</p>
-        </Panel>
-
-        <Panel title="Bundles and pending pieces at every stage">
-          {totalPending === 0 && d.byStage.every((s) => s.bundles === 0) ? (
-            <p className="m-0 text-[14px] text-text-secondary">No bundle is in work.</p>
+        <Panel title="Lots in work">
+          {byLot.length === 0 ? (
+            <p className="m-0 text-[15px] text-text-secondary">Every lot is completed, or none has been created.</p>
           ) : (
-            <div className="flex flex-col gap-3">
-              <StackedBar label="Pending pieces by stage" segments={d.byStage.map((s) => ({ label: s.label, value: s.pending }))} />
-              <p className="m-0 text-[13px] text-text-secondary">{d.byStage.filter((s) => s.bundles > 0).map((s) => `${s.label}: ${s.bundles} bundle${s.bundles === 1 ? "" : "s"}`).join(" · ") || "No bundle is waiting at a stage."}</p>
-            </div>
-          )}
-        </Panel>
-
-        <Panel title="Material with karigars" flush>
-          <DataTable
-            caption="Pieces each karigar is holding"
-            rows={d.withWorkers.map((w) => ({ id: w.workerId, name: w.name, pieces: w.pieces }))}
-            columns={[{ key: "name", header: "Karigar", variant: "link", href: "/karigars/{id}" }, { key: "pieces", header: "Pieces held", numeric: true, sortable: true }]}
-            emptyTitle="Nothing is out"
-            emptyDescription="No karigar is holding any pieces."
-          />
-        </Panel>
-
-        <Panel title="Open lots" flush>
-          <DataTable
-            caption="Lots not yet completed"
-            rows={d.activeLots.map((l) => ({ id: l.id, number: l.number, title: l.name ?? l.design, stage: l.stageLabel ?? "—", location: l.location, cut: `${l.bundledPieces} of ${l.plannedPieces}`, status: `${STATUS_LABEL[l.status]}${l.overdue ? " · overdue" : ""}` }))}
-            columns={[
-              { key: "number", header: "Lot", variant: "link", href: "/lots/{id}", subKey: "title" },
-              { key: "stage", header: "Stage" },
-              { key: "location", header: "Location" },
-              { key: "cut", header: "Cut of planned", numeric: true },
-              { key: "status", header: "Status" },
-            ]}
-            emptyTitle="No open lots"
-            emptyDescription="Every lot is completed, or none has been created."
-          />
-        </Panel>
-
-        <Panel title="Days since each lot last moved">
-          {d.stuck.length === 0 ? (
-            <p className="m-0 text-[14px] text-text-secondary">No open lots.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {d.stuck.map((s) => (
-                <div key={s.lotId} className="grid grid-cols-[5.5rem_1fr] items-center gap-3">
-                  <Link href={`/lots/${s.lotId}`} className="text-[14px] font-medium text-accent-ink no-underline hover:underline">{s.number}</Link>
-                  <ProgressBar label={`${s.number}, days since it last moved`} value={s.days ?? 0} total={longest} tone={s.days !== null && s.days >= 7 ? "pending" : "active"} figures={s.days === null ? "Not started" : `${s.days} day${s.days === 1 ? "" : "s"}`} />
-                </div>
+            <ul className="m-0 flex list-none flex-col gap-5 p-0">
+              {byLot.map(({ lot, total, counts, bundles }) => (
+                <li key={lot.id} className="list-none">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <Link href={`/lots/${lot.id}`} className="min-w-0 truncate text-[15px] font-semibold text-accent-ink no-underline hover:underline">
+                      {lot.number} <span className="font-normal text-text-secondary">· {lot.name ?? lot.design}</span>
+                    </Link>
+                    <StateBadge category={STATUS_CATEGORY[lot.status]!} label={`${STATUS_LABEL[lot.status]}${lot.overdue ? " · overdue" : ""}`} />
+                  </div>
+                  {total > 0 ? <PieceBar counts={counts} total={total} label={`${lot.number} pieces`} size="sm" legend={false} /> : <p className="m-0 text-[13px] text-text-secondary">Nothing cut yet</p>}
+                  <p className="m-0 mt-1.5 text-[13px] leading-[18px] text-text-secondary">
+                    {bundles > 0 ? `${plural(bundles, "bundle")} · ${lot.stageLabel ?? "—"} · ${lot.location}` : `${lot.bundledPieces} of ${lot.plannedPieces} cut`}
+                  </p>
+                </li>
               ))}
-              <p className="m-0 text-[13px] text-text-tertiary">{d.overdue.issues} issue{d.overdue.issues === 1 ? " is" : "s are"} past the expected return date. How many days counts as stuck is still to be agreed.</p>
-            </div>
+            </ul>
           )}
         </Panel>
 
-        <Panel title="Ready stock">
-          <p className="m-0 text-[15px] text-text">{d.ready.pieces} good pieces · {d.ready.bundles} bundle{d.ready.bundles === 1 ? "" : "s"} · {d.ready.lots} lot{d.ready.lots === 1 ? "" : "s"}</p>
-          <p className="m-0 mt-2 text-[13px] text-text-tertiary">Good pieces that have reached the last stage. Packing and dispatch are not recorded yet, so this does not fall when garments leave.</p>
+        <Panel title="Material with karigars">
+          {d.withWorkers.length === 0 ? (
+            <p className="m-0 text-[15px] text-text-secondary">No karigar is holding any pieces.</p>
+          ) : (
+            <BarList
+              label="Pieces each karigar is holding"
+              items={d.withWorkers.map((w) => ({ id: w.workerId, label: w.name, href: `/karigars/${w.workerId}`, value: w.pieces, display: `${w.pieces} pcs` }))}
+            />
+          )}
         </Panel>
 
         {canWage && (
-          <Panel title="Lot-wise costing" flush>
-            <DataTable
-              caption="Wages earned on each lot"
-              rows={d.lotWages.map((l) => ({ id: l.lotId, number: l.number, wages: rupees(l.wagesMinor) }))}
-              columns={[{ key: "number", header: "Lot", variant: "link", href: "/lots/{id}" }, { key: "wages", header: "Wages so far", numeric: true }]}
-              emptyTitle="No wages yet"
-              emptyDescription="Wages appear as work is returned."
-            />
-            <p className="m-0 px-5 pb-4 text-[13px] text-text-tertiary">Wages only. The other cost categories are recorded in a later stage, and cost per good piece is shown in the costing report.</p>
+          <Panel title="Owed to karigars">
+            {d.dues.workers.length === 0 ? (
+              <p className="m-0 text-[15px] text-text-secondary">Every karigar&apos;s account is square.</p>
+            ) : (
+              <>
+                <p className="tabular m-0 mb-4 text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-text">{rupees(d.dues.totalMinor)}</p>
+                <BarList
+                  tone="pending"
+                  label="Balance due to each karigar"
+                  items={d.dues.workers.map((w) => ({ id: w.workerId, label: w.name, href: `/karigars/${w.workerId}`, value: w.balanceMinor, display: rupees(w.balanceMinor) }))}
+                />
+              </>
+            )}
+            <p className="m-0 mt-4 text-[13px] leading-[18px] text-text-tertiary">Advances not yet recovered from wages: {rupees(d.dues.advanceOutstandingMinor)}.</p>
           </Panel>
         )}
 
         {canWage && (
-          <Panel title="Karigars' dues" flush>
-            <DataTable
-              caption="Balance due to each karigar"
-              rows={d.dues.workers.map((w) => ({ id: w.workerId, name: w.name, balance: rupees(w.balanceMinor) }))}
-              columns={[{ key: "name", header: "Karigar", variant: "link", href: "/karigars/{id}" }, { key: "balance", header: "Balance due", numeric: true }]}
-              emptyTitle="Nothing is owed"
-              emptyDescription="Every karigar's account is square."
-            />
-            <p className="m-0 px-5 pb-4 text-[13px] text-text-tertiary">Advances not yet recovered from wages: {rupees(d.dues.advanceOutstandingMinor)}.</p>
+          <Panel title="Wages by lot">
+            {d.lotWages.length === 0 ? (
+              <p className="m-0 text-[15px] text-text-secondary">Wages appear as work is returned.</p>
+            ) : (
+              <BarList tone="completed" label="Wages earned on each lot" items={d.lotWages.map((l) => ({ id: l.lotId, label: l.number, href: `/lots/${l.lotId}`, value: l.wagesMinor, display: rupees(l.wagesMinor) }))} />
+            )}
+            <p className="m-0 mt-4 text-[13px] leading-[18px] text-text-tertiary">Wages only. The other cost categories come in a later stage; cost per good piece is in the costing report.</p>
           </Panel>
         )}
       </div>
+
+      <p className="m-0 mt-6 px-1 text-[13px] leading-[18px] text-text-tertiary">
+        Across every lot, including finished ones, {d.ready.pieces} good pieces are ready in {plural(d.ready.bundles, "bundle")}. Packing and dispatch are not recorded yet, so this does not fall when garments leave.
+      </p>
     </>
   );
 }

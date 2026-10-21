@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { QueryDefinition } from "@/server/platform/query";
 import { costPerGoodPiece, daysInStage, wageOf, workerMoney, type PaymentRow } from "./ledger";
 import { activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
-import { bundleRow, summariseLot, type BundleRow, type LotRow } from "./index";
+import { bundleRow, placementsOf, summariseLot, type BundleRow, type LotRow, type Placement } from "./index";
 
 /**
  * The owner's dashboard and the reports (requirement sheet RP-03 to RP-07, RP-09, and costing and ready stock as far as
@@ -79,7 +79,15 @@ export type Dashboard = {
   dues: { totalMinor: number; advanceOutstandingMinor: number; workers: Array<{ workerId: string; name: string; balanceMinor: number }> };
   stuck: Array<{ lotId: string; number: string; days: number | null }>;
   overdue: { lots: number; issues: number };
+  /** Every live bundle of an open lot, for the floor board. */
+  floor: Array<BundleRow & { lotName: string }>;
+  /** Where each of those bundles' pieces stand, one row per bundle per stage. */
+  placements: Placement[];
+  /** Issues past their expected return date, the longest overdue first. */
+  lateIssues: Array<{ bundleId: string; bundleNumber: string; lotNumber: string; workerId: string; workerName: string; stageLabel: string; open: number; dueDate: string; daysLate: number }>;
 };
+
+const daysBetween = (from: string, to: string) => Math.max(0, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
 
 export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
   key: "verity.piecework.dashboard",
@@ -136,10 +144,26 @@ export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
 
     const overdueIssues = openBundles.reduce((sum, b) => sum + b.position.stages.reduce((s, p) => s + p.issues.filter((i) => i.open > 0 && i.dueDate !== null && i.dueDate < d.today).length, 0), 0);
 
+    const lotName = new Map(d.lots.map((l) => [l.id, l.name ?? l.design]));
+    const floor = openBundles.map((b) => ({ ...bundleRow(b, d.lotNo.get(b.lotId) ?? "", d.stages, d.names, d.today), lotName: lotName.get(b.lotId) ?? "" }));
+    const placements = openBundles.flatMap((b) => placementsOf(b, d.lotNo.get(b.lotId) ?? "", lotName.get(b.lotId) ?? "", d.names, d.today));
+    const lateIssues = openBundles
+      .flatMap((b) =>
+        b.position.stages.flatMap((s) =>
+          s.issues
+            .filter((i) => i.open > 0 && i.dueDate !== null && i.dueDate < d.today)
+            .map((i) => ({
+              bundleId: b.id, bundleNumber: b.number, lotNumber: d.lotNo.get(b.lotId) ?? "", workerId: i.workerId, workerName: d.names.get(i.workerId) ?? "A worker",
+              stageLabel: s.label, open: i.open, dueDate: i.dueDate!, daysLate: daysBetween(i.dueDate!, d.today),
+            })),
+        ),
+      )
+      .sort((a, b) => b.daysLate - a.daysLate);
+
     return {
       today: d.today, activeLots, byStage, withWorkers, ready, quality, lotWages,
       dues: { totalMinor: dueWorkers.reduce((s, w) => s + w.balanceMinor, 0), advanceOutstandingMinor: people.reduce((s, p) => s + p.money.advanceOutstandingMinor, 0), workers: dueWorkers },
-      stuck, overdue: { lots: activeLots.filter((l) => l.overdue).length, issues: overdueIssues },
+      stuck, overdue: { lots: activeLots.filter((l) => l.overdue).length, issues: overdueIssues }, floor, placements, lateIssues,
     };
   },
 };
