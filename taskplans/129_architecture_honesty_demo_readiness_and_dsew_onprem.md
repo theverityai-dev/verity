@@ -1,0 +1,119 @@
+# Task Plan 129 — Architecture honesty fixes, demo-grade platform, and DSEW on-premises
+
+**Authority:** Product-owner request, 2026-10-22, after a critical architecture review of the repository: "we build for demos
+too because indian client need to see things visually … whatever we build its prep for future clients and their demos", then
+"how to fix and solve everything you said make a taskplan and finish it off on high priority also DSEW on prem is high priority
+too". Grounded in: `taskplans/handoffs/FINISHER.md` (P0-1, P0-2, P1-2), `clients/dsew/deployment-readiness-audit.md`
+(blockers B1-B6), `clients/dsew/onprem-stage2-design.md`, ADR-031 (deployment modes), ADR-032 (public origin), ADR-053
+(Experience System), `CLAUDE.md` (scope note 2026-09-30, Experience System section, forbidden pattern 8). Supersedes nothing;
+extends Task 125 and the DSEW phase plan. Authorises no new business capability and changes no invariant, `enforcePolicy()`,
+INV-001 or ADR-017.
+
+## Status: IN PROGRESS 2026-10-22
+
+Per-item status lives in the tables below and is mirrored in `FINISHER.md`. Nothing here is called complete until its
+"Done when" holds.
+
+## 1. What the review found, and what the owner corrected
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | Breadth (26 capabilities, 246 models) far ahead of paying clients | **Corrected by the owner.** Breadth is demo inventory: Indian buyers decide by seeing a working screen. Breadth stays. The real defect is that breadth is *unverified*, so it is not demo-grade. Workstream C |
+| 2 | Screens proven at the server but never opened in a browser; known failing conformance tests; no green full-suite record | A3 and workstream C |
+| 3 | Deployment sprawl: Modes A, B, C and a proposed D | Decision D2; workstream E |
+| 4 | A push can reach production before its migration (caused an outage 2026-10-20); readiness flapping | A2; readiness already fixed by `ef929e27` (scheduler staleness now reports `degraded`, HTTP 200) |
+| 5 | Accounting does not post to the ledger; Odoo/ERPNext parity is being rebuilt by hand | DSEW P1-1h (ADR-044 acceptance), E2 |
+| 6 | Visual system changed six times in six weeks; 24px blur on every cell is a risk on cheap phones and old office PCs | Workstream D |
+| 7 | `CLAUDE.md` contradicts itself and the code (scope list, forbidden pattern 8 vs ADR-053, stale ADR highlights) | A1 |
+| 8 | Bus factor of one person plus agent sessions; docs are the control plane and drift | A1 and the standing rule in section 2 |
+
+## 2. Decisions taken (recorded, not asked; basis given)
+
+- **D1. Demo-readiness is a first-class state.** New term beside BUILT / PROVEN / DEMONSTRATED / NOT YET BUILT:
+  **DEMO-READY** = a seeded demo tenant exists, a reset command restores it, and every screen of the capability has been opened
+  at desktop and 390px in both themes with real data and no defect left unlogged. Basis: the owner's sales reality; screens that
+  are BUILT but never opened (FINISHER P1-2) cannot be shown to a buyer safely.
+- **D2. Deployment modes.** Hosted multi-tenant SaaS (Vercel + Supabase) is the default for every client. DSEW is the single
+  on-premises validation target, **Mode B** (private network: self-hosted Keycloak, bundled SeaweedFS, no hosted dependency at
+  runtime). Mode C (air-gapped) and Mode D (client-owned Vercel/Supabase) are **parked**: no work, no promise, no proposal
+  wording, until a named paying client requires them (ADR-031 constraint 2 already forbids selling an unproven mode).
+  Basis: one person cannot support four modes; DSEW wants its data on its own premises.
+- **D3. AI on a low-end on-prem server.** Never run a language model on the DSEW host. Mode B ships with AI **off** and zero
+  egress. If DSEW opts in, the existing agent channel calls a hosted OpenAI-compatible endpoint (`OPENAI_BASE_URL`) from one
+  allow-listed egress route, per tenant, as the caller's own `ActorContext` (ADR-017). A local model is considered only on a
+  separate GPU machine, and only if asked. Basis: server CPU/RAM unknown (survey unanswered), local model quality on commodity
+  hardware is poor, and the no-egress test (B5) is the client's trust story.
+- **D4. Migration gate = build-time assertion, not auto-migrate.** The production build fails when the production database lacks
+  a migration the commit carries, so the previous deployment stays live. Chosen over running `migrate deploy` in the Vercel
+  build (migrations would run as `postgres` from the build environment, and a failed migration would block every deploy) and over
+  a CI job needing a production secret. One-time step: the migration that adds the read function must be applied to production
+  before the first push that carries the gate. Resolves FINISHER P0-2.
+- **D5. Low-end rendering.** Frosted glass stays the design (ADR-053, and it sells in demos). A **lite effects** mode removes
+  blur and keeps the same layout, tint and hairlines; it turns on automatically on weak devices and by a user setting.
+  ADR-053 already requires a solid fallback under `prefers-reduced-transparency`; this extends the trigger, not the design.
+
+Standing rule added by this plan: **governing docs are corrected in the same commit as the code that falsifies them**
+(`CLAUDE.md`, `FINISHER.md`, `00_STATUS_INDEX.md`, handoffs README).
+
+## 3. Workstream A — Truth and production safety (first)
+
+| Id | Item | Done when | Status |
+|---|---|---|---|
+| A1 | Correct governing docs: `CLAUDE.md` scope note and stale highlights, forbidden pattern 8 vs ADR-053, `FINISHER.md` P0-1 | docs match code; no contradiction between `CLAUDE.md` rules | IN PROGRESS |
+| A2 | Migration gate (D4): `verity.applied_migration_names()` definer function, `scripts/assert-migrations-applied.mjs`, wired into `npm run build` | DB test: returns only finished, not rolled-back migrations; runtime role can execute, PUBLIC cannot; script test: a missing migration fails and names it; proven once on a branch before the first push | IN PROGRESS |
+| A3 | One full green suite on the local test database; fix or explicitly baseline the three known conformance failures | `npm test` exit 0 recorded here with date and commit | IN PROGRESS |
+
+## 4. Workstream B — DSEW on-premises, Mode B (high priority)
+
+Design source: `clients/dsew/deployment-readiness-audit.md` sections 8-10 and `onprem-stage2-design.md`. Already BUILT and
+PROVEN: hardened compose package, install/migrate/upgrade/backup/restore/health scripts, OIDC relying party, S3 driver,
+SeaweedFS overlay, degraded-readiness contract (`ef929e27`), reversible membership disable (ADR-049, local database only), a
+fresh-clone install with 141/141 migrations in WSL2 (stage 1). Everything below is NOT YET BUILT unless marked.
+
+| Id | Item | Blocker closed | Done when |
+|---|---|---|---|
+| B1 | Keycloak overlay `deploy/compose/docker-compose.keycloak.yml`, realm template, confidential PKCE client, own database and volume, digest-pinned | B1 | stack signs a user in through Keycloak; preflight refuses default admin credentials |
+| B2 | `deploy/scripts/provision-oidc-user.sh`: create the Keycloak user, take the UUID `sub`, call the existing `provisionIdentity` path. No runtime auth change; a Keycloak Admin adapter needs an ADR first | B2 | script test provisions a user who can sign in and reach their role |
+| B3 | Reverse proxy overlay (Caddy, internal CA or supplied certificate) for web, Keycloak and the object store; browser-reachable presigned upload endpoint; CA-trust guide for PCs and phones | B3, B6 | a file uploads from a browser through HTTPS to the bundled store; `VERITY_PUBLIC_URL` is `https` |
+| B4 | One **backup set**: verity dump, Keycloak dump, object-store snapshot, checksummed manifest; scripted restore verification (role attributes, forced RLS, file checksums) | B4 | destroy-and-restore drill returns the same data; negative tests for a corrupt set and a wrong key |
+| B5 | No-egress test: stack on a network that blocks outbound; sign-in, job, upload and backup all work; every denied connection listed (applies D3) | audit tests 1, 5 | test passes and output recorded; "zero egress" claimed only after |
+| B6 | Operator runbook `deploy/runbooks/dsew-operations.md` for DSEW's IT person: install, upgrade, backup, restore, add/disable a user, rotate secrets, IdP-down behaviour | operational | a person other than the author installs from it on a clean VM |
+| B7 | Validation gate on the target: clean install, Keycloak sign-in, phone upload over HTTPS, backup, destroy, restore, same data, no egress | B5 | "validated on Mode B for D&S" is stated only after this passes on a VM matching the survey |
+
+**Blocked on a person (code cannot close this):** the DSEW server survey (make, OS build, CPU, RAM, disk, Hyper-V and licence,
+whether a Linux VM is permitted, backup owner, recovery time). Until answered, installing at DSEW stays **NO-GO**; B1-B6 proceed
+on a DSEW-like local VM and are labelled as such. Windows Server 2019 compatibility stays UNKNOWN.
+
+## 5. Workstream C — Demo-grade platform
+
+| Id | Item | Done when |
+|---|---|---|
+| C1 | **Demo Readiness Matrix** in `docs/demo/readiness-matrix.md`: rows = capabilities; columns = demo tenant, seed command, reset command, screens, last walked (date, widths, themes), open defects | every capability has a row; DEMO-READY only with evidence |
+| C2 | Route-walk harness: headless Playwright with a saved session (delete the session file afterwards, it holds cookies) visits every navigation route of every demo tenant at desktop and 390px, light and dark; fails on 5xx, console error, horizontal scroll or clipped card | one command prints a pass/fail table; screenshots committed under `docs/demo/evidence/` |
+| C3 | Fix what the harness finds in shared primitives, not per page; log anything not fixed | zero unlogged defects for DSEW, Stylified, Colonel Kebabz and the plywood demo tenant first |
+| C4 | One-command reset per demo tenant (`reset:demo` exists; verify per tenant; never run against production: the `*-hero` seed scripts load `.env`, which is production) | reset returns a tenant to its seeded state in under a minute; documented |
+
+## 6. Workstream D — Low-end devices
+
+| Id | Item | Done when |
+|---|---|---|
+| D1 | Lite effects mode (D5): `data-effects="lite"` on `<html>`, set from `prefers-reduced-transparency`, a device memory/cores heuristic and a persisted user setting; same tokens, no `backdrop-filter` | screenshot diff shows layout unchanged; no blur layer remains in lite mode |
+| D2 | Measure: performance trace on the DSEW floor screens with 6x CPU throttle, glass vs lite; record numbers | numbers recorded here; lite is within budget or the gap is logged |
+
+## 7. Workstream E — Scope discipline
+
+| Id | Item | Done when |
+|---|---|---|
+| E1 | New ADR (PROPOSED) amending ADR-031 to "A default, B for DSEW, C and D parked"; check the ADR register for the number first | ADR exists; proposal documents and `CLAUDE.md` use its wording |
+| E2 | Accounting posting: obtain acceptance of ADR-044, then build posting per FINISHER P1-1h. No third ledger path before acceptance | ADR-044 ACCEPTED or amended; posting handlers proven |
+| E3 | Prune: move complete or superseded taskplans out of the active list; keep `00_STATUS_INDEX.md` as the register | active `taskplans/` lists only live work |
+
+## 8. Non-goals
+
+No new business capability. No Mode C or Mode D work. No local language model on the DSEW host. No change to RLS,
+`withTenant()`, `enforcePolicy()`, the HQ operator model or the Experience System design language. No push and no production
+database change without the product owner's go.
+
+## 9. Order of work
+
+A1, A2, A3 → B1-B4 (in parallel with C1-C2) → B5-B6 → D1 → C3 → B7 when the survey is answered → E.

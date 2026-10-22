@@ -46,6 +46,14 @@ security boundary (Task 120's external tool-invocation surface) still needs its 
 code, and nothing here changes INV-001, ADR-017 or `enforcePolicy()`. The list above otherwise
 stands: no new business capability outside those three is authorized by this note.
 
+**Product-owner direction, 2026-10-22 (Task 129):** Verity is also built as **demo inventory**. Indian clients decide by
+seeing a working screen, so capabilities beyond the list above exist (restaurants, loyalty, HR, manufacturing, piece-rate,
+CRM and others) to be shown and then adapted for the next client. That does not make them production-proven: a capability is
+**DEMO-READY** only with a seeded demo tenant, a reset command and a recorded browser walk (see the reporting vocabulary
+below). The scope list above still governs what may be *claimed* as production-ready, and new capability work needs the owner's
+authorisation as before. Deployment: hosted multi-tenant is the default; DSEW is the one on-premises target (Mode B); Modes C
+and D are parked (Task 129 D2, ADR-031).
+
 `Party` is the first vertical slice **only as a platform proving slice** — it exercises
 Tenant -> Organization -> Party -> User -> Membership -> Role -> Permission -> Entity ->
 Command -> State -> Event -> Audit. Keep it minimal and foundational. Do not grow it into
@@ -214,8 +222,9 @@ workflows, routes, or terminology, and never add a compatibility layer for them.
 5. `SpecRefTarget` enum: `VEHICLE_BRAND`, `VEHICLE_MODEL`, `VEHICLE_GENERATION`, `DESIGN`, `COLOR`
 6. `SystemRole` enum: `OWNER`, `CO_OWNER`, `MANAGER`, `SUPERVISOR`, `WORKER`, `STORE_MANAGER` — use dynamic Verb+Entity+Scope permissions
 7. Entities `ProductionBatch`, `BomMode`, `QCTemplate`
-8. `backdrop-filter`/blur on content cells, rows, badges or status dots; translucency is only for
-  bars and overlays (ADR-033). (`.verity-glass` as a bare class name remains forbidden.)
+8. `backdrop-filter`/blur on table rows, badges or status dots. Under ADR-053 a content cell (`.glass-card`) is frosted
+  glass by design and a cell inside a cell is flat; this rule was tightened from "content cells" because ADR-053 superseded
+  the ADR-033 wording it carried. (`.verity-glass` as a bare class name remains forbidden.)
 9. Routes `/owner`, `/worker`, `/inspector`, `/supervisor`, `/verity` (legacy role-based routing)
 10. `@@map` to VEDA schema naming
 
@@ -410,6 +419,9 @@ Code compiling is not completion.
 - **PROVEN** — foundation behavior validated by passing tests.
 - **DEMONSTRATED** — a hypothetical capability modeled on the foundation (on paper).
 - **NOT YET BUILT** — business capability intentionally unimplemented.
+- **DEMO-READY** — BUILT, with a seeded demo tenant, a working reset command, and every screen opened at desktop and 390px in
+  both themes with real data and no unlogged defect (evidence in `docs/demo/readiness-matrix.md`). Server tests alone never
+  earn this word.
 
 Never report hypothetical composition as implemented functionality.
 

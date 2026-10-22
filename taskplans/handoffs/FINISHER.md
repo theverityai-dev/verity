@@ -46,19 +46,8 @@ Every item has: **What**, **Why**, **How**, **Done when**, **Source**, **Status*
 
 ## P0: production correctness
 
-### P0-1. Readiness flaps on `scheduler_stale`
-
-- **What:** `/api/ready` returns 503 for a few minutes between scheduled runs.
-- **Why:** The freshness limit is 15 minutes but the GitHub Actions "Scheduled work" workflow fires every
-  15 to 20 minutes, so a healthy deployment reports not-ready and any uptime check on it will alarm.
-- **How:** In `src/server/platform/readiness.ts`, change `SCHEDULER_FRESH_MS` from `15 * 60_000` to
-  `30 * 60_000` (line 16). Update the comment above it with the reason. Check the readiness test
-  (search `src/` for `scheduler_stale`) still asserts the new limit. Alternative, larger fix: move the
-  trigger off GitHub Actions cron; do not do this without a decision.
-- **Done when:** a test proves 29 minutes since the last run is ready and 31 is not, and `/api/ready`
-  stays 200 across three consecutive scheduler cycles on production.
-- **Source:** 125 progress log, "Production state, 2026-10-09 evening".
-- **Status:** NOT STARTED
+(Task 129, `taskplans/129_architecture_honesty_demo_readiness_and_dsew_onprem.md`, is the active plan for the P0 gate, DSEW
+on-premises Mode B, demo-readiness and low-end devices. Its items are mirrored below as they start.)
 
 ### P0-2. A push can reach production before its migration
 
@@ -71,16 +60,17 @@ Every item has: **What**, **Why**, **How**, **Done when**, **Source**, **Status*
 - **Why:** `npm run build` runs `prisma generate` only, and Vercel deploys every push to `main`. Nothing
   stops a commit whose migration is missing from production from going live; the process rule ("apply
   the migration before the push") depends on every session remembering it.
-- **How:** Pick one with the product owner: (a) a CI job on `main` that runs `prisma migrate status`
-  against production and fails the deploy when anything is pending (needs a read-only production
-  secret in CI); (b) run `prisma migrate deploy` in the Vercel build (simplest; every additive migration
-  ships with its code, but a failed migration then blocks the deploy and migrations run as `postgres`
-  from the build); (c) a pre-push hook that refuses a push whose `prisma/migrations` is ahead of
-  production. Not decided; (a) keeps today's manual control and is the smallest change.
-- **Done when:** a push whose migration is not on production cannot become the production deployment,
-  proven once on a branch.
+- **How:** Decided 2026-10-22 (Task 129 D4): a build-time assertion, not auto-migrate. `scripts/assert-migrations-applied.mjs`
+  runs in `npm run build`; on `VERCEL_ENV=production` it asks `verity.applied_migration_names()` (migration
+  `20261022200000_applied_migrations_gate`) and fails the build when this commit carries a migration production lacks, so the
+  previous deployment stays live. `VERITY_SKIP_MIGRATION_GATE=1` is the loud emergency bypass.
+- **Done when:** a push whose migration is not on production cannot become the production deployment, proven once on a branch.
+- **Next step (needs the product owner):** apply `20261022200000_applied_migrations_gate` to production (`prisma migrate
+  deploy` with `DIRECT_URL`) BEFORE the first push that carries the gate, together with any other pending migration
+  (`20261021200000_inventory_style_master`, `20261021300000_capability_piecework`, `20261022100000_piecework_bundles_quality`
+  if still pending). Then push a throwaway branch to a preview, then to `main`, and record the build log line `[migration-gate] ok`.
 - **Source:** this session's finding, 2026-10-20.
-- **Status:** NOT STARTED. Needs the product owner's choice of (a), (b) or (c).
+- **Status:** BUILT and PROVEN locally 2026-10-22 (`src/test/migration-gate.test.ts`, 10 tests); NOT proven on production.
 
 ---
 
@@ -535,6 +525,10 @@ Do not pick these up without a fresh product-owner decision (`CLAUDE.md` stop co
 ## Recently removed
 
 (Newest first. One line each: date, item, commit. Keep the last 10.)
+
+- 2026-10-22: old P0-1, readiness flapping on `scheduler_stale`. Already fixed by `ef929e27`: a stale scheduler now
+  reports `degraded` with HTTP 200 (core checks only return 503), proven by `readiness-degraded` and
+  `readiness-scheduler-grace`. The 15-minute limit was kept by the 2026-10-19 decision; this entry had not caught up.
 
 - 2026-10-20: old P0-2, Task 126 on production. Its migrations `20261009100000` to `20261009140000` were
   already applied and its code pushed; the register had not been updated. The same day
