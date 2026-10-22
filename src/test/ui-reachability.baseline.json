@@ -1,5 +1,4 @@
 {
-  "verity.accounting.list_accounts": "Read query, not referenced by a screen; serves the API and agent channel. /accounting reads accounts directly.",
   "verity.accounting.post_documents": "Scheduled job (POST /api/scheduled), not a person's action. The same pass is the Post now button (post_documents_now).",
   "verity.approval.list_pending": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.approval.request": "Reviewed 2026-10-06: generic approval kept for future multi-step workflows. Purchase-order and expense approvals are capability-native, and wastage over Rs 2,000 is flagged for review rather than blocked (clients/colonel-kebabz/reference-parity/DECISIONS.md #4).",
