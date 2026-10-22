@@ -4,6 +4,10 @@
 least-privilege scheduler sidecar, and optionally one S3-compatible object
 store.
 
+> **Private-network install (Mode B: Keycloak, TLS proxy, bundled file store, no outside dependency)?** Use
+> `VERITY_DEPLOYMENT_MODE=B` and follow `deploy/runbooks/dsew-operations.md`. The rest of this page describes the base package
+> (Mode A).
+
 ## Requirements
 
 *   Docker Engine 24+ with the Compose plugin.

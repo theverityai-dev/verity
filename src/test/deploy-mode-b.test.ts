@@ -82,6 +82,14 @@ describe("Mode B proxy", () => {
     expect(proxy.services.proxy.cap_drop).toEqual(["ALL"]);
   });
 
+  it("leaves no container with a route out: the default network is internal and only the proxy joins the edge (B5)", () => {
+    expect(proxy.networks.default.internal).toBe(true);
+    expect(Object.keys(proxy.services.proxy.networks)).toContain("edge");
+    for (const [name, service] of Object.entries(proxy.services) as Array<[string, { networks?: object }]>) {
+      if (name !== "proxy") expect(service.networks, `${name} must stay on the internal default network only`).toBeUndefined();
+    }
+  });
+
   it("does not wait for web, so the proxy can start before migrations", () => {
     expect(Object.keys(proxy.services.proxy.depends_on)).not.toContain("web");
   });

@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-21** (against `main` at `73d76534`; P2-12 film added)
+**Last updated: 2026-10-22** (against `main` at `5a6ba739`; Task 129 block P0b added, old P0-1 removed)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -71,6 +71,56 @@ on-premises Mode B, demo-readiness and low-end devices. Its items are mirrored b
   if still pending). Then push a throwaway branch to a preview, then to `main`, and record the build log line `[migration-gate] ok`.
 - **Source:** this session's finding, 2026-10-20.
 - **Status:** BUILT and PROVEN locally 2026-10-22 (`src/test/migration-gate.test.ts`, 10 tests); NOT proven on production.
+
+---
+
+## P0b: Task 129, DSEW on-premises (Mode B) and demo-readiness (set 2026-10-22, owner: "high priority")
+
+Plan and decisions: `taskplans/129_architecture_honesty_demo_readiness_and_dsew_onprem.md`. Source of truth for what is
+BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only what is left.
+
+### P0b-1. DSEW on-premises validation on the target host (Task 129 B7)
+
+- **What:** Mode B is built and was rehearsed end to end (sign-in over PKCE through the TLS proxy, browser upload, user
+  provisioning, a destroy-and-restore of the whole recovery set, and no-egress by network design) on a throwaway Linux stack. It
+  has not run on anything matching DSEW's hardware. Windows Server 2019 compatibility is UNKNOWN.
+- **Why:** ADR-031: a result is stated for the mode and host it was measured on. Installing at DSEW is NO-GO until the survey is
+  answered.
+- **How:** (1) Get the server survey answered (`clients/dsew/onprem-stage2-design.md` section 6). (2) Provision a Linux VM or
+  machine to match; follow `deploy/runbooks/dsew-operations.md` section 9 with someone other than the author. (3) Sign in and
+  upload from a real phone with the CA installed (Android and iPhone). (4) Time the restore. (5) Record numbers in the DSEW phase plan.
+- **Done when:** runbook section 9 passes on the target and the dated record is committed; only then say "validated on Mode B for D&S".
+- **Status:** BLOCKED on a person (DSEW server survey; a Linux VM or machine for DSEW).
+
+### P0b-2. Disabling a person's Verity access has no screen
+
+- **What:** `disableMembership` / `restoreMembership` (ADR-049) are tested commands that nothing in `src/app` calls.
+  Offboarding on Mode B needs two steps (disable in Keycloak, disable in Verity); the second can only be run by an engineer today.
+- **How:** An HQ/People action on a member row with a required reason, using the existing command and the shared Modal/FormModal
+  (forms open as sheets). ADR-049 is still PROPOSED: get it accepted first.
+- **Done when:** an administrator disables and restores a member from the People screen; an existing session ends at its next
+  request, proven by the existing `membership-disable` test plus one browser check.
+- **Status:** NOT STARTED
+
+### P0b-3. Apply the migration gate to production (Task 129 A2 / old P0-2)
+
+- **What:** `scripts/assert-migrations-applied.mjs` is in `npm run build`. It only protects production once
+  `20261022200000_applied_migrations_gate` exists there.
+- **How:** with the product owner's go: `prisma migrate deploy` with `DIRECT_URL` (also applies any other pending migration),
+  then push a preview, then `main`, and record `[migration-gate] ok` from the build log.
+- **Status:** WAITING for the product owner's go (touches production).
+
+### P0b-4. Demo readiness (Task 129 workstream C) and low-end devices (D)
+
+- **What:** No Demo Readiness Matrix exists; no route-walk harness; no lite-effects mode. Screens built but never opened in a
+  browser are P1-2 below.
+- **How:** Plan sections 5 and 6. Order: C1 matrix, C2 harness, D1 lite mode, C3 fixes, C4 resets.
+- **Status:** NOT STARTED
+
+### P0b-5. Accounting posting and the deployment-mode ADR (Task 129 workstream E)
+
+- **What:** ADR-044 (ledger posting) still PROPOSED; no ADR yet records "hosted default, DSEW Mode B, Modes C and D parked".
+- **Status:** NOT STARTED. ADR-044 acceptance needs the product owner.
 
 ---
 

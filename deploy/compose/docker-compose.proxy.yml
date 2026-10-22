@@ -55,6 +55,8 @@ services:
           - ${VERITY_APP_HOST}
           - ${VERITY_IDP_HOST}
           - ${VERITY_FILES_HOST}
+      # The only network with a route to the host's own address space, which is what lets the published port work.
+      edge: {}
     # No dependency on web: install.sh starts the proxy before migrations, and Caddy resolves its upstreams per request, so a
     # web that is not up yet answers 502 rather than stopping the proxy from starting.
     depends_on:
@@ -82,6 +84,16 @@ services:
       NODE_EXTRA_CA_CERTS: /tls/root.crt
     volumes:
       - ../config/tls/root.crt:/tls/root.crt:ro
+
+networks:
+  # NO EGRESS BY CONSTRUCTION (Task 129 B5, decision D3). Every service sits on this network and an internal network has no
+  # gateway, so no container can open a connection to the internet or the office LAN: not the application, not Keycloak, not
+  # the object store, not the database. The proxy alone is also on `edge`, which only exists to carry the published port in.
+  # Image pulls at install and upgrade are made by the host's Docker daemon, not by a container, and are unaffected.
+  # An AI or other outbound integration is opt-in per tenant through its own allow-listed route, never by loosening this.
+  default:
+    internal: true
+  edge: {}
 
 volumes:
   verity-proxy-data:
