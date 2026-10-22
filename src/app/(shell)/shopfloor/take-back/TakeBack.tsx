@@ -16,6 +16,7 @@ import { runFloorCommand } from "../actions";
 import { Cover, TONE } from "../FloorChrome";
 
 const RETURN = "verity.piecework.record_return";
+const daysBetween = (from: string, to: string) => Math.max(1, Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
 const REQUEST = "verity.piecework.request_approval";
 const ENTRY_ENTITY = "verity.piecework.entry";
 
@@ -95,7 +96,7 @@ export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; 
                         <span className="block truncate text-[16px] font-semibold text-text">{i.bundleNumber} · {i.stageLabel}{i.isRework ? ` · ${t.rework}` : ""}</span>
                         <span className="block text-[13px] text-text-secondary">{i.open} {t.of} {i.issued} {t.stillOut} · {t.due} {shortDate(i.dueDate)}</span>
                       </span>
-                      {i.late && <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{t.daysLate}</span>}
+                      {i.late && <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{daysBetween(i.dueDate!, today)} {t.daysLate}</span>}
                     </button>
                   </li>
                 ))}

@@ -5,8 +5,8 @@ import type { Labels } from "./labels";
 export type FloorTab = "floor" | "take-back" | "give-out" | "register" | "day-close";
 
 /**
- * The strip every floor screen shares: five places a supervisor goes, as large pills that scroll sideways on a phone only
- * for the tab row itself (never for cards). The active one is the tinted pill, as in the iPadOS sidebar.
+ * The strip every floor screen shares: five places a supervisor goes, as large pills that wrap onto a second row on a
+ * phone, so none is hidden off screen. The active one is the tinted pill, as in the iPadOS sidebar.
  */
 export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
   const tabs: Array<[FloorTab, string, string]> = [
@@ -17,7 +17,7 @@ export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
     ["day-close", "/shopfloor/day-close", t.dayClose],
   ];
   return (
-    <nav aria-label="Floor" className="-mx-1 mb-6 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+    <nav aria-label="Floor" className="mb-6 flex flex-wrap gap-1.5">
       {tabs.map(([key, href, label]) => (
         <Link
           key={key}

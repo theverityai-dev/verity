@@ -44,7 +44,7 @@ async function DayClosePage() {
             <p className="micro m-0 mb-2">{t.warnings}</p>
             <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[14px] text-text-secondary">
               {s.late.map((l) => <li key={`${l.bundleNumber}-${l.workerName}-${l.stageLabel}`}>{l.bundleNumber} · {l.workerName} · {l.open} {t.stillOut} · {t.due} {shortDate(l.dueDate)}</li>)}
-              {s.openShortages > 0 && <li>{s.openShortages} {t.alertShortage}</li>}
+              {s.openShortages > 0 && <li>{t.alertShortage}: {s.openShortages}</li>}
             </ul>
           </div>
         )}

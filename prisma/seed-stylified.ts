@@ -302,6 +302,10 @@ async function main() {
   }
   if (supB) {
     await executeCommand(supB, piecework.requestApproval, { kind: "writeoff", entryId: p1ret.id, pieces: 2, reason: "2 pieces lost at the pasting table, searched twice" });
+    // Today's work at Supervisor B's stages, so the closed day below carries real figures: 60 good pieces of B-0002 reached
+    // button and kaj, 40 went to Karigar D this morning and came back counted.
+    const todayKaj = await executeCommand(supB, piecework.recordIssue, { bundleId: b2, stageId: stage.kaj!, workerId: worker.D!, pieces: 40, dueDate: day(1) });
+    await executeCommand(supB, piecework.recordReturn, { issueId: todayKaj.id, good: 36, rejected: 2, rework: 0, short: 0, note: "Stain: 2 pieces" });
     await executeCommand(supB, piecework.closeDay, { note: "आज पेस्टिंग और फिनिशिंग पूरी हुई। फिनिशिंग में 2 पीस पर जले का निशान, फोटो के साथ मैनेजर को भेजा।", lang: "hi" });
   }
 

@@ -66,7 +66,7 @@ async function KarigarQuickView({ params }: { params: Promise<{ id: string }> })
                   <span className="block truncate text-[16px] font-semibold text-text">{i.bundleNumber} · {i.stageLabel}</span>
                   <span className="block text-[13px] text-text-secondary">{i.open} {t.stillOut} · {t.due} {shortDate(i.dueDate)}</span>
                 </span>
-                {i.late && <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{t.daysLate}</span>}
+                {i.late && <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{Math.max(1, Math.round((Date.parse(`${k.today}T00:00:00Z`) - Date.parse(`${i.dueDate}T00:00:00Z`)) / 86_400_000))} {t.daysLate}</span>}
               </Link>
             </li>
           ))}

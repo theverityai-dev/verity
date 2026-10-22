@@ -92,13 +92,13 @@ function ApprovalCard({ row: r, photos, canAct }: { row: ApprovalRow; photos: st
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="micro m-0">{KIND[r.kind]}</p>
-          <p className="figure m-0 mt-1 text-[34px] text-text">{r.amountMinor ? rupees(r.amountMinor) : r.pieces ? `${r.pieces}` : r.lotNumber ?? ""}{!r.amountMinor && r.pieces ? <span className="ml-1.5 text-[14px] font-normal text-text-secondary">pieces</span> : null}</p>
+          <p className="figure m-0 mt-1 text-[34px] text-text">{r.amountMinor ? rupees(r.amountMinor) : r.pieces ? `${r.pieces}` : r.lotNumber ?? ""}{!r.amountMinor && r.pieces ? <span className="ml-1.5 text-[14px] font-normal tracking-normal text-text-secondary">pieces</span> : null}</p>
         </div>
         {r.aboveLimit && <Badge tone="accent">Needs the owner</Badge>}
       </div>
 
       {photos?.[0] && (
-        // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed read URL from the file store
+         
         <img src={photos[0]} alt="Photograph of the pieces" className="max-h-56 w-full rounded-[14px] object-cover" />
       )}
 

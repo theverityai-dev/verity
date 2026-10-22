@@ -11,7 +11,7 @@ import { shortDate } from "../../lots/format";
 import { photosFor } from "../photos";
 import { getLang } from "../lang";
 import { LangToggle } from "../LangToggle";
-import { FloorTabs } from "../FloorChrome";
+import { Cover, FloorTabs } from "../FloorChrome";
 import { WriteoffForm } from "./WriteoffForm";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +40,7 @@ async function RegisterPage() {
             <li key={`${w.bundleId}:${w.stageId}`} className="list-none">
               <Surface className="flex h-full flex-col gap-3 p-4">
                 <div className="flex items-start gap-3">
-                  <Evidence urls={photos.get(w.entryId ?? "")} />
+                  <Evidence urls={photos.get(w.entryId ?? "")} cover={w.cover} label={w.lotNumber} />
                   <div className="min-w-0 flex-1">
                     <p className="m-0 text-[16px] font-semibold text-text">{w.bundleNumber} · {w.stageLabel}</p>
                     <p className="m-0 text-[13px] text-text-secondary">{w.lotName}{w.workerName ? ` · ${w.workerName}` : ""}</p>
@@ -65,7 +65,7 @@ async function RegisterPage() {
             <li key={s.entryId} className="list-none">
               <Surface className="flex h-full flex-col gap-3 p-4">
                 <div className="flex items-start gap-3">
-                  <Evidence urls={photos.get(s.entryId)} />
+                  <Evidence urls={photos.get(s.entryId)} cover={s.cover} label={s.lotNumber} />
                   <div className="min-w-0 flex-1">
                     <p className="m-0 text-[16px] font-semibold text-text">{s.bundleNumber} · {s.stageLabel}</p>
                     <p className="m-0 text-[13px] text-text-secondary">{s.workerName} · {shortDate(s.date)} · {s.ageDays} {t.daysOld}</p>
@@ -85,10 +85,10 @@ async function RegisterPage() {
   );
 }
 
-function Evidence({ urls }: { urls: string[] | undefined }) {
-  // eslint-disable-next-line @next/next/no-img-element -- a short-lived signed read URL from the file store
+function Evidence({ urls, cover, label }: { urls: string[] | undefined; cover: string | null; label: string }) {
+   
   if (urls?.[0]) return <img src={urls[0]} alt="" className="size-14 shrink-0 rounded-[12px] object-cover" />;
-  return <span aria-hidden="true" className="grid size-14 shrink-0 place-items-center rounded-[12px] bg-[var(--color-control)] text-text-tertiary">·</span>;
+  return <Cover src={cover} label={label} size={56} />;
 }
 
 export default withCapabilityPageAccess(PIECEWORK_CAPABILITY, RegisterPage);
