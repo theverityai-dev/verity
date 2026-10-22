@@ -496,6 +496,23 @@
   .glass-overlay { background: var(--color-surface-elevated); }
 }
 
+/* Lite effects (Task 129 D5): the same answer as Reduce Transparency, reached by a setting or by device detection instead of an
+   operating-system flag. Layout, tint, type and the hairline are unchanged; the blur, the light field and the masked rim (the
+   costliest paint on a weak GPU) go. Fills become the opaque surface so text contrast is the one the AA check was made on. */
+:root[data-effects="lite"] .glass-shell,
+:root[data-effects="lite"] .glass-overlay,
+:root[data-effects="lite"] .glass-card,
+:root[data-effects="lite"] .glass-inset {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-effects="lite"] .glass-shell { background: light-dark(#ffffff, #0e0f12); }
+:root[data-effects="lite"] .glass-card,
+:root[data-effects="lite"] .glass-inset { background: var(--color-surface); }
+:root[data-effects="lite"] .glass-overlay { background: var(--color-surface-elevated); }
+:root[data-effects="lite"] .glass-card::after { display: none; }
+:root[data-effects="lite"] body::before { display: none; }
+
 /* Public passport: the pass card rises into place once. Reduced motion collapses it below. */
 @keyframes passport-rise { from { opacity: 0; transform: translateY(14px) scale(0.985); } to { opacity: 1; transform: none; } }
 .passport-rise { animation: passport-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }

@@ -1,6 +1,6 @@
 # Client-owned Vercel and Supabase deployments: research and recommendation
 
-**Date:** 2026-10-16. **Status:** Research, nothing built. Needs a product-owner decision (section 9).
+**Date:** 2026-10-16. **Status:** Research, nothing built. **PARKED 2026-10-22 by ADR-054 (PROPOSED): no work until a named paying client requires Mode D.** Needs a product-owner decision (section 9).
 Authority it builds on: ADR-031 (deployment modes), ADR-032 (public origin), ADR-013/034/035 (HQ operator
 model), ADR-020 (OIDC), INV-001. Written for the product owner and the engineers who would build it.
 

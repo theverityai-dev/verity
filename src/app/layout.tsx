@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cookies } from "next/headers";
 import { accentStyle, DEFAULT_ACCENT } from "@/server/platform/accent";
+import { EFFECTS_COOKIE, effectsAttribute } from "@/lib/effects";
+import { EffectsDetector } from "@/components/shell/EffectsDetector";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -56,16 +58,18 @@ type Theme = "light" | "dark";
  * HTML. Accent is intentionally fixed to Apple system blue for this phase;
  * reintroduce user choice only with the later accent-picker scope.
  */
-async function appearance(): Promise<{ theme?: Theme }> {
+async function appearance(): Promise<{ theme?: Theme; effects?: "lite" }> {
   const jar = await cookies();
   const t = jar.get("verity-theme")?.value;
   return {
     theme: t === "light" || t === "dark" ? t : undefined,
+    // Lite effects (Task 129 D5): stamped by the server from the cookie so a weak device never paints the blur first.
+    effects: effectsAttribute(jar.get(EFFECTS_COOKIE)?.value),
   };
 }
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const { theme } = await appearance();
+  const { theme, effects } = await appearance();
 
   return (
     // The font variables go on <html>, not <body>. Tailwind v4 emits theme
@@ -84,6 +88,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html
       lang="en"
       data-theme={theme}
+      data-effects={effects}
       // The custom properties carry the whole fixed-blue accent system. The 50→900 ladder
       // derives from the seed in CSS, so a change here repaints every accent
       // surface without a single component knowing it happened. `--color-accent-on`
@@ -103,6 +108,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           Skip to content
         </a>
         {children}
+        <EffectsDetector />
       </body>
     </html>
   );

@@ -104,7 +104,7 @@ on a DSEW-like local VM and are labelled as such. Windows Server 2019 compatibil
 
 | Id | Item | Done when |
 |---|---|---|
-| E1 | New ADR (PROPOSED) amending ADR-031 to "A default, B for DSEW, C and D parked"; check the ADR register for the number first | ADR exists; proposal documents and `CLAUDE.md` use its wording |
+| E1 | New ADR (PROPOSED) amending ADR-031 to "A default, B for DSEW, C and D parked"; check the ADR register for the number first | ADR exists; proposal documents and `CLAUDE.md` use its wording. **ADR-054 written, PROPOSED 2026-10-22;** `CLAUDE.md` cites it. DSEW proposal wording not yet checked against it |
 | E2 | Accounting posting: obtain acceptance of ADR-044, then build posting per FINISHER P1-1h. No third ledger path before acceptance | ADR-044 ACCEPTED or amended; posting handlers proven |
 | E3 | Prune: move complete or superseded taskplans out of the active list; keep `00_STATUS_INDEX.md` as the register | active `taskplans/` lists only live work |
 

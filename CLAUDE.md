@@ -52,7 +52,7 @@ CRM and others) to be shown and then adapted for the next client. That does not 
 **DEMO-READY** only with a seeded demo tenant, a reset command and a recorded browser walk (see the reporting vocabulary
 below). The scope list above still governs what may be *claimed* as production-ready, and new capability work needs the owner's
 authorisation as before. Deployment: hosted multi-tenant is the default; DSEW is the one on-premises target (Mode B); Modes C
-and D are parked (Task 129 D2, ADR-031).
+and D are parked (Task 129 D2; ADR-054 PROPOSED amends ADR-031).
 
 `Party` is the first vertical slice **only as a platform proving slice** — it exercises
 Tenant -> Organization -> Party -> User -> Membership -> Role -> Permission -> Entity ->

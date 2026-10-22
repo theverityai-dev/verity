@@ -393,7 +393,9 @@ describe("script discipline (AC-09)", () => {
   });
 
   it("pins the compose project name so cwd cannot change which deployment is touched", () => {
-    expect(read("deploy/scripts/_common.sh")).toMatch(/--project-name verity/);
+    // Pinned to "verity" unless the operator sets VERITY_COMPOSE_PROJECT on purpose (a rehearsal beside a real deployment, Task
+    // 129). The working directory is still never what picks the project.
+    expect(read("deploy/scripts/_common.sh")).toMatch(/--project-name "\$\{VERITY_COMPOSE_PROJECT:-verity\}"/);
   });
 
   it("fails loudly rather than continuing", () => {
