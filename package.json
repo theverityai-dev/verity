@@ -18,6 +18,7 @@
     "start": "next start",
     "validate:workflow": "node scripts/validate-workflow.mjs",
     "validate:deployment-security": "node scripts/validate-deployment-security.mjs",
+    "demo:walk": "node scripts/demo-walk.mjs",
     "lint": "eslint",
     "test": "vitest run",
     "test:pure": "prisma generate && vitest run --config vitest.pure.config.mts",

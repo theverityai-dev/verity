@@ -110,12 +110,18 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
   then push a preview, then `main`, and record `[migration-gate] ok` from the build log.
 - **Status:** WAITING for the product owner's go (touches production).
 
-### P0b-4. Demo readiness (Task 129 workstream C) and low-end devices (D)
+### P0b-4. Demo readiness: walk the real tenants (Task 129 workstream C), and measure low-end devices (D2)
 
-- **What:** No Demo Readiness Matrix exists; no route-walk harness; no lite-effects mode. Screens built but never opened in a
-  browser are P1-2 below.
-- **How:** Plan sections 5 and 6. Order: C1 matrix, C2 harness, D1 lite mode, C3 fixes, C4 resets.
-- **Status:** NOT STARTED
+- **What:** The Demo Readiness Matrix (`docs/demo/readiness-matrix.md`), the route-walk harness (`npm run demo:walk`) and lite
+  effects (Appearance: Automatic, Full glass, Lite) are built. **No demo tenant has been walked**, so nothing is DEMO-READY. Low-end
+  performance is unmeasured (a headless scroll test cannot see GPU cost).
+- **Why:** The owner sells by showing screens. A 404, a clipped card or a console error in front of a buyer is the failure this
+  prevents. The frosted blur was also found not to render in Chrome/Edge/Firefox (fixed; see the matrix).
+- **How:** For each tenant in the matrix: seed on a local database, save a session, run `npm run demo:walk`, fix defects in shared
+  primitives, commit evidence under `docs/demo/evidence/`, update the matrix row. Order: D & S Electric Works, Stylified, Colonel
+  Kebabz, plywood, PlotArmour. Then take one throttled trace of a floor screen on a real Android phone, glass vs lite.
+- **Done when:** each tenant's row has a dated walk with zero unlogged defects; D2 has numbers.
+- **Status:** NOT STARTED for the tenant walks; harness and lite mode DONE (`81ad10db`, this commit).
 
 ### P0b-5. Accounting posting and the deployment-mode ADR (Task 129 workstream E)
 

@@ -9,7 +9,7 @@ too". Grounded in: `taskplans/handoffs/FINISHER.md` (P0-1, P0-2, P1-2), `clients
 extends Task 125 and the DSEW phase plan. Authorises no new business capability and changes no invariant, `enforcePolicy()`,
 INV-001 or ADR-017.
 
-## Status: IN PROGRESS 2026-10-22 (A built; B1-B6 built and rehearsed; B7 and C-E open)
+## Status: IN PROGRESS 2026-10-22 (A, B1-B6, C1-C2, D1, E1 built; B7, C3-C4, D2, E2-E3 open)
 
 Per-item status lives in the tables below and is mirrored in `FINISHER.md`. Nothing here is called complete until its
 "Done when" holds.
@@ -61,7 +61,7 @@ Standing rule added by this plan: **governing docs are corrected in the same com
 |---|---|---|---|
 | A1 | Correct governing docs: `CLAUDE.md` scope note and stale highlights, forbidden pattern 8 vs ADR-053, `FINISHER.md` P0-1 | docs match code; no contradiction between `CLAUDE.md` rules | DONE `fb0e1e4b`. The ADR highlight list in `CLAUDE.md` is still stale beyond what it names; it says so itself |
 | A2 | Migration gate (D4): `verity.applied_migration_names()` definer function, `scripts/assert-migrations-applied.mjs`, wired into `npm run build` | DB test: returns only finished, not rolled-back migrations; runtime role can execute, PUBLIC cannot; script test: a missing migration fails and names it; proven once on a branch before the first push | BUILT and PROVEN locally `fb0e1e4b` (10 tests). **Not proven on production:** the migration must be applied to production first, then one preview deploy |
-| A3 | One full green suite on the local test database; fix or explicitly baseline the three known conformance failures | `npm test` exit 0 recorded here with date and commit | PARTIAL. Full suite on a CI-shaped local database, 2026-10-22: 134 of 137 files passed. Conformance (3 stale expectations: piecework dependencies, three append-only tables, a request-memo `react` import in `auth.ts`) fixed in `5a6ba739`. The remaining red tests are `deploy-public-url-preflight` (2 of 8) timing out on this Windows host, where each `bash` plus `docker` call costs seconds; the same file passed 14 of 16 with a 400 s cap and is a Linux CI test. Not claimed green until it runs on Linux |
+| A3 | One full green suite on the local test database; fix or explicitly baseline the three known conformance failures | `npm test` exit 0 recorded here with date and commit | DONE in substance. Full suite on a CI-shaped local database, 2026-10-22: 136 of 138 files and 1604 of 1619 tests passed on Windows. Conformance (3 stale expectations: piecework dependencies, three append-only tables, a request-memo `react` import in `auth.ts`) fixed in `5a6ba739`. The 8 remaining reds are `deploy-public-url-preflight` (7) and `deploy-bundled-storage` (1), which time out at 30 s on this Windows host because each `bash` spawn costs seconds. Run natively on Linux (Node 22 container) the same two files and four neighbours pass: 6 files, 93 tests, 2.1 s. `npm test` exit 0 is therefore a Linux result, not yet a recorded CI run |
 
 ## 4. Workstream B — DSEW on-premises, Mode B (high priority)
 
@@ -88,8 +88,8 @@ on a DSEW-like local VM and are labelled as such. Windows Server 2019 compatibil
 
 | Id | Item | Done when |
 |---|---|---|
-| C1 | **Demo Readiness Matrix** in `docs/demo/readiness-matrix.md`: rows = capabilities; columns = demo tenant, seed command, reset command, screens, last walked (date, widths, themes), open defects | every capability has a row; DEMO-READY only with evidence |
-| C2 | Route-walk harness: headless Playwright with a saved session (delete the session file afterwards, it holds cookies) visits every navigation route of every demo tenant at desktop and 390px, light and dark; fails on 5xx, console error, horizontal scroll or clipped card | one command prints a pass/fail table; screenshots committed under `docs/demo/evidence/` |
+| C1 | **Demo Readiness Matrix** in `docs/demo/readiness-matrix.md`: rows = capabilities; columns = demo tenant, seed command, reset command, screens, last walked (date, widths, themes), open defects | every capability has a row; DEMO-READY only with evidence. **BUILT:** five demo tenants with seed and restore commands read from the repository, every "last walked" is *never*; four capabilities have no named demo tenant yet. Nothing is DEMO-READY |
+| C2 | Route-walk harness: headless Playwright with a saved session (delete the session file afterwards, it holds cookies) visits every navigation route of every demo tenant at desktop and 390px, light and dark; fails on 5xx, console error, horizontal scroll or clipped card | one command prints a pass/fail table; screenshots committed under `docs/demo/evidence/`. **BUILT:** `npm run demo:walk` (`scripts/demo-walk.mjs`, pure judge tested in `src/test/demo-walk.test.ts`). Proven on the rehearsal stack: it caught a deliberate 404, classed a locked screen FORBIDDEN, passed the rest. **No real demo tenant has been walked.** It cannot tell whether a capability is active for the tenant |
 | C3 | Fix what the harness finds in shared primitives, not per page; log anything not fixed | zero unlogged defects for DSEW, Stylified, Colonel Kebabz and the plywood demo tenant first |
 | C4 | One-command reset per demo tenant (`reset:demo` exists; verify per tenant; never run against production: the `*-hero` seed scripts load `.env`, which is production) | reset returns a tenant to its seeded state in under a minute; documented |
 
@@ -97,8 +97,8 @@ on a DSEW-like local VM and are labelled as such. Windows Server 2019 compatibil
 
 | Id | Item | Done when |
 |---|---|---|
-| D1 | Lite effects mode (D5): `data-effects="lite"` on `<html>`, set from `prefers-reduced-transparency`, a device memory/cores heuristic and a persisted user setting; same tokens, no `backdrop-filter` | screenshot diff shows layout unchanged; no blur layer remains in lite mode |
-| D2 | Measure: performance trace on the DSEW floor screens with 6x CPU throttle, glass vs lite; record numbers | numbers recorded here; lite is within budget or the gap is logged |
+| D1 | Lite effects mode (D5): `data-effects="lite"` on `<html>`, set from `prefers-reduced-transparency`, a device memory/cores heuristic and a persisted user setting; same tokens, no `backdrop-filter` | screenshot diff shows layout unchanged; no blur layer remains in lite mode. **BUILT `81ad10db`:** `data-effects="lite"` from a setting (Appearance: Automatic, Full glass, Lite) or one-time detection (4 or fewer cores, 4 GB or less), stamped by the server from a cookie. Verified in Chromium: lite has 0 elements with a backdrop filter and no light field; full has 4 to 12. No screenshot diff taken |
+| D2 | Measure: performance trace on the DSEW floor screens with 6x CPU throttle, glass vs lite; record numbers | numbers recorded here; lite is within budget or the gap is logged. **NOT MEASURED.** A scroll-frame test at 6x CPU throttle in headless Chromium showed 16.7 ms frames in both modes (no GPU compositing), so it says nothing. Needs a real low-end phone or a GPU-backed trace |
 
 ## 7. Workstream E — Scope discipline
 
