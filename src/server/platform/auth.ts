@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { SignJWT, createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
@@ -213,10 +214,17 @@ export function activeAuthProviderName(): string {
   return authProvider.name;
 }
 
-/** The authenticated principal for the current request, or null. */
-export async function getAuthUser(): Promise<Principal | null> {
+/**
+ * The authenticated principal for the current request, or null.
+ *
+ * Memoised per request with React `cache` (performance audit 2026-10-22): the shell layout, the page wrapper and the page
+ * each used to ask again, and in Supabase mode every ask is a network round trip to the auth server (about five per
+ * navigation). The cache lives for one request only, so nothing outlives the cookies it was read from; outside a React
+ * server render (tests, scripts) it is a plain pass-through.
+ */
+export const getAuthUser = cache(async (): Promise<Principal | null> => {
   return authProvider.getPrincipal();
-}
+});
 
 export async function setActiveMembership(membershipId: string): Promise<void> {
   const token = await new SignJWT({ membershipId })
@@ -271,7 +279,7 @@ export type MembershipOption = {
  * The function is keyed on the Supabase auth user id, so it can only ever return
  * this principal's own memberships.
  */
-export async function listMemberships(): Promise<MembershipOption[]> {
+export const listMemberships = cache(async (): Promise<MembershipOption[]> => {
   const authUser = await getAuthUser();
   if (!authUser) return [];
 
@@ -302,7 +310,7 @@ export async function listMemberships(): Promise<MembershipOption[]> {
     roleName: r.role_name,
     tenantStatus: r.tenant_status,
   }));
-}
+});
 
 /**
  * Names of workspaces the signed-in person belongs to that are suspended
@@ -327,7 +335,7 @@ export async function suspendedWorkspaceNames(): Promise<string[]> {
  * authenticated user, so a forged or stale cookie yields no actor rather than
  * the wrong tenant.
  */
-export async function resolveActor(): Promise<ActorContext | null> {
+export const resolveActor = cache(async (): Promise<ActorContext | null> => {
   const memberships = await listMemberships();
   if (memberships.length === 0) return null;
 
@@ -345,7 +353,7 @@ export async function resolveActor(): Promise<ActorContext | null> {
     organizationId: chosen.organizationId,
     roleId: chosen.roleId,
   };
-}
+});
 
 /**
  * An expected request denial, not a system fault.
