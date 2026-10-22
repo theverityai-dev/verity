@@ -917,9 +917,9 @@ export function registerPieceworkCapability(): void {
   registerContribution({
     capabilityId: PIECEWORK_CAPABILITY,
     navigation: [
-      { href: "/floor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
-      { href: "/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
-      { href: "/floor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
+      { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
+      { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
+      { href: "/shopfloor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/dashboard", label: "Owner dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots", label: "Lots", group: "Production", order: 21, icon: "batch", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots/entry", label: "Daily entry", group: "Production", order: 22, icon: "plus", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },

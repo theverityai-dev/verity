@@ -27,14 +27,22 @@ import { provisionIdentity } from "../src/server/platform/identity";
 import { activateCapability, invalidateCapabilityCache } from "../src/server/platform/capability";
 import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import * as piecework from "../src/server/capabilities/piecework";
+import { ENTITY_EVIDENCE, EVIDENCE_CAPABILITY } from "../src/server/capabilities/evidence";
+import { LOCATION_CAPABILITY } from "../src/server/capabilities/location";
 
 const TENANT_NAME = "Stylified";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let MUNSHI_SUB = process.env.STYLIFIED_MUNSHI_SUB;
 let OWNER_SUB = process.env.STYLIFIED_OWNER_SUB;
+let MANAGER_SUB = process.env.STYLIFIED_MANAGER_SUB;
+let SUPA_SUB = process.env.STYLIFIED_SUPERVISOR_A_SUB;
+let SUPB_SUB = process.env.STYLIFIED_SUPERVISOR_B_SUB;
 const MUNSHI_EMAIL = process.env.STYLIFIED_MUNSHI_EMAIL ?? "munshi@stylified.demo";
 const OWNER_EMAIL = process.env.STYLIFIED_OWNER_EMAIL ?? "owner@stylified.demo";
+const MANAGER_EMAIL = process.env.STYLIFIED_MANAGER_EMAIL ?? "manager@stylified.demo";
+const SUPA_EMAIL = process.env.STYLIFIED_SUPERVISOR_A_EMAIL ?? "supervisor.a@stylified.demo";
+const SUPB_EMAIL = process.env.STYLIFIED_SUPERVISOR_B_EMAIL ?? "supervisor.b@stylified.demo";
 
 if (!MUNSHI_SUB && !OWNER_SUB && !(SUPABASE_URL && SERVICE_ROLE_KEY)) {
   throw new Error("Set STYLIFIED_MUNSHI_SUB and/or STYLIFIED_OWNER_SUB (OIDC), or SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
@@ -99,6 +107,9 @@ async function main() {
   if (!MUNSHI_SUB && !OWNER_SUB) {
     MUNSHI_SUB = await ensureLogin(MUNSHI_EMAIL, "Munshi");
     OWNER_SUB = await ensureLogin(OWNER_EMAIL, "Owner");
+    MANAGER_SUB = await ensureLogin(MANAGER_EMAIL, "Manager");
+    SUPA_SUB = await ensureLogin(SUPA_EMAIL, "Supervisor A");
+    SUPB_SUB = await ensureLogin(SUPB_EMAIL, "Supervisor B");
   }
   const tenantId = randomUUID();
 
@@ -106,41 +117,61 @@ async function main() {
     await tx.tenant.create({ data: { id: tenantId, name: TENANT_NAME, timeZone: "Asia/Kolkata", customFields: { demo: true, demoFor: "stylified" } } });
     const org = await tx.organization.create({ data: { tenantId, name: TENANT_NAME, parentId: null } });
 
-    // The munshi writes; the owner only reads. Both land on the generic overview after sign-in.
-    const munshiRole = await tx.role.create({ data: { tenantId, name: "Munshi" } });
-    const ownerRole = await tx.role.create({ data: { tenantId, name: "Owner" } });
-    await tx.permission.createMany({
-      data: ENTITIES.flatMap((entity) =>
-        (["Read", "Create", "Edit", "ActionExecute"] as const).map((verb) => ({ tenantId, roleId: munshiRole.id, verb, entity, scope: "Tenant" as const })),
-      ),
-    });
-    // The owner reads lots, bundles, karigars, money and reports. The entry screen is the munshi's, so the owner is not
-    // granted the entry entity at all: its menu item and buttons never appear.
-    await tx.permission.createMany({
-      data: ENTITIES.filter((entity) => entity !== piecework.ENTITY_PIECEWORK_ENTRY).map((entity) => ({ tenantId, roleId: ownerRole.id, verb: "Read" as const, entity, scope: "Tenant" as const })),
-    });
-    for (const role of [munshiRole, ownerRole]) {
+    // Four roles, built from permissions only (no role name is known to the code). The stage scope is the grant
+    // ActionExecute on the stage entity: whoever holds it works at every stage; a supervisor does not, and is limited to the
+    // stages the owner assigns. A supervisor holds no grant on workers or payments, so no rate, wage or balance reaches them.
+    const VERBS = ["Read", "Create", "Edit", "ActionExecute"] as const;
+    type Verb = (typeof VERBS)[number];
+    type Grant = [string, readonly Verb[]];
+    const NEW = [piecework.ENTITY_PIECEWORK_APPROVAL, piecework.ENTITY_PIECEWORK_DAY_CLOSE, piecework.ENTITY_PIECEWORK_SETTING, piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT];
+    const full = (list: string[]): Grant[] => list.map((e) => [e, VERBS]);
+    const grants: Record<string, Grant[]> = {
+      Owner: full([...ENTITIES, ...NEW, ENTITY_EVIDENCE]),
+      Manager: [
+        ...full(ENTITIES),
+        [piecework.ENTITY_PIECEWORK_APPROVAL, VERBS], [piecework.ENTITY_PIECEWORK_SETTING, ["Read"]], [piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ["Read"]],
+        [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
+      ],
+      Supervisor: [
+        [piecework.ENTITY_PIECEWORK_STAGE, ["Read"]], [piecework.ENTITY_PIECEWORK_LOT, ["Read"]], [piecework.ENTITY_PIECEWORK_BUNDLE, ["Read"]],
+        [piecework.ENTITY_PIECEWORK_ENTRY, ["Read", "Create", "ActionExecute"]], [piecework.ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]],
+        [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
+      ],
+      Munshi: [
+        ...full(ENTITIES),
+        [piecework.ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]], [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
+      ],
+    };
+    const roleId: Record<string, string> = {};
+    for (const [name, list] of Object.entries(grants)) {
+      const role = await tx.role.create({ data: { tenantId, name } });
+      roleId[name] = role.id;
+      await tx.permission.createMany({ data: list.flatMap(([entity, verbs]) => verbs.map((verb) => ({ tenantId, roleId: role.id, verb, entity, scope: "Tenant" as const }))) });
       await tx.permission.create({ data: { tenantId, roleId: role.id, verb: "Read", entity: "verity.platform.overview", scope: "Tenant" } });
     }
 
-    const login = async (sub: string | undefined, name: string, email: string, roleId: string) => {
+    const login = async (sub: string | undefined, name: string, email: string, role: string) => {
       if (!sub) return null;
       const identity = await provisionIdentity(tx, { organizationId: org.id, authUserId: sub, displayName: name, email });
-      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId } });
-      return identity;
+      await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId: roleId[role]! } });
+      return { ...identity, roleId: roleId[role]! };
     };
-    const munshi = await login(MUNSHI_SUB, "Munshi", MUNSHI_EMAIL, munshiRole.id);
-    const owner = await login(OWNER_SUB, "Owner", OWNER_EMAIL, ownerRole.id);
+    const munshi = await login(MUNSHI_SUB, "Munshi", MUNSHI_EMAIL, "Munshi");
+    const owner = await login(OWNER_SUB, "Owner", OWNER_EMAIL, "Owner");
+    const manager = await login(MANAGER_SUB, "Manager", MANAGER_EMAIL, "Manager");
+    const supA = await login(SUPA_SUB, "Supervisor A", SUPA_EMAIL, "Supervisor");
+    const supB = await login(SUPB_SUB, "Supervisor B", SUPB_EMAIL, "Supervisor");
     await activateCapability(tx, tenantId, piecework.PIECEWORK_CAPABILITY);
-    return { orgId: org.id, munshiRoleId: munshiRole.id, ownerRoleId: ownerRole.id, munshi, owner };
+    // Photographs are platform Evidence, which depends on Location.
+    await activateCapability(tx, tenantId, LOCATION_CAPABILITY);
+    await activateCapability(tx, tenantId, EVIDENCE_CAPABILITY);
+    return { orgId: org.id, munshiRoleId: roleId.Munshi!, ownerRoleId: roleId.Owner!, munshi, owner, manager, supA, supB };
   });
   invalidateCapabilityCache();
 
-  // Entries are written as the munshi, which is who writes them in the business. With only an owner login the
-  // owner is promoted for the seeding run and put back to view-only afterwards.
+  // Entries are written as the munshi, which is who writes them in the business; the owner holds every grant and can stand in.
   const writer = ids.munshi ?? ids.owner!;
-  if (!ids.munshi) await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: ids.owner!.membershipId }, data: { roleId: ids.munshiRoleId } }));
-  const actor: ActorContext = { tenantId, userId: writer.userId, membershipId: writer.membershipId, organizationId: ids.orgId, roleId: ids.munshiRoleId };
+  const actor: ActorContext = { tenantId, userId: writer.userId, membershipId: writer.membershipId, organizationId: ids.orgId, roleId: writer.roleId };
   invalidateCapabilityCache();
 
   // The process chain after cutting, from the requirement sheet's process master. Cutting happens before a bundle exists
@@ -192,11 +223,11 @@ async function main() {
   // B-0001: the requirement sheet's reconciliation, 100 = 94 good + 2 rejected + 1 rework + 2 short + 1 open,
   // then its rework redone and the rest taken through to ready.
   const p1 = await out(b1, "pasting", "C", 100, 12);
-  await back(p1.id, { good: 94, rejected: 2, rework: 1, short: 2 }, 10);
+  const p1ret = await back(p1.id, { good: 94, rejected: 2, rework: 1, short: 2 }, 10);
   const rw = await out(b1, "pasting", "C", 1, 9, { isRework: true });
   await back(rw.id, { good: 1 }, 8);
   const c1 = await out(b1, "collar", "B", 95, 8);
-  await back(c1.id, { good: 90, rejected: 3, rework: 2 }, 6);
+  const c1ret = await back(c1.id, { good: 90, rejected: 3, rework: 2 }, 6);
   const s1 = await out(b1, "stitching", "A", 90, 6);
   await back(s1.id, { good: 88, rejected: 1, short: 1 }, 3);
   const k1 = await out(b1, "kaj", "D", 88, 3);
@@ -218,7 +249,7 @@ async function main() {
   await out(b3, "collar", "B", 98, 7, { dueDate: day(-1) });
 
   // LOT-0002, Winter shirts: planned, still a draft.
-  await lot("Flannel check", "Winter shirts", 300, 1, 40, "Flannel");
+  const lot2 = await lot("Flannel check", "Winter shirts", 300, 1, 40, "Flannel");
 
   // LOT-0003, an older lot, finished, completed and closed: its ledger is locked.
   const lot3 = await lot("Poplin half sleeve", "Summer half sleeves", 50, 40, -18, "Poplin");
@@ -251,14 +282,41 @@ async function main() {
   await pay("B", "payment", 300, 4, { mode: "bank", reference: "NEFT 4471" });
   await pay("D", "payment", 200, 2, { mode: "cash" });
 
-  // Put the owner back to view-only if they were promoted just to run the seed.
-  if (!ids.munshi) await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: ids.owner!.membershipId }, data: { roleId: ids.ownerRoleId } }));
+  // The floor: who looks after which stage, what is waiting for a decision, and one closed day. Supervisor A looks after
+  // the collar and stitching (where an outside unit is late and Karigar A holds 37 pieces), Supervisor B the rest.
+  const as = (who: { userId: string; membershipId: string; roleId: string } | null | undefined): ActorContext | null =>
+    who ? { tenantId, userId: who.userId, membershipId: who.membershipId, organizationId: ids.orgId, roleId: who.roleId } : null;
+  const ownerActor = as(ids.owner);
+  const supA = as(ids.supA);
+  const supB = as(ids.supB);
+  if (ownerActor) {
+    await executeCommand(ownerActor, piecework.setLimits, { deductionLimitMinor: 100_000, writeoffLimitPieces: 5 });
+    if (ids.supA) await executeCommand(ownerActor, piecework.assignStages, { userId: ids.supA.userId, stageIds: [stage.collar!, stage.stitching!] });
+    if (ids.supB) await executeCommand(ownerActor, piecework.assignStages, { userId: ids.supB.userId, stageIds: [stage.pasting!, stage.kaj!, stage.finishing!] });
+  }
+  if (supA) {
+    // Three requests the manager will see: a deduction inside the limit with its photographable defect, a write-off of two
+    // short pieces, and a larger deduction only the owner may approve.
+    await executeCommand(supA, piecework.requestApproval, { kind: "deduction", workerId: worker.B!, entryId: c1ret.id, amountMinor: 15_000, reason: "3 collars rejected for stitch defect" });
+    await executeCommand(supA, piecework.requestApproval, { kind: "deduction", workerId: worker.A!, amountMinor: 250_000, reason: "Whole stitching batch re-done at the factory's cost" });
+  }
+  if (supB) {
+    await executeCommand(supB, piecework.requestApproval, { kind: "writeoff", entryId: p1ret.id, pieces: 2, reason: "2 pieces lost at the pasting table, searched twice" });
+    await executeCommand(supB, piecework.closeDay, { note: "आज पेस्टिंग और फिनिशिंग पूरी हुई। फिनिशिंग में 2 पीस पर जले का निशान, फोटो के साथ मैनेजर को भेजा।", lang: "hi" });
+  }
+
+  // Lot pictures for the screens: the demo tenant's own images, served from public/demo/stylified. Customer pictures belong to
+  // the customer; these are generated stills and belong to this demo only.
+  const covers: Array<[string, string]> = [[lot1, "lot-spring-formals-thumb"], [lot2, "lot-winter-flannel-thumb"], [lot3, "lot-summer-poplin-thumb"], [lot4, "lot-export-check-thumb"]];
+  for (const [id, file] of covers) {
+    await admin.$executeRawUnsafe(`UPDATE piecework_lot SET custom_fields = custom_fields || '{"coverImage":"/demo/stylified/${file}.webp"}'::jsonb WHERE id = '${id}'::uuid`);
+  }
 
   console.log("\nStylified demo tenant is ready.\n");
   console.log(`Tenant:  ${tenantId}`);
   for (const email of Object.keys(passwords)) console.log(`Login:   ${email}  password ${passwords[email]}  (shown once)`);
   if (!Object.keys(passwords).length) console.log(`Munshi:  ${MUNSHI_SUB ? `IdP sub ${MUNSHI_SUB}` : "(none)"}\nOwner:   ${OWNER_SUB ? `IdP sub ${OWNER_SUB}` : "(none)"}`);
-  console.log("Lots: 4 (LOT-0001 running, LOT-0002 draft, LOT-0003 closed, LOT-0004 on hold), bundles: 6, karigars: 6, stages: 5. Everything is fictional.");
+  console.log("Roles: Owner, Manager, Supervisor (two people), Munshi. Pending approvals: 3. Lots: 4 (LOT-0001 running, LOT-0002 draft, LOT-0003 closed, LOT-0004 on hold), bundles: 6, karigars: 6, stages: 5. Everything is fictional.");
 }
 
 main()
