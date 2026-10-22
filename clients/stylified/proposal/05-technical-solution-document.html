@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Technical solution: Verity for Stylified</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="verity-doc.css">
+<style>
+  .stack { display: grid; gap: 2.4mm; margin: 2mm 0 5mm; }
+  .layer { border: 0.25mm solid var(--line); border-radius: 3mm; padding: 3mm 4mm; background: linear-gradient(160deg,#fff,#f6f9ff); display: grid; grid-template-columns: 34mm 1fr; gap: 4mm; align-items: start; break-inside: avoid; }
+  .layer .mono { color: var(--blue); }
+  .layer p { margin: 0; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<!--DOC:cover-->
+<section class="cover">
+  <div class="cover-inner">
+    <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div>
+    <h1>Technical solution document</h1>
+    <p class="sub">How the Stylified workspace is built, hosted, secured, backed up and tested.</p>
+    <span class="status">Draft for review</span>
+    <div class="cover-meta">
+      <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
+      <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
+      <div><span class="mono">Date</span><b>22 October 2026</b></div>
+      <div><span class="mono">Document</span><b>5 of 5</b></div>
+    </div>
+  </div>
+</section>
+<!--/DOC:cover-->
+
+<!--DOC:body-->
+<main>
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 5 of 5 · Technical solution</span></div>
+
+<h1 class="page-title">How it is built</h1>
+<p class="lede">For Stylified's owner and for anyone you ask to review the solution. It says what exists, what is built in this project, and where we are still working.</p>
+
+<h2><span class="num">01</span>Overview</h2>
+<p>Stylified gets its own workspace on Verity's hosted platform. The workspace is a set of screens and rules for the piece-rate cycle, on top of a shared foundation that provides sign-in, roles, an audit trail, files, notifications and company isolation.</p>
+<div class="stack">
+  <div class="layer"><span class="mono">Experience</span><p>Web application for desktop, tablet and phone, dark and light themes. Supervisor screens are designed phone-first. Hindi and English labels on entry and supervisor screens.</p></div>
+  <div class="layer"><span class="mono">Piece-rate module</span><p>Lots, bundles, stages, karigars and rates, issues and returns, rework, shortages, wages and money, approvals, day close, reports. Every change is a <em>command</em> with its own checks; every screen reads through a <em>query</em>.</p></div>
+  <div class="layer"><span class="mono">Platform foundation</span><p>Company isolation, identity and memberships, roles built from permissions, an audit trail, an event log, file storage, notifications, numbering, configuration.</p></div>
+  <div class="layer"><span class="mono">Data and hosting</span><p>A relational database with row-level security forced on every Stylified table, file storage, application hosting in an Indian region, backups.</p></div>
+</div>
+
+<h2><span class="num">02</span>Hosting</h2>
+<table>
+<thead><tr><th>Part</th><th>Where and how</th></tr></thead>
+<tbody>
+<tr><td>Application</td><td>Hosted serverless application, deployed to the Mumbai region (configured in the deployment settings)</td></tr>
+<tr><td>Database</td><td>Managed PostgreSQL in the Mumbai region, reached through a connection pooler in transaction mode. The application connects as a restricted role that cannot bypass row-level security</td></tr>
+<tr><td>Files</td><td>Object storage with the same company isolation; used for photographs</td></tr>
+<tr><td>Sign-in</td><td>The platform's identity service; passwords never reach Verity's own tables</td></tr>
+<tr><td>Environments</td><td>A demonstration workspace with fictional data and Stylified's own workspace are separate tenants. Nothing is shared between them</td></tr>
+</tbody></table>
+<p class="footnote">Provider names and plans can change over the life of the service; the data stays in an Indian region and the isolation rules below do not change.</p>
+
+<h2><span class="num">03</span>Company isolation</h2>
+<ul>
+<li>Every Stylified record carries the company it belongs to. The database itself refuses to return or accept a row for another company: row-level security is <strong>forced</strong> on each table and the company is set for each request from the signed-in user's verified membership, <strong>never from anything the browser sends</strong>.</li>
+<li>If no company is set, a query returns nothing and a write is rejected: isolation fails closed.</li>
+<li>The platform checks at startup that its database role is one that cannot bypass these rules, and refuses to run otherwise. An automated test proves that one company cannot read another's data.</li>
+</ul>
+
+<h2><span class="num">04</span>Roles and permissions</h2>
+<ul>
+<li>A permission is an action on a kind of record within a scope (for example "issue" on a piece-rate entry for the company). A role is a named set of permissions. There are no hard-coded role names in the code, so changing a role is a setting, not a release.</li>
+<li>The four Stylified roles (Owner, Manager, Supervisor, Munshi) and their matrix are in document 2, section 4.</li>
+<li>The server checks the permission for every command and every query. Hiding a button is only a convenience; it is never the control.</li>
+<li><strong>Supervisor stage scope.</strong> The platform's scope list stays as it is. A supervisor's assigned stages are held as a small record in the piece-rate module, and the issue and return commands refuse a supervisor acting on a stage that is not theirs. This is tested with a second supervisor.</li>
+</ul>
+
+<h2><span class="num">05</span>The data model</h2>
+<table>
+<thead><tr><th>Record</th><th>What it holds</th><th>Rules</th></tr></thead>
+<tbody>
+<tr><td>Stage</td><td>A step in the line, in order (pasting, collar and cuff, stitching, button and kaj, finishing and press)</td><td>Stages are Stylified's data; the order is frozen once work exists</td></tr>
+<tr><td>Lot</td><td>Number, name, design, fabric type, planned pieces, dates, status</td><td>Numbers are gapless and never reused; a closed lot is locked</td></tr>
+<tr><td>Bundle</td><td>Number B-0001 onward, net pieces, size-mix note, the lot it belongs to</td><td>Numbers are gapless per workspace</td></tr>
+<tr><td>Karigar or unit</td><td>Name, kind (in the factory or outside), contact, active</td><td>Retired, never deleted</td></tr>
+<tr><td>Rate</td><td>Rupees per piece for a karigar at a stage, the wage basis, the date it applies from</td><td>History is kept; each return takes a snapshot of the rate used</td></tr>
+<tr><td>Entry (issue or return)</td><td>Bundle, stage, karigar, pieces, due date, and for a return the split into good, rejected, rework and short</td><td>Append-only. A database check makes the four parts sum to the pieces returned. Corrections are reversals</td></tr>
+<tr><td>Payment</td><td>Advance, recovery, deduction or payment, amount, mode, reference, reason</td><td>Append-only; amounts are whole paise, so there is no rounding drift</td></tr>
+<tr><td>Stage assignment <span class="tag new">new</span></td><td>A supervisor and a stage</td><td>Set by the owner; checked by the commands</td></tr>
+<tr><td>Approval request <span class="tag new">new</span></td><td>Kind (deduction, write-off, hold, close), subject, amount or pieces, requester, state, decision and reason</td><td>Decided once; above-limit requests need the owner</td></tr>
+<tr><td>Evidence photo <span class="tag new">new</span></td><td>A file reference on a rejected or rework entry; a cover photo reference on a lot</td><td>Stored with company isolation; never a public link</td></tr>
+<tr><td>Day close <span class="tag new">new</span></td><td>Supervisor, date, summary figures at the time, a note</td><td>Frozen once submitted</td></tr>
+</tbody></table>
+
+<h3>How the figures are made</h3>
+<p>Nothing on a dashboard is typed in. Pieces out, pieces waiting, good, rejected, rework, short, days at a stage, wages and balances are all computed from the entries and payments by one piece of logic, which is covered by automated tests that use the worked examples from your requirement sheet (for example 100 pieces issued, 94 good, 2 rejected, 1 rework, 2 short and 1 still open; and ₹48,000 over 960 good pieces is ₹50 a piece). A figure on a report always agrees with the entries it is built from.</p>
+
+<h2><span class="num">06</span>Audit and corrections</h2>
+<ul>
+<li>Every command records who did it, when, from which role, and what changed, in an audit trail the owner can read.</li>
+<li>Entries, payments and rate history cannot be updated or deleted by the application: a database rule rejects both. A wrong entry is cancelled by a <strong>reversal</strong> with a reason; the original and the reversal both stay visible.</li>
+<li>A reversal that would leave a later stage with more pieces than it received is refused.</li>
+</ul>
+
+<h2><span class="num">07</span>Photographs</h2>
+<ul>
+<li>A photograph is uploaded from the phone camera or a file, checked for type and size, stored in the company's isolated storage, and shown through a short-lived link only to users who may see the record.</li>
+<li>Pictures are resized for the screen so lists stay fast.</li>
+</ul>
+
+<h2><span class="num">08</span>Backups and recovery</h2>
+<ul>
+<li>A daily backup of the database and files, kept for at least 30 days, is part of the service (document 3, section 5). The mechanism (the hosting provider's backups plus our own nightly export) is configured and a <strong>restore is rehearsed</strong> on Stylified's workspace before go-live; that rehearsal is an acceptance criterion.</li>
+<li>Because corrections are reversals, a restore is needed only for loss or damage, not for ordinary mistakes.</li>
+</ul>
+
+<h2><span class="num">09</span>Security summary</h2>
+<table>
+<thead><tr><th>Concern</th><th>Control</th></tr></thead>
+<tbody>
+<tr><td>One company seeing another's data</td><td>Forced row-level security in the database; company taken from the verified membership; tested</td></tr>
+<tr><td>A user doing more than their role allows</td><td>Server-side permission check on every command and query; tested</td></tr>
+<tr><td>Altering history</td><td>Append-only ledgers enforced by the database; reversal only</td></tr>
+<tr><td>Staff access to your data</td><td>Only to support you; each session recorded in your audit trail and time-limited</td></tr>
+<tr><td>Secrets</td><td>Held in the hosting environment, never in code or in the database</td></tr>
+<tr><td>Public links</td><td>The bundle QR opens a sign-in screen, then the bundle. It carries only the bundle's address, no figures or names</td></tr>
+</tbody></table>
+
+<h2><span class="num">10</span>Speed</h2>
+<p>We measured the local build: a page made about 10 to 16 database calls, mostly shared overhead from sign-in and navigation rather than the page itself. We have already removed the repeated identity lookups (the first of several steps), added an instant top progress bar and press feedback on every card and button, and replaced the lone loading spinner with a page-shaped skeleton. The remaining planned steps are folding the layout's queries into one, caching each user's navigation and permissions for about a minute, and narrowing the dashboard's queries as history grows. We will report measured times on Stylified's workspace before go-live, not estimates.</p>
+
+<h2><span class="num">11</span>Testing</h2>
+<table>
+<thead><tr><th>Layer</th><th>What is covered</th></tr></thead>
+<tbody>
+<tr><td>Logic tests</td><td>28 tests on the piece-rate calculations, using the requirement sheet's own examples</td></tr>
+<tr><td>Database tests</td><td>23 tests against a real database: reconciliation, over-issue and over-return refusals, rework pool, the three wage bases, payment guards, reversal rules, concurrent entries, append-only rules, the owner role refused every write, company isolation</td></tr>
+<tr><td>Platform tests</td><td>Identity, membership, tenant isolation and permission tests that every capability inherits</td></tr>
+<tr><td>Browser checks</td><td>Every screen opened in dark and light on desktop and at 390 px, with the demonstration data, before go-live; defects are logged and fixed</td></tr>
+<tr><td>Acceptance</td><td>The ten criteria in document 2, section 10, run with Stylified</td></tr>
+</tbody></table>
+
+<h2><span class="num">12</span>What we are not claiming</h2>
+<ul>
+<li>The piece-rate module has been run on fictional data on our own test environment. It has not yet run on Stylified's workspace or with Stylified's people.</li>
+<li>The new supervisor, approval, photograph and bilingual work in this project is a plan until it is built and passes its tests.</li>
+<li>Speed on the hosted service is not yet measured; the figures above are from a local build.</li>
+<li>Offline use, SMS or WhatsApp alerts, barcode scanning and the Phase 2 modules are not part of this solution.</li>
+</ul>
+</main>
+<!--/DOC:body-->
+</body>
+</html>

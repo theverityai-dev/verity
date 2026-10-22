@@ -293,6 +293,25 @@ Source: `clients/dsew/decisions.md` ("Scope amendment" and "Client call findings
 
 ---
 
+### P1-4. Stylified: build the MVP and show it (proposal pack drafted 2026-10-22)
+
+**What.** The Stylified (Ludhiana garment maker) hosted MVP: supervisor screens S1 to S6, manager approvals M1 and M2,
+a four-role set (Owner, Manager, Supervisor, Munshi) with supervisor stage assignment, photographs (lot cover, defect
+evidence), bilingual labels on entry and supervisor screens, in-app late-return alerts, a seeded demo and reset, then
+go-live. The scope, roles matrix, screens, demo script and acceptance criteria are in
+`clients/stylified/proposal/02-mvp-build-and-demo-plan.html`.
+**Why.** The commercial offer is drafted: ₹25,000 + 18% GST one time, ₹15,000 a month GST-included (₹4,500 server, ₹4,000
+maintenance, ₹6,500 subscription), 3-month lock-in from go-live. The piece-rate core is built and DB-proven; the floor
+roles and photographs are not.
+**How.** Plan in the MVP document section 8: roles from permissions (no platform scope change), stage assignment checked in
+the capability's commands, an approval request record on the existing approval substrate, file references through the
+platform file store, a small label catalogue. Photographs need a new file field, so check ADR need before building.
+**Done when.** Every acceptance criterion in document 2 section 10 passes, every screen is opened at desktop and 390 px in
+both themes (DEMO-READY gate), the migration is applied to production (P0b-3), and Stylified's workspace has a rehearsed
+restore.
+**Source.** `clients/stylified/proposal/`, `clients/stylified/requirement-sheet-review.md`, `taskplans/handoffs/DESIGN_AUDIT.md`.
+**Status.** PLANNED. The pricing reading ("15k incl GST" as ₹15,000 per month inclusive) needs the owner's confirmation.
+
 ## P2: planned build work, unblocked
 
 ### P2-0. Client-owned Vercel and Supabase deployments: decide, then pilot
