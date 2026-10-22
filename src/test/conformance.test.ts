@@ -358,6 +358,8 @@ describe("conformance: over-genericity (Phase G)", () => {
       // Document (ADR-048): the code lists a document number is assembled from (client, division) on a type, and
       // the codes chosen for one document, kept so its number can be explained later.
       "segments",
+      // Piece-rate floor: a supervisor's closed day, a frozen document of what was handed over (append-only).
+      "summary",
     ]);
     const unexpected = jsonFields.filter((name) => !permitted.has(name));
     expect(unexpected).toEqual([]);
@@ -565,6 +567,7 @@ describeDb("conformance: database enforcement", () => {
         "outreach_team_weekly_assessment",
         "outreach_weekly_report",
         // Piece-rate ledger (20261021300000): entries, payments and per-worker rates are facts, never edited.
+        "piecework_day_close",
         "piecework_entry",
         "piecework_payment",
         "piecework_worker_rate",
