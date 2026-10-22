@@ -39,8 +39,9 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
   const asRework = rework || reworkOnly;
   const room = card ? (asRework ? card.reworkPool : card.toIssue) : 0;
   const worker = workers.find((w) => w.id === workerId);
-  const hasRate = !card || !worker ? true : worker.stageIds.includes(card.stageId);
-  const valid = card !== undefined && workerId !== "" && hasRate && pieces >= 1 && pieces <= room;
+  // Only karigars set up for this stage are offered: a supervisor cannot set a rate, and the ledger refuses an unrated worker anyway.
+  const eligible = card ? workers.filter((w) => w.stageIds.includes(card.stageId)) : workers;
+  const valid = card !== undefined && worker !== undefined && eligible.some((w) => w.id === worker.id) && pieces >= 1 && pieces <= room;
 
   const choose = (w: FloorWaiting) => { setKey(`${w.bundleId}:${w.stageId}`); setRework(false); setPieces(Math.max(1, w.toIssue || w.reworkPool)); setDone(null); setFailure(null); };
 
@@ -102,14 +103,15 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
             <Field label={t.karigar} htmlFor="go-worker" required>
               <Select id="go-worker" value={workerId} onChange={(e) => setWorkerId(e.target.value)} required>
                 <option value="" disabled>{t.pickKarigar}</option>
-                {workers.map((w) => (
+                {eligible.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.name}{w.piecesHeld > 0 ? ` · ${t.holds} ${w.piecesHeld}` : ""}{!w.stageIds.includes(card.stageId) ? ` (${t.noRate})` : ""}
+                    {w.name}{w.piecesHeld > 0 ? ` · ${t.holds} ${w.piecesHeld}` : ""}
                   </option>
                 ))}
               </Select>
             </Field>
-            {!hasRate && <p role="alert" className="m-0 text-[13px]" style={{ color: "var(--color-state-blocked)" }}>{worker?.name}: {t.noRate}</p>}
+            {workers.length > eligible.length && <p className="m-0 text-[13px] text-text-tertiary">{workers.length - eligible.length} {t.notListedNoRate}</p>}
+            {eligible.length === 0 && <p role="alert" className="m-0 text-[13px]" style={{ color: "var(--color-state-blocked)" }}>{t.noKarigarForStage}</p>}
 
             {card.toIssue > 0 && card.reworkPool > 0 && (
               <Checkbox label={`${t.isRework} (${card.reworkPool})`} checked={rework} onChange={(e) => { setRework(e.target.checked); setPieces(1); }} />

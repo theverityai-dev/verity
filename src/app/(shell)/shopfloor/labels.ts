@@ -125,6 +125,8 @@ const EN = {
   nothingOutShort: "Nothing is out",
   issued: "Issued",
   returned: "Returned",
+  notListedNoRate: "karigars are not listed because they have no rate for this stage.",
+  noKarigarForStage: "No karigar is set up for this stage. Ask the owner.",
 } as const;
 
 export type Labels = { [K in keyof typeof EN]: string };
@@ -247,6 +249,8 @@ const HI: Labels = {
   nothingOutShort: "कुछ भी बाहर नहीं है",
   issued: "दिया",
   returned: "लौटा",
+  notListedNoRate: "कारीगर सूची में नहीं हैं क्योंकि इस स्टेज का उनका रेट तय नहीं है।",
+  noKarigarForStage: "इस स्टेज के लिए कोई कारीगर तय नहीं है। मालिक से कहें।",
 };
 
 export const LABELS: Record<Lang, Labels> = { en: EN, hi: HI };

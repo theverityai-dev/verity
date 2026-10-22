@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-23** (Task 130 steps 1 to 4 built, locally; demo walk run on two tenants)
+**Last updated: 2026-10-23** (Task 130 steps 1 to 4 built, locally; demo walk run on two tenants; Stylified MVP DEMO-READY locally)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -292,7 +292,7 @@ platform file store, a small label catalogue. Photographs need a new file field,
 both themes (DEMO-READY gate), the migration is applied to production (P0b-3), and Stylified's workspace has a rehearsed
 restore.
 **Source.** `clients/stylified/proposal/`, `clients/stylified/requirement-sheet-review.md`, `taskplans/handoffs/DESIGN_AUDIT.md`.
-**Status.** BUILT locally 2026-10-23, not yet DEMO-READY on a hosted tenant: roles, stage scope, approvals with limits, day close, supervisor screens S1 to S6 at `/shopfloor`, Approvals, Team and limits, Hindi and English on daily entry and the floor screens, lot hold and close requests, seed with five logins. 30 database tests pass (23 core, 7 floor). Walked in a browser at 390 px and desktop in both themes with no console error. Still open: the production migration `20261023110000_piecework_floor_roles` (with `20261022100000`), defect photographs on a deployment with file storage, a recorded DEMO-READY walk, lot cover upload, the speed work (proxy session check, layout queries, dashboard history), and the rehearsed restore. Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
+**Status.** DEMO-READY locally 2026-10-23 (acceptance record: `clients/stylified/acceptance-record.md`; criteria 1 to 9 met on the demonstration workspace, 10 met locally). Built: roles, stage scope, approvals with limits, day close, supervisor screens S1 to S6 at `/shopfloor`, Approvals, Team and limits, Hindi and English, lot covers with upload, defect photographs, a year-of-history speed fix (owner dashboard 49 s and failing, now 0.5 s), money withheld from supervisors at the query. Still open: (1) one run of the supervisor, manager and photograph flows on Stylified's hosted workspace with its storage bucket set; (2) the Supabase restore rehearsal into a scratch project (`docs/deployment/stylified-backup-restore.md`); (3) confirm migration `20261023110000_piecework_floor_roles` is on production (the owner said on 2026-10-23 they deployed; not verified here); (4) **owner decision**: verify the session token locally (`getClaims`) on every page to remove one authentication round trip per page, at the cost of a revoked session living up to an hour (details in the acceptance record). Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
 Stylified's own Vercel and Supabase accounts is an option quoted later and not promised (ADR-054 keeps Mode D parked; see P2-0).
 
 ## P2: planned build work, unblocked
