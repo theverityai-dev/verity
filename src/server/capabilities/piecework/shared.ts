@@ -21,6 +21,12 @@ export type EntryRow = {
   entryDate: Date; rateMinor: number | null; dueDate: Date | null;
 };
 
+/** The columns the ledger arithmetic reads. A screen that only derives positions and money selects these, not the whole row. */
+export const LEDGER_SELECT = {
+  id: true, bundleId: true, stageId: true, workerId: true, kind: true, pieces: true, goodPieces: true, rejectedPieces: true, reworkPieces: true,
+  shortPieces: true, issueId: true, isRework: true, wageBasis: true, reversesId: true, entryDate: true, rateMinor: true, dueDate: true,
+} as const;
+
 export const toLedger = (r: EntryRow): LedgerEntry => ({
   id: r.id,
   bundleId: r.bundleId,
@@ -51,13 +57,29 @@ export type LoadedBundle = {
   entries: LedgerEntry[]; position: BundlePosition;
 };
 
-/** Every bundle with its derived position. One query per table, grouped in memory. */
-export async function loadBundles(tx: Tx, stages: StageRef[], where: { lotId?: string; bundleId?: string } = {}): Promise<LoadedBundle[]> {
+/**
+ * Every bundle with its derived position. One query per table, grouped in memory. A screen that needs only some bundles says
+ * which (lotIds, bundleIds), so a factory with a year of closed lots does not derive the position of all of them on every
+ * page. A caller that already holds every entry passes them as entries and the second query is skipped.
+ */
+export async function loadBundles(
+  tx: Tx,
+  stages: StageRef[],
+  where: { lotId?: string; lotIds?: string[]; bundleId?: string; bundleIds?: string[]; entries?: LedgerEntry[] } = {},
+): Promise<LoadedBundle[]> {
   const bundles = await tx.pieceworkBundle.findMany({
-    where: { ...(where.lotId ? { lotId: where.lotId } : {}), ...(where.bundleId ? { id: where.bundleId } : {}) },
+    where: {
+      ...(where.lotId ? { lotId: where.lotId } : {}),
+      ...(where.lotIds ? { lotId: { in: where.lotIds } } : {}),
+      ...(where.bundleId ? { id: where.bundleId } : {}),
+      ...(where.bundleIds ? { id: { in: where.bundleIds } } : {}),
+    },
     orderBy: { sequenceNo: "asc" },
   });
-  const entries = (await tx.pieceworkEntry.findMany({ where: { bundleId: { in: bundles.map((b) => b.id) } } })).map((e) => toLedger(e));
+  const wanted = new Set(bundles.map((b) => b.id));
+  const entries = where.entries
+    ? where.entries.filter((e) => wanted.has(e.bundleId))
+    : (await tx.pieceworkEntry.findMany({ where: { bundleId: { in: bundles.map((b) => b.id) } }, select: LEDGER_SELECT })).map((e) => toLedger(e));
   const byBundle = new Map<string, LedgerEntry[]>();
   for (const e of entries) byBundle.set(e.bundleId, [...(byBundle.get(e.bundleId) ?? []), e]);
   return bundles.map((b) => {

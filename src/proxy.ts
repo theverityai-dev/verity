@@ -84,8 +84,11 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
       },
     );
 
-    // Touching getUser() is what triggers the refresh.
-    await supabase.auth.getUser();
+    // Touching getClaims() is what triggers the refresh: it reads the session from the cookie, refreshes it when the
+    // access token has expired, and verifies the token locally. It is not an authorization check and not a network call per
+    // request; the page's own requireActor() still validates the user with the auth server (getUser), so a revoked session is
+    // refused there exactly as before. getUser() here made every request pay two round trips to the auth provider.
+    await supabase.auth.getClaims();
     }
   } catch (error) {
     /**

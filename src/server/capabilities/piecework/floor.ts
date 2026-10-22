@@ -274,7 +274,9 @@ async function floorState(tx: Tx, actor: ActorContext): Promise<FloorState> {
   ]);
   const lots = new Map(lotRows.map((l) => [l.id, { number: l.number, name: l.name ?? l.design, cover: coverOf(l.customFields), status: l.status }]));
   const workers = new Map(workerRows.map((w) => [w.id, w.name]));
-  const bundles = (await loadBundles(tx, stages)).filter((b) => !b.cancelledAt && lots.has(b.lotId) && lots.get(b.lotId)!.status === "active");
+  // Only the lots in work: the floor never shows a closed lot, so its bundles are not derived at all.
+  const activeLotIds = lotRows.filter((l) => l.status === "active").map((l) => l.id);
+  const bundles = (await loadBundles(tx, stages, { lotIds: activeLotIds })).filter((b) => !b.cancelledAt);
   const issues: FloorIssue[] = [];
   const waiting: FloorWaiting[] = [];
   for (const b of bundles) {
@@ -301,8 +303,13 @@ async function floorState(tx: Tx, actor: ActorContext): Promise<FloorState> {
 
 /** Shortage and rework registers need the return entries themselves (reason note, who, when). */
 async function registers(tx: Tx, st: FloorState) {
-  const rows = await tx.pieceworkEntry.findMany({ where: { kind: "receive" }, orderBy: { createdAt: "desc" } });
-  const reversed = new Set((await tx.pieceworkEntry.findMany({ where: { reversesId: { not: null } }, select: { reversesId: true } })).map((r) => r.reversesId!));
+  // Only returns that left something to act on (short or rework) in lots still in work: a year of closed lots is never read.
+  const activeLotIds = [...st.lots].filter(([, l]) => l.status === "active").map(([id]) => id);
+  const rows = await tx.pieceworkEntry.findMany({
+    where: { kind: "receive", lotId: { in: activeLotIds }, OR: [{ shortPieces: { gt: 0 } }, { reworkPieces: { gt: 0 } }] },
+    orderBy: { createdAt: "desc" },
+  });
+  const reversed = new Set((await tx.pieceworkEntry.findMany({ where: { reversesId: { in: rows.map((r) => r.id) } }, select: { reversesId: true } })).map((r) => r.reversesId!));
   const live = rows.filter((r) => !r.reversesId && !reversed.has(r.id));
   const approvals = await tx.pieceworkApproval.findMany({ where: { kind: "writeoff", entryId: { not: null } } });
   const bundleNo = new Map(st.bundles.map((b) => [b.id, b.number]));

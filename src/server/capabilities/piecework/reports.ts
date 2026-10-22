@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { QueryDefinition } from "@/server/platform/query";
 import { costPerGoodPiece, daysInStage, wageOf, workerMoney, type PaymentRow } from "./ledger";
-import { activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
+import { LEDGER_SELECT, activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
 import { bundleRow, placementsOf, summariseLot, type BundleRow, type LotRow, type Placement } from "./index";
 
 /**
@@ -21,14 +21,14 @@ async function loadAll(tx: Tx) {
     activeStages(tx),
     tx.pieceworkLot.findMany({ orderBy: { sequenceNo: "asc" } }),
     tx.pieceworkWorker.findMany({ orderBy: { name: "asc" } }),
-    tx.pieceworkPayment.findMany(),
-    tx.pieceworkEntry.findMany(),
+    tx.pieceworkPayment.findMany({ select: { workerId: true, kind: true, amountMinor: true, reversesId: true, paidOn: true } }),
+    tx.pieceworkEntry.findMany({ select: LEDGER_SELECT }),
     todayFor(tx),
   ]);
-  const bundles = await loadBundles(tx, stages);
+  const ledger = allEntries.map((e) => toLedger(e));
+  const bundles = await loadBundles(tx, stages, { entries: ledger });
   const names = new Map(workers.map((w) => [w.id, w.name]));
   const lotNo = new Map(lots.map((l) => [l.id, l.number]));
-  const ledger = allEntries.map((e) => toLedger(e));
   return { stages, lots, bundles, workers, payments, ledger, names, lotNo, today };
 }
 
@@ -128,9 +128,15 @@ export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
       reworkOpen: liveBundles.reduce((s, b) => s + b.position.reworkOpen, 0),
     };
 
-    const lotWages = live
-      .map((l) => ({ lotId: l.id, number: l.number, wagesMinor: d.ledger.filter((e) => e.bundleId && bundlesOf(l.id).some((b) => b.id === e.bundleId)).reduce((s, e) => s + wageOf(e), 0) }))
-      .filter((l) => l.wagesMinor !== 0);
+    // One pass over the ledger, not one per lot: with a year of history the per-lot scan was quadratic and took the page past
+    // its transaction limit.
+    const lotOfBundle = new Map(d.bundles.map((b) => [b.id, b.lotId]));
+    const wageByLot = new Map<string, number>();
+    for (const e of d.ledger) {
+      const lotId = e.bundleId ? lotOfBundle.get(e.bundleId) : undefined;
+      if (lotId) wageByLot.set(lotId, (wageByLot.get(lotId) ?? 0) + wageOf(e));
+    }
+    const lotWages = live.map((l) => ({ lotId: l.id, number: l.number, wagesMinor: wageByLot.get(l.id) ?? 0 })).filter((l) => l.wagesMinor !== 0);
 
     const people = d.workers.map((w) => ({
       workerId: w.id, name: w.name,

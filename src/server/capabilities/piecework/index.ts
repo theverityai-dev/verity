@@ -876,8 +876,8 @@ export const workerLedger: QueryDefinition<{ workerId: string }, WorkerLedger | 
     const ledger = entries.map((e) => toLedger(e));
     const net = (kind: "issue" | "receive") => ledger.reduce((s, e) => s + (e.kind === kind ? (e.reversesId ? -1 : 1) * e.pieces : 0), 0);
 
-    // Open issues, derived per bundle so rework and reversals are respected.
-    const bundles = await loadBundles(ctx.tx, stages, {});
+    // Open issues, derived per bundle so rework and reversals are respected. Only this worker's bundles are derived.
+    const bundles = await loadBundles(ctx.tx, stages, { bundleIds: [...new Set(entries.map((e) => e.bundleId))] });
     const inHand = bundles.flatMap((b) =>
       b.position.stages.flatMap((s) => s.issues.filter((i) => i.workerId === worker.id && i.open > 0).map((i) => ({
         issueId: i.issueId, bundleId: b.id, bundleNumber: b.number, lotNumber: lotNo.get(b.lotId) ?? "", stageLabel: s.label, issued: i.issued, open: i.open, isRework: i.isRework,

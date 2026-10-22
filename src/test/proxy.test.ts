@@ -27,14 +27,14 @@ import { NextRequest } from "next/server";
  * not occur locally, which is exactly the kind of defect that ships.
  */
 
-const getUser = vi.fn();
+const getClaims = vi.fn();
 
 vi.mock("@supabase/ssr", () => ({
   // Mirrors the real client, which validates its arguments and throws
   // synchronously on a missing URL — the boot-misconfiguration case.
   createServerClient: vi.fn((url?: string) => {
     if (!url) throw new Error("supabaseUrl is required.");
-    return { auth: { getUser } };
+    return { auth: { getClaims } };
   }),
 }));
 
@@ -46,14 +46,14 @@ async function callProxy(): Promise<Response> {
 describe("session refresh boundary", () => {
   beforeEach(() => {
     vi.resetModules();
-    getUser.mockReset();
+    getClaims.mockReset();
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://supabase.test";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-for-test";
     delete process.env.VERITY_AUTH_PROVIDER;
   });
 
   it("returns a Response on the happy path", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "u1" } }, error: null });
+    getClaims.mockResolvedValue({ data: { claims: { sub: "u1" } }, error: null });
     const response = await callProxy();
     expect(response).toBeInstanceOf(Response);
   });
@@ -61,7 +61,7 @@ describe("session refresh boundary", () => {
   it("still returns a Response when the auth service throws", async () => {
     // The regression. Before the fix this rejected, and Next reported
     // "Failed to convert value to 'Response'" for every route at once.
-    getUser.mockRejectedValue(new Error("fetch failed: ECONNREFUSED"));
+    getClaims.mockRejectedValue(new Error("fetch failed: ECONNREFUSED"));
 
     const response = await callProxy();
     expect(response).toBeInstanceOf(Response);
@@ -70,7 +70,7 @@ describe("session refresh boundary", () => {
   it("still returns a Response when the auth client cannot be constructed", async () => {
     // A missing or malformed env var throws synchronously, before any await.
     delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    getClaims.mockResolvedValue({ data: null, error: null });
 
     const response = await callProxy();
     expect(response).toBeInstanceOf(Response);
@@ -78,7 +78,7 @@ describe("session refresh boundary", () => {
 
   it("does not swallow the failure silently", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    getUser.mockRejectedValue(new Error("fetch failed: ECONNREFUSED"));
+    getClaims.mockRejectedValue(new Error("fetch failed: ECONNREFUSED"));
 
     await callProxy();
 
@@ -99,7 +99,7 @@ describe("session refresh boundary", () => {
     expect(createServerClient).not.toHaveBeenCalled();
   });
   it("serves a fresh enforcing CSP and requests private, week-long session cookies", async () => {
-    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    getClaims.mockResolvedValue({ data: null, error: null });
     const first = await callProxy();
     const second = await callProxy();
     expect(first.headers.get("content-security-policy")).toContain("'strict-dynamic'");
