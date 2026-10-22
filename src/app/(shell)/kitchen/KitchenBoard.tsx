@@ -260,7 +260,7 @@ export function KitchenBoard({
           </nav>
         )}
         {late > 0 && (
-          <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--color-state-blocked-fill)] px-4 text-[14px] font-semibold text-[var(--color-state-blocked-ink)]">
+          <span className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--color-state-blocked-fill)] px-4 text-[14px] font-semibold text-[var(--color-state-blocked-on)]">
             <Icon name="clock" size={16} />
             {late} late
           </span>
@@ -303,7 +303,7 @@ export function KitchenBoard({
 
       {cancelled.length > 0 && (
         <section aria-label="Cancelled dishes" className="mb-5 rounded-[12px] bg-[var(--color-state-blocked-fill)] p-4">
-          <h2 className="m-0 mb-3 flex items-center gap-2 text-[17px] font-semibold text-[var(--color-state-blocked-ink)]">
+          <h2 className="m-0 mb-3 flex items-center gap-2 text-[17px] font-semibold text-[var(--color-state-blocked-on)]">
             Stop making these
             <span className="tabular rounded-full bg-surface px-2 text-[13px]">{cancelled.length}</span>
           </h2>
@@ -311,7 +311,7 @@ export function KitchenBoard({
             {cancelled.map((dish) => (
               <li key={dish.lineId} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-surface p-3.5">
                 <span className="text-[17px] text-text">
-                  <span className="tabular font-bold">{dish.qty} ×</span>{" "}
+                  <span className="tabular font-medium">{dish.qty} ×</span>{" "}
                   <span className="line-through decoration-danger decoration-2">{dish.itemName}</span>
                   <span className="ml-2 text-[14px] text-text-secondary">{dish.label}{dish.stationName ? `, ${dish.stationName}` : ""}</span>
                 </span>
@@ -347,7 +347,7 @@ export function KitchenBoard({
                         <span className="flex min-w-0 items-center gap-2.5">
                           <IconTile kind={channelKindFor(docket.channel)} size="sm" />
                           <span className="min-w-0">
-                            <span className="block truncate text-[19px] font-bold leading-6 text-text">{docket.label}</span>
+                            <span className="block truncate text-[20px] font-medium leading-6 text-text">{docket.label}</span>
                             <span className="block text-[13px] text-text-secondary">{CHANNEL_TAG[docket.channel] ?? docket.channel}</span>
                           </span>
                         </span>
@@ -363,7 +363,7 @@ export function KitchenBoard({
                           <li key={ticket.lineId} className="flex items-start justify-between gap-3 border-t border-line px-3.5 py-3">
                             <span className="min-w-0 text-[17px] leading-6 text-text">
                               {/* Quantity first and large: the number is what a cook acts on, and "2 ×" read as "1 ×" is a wasted dish. */}
-                              <span className="tabular mr-1.5 font-bold">{ticket.qty} ×</span>
+                              <span className="tabular mr-1.5 font-medium">{ticket.qty} ×</span>
                               {ticket.itemName}
                               {ticket.variantName && <span className="text-text-secondary"> ({ticket.variantName})</span>}
                               {ticket.courseName && (

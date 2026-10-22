@@ -88,9 +88,9 @@ async function ApprovalsPage() {
           a count of rows already loaded — nothing here is a second query and
           nothing can disagree with the sections beneath it. */}
       <StatRow cols={3} className="mb-6">
-        <Stat label="Awaiting your role" value={awaitingMe.length} />
-        <Stat label="In flight elsewhere" value={awaitingOthers.length} />
-        <Stat label="Settled" value={settled.length} />
+        <Stat kind="approval" label="Awaiting your role" value={awaitingMe.length} />
+        <Stat icon="clock" state="pending" label="In flight elsewhere" value={awaitingOthers.length} />
+        <Stat icon="check" state="completed" label="Settled" value={settled.length} />
       </StatRow>
 
       <div className="flex flex-col gap-6">

@@ -332,7 +332,7 @@ async function OutreachPage({
                   <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">
                     Current direction · {data.currentDirection.weekLabel}
                   </p>
-                  <p className="m-0 mt-1 text-[18px] font-bold text-text">
+                  <p className="m-0 mt-1 text-[17px] font-medium text-text">
                     {data.currentDirection.priorityVertical ?? "No priority vertical set"}
                   </p>
                 </div>
@@ -506,7 +506,7 @@ async function OutreachPage({
                   ["Proposals", data.pulse.proposals],
                 ].map(([label, value]) => (
                   <div key={String(label)} className="min-w-0">
-                    <p className="tabular m-0 text-[20px] font-bold leading-none text-text">{value}</p>
+                    <p className="tabular m-0 text-[20px] font-medium leading-none text-text">{value}</p>
                     <p className="m-0 mt-1.5 truncate text-[11.5px] text-text-tertiary">{label}</p>
                   </div>
                 ))}
@@ -586,7 +586,7 @@ async function OutreachPage({
                           </p>
                         </div>
                       </div>
-                      <span className="tabular text-[24px] font-extralight text-text">{team.pipeline}</span>
+                      <span className="figure text-[24px] text-text">{team.pipeline}</span>
                     </div>
 
                     {progress != null ? (
@@ -609,8 +609,8 @@ async function OutreachPage({
                         ["Closed", team.closed],
                       ].map(([label, value]) => (
                         <div key={String(label)} className="min-w-0">
-                          <p className="tabular m-0 text-[17px] font-bold text-text">{value}</p>
-                          <p className="m-0 mt-1 truncate text-[10.5px] text-text-tertiary">{label}</p>
+                          <p className="tabular m-0 text-[17px] font-medium text-text">{value}</p>
+                          <p className="m-0 mt-1 truncate text-[11px] text-text-tertiary">{label}</p>
                         </div>
                       ))}
                     </div>

@@ -24,9 +24,11 @@
    *   surface  secondarySystemGroupedBackground (the cell)
    *   sunken   tertiarySystemGroupedBackground (a cell inside a cell)
    * ------------------------------------------------------------------- */
-  --color-canvas: light-dark(#f2f2f7, #000000);
+  --color-canvas: light-dark(#e9edf6, #000000);
   --color-surface: light-dark(#ffffff, #141416);
   --color-surface-elevated: light-dark(#ffffff, #1c1c1e);
+  /* Top of a lite-effects cell: a hair lighter than the surface so the cell still has a lit edge without blur. */
+  --color-lite-hi: light-dark(#ffffff, #1a1a1d);
   /* A cell inside a glass cell: a faint wash, never an opaque grey slab, so inner panels sit in the glass. */
   --color-surface-sunken: light-dark(rgb(60 60 67 / 0.06), rgb(255 255 255 / 0.05));
   /* Fill family (ADR-053): text fields, gray buttons, segmented controls. */
@@ -44,17 +46,23 @@
    * ------------------------------------------------------------------- */
   /* Dimmed after review (2026-10-22: "too much glass, keep it dim and subtle, soft edges"): low fill contrast,
      rims at a whisper, blooms at roughly half strength, a soft long shadow. */
-  --glass-1: light-dark(rgb(255 255 255 / 0.80), rgb(255 255 255 / 0.075));
-  --glass-2: light-dark(rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.022));
-  --glass-3: light-dark(rgb(255 255 255 / 0.62), rgb(255 255 255 / 0.05));
+  /* Light theme (2026-10-23): white glass on a near-white canvas read as a flat white box, because a frosted
+     cell shows only by differing from what is behind it. The canvas is now a cool blue-grey, the blooms carry
+     real colour, the fill is more translucent so they show through, and the cell has a dark hairline, a contact
+     shadow and a soft ambient shadow besides the long one. Dark is unchanged. */
+  --glass-1: light-dark(rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.075));
+  --glass-2: light-dark(rgb(255 255 255 / 0.42), rgb(255 255 255 / 0.022));
+  --glass-3: light-dark(rgb(255 255 255 / 0.50), rgb(255 255 255 / 0.05));
   --glass-rim-1: light-dark(rgb(255 255 255 / 1), rgb(255 255 255 / 0.24));
-  --glass-rim-2: light-dark(rgb(10 100 200 / 0.20), rgb(113 184 255 / 0.18));
-  --glass-hi: light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.20));
-  --glass-shadow: light-dark(rgb(40 50 90 / 0.30), rgb(0 0 0 / 0.85));
-  --bloom-1: light-dark(rgb(10 132 255 / 0.22), rgb(10 132 255 / 0.26));
-  --bloom-2: light-dark(rgb(64 156 255 / 0.20), rgb(64 156 255 / 0.15));
-  --bloom-3: light-dark(rgb(0 64 221 / 0.12), rgb(0 64 221 / 0.24));
-  --bloom-4: light-dark(rgb(113 184 255 / 0.26), rgb(113 184 255 / 0.10));
+  --glass-rim-2: light-dark(rgb(10 100 200 / 0.34), rgb(113 184 255 / 0.18));
+  --glass-hi: light-dark(rgb(255 255 255 / 1), rgb(255 255 255 / 0.20));
+  --glass-shadow: light-dark(rgb(40 60 120 / 0.34), rgb(0 0 0 / 0.85));
+  --glass-contact: light-dark(rgb(30 45 100 / 0.12), rgb(0 0 0 / 0));
+  --glass-ambient: light-dark(rgb(40 70 160 / 0.22), rgb(0 0 0 / 0));
+  --bloom-1: light-dark(rgb(10 132 255 / 0.36), rgb(10 132 255 / 0.26));
+  --bloom-2: light-dark(rgb(64 156 255 / 0.30), rgb(64 156 255 / 0.15));
+  --bloom-3: light-dark(rgb(0 64 221 / 0.20), rgb(0 64 221 / 0.24));
+  --bloom-4: light-dark(rgb(113 184 255 / 0.40), rgb(113 184 255 / 0.10));
 
   /* ---------------------------------------------------------------------
    * LABELS — label / secondaryLabel / tertiaryLabel, increased-contrast
@@ -136,7 +144,7 @@
    * ------------------------------------------------------------------- */
   --color-success: light-dark(#1f7a36, #30db5b);
   --color-success-subtle: light-dark(rgb(52 199 89 / 0.14), rgb(48 209 88 / 0.18));
-  --color-warning: light-dark(#c93400, #ffb340);
+  --color-warning: light-dark(#9c5500, #ffb340);
   --color-warning-subtle: light-dark(rgb(255 149 0 / 0.14), rgb(255 159 10 / 0.18));
   --color-danger: light-dark(#d70015, #ff6961);
   --color-danger-subtle: light-dark(rgb(255 59 48 / 0.12), rgb(255 69 58 / 0.18));
@@ -144,7 +152,7 @@
   --color-info-subtle: light-dark(rgb(0 122 255 / 0.12), rgb(10 132 255 / 0.18));
 
   --color-state-draft: light-dark(#6c6c70, #aeaeb2);
-  --color-state-pending: light-dark(#a86000, #ffb340);
+  --color-state-pending: light-dark(#9c5500, #ffb340);
   --color-state-active: light-dark(#0040dd, #409cff);
   --color-state-blocked: light-dark(#d70015, #ff6961);
   --color-state-completed: light-dark(#1f7a36, #30db5b);
@@ -164,7 +172,7 @@
   /* ADR-053: glass cells float on a long, faint ambient shadow; floating things go higher. */
   --shadow-highlight: 0 0 0 transparent;
   --shadow-sm: 0 1px 2px light-dark(rgb(40 50 90 / 0.10), rgb(0 0 0 / 0.5));
-  --shadow-card: 0 44px 70px -44px var(--glass-shadow);
+  --shadow-card: 0 44px 70px -44px var(--glass-shadow), 0 1px 3px var(--glass-contact), 0 16px 34px -18px var(--glass-ambient);
   --shadow-md: 0 8px 24px -8px light-dark(rgb(40 50 90 / 0.22), rgb(0 0 0 / 0.6));
   --shadow-lg: 0 20px 56px -14px light-dark(rgb(40 50 90 / 0.30), rgb(0 0 0 / 0.75));
 
@@ -177,6 +185,12 @@
   /* iOS default curve and its sheet presentation curve. */
   --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-slide: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* One weight ladder (ADR-053): 200 page title and figures, 300 section title, 400 body, 500 for every emphasised
+     run. `semibold` is remapped to 500 so the existing `font-semibold` call sites land on the same step as
+     `font-medium`; `bold` stays 600 and is for printed documents only. */
+  --font-weight-semibold: 500;
+  --font-weight-bold: 600;
 
   --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
@@ -202,17 +216,28 @@
      danger-subtle fill in the 2026-10-16 Lighthouse pass; this clears 5:1 on that fill and on the gray hover. */
   --color-danger-ink: light-dark(#bd0010, #ff6961);
 
-  --color-state-draft-fill: light-dark(#ececec, #3c3c3f);
+  /* Signal colours (2026-10-23). A saturated solid with a white (amber: near-black) word, the way an iOS badge
+     reads, in both themes, instead of a pastel wash with coloured text. The word clears 4.5:1 on its own fill
+     (kind-hue-contrast.test.ts). */
+  /* Three tokens per state: `-fill` the surface, `-on` the word or glyph set on that fill, `-ink` the same
+     colour used as plain text on the glass or canvas (never on its own fill). */
+  --color-state-draft-fill: light-dark(#636366, #636366);
+  --color-state-draft-on: light-dark(#ffffff, #ffffff);
   --color-state-draft-ink: light-dark(#69696d, #aeaeb2);
-  --color-state-pending-fill: light-dark(#f4eade, #4e3d25);
+  --color-state-pending-fill: light-dark(#ffb020, #ffb020);
+  --color-state-pending-on: light-dark(#2b1b00, #2b1b00);
   --color-state-pending-ink: light-dark(#995700, #ffb340);
-  --color-state-active-fill: light-dark(#dee6fb, #243850);
+  --color-state-active-fill: light-dark(#0a5fe0, #0a5fe0);
+  --color-state-active-on: light-dark(#ffffff, #ffffff);
   --color-state-active-ink: light-dark(#0040dd, #4fa4ff);
-  --color-state-blocked-fill: light-dark(#fadee1, #4e2d2d);
+  --color-state-blocked-fill: light-dark(#dc1b30, #dc1b30);
+  --color-state-blocked-on: light-dark(#ffffff, #ffffff);
   --color-state-blocked-ink: light-dark(#cd0014, #ff7870);
-  --color-state-completed-fill: light-dark(#e2eee5, #20462b);
+  --color-state-completed-fill: light-dark(#167f35, #167f35);
+  --color-state-completed-on: light-dark(#ffffff, #ffffff);
   --color-state-completed-ink: light-dark(#1e7634, #30db5b);
-  --color-state-cancelled-fill: light-dark(#ececec, #3c3c3f);
+  --color-state-cancelled-fill: light-dark(#636366, #636366);
+  --color-state-cancelled-on: light-dark(#ffffff, #ffffff);
   --color-state-cancelled-ink: light-dark(#69696d, #aeaeb2);
 
   /* ---------------------------------------------------------------------
@@ -224,21 +249,32 @@
    * fill; hue is >= 20deg from every semantic hue and the default tint
    * (enforced by src/components/ui/business/domains.test.ts).
    * ------------------------------------------------------------------- */
-  --color-hue-indigo-fill: light-dark(#e4e2f8, #3f3d50);
+  /* Light: a saturated solid tile with a white glyph (the iOS Settings icon look), not a pastel wash. Dark keeps
+     its tinted fill with a bright glyph. */
+  /* `-fill` the tile, `-on` the glyph on it, `-ink` the hue as a stroke or text on the glass (chart series). */
+  --color-hue-indigo-fill: light-dark(#4a3fdc, #4b44c4);
+  --color-hue-indigo-on: light-dark(#ffffff, #ffffff);
   --color-hue-indigo-ink: light-dark(#3e30cf, #aca6ed);
-  --color-hue-purple-fill: light-dark(#f1e3f6, #47394e);
+  --color-hue-purple-fill: light-dark(#a23fc7, #8f3db0);
+  --color-hue-purple-on: light-dark(#ffffff, #ffffff);
   --color-hue-purple-ink: light-dark(#9c37be, #d195e4);
-  --color-hue-magenta-fill: light-dark(#f5e1ed, #4d3745);
+  --color-hue-magenta-fill: light-dark(#c02a82, #b02a76);
+  --color-hue-magenta-on: light-dark(#ffffff, #ffffff);
   --color-hue-magenta-ink: light-dark(#b62b7c, #e88cc2);
-  --color-hue-teal-fill: light-dark(#deece7, #264e43);
+  --color-hue-teal-fill: light-dark(#0b8265, #0f7a60);
+  --color-hue-teal-on: light-dark(#ffffff, #ffffff);
   --color-hue-teal-ink: light-dark(#117456, #47ebba);
-  --color-hue-cyan-fill: light-dark(#ddebed, #254950);
+  --color-hue-cyan-fill: light-dark(#0a7d90, #0d7487);
+  --color-hue-cyan-on: light-dark(#ffffff, #ffffff);
   --color-hue-cyan-ink: light-dark(#0e7181, #42d9f0);
-  --color-hue-olive-fill: light-dark(#e8ebdf, #444b2a);
+  --color-hue-olive-fill: light-dark(#667a14, #6a7c14);
+  --color-hue-olive-on: light-dark(#ffffff, #ffffff);
   --color-hue-olive-ink: light-dark(#5d6e17, #c4e151);
-  --color-hue-brown-fill: light-dark(#efe8e2, #443d39);
+  --color-hue-brown-fill: light-dark(#935f33, #8a5a30);
+  --color-hue-brown-on: light-dark(#ffffff, #ffffff);
   --color-hue-brown-ink: light-dark(#8a5b33, #c2a78e);
-  --color-hue-slate-fill: light-dark(#e8eaed, #3b3f45);
+  --color-hue-slate-fill: light-dark(#5f7188, #566579);
+  --color-hue-slate-on: light-dark(#ffffff, #ffffff);
   --color-hue-slate-ink: light-dark(#58687e, #9eadc2);
 }
 
@@ -505,8 +541,14 @@
   backdrop-filter: none;
 }
 :root[data-effects="lite"] .glass-shell { background: light-dark(#ffffff, #0e0f12); }
+/* Lite keeps what is cheap (a vertical fill, the top highlight, the dark hairline and the shadows, all plain box-shadow
+   or gradient) and drops what is not (blur, the masked rim, the blooms). Before this the light theme lost every edge
+   and became white boxes on a grey page. */
 :root[data-effects="lite"] .glass-card,
-:root[data-effects="lite"] .glass-inset { background: var(--color-surface); }
+:root[data-effects="lite"] .glass-inset { background: linear-gradient(180deg, var(--color-lite-hi), var(--color-surface)); }
+:root[data-effects="lite"] .glass-card {
+  box-shadow: inset 0 1px 0 var(--glass-hi), inset 0 0 0 1px var(--color-line-strong), var(--shadow-card);
+}
 :root[data-effects="lite"] .glass-overlay { background: var(--color-surface-elevated); }
 :root[data-effects="lite"] .glass-card::after { display: none; }
 :root[data-effects="lite"] body::before { display: none; }

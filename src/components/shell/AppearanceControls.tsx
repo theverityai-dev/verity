@@ -82,7 +82,7 @@ export function AppearanceControls() {
               onClick={() => chooseTheme(t.value)}
               aria-pressed={theme === t.value}
               className={
-                "inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-4 text-[13.5px] transition-colors " +
+                "inline-flex h-11 cursor-pointer items-center gap-2.5 rounded-lg px-4 text-[13px] transition-colors " +
                 (theme === t.value
                   ? "bg-accent-subtle font-medium text-text ring-1 ring-[var(--color-accent-line)]"
                   : "bg-control text-text-secondary hover:text-text")
@@ -97,7 +97,7 @@ export function AppearanceControls() {
 
       <fieldset className="m-0 border-0 p-0">
         <legend className="mb-1 p-0 text-[13px] font-medium text-text">Visual effects</legend>
-        <p className="mb-3 text-[12.5px] text-text-secondary">
+        <p className="mb-3 text-[13px] text-text-secondary">
           Lite keeps every colour and layout and removes the frosted blur, which is the heaviest thing on an older phone or PC.
         </p>
         <div className="flex flex-wrap gap-2">
@@ -109,7 +109,7 @@ export function AppearanceControls() {
               aria-pressed={effects === e.value}
               title={e.hint}
               className={
-                "inline-flex h-11 cursor-pointer items-center rounded-lg px-4 text-[13.5px] transition-colors " +
+                "inline-flex h-11 cursor-pointer items-center rounded-lg px-4 text-[13px] transition-colors " +
                 (effects === e.value
                   ? "bg-accent-subtle font-medium text-text ring-1 ring-[var(--color-accent-line)]"
                   : "bg-control text-text-secondary hover:text-text")

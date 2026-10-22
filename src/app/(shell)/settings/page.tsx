@@ -57,7 +57,7 @@ export default function SettingsPage() {
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-[14px] font-medium text-text">{l.label}</span>
-              <span className="text-[12.5px] text-text-tertiary">{l.description}</span>
+              <span className="text-[13px] text-text-tertiary">{l.description}</span>
             </span>
           </Link>
         ))}

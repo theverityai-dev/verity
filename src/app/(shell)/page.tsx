@@ -293,7 +293,7 @@ export default async function OverviewPage() {
             {data.activations.map((a) => (
               <span
                 key={a.capabilityId}
-                className="inline-flex items-center gap-2 rounded-pill bg-surface-sunken px-3 py-1.5 text-[12.5px] text-text-secondary"
+                className="inline-flex items-center gap-2 rounded-pill bg-surface-sunken px-3 py-1.5 text-[13px] text-text-secondary"
               >
                 <span aria-hidden="true" className="size-[6px] rounded-full bg-accent" />
                 {a.capability.name}

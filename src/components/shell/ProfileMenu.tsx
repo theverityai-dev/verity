@@ -140,7 +140,7 @@ export function ProfileMenu({
           style={{ position: "fixed", top: anchor.top, right: anchor.right }}
           className="glass-overlay z-50 w-56 rounded-xl p-1.5"
         >
-          <div className="truncate px-3 py-2 text-[12.5px] text-text-tertiary">{userLabel}</div>
+          <div className="truncate px-3 py-2 text-[13px] text-text-tertiary">{userLabel}</div>
           <Link
             ref={(el) => {
               itemRefs.current[0] = el;

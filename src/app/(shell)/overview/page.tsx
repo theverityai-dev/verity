@@ -254,7 +254,7 @@ async function OverviewPage() {
           context, but visually subordinate to the business pulse above. */}
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel title="Purchase overview">
-          <p className="tabular m-0 text-[26px] font-normal leading-none text-text">
+          <p className="tabular m-0 figure text-[26px] text-text">
             {rupees(c.purchasesThisMonthPaise)}
           </p>
           <p className="m-0 mt-1 text-[12px] text-text-tertiary">Open purchase orders: {c.openPurchaseOrders}</p>
@@ -344,7 +344,7 @@ async function OverviewPage() {
           <Panel title="Margin, last 30 days">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
-                <p className="tabular m-0 text-[28px] font-normal leading-none tracking-[-0.02em] text-text">
+                <p className="tabular m-0 figure text-[28px] text-text">
                   {rupees(margin.marginPaise)}
                 </p>
                 <p className="mb-0 mt-2 text-[13px] text-text-secondary">

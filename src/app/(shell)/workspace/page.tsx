@@ -82,9 +82,9 @@ export default async function WorkspacePage() {
           the queues that have anything in them, not the queues that exist —
           an empty queue is not work. */}
       <StatRow cols={3} className="mb-6">
-        <Stat label="Items waiting" value={waiting.reduce((n, q) => n + q.value, 0)} />
-        <Stat label="Queues with work" value={waiting.length} />
-        <Stat label="Sync exceptions" value={data.exceptions.length} />
+        <Stat kind="schedule" label="Items waiting" value={waiting.reduce((n, q) => n + q.value, 0)} />
+        <Stat kind="production" label="Queues with work" value={waiting.length} />
+        <Stat icon="flag" state="blocked" label="Sync exceptions" value={data.exceptions.length} />
       </StatRow>
 
       {nothingWaiting ? (
@@ -133,7 +133,7 @@ export default async function WorkspacePage() {
                   <Row key={exception.id} className="items-start">
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="text-[14px] text-text">{exception.kind}</span>
-                      <span className="text-[12.5px] leading-relaxed text-text-secondary">
+                      <span className="text-[13px] leading-relaxed text-text-secondary">
                         {exception.detail}
                       </span>
                     </span>

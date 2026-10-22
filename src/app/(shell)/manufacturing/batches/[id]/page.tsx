@@ -43,9 +43,9 @@ async function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) 
       />
 
       <StatRow cols={3} className="mb-6">
-        <Stat label="Orders" value={batch.orders.length} />
-        <Stat label="Holding stock" value={`${held} of ${batch.orders.length}`} />
-        <Stat label="Components short" value={short.length} hint={short.length ? "Stock does not cover the whole batch" : "Stock covers the batch"} />
+        <Stat kind="production" label="Orders" value={batch.orders.length} />
+        <Stat kind="stock" label="Holding stock" value={`${held} of ${batch.orders.length}`} />
+        <Stat icon={short.length ? "flag" : "check"} state={short.length ? "blocked" : "completed"} label="Components short" value={short.length} hint={short.length ? "Stock does not cover the whole batch" : "Stock covers the batch"} />
       </StatRow>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.2fr]">

@@ -80,7 +80,7 @@ export function Tabs({ tabs, defaultTab, scroll = false }: { tabs: TabDef[]; def
             tabIndex={t.id === active ? 0 : -1}
             onClick={() => setActive(t.id)}
             className={
-              "relative -mb-px flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13.5px] font-medium transition-colors " +
+              "relative -mb-px flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-[13px] font-medium transition-colors " +
               (scroll ? "shrink-0 whitespace-nowrap " : "") +
               (t.id === active
                 ? "border-accent text-text"

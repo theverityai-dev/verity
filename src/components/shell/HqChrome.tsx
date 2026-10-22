@@ -158,7 +158,7 @@ export function HqChrome({
                 href={item.href}
                 aria-current={current ? "page" : undefined}
                 className={
-                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium no-underline transition-colors duration-200 " +
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium no-underline transition-colors duration-200 " +
                   (current ? "text-accent-ink" : "text-text-tertiary")
                 }
               >

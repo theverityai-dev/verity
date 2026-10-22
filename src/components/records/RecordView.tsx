@@ -66,12 +66,12 @@ import {
 const cx = (...c: Array<string | false | null | undefined>) => c.filter(Boolean).join(" ");
 
 const TONE_CLASS: Record<NonNullable<FieldOption["tone"]>, { fill: string; ink: string; dot: string }> = {
-  neutral: { fill: "var(--color-state-draft-fill)", ink: "var(--color-state-draft-ink)", dot: "var(--color-state-draft)" },
-  info: { fill: "var(--color-state-active-fill)", ink: "var(--color-state-active-ink)", dot: "var(--color-state-active)" },
+  neutral: { fill: "var(--color-state-draft-fill)", ink: "var(--color-state-draft-on)", dot: "var(--color-state-draft-on)" },
+  info: { fill: "var(--color-state-active-fill)", ink: "var(--color-state-active-on)", dot: "var(--color-state-active-on)" },
   accent: { fill: "var(--color-accent-subtle)", ink: "var(--color-accent-ink)", dot: "var(--color-accent)" },
-  success: { fill: "var(--color-state-completed-fill)", ink: "var(--color-state-completed-ink)", dot: "var(--color-state-completed)" },
-  warning: { fill: "var(--color-state-pending-fill)", ink: "var(--color-state-pending-ink)", dot: "var(--color-state-pending)" },
-  danger: { fill: "var(--color-state-blocked-fill)", ink: "var(--color-state-blocked-ink)", dot: "var(--color-state-blocked)" },
+  success: { fill: "var(--color-state-completed-fill)", ink: "var(--color-state-completed-on)", dot: "var(--color-state-completed-on)" },
+  warning: { fill: "var(--color-state-pending-fill)", ink: "var(--color-state-pending-on)", dot: "var(--color-state-pending-on)" },
+  danger: { fill: "var(--color-state-blocked-fill)", ink: "var(--color-state-blocked-on)", dot: "var(--color-state-blocked-on)" },
 };
 
 export function OptionPill({ option, fallback }: { option?: FieldOption; fallback?: string }) {
@@ -1289,7 +1289,7 @@ function BoardCard({
       </div>
       {company && <p className="m-0 mt-0.5 truncate text-[14px] text-text-secondary">{company.label}</p>}
       <div className="mt-2.5 flex items-center gap-2">
-        {amount !== null ? <span className="tabular text-[17px] font-bold text-text">{moneyShort(amount)}</span> : <span className="text-[14px] text-text-tertiary">No amount</span>}
+        {amount !== null ? <span className="tabular text-[17px] font-medium text-text">{moneyShort(amount)}</span> : <span className="text-[14px] text-text-tertiary">No amount</span>}
         <span className="flex-1" />
         {owner && <Avatar name={owner.label} size={24} />}
       </div>
@@ -1297,7 +1297,7 @@ function BoardCard({
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px]">
           {typeof row.ref === "string" && <span className="tabular text-text-tertiary">{row.ref}</span>}
           {open && bid && bidDays !== null && bidDays <= 14 && (
-            <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium", bidDays < 0 ? "bg-[var(--color-state-blocked-fill)] text-[var(--color-state-blocked-ink)]" : "bg-[var(--color-state-pending-fill)] text-[var(--color-state-pending-ink)]")} suppressHydrationWarning>
+            <span className={cx("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium", bidDays < 0 ? "bg-[var(--color-state-blocked-fill)] text-[var(--color-state-blocked-on)]" : "bg-[var(--color-state-pending-fill)] text-[var(--color-state-pending-on)]")} suppressHydrationWarning>
               <Icon name="flag" size={12} /> Bid {bidDays < 0 ? "overdue" : relativeDay(bid)}
             </span>
           )}

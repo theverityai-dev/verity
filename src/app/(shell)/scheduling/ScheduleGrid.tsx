@@ -115,7 +115,7 @@ export function ScheduleGrid({
         <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[12px] text-text-secondary transition-colors hover:text-text [&::-webkit-details-marker]:hidden">
           <span
             aria-hidden="true"
-            className="text-[10px] text-text-tertiary transition-transform group-open:rotate-90"
+            className="text-[11px] text-text-tertiary transition-transform group-open:rotate-90"
           >
             ▶
           </span>

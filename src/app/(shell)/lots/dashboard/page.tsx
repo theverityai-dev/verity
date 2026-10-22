@@ -181,7 +181,7 @@ async function OwnerDashboardPage() {
               <p className="m-0 text-[15px] text-text-secondary">Every karigar&apos;s account is square.</p>
             ) : (
               <>
-                <p className="tabular m-0 mb-4 text-[28px] font-extralight leading-[1.1] tracking-[-0.045em] text-text">{rupees(d.dues.totalMinor)}</p>
+                <p className="tabular m-0 mb-4 figure text-[28px] text-text">{rupees(d.dues.totalMinor)}</p>
                 <BarList
                   tone="pending"
                   label="Balance due to each karigar"

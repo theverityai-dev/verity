@@ -416,7 +416,7 @@ export function ShellChrome({
               {unreadCount > 0 && (
                 <span
                   aria-hidden="true"
-                  className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 text-[10px] font-medium leading-none text-accent-on"
+                  className="absolute -right-0.5 -top-0.5 grid h-[18px] min-w-[18px] place-items-center rounded-full bg-accent px-1 text-[11px] font-medium leading-none text-accent-on"
                 >
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
@@ -476,7 +476,7 @@ export function ShellChrome({
                 className={
                   // iOS tab bar item: 10pt medium label under a 24pt glyph,
                   // tint when selected, gray otherwise.
-                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium no-underline " +
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium no-underline " +
                   "transition-colors duration-200 " +
                   (current ? "text-accent-ink" : "text-text-tertiary")
                 }
@@ -492,7 +492,7 @@ export function ShellChrome({
             aria-controls="mobile-nav"
             onClick={() => setNavOpen((v) => !v)}
             className={
-              "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[10px] font-medium " +
+              "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium " +
               "transition-colors duration-200 " +
               (navOpen ? "text-accent-ink" : "text-text-tertiary")
             }

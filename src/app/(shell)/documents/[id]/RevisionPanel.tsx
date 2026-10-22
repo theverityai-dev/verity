@@ -123,7 +123,7 @@ function RevisionCard({ documentId, revision, isCurrent, canSelfRelease, hasOpen
   return (
     <li className="rounded-[12px] bg-[var(--color-surface-sunken)] p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="tabular text-[22px] font-bold leading-[26px] text-text">{r.label}</span>
+        <span className="figure text-[22px] leading-[26px] text-text">{r.label}</span>
         <StateBadge category={STATUS_CATEGORY[r.status] ?? "Draft"} label={STATUS_LABEL[r.status] ?? r.status} />
         {isCurrent && <span className="rounded-full bg-[var(--color-control)] px-2.5 py-0.5 text-[12px] font-semibold text-text-secondary">Current</span>}
         {r.status === "released" && (

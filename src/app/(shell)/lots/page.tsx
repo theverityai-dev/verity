@@ -96,7 +96,7 @@ async function LotsPage({ searchParams }: { searchParams: Promise<{ show?: strin
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="m-0 text-[13px] font-semibold leading-[18px] tracking-[0.02em] text-text-secondary">{l.number}</p>
-                        <h2 className="m-0 mt-0.5 truncate text-[19px] font-semibold leading-[24px] tracking-[-0.02em] text-text">{l.name ?? l.design}</h2>
+                        <h2 className="m-0 mt-0.5 truncate text-[20px] font-semibold leading-[24px] tracking-[-0.02em] text-text">{l.name ?? l.design}</h2>
                         <p className="m-0 truncate text-[14px] leading-[20px] text-text-secondary">{[l.name ? l.design : null, l.fabricType].filter(Boolean).join(" · ") || " "}</p>
                       </div>
                       <StateBadge category={STATUS_CATEGORY[l.status]!} label={STATUS_LABEL[l.status]} />

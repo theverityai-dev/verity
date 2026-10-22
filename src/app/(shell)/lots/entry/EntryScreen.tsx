@@ -89,7 +89,7 @@ export function EntryScreen({ bundles, openIssues, workers, today, initialBundle
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
       {failure && <ErrorState title="That entry was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-      {saved && <p role="status" className="m-0 rounded-[12px] bg-state-completed-fill px-4 py-3 text-[14px] font-medium text-state-completed-ink">{saved}</p>}
+      {saved && <p role="status" className="m-0 rounded-[12px] bg-state-completed-fill px-4 py-3 text-[14px] font-medium text-state-completed-on">{saved}</p>}
 
       <div role="group" aria-label="Entry type" className="grid grid-cols-2 gap-2">
         {(["issue", "return"] as const).map((m) => (

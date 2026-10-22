@@ -54,10 +54,10 @@ async function AssetsPage() {
       {/* Counted by the canonical StateCategory (ADR-009) rather than by state
           key, so the figures stay correct when a tenant renames its labels. */}
       <StatRow cols={4} className="mb-6">
-        <Stat label="Assets in scope" value={data.length} />
-        <Stat label="Active" value={data.filter((r) => r.category === "Active").length} />
-        <Stat label="Blocked" value={data.filter((r) => r.category === "Blocked").length} />
-        <Stat label="Unassigned" value={data.filter((r) => r.location === "Unassigned").length} />
+        <Stat kind="asset" label="Assets in scope" value={data.length} />
+        <Stat icon="check" state="active" label="Active" value={data.filter((r) => r.category === "Active").length} />
+        <Stat icon="flag" state="blocked" label="Blocked" value={data.filter((r) => r.category === "Blocked").length} />
+        <Stat kind="location" label="Unassigned" value={data.filter((r) => r.location === "Unassigned").length} />
       </StatRow>
 
       <DataTable

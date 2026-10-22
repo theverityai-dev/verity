@@ -119,7 +119,7 @@ async function MemberPage({ params }: { params: Promise<{ teamId: string; partyI
           {data.heatmap.map((d) => (
             <div key={d.date} className="flex flex-col items-center gap-1" title={`${d.date}: ${d.count} activit${d.count === 1 ? "y" : "ies"}`}>
               <span className={`h-6 w-6 rounded-[6px] ${cell(d.count)}`} />
-              <span className="text-[10px] text-text-tertiary">{d.date.slice(8)}</span>
+              <span className="text-[11px] text-text-tertiary">{d.date.slice(8)}</span>
             </div>
           ))}
         </div>

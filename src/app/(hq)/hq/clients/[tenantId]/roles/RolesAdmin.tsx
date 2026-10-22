@@ -307,7 +307,7 @@ export function RolesAdmin({
                                           <td className="px-3 py-2">
                                             {action && (
                                               <Checkbox
-                                                label={<span className="text-[12.5px] text-text-secondary">{actionLabel}</span>}
+                                                label={<span className="text-[13px] text-text-secondary">{actionLabel}</span>}
                                                 checked={action.checked}
                                                 disabled={pending}
                                                 onChange={() =>

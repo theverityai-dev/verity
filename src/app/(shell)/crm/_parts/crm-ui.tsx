@@ -1,5 +1,6 @@
 "use client";
 
+import { useMounted } from "@/hooks/use-mounted";
 import Link from "next/link";
 import Papa from "papaparse";
 import { useMemo, useRef, useState, useTransition, type ReactNode } from "react";
@@ -396,8 +397,8 @@ export function ImportButton({ object, label }: { object: "company" | "person"; 
           </label>
         ) : done !== null ? (
           <div className="py-6 text-center">
-            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-ink)]"><Icon name="check" size={28} /></div>
-            <p className="m-0 text-[20px] font-bold text-text">{done} {label} imported</p>
+            <div className="mx-auto mb-3 grid size-14 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-on)]"><Icon name="check" size={28} /></div>
+            <p className="m-0 text-[20px] font-medium text-text">{done} {label} imported</p>
             <p className="m-0 mt-1 text-[15px] text-text-secondary">{counts?.dup ? `${counts.dup} already existed and were skipped. ` : ""}{counts?.bad ? `${counts.bad} rows had problems and were not imported.` : ""}</p>
           </div>
         ) : !results ? (
@@ -1001,7 +1002,7 @@ function TimelineItem({ entry: e, members, canWrite }: { entry: TimelineEntry; m
   const time = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit" }).format(new Date(e.at));
   return (
     <li className="flex gap-3 border-b border-[var(--color-separator)] px-4 py-3 last:border-b-0">
-      <span aria-hidden="true" className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[9px]" style={{ backgroundColor: `var(--color-hue-${hue}-fill)`, color: `var(--color-hue-${hue}-ink)` }}>
+      <span aria-hidden="true" className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-[9px]" style={{ backgroundColor: `var(--color-hue-${hue}-fill)`, color: `var(--color-hue-${hue}-on)` }}>
         <Icon name={icon} size={16} />
       </span>
       <div className="min-w-0 flex-1">
@@ -1029,7 +1030,7 @@ function TimelineItem({ entry: e, members, canWrite }: { entry: TimelineEntry; m
         {e.body && <p className="m-0 mt-1 whitespace-pre-wrap break-words text-[15px] leading-[21px] text-text">{e.body}</p>}
         {e.kind === "interaction" && (Boolean(e.meta.outcome) || Boolean(e.meta.durationMinutes)) && (
           <p className="m-0 mt-1.5 flex flex-wrap gap-2 text-[13px]">
-            {Boolean(e.meta.outcome) && <span className="rounded-full bg-[var(--color-state-completed-fill)] px-2 py-0.5 font-medium text-[var(--color-state-completed-ink)]">{String(e.meta.outcome)}</span>}
+            {Boolean(e.meta.outcome) && <span className="rounded-full bg-[var(--color-state-completed-fill)] px-2 py-0.5 font-medium text-[var(--color-state-completed-on)]">{String(e.meta.outcome)}</span>}
             {Boolean(e.meta.durationMinutes) && <span className="text-text-secondary">{String(e.meta.durationMinutes)} min</span>}
           </p>
         )}
@@ -1070,6 +1071,8 @@ export type FollowUpRow = {
 
 /** Follow-ups as a to-do list in the order they need doing: overdue, today, this week, later, undated. */
 export function FollowUpQueue({ rows, done }: { rows: FollowUpRow[]; done: boolean }) {
+  // Which bucket an item is in depends on the viewer's day, which the server does not know; the list therefore appears once mounted.
+  const mounted = useMounted();
   const buckets = useMemo(() => {
     if (done) return [{ key: "done", label: "Done", tone: "neutral" as const, items: rows }];
     const b = { overdue: [] as FollowUpRow[], today: [] as FollowUpRow[], week: [] as FollowUpRow[], later: [] as FollowUpRow[], none: [] as FollowUpRow[] };
@@ -1092,10 +1095,11 @@ export function FollowUpQueue({ rows, done }: { rows: FollowUpRow[]; done: boole
     ].filter((x) => x.items.length);
   }, [rows, done]);
 
+  if (!mounted && rows.length) return null;
   if (!rows.length) {
     return (
       <div className="glass-card rounded-[12px] px-6 py-12 text-center">
-        <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-ink)]"><Icon name="check" size={24} /></div>
+        <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-on)]"><Icon name="check" size={24} /></div>
         <p className="m-0 text-[17px] font-semibold text-text">{done ? "Nothing completed yet" : "All caught up"}</p>
         <p className="m-0 mx-auto mt-1 max-w-[46ch] text-[15px] text-text-secondary">{done ? "Completed follow-ups appear here." : "Plan a follow-up from any company, person or opportunity and it lands here on its due day."}</p>
       </div>
@@ -1141,7 +1145,7 @@ export function FactRow({ items }: { items: Array<{ label: string; value: ReactN
       {items.map((i) => (
         <div key={i.label} className="bg-[var(--color-surface)] px-4 py-3">
           <dt className="text-[13px] text-text-secondary">{i.label}</dt>
-          <dd className={cx("tabular m-0 mt-0.5 text-[22px] font-bold leading-[28px]", i.tone === "danger" ? "text-[var(--color-danger-ink)]" : i.tone === "success" ? "text-[var(--color-state-completed-ink)]" : "text-text")}>{i.value}</dd>
+          <dd className={cx("tabular m-0 mt-0.5 figure text-[22px] leading-[28px]", i.tone === "danger" ? "text-[var(--color-danger-ink)]" : i.tone === "success" ? "text-[var(--color-state-completed-ink)]" : "text-text")}>{i.value}</dd>
         </div>
       ))}
     </dl>
@@ -1327,7 +1331,7 @@ export function DuplicatesButton({ object, described }: { object: "company" | "p
           <p className="m-0 py-6 text-center text-[15px] text-text-secondary">Looking…</p>
         ) : groups.length === 0 ? (
           <div className="py-6 text-center">
-            <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-ink)]"><Icon name="check" size={24} /></div>
+            <div className="mx-auto mb-3 grid size-12 place-items-center rounded-full bg-[var(--color-state-completed-fill)] text-[var(--color-state-completed-on)]"><Icon name="check" size={24} /></div>
             <p className="m-0 text-[17px] font-semibold text-text">No duplicates found</p>
           </div>
         ) : (
@@ -1369,7 +1373,7 @@ export function DuplicatesButton({ object, described }: { object: "company" | "p
 /** The banner on a record that was merged into another. */
 export function MergedNotice({ into, href }: { into: Ref; href: string }) {
   return (
-    <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-draft-fill)] px-4 py-3 text-[15px] text-[var(--color-state-draft-ink)]">
+    <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-draft-fill)] px-4 py-3 text-[15px] text-[var(--color-state-draft-on)]">
       This record was merged into <Link href={href} className="font-semibold text-accent-ink">{into.label}</Link>. Its history shows there.
     </p>
   );

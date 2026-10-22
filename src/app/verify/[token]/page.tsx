@@ -125,7 +125,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
                   <span
                     aria-hidden="true"
                     className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full"
-                    style={{ backgroundColor: "var(--color-state-completed-fill)", color: "var(--color-state-completed-ink)" }}
+                    style={{ backgroundColor: "var(--color-state-completed-fill)", color: "var(--color-state-completed-on)" }}
                   >
                     <Icon name="check" size={12} />
                   </span>

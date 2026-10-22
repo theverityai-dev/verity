@@ -171,11 +171,11 @@ async function StyleDetailPage({ params }: { params: Promise<{ id: string }> }) 
       />
 
       <StatRow cols={4} className="mb-6">
-        <div className="flex flex-col px-5 py-4">
+        <div className="flex flex-col">
           <span className="flex h-[26px] items-center text-[15px]">
             <StateBadge category={detail.active ? "Active" : "Cancelled"} label={detail.active ? "active" : "archived"} />
           </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">State</span>
+          <span className="micro mt-2">State</span>
         </div>
         <Stat label="Variants" value={detail.variants} hint={`${detail.combinations} possible now`} />
         <Stat label="To generate" value={detail.missing} hint={detail.missing === 0 ? "Every combination exists" : "Offered, no variant yet"} />

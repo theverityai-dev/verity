@@ -196,17 +196,17 @@ async function OutreachLeadDetailPage({
       />
 
       <StatRow className="mb-6">
-        <div className="flex flex-col px-5 py-4">
+        <div className="flex flex-col">
           <span className="flex h-[26px] items-center text-[15px]">
             <StateBadge category={data.category} label={lead.state.replace(/_/g, " ")} />
           </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">Stage</span>
+          <span className="micro mt-2">Stage</span>
         </div>
-        <div className="flex flex-col px-5 py-4">
+        <div className="flex flex-col">
           <span className="flex h-[26px] items-center text-[15px]">
             <HealthBadge health={health} />
           </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">Health</span>
+          <span className="micro mt-2">Health</span>
         </div>
         <Stat label="Team" value={data.teamName} />
         <Stat

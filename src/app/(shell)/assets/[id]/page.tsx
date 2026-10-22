@@ -116,15 +116,15 @@ async function AssetDetailPage({ params }: { params: Promise<{ id: string }> }) 
         {/* State is a category, not a count, so it does not use `Stat` — but it
             sits on the same rhythm as the figures beside it: value first, label
             beneath. */}
-        <div className="flex flex-col px-5 py-4">
+        <div className="flex flex-col">
           <span className="flex h-[26px] items-center text-[15px]">
             <StateBadge category={data.category} label={data.asset.state} />
           </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">State</span>
+          <span className="micro mt-2">State</span>
         </div>
-        <Stat label="Bookings" value={data.bookings.length} />
-        <Stat label="Evidence" value={data.evidence.length} />
-        <Stat label="Version" value={data.asset.version} hint="Optimistic concurrency" />
+        <Stat kind="schedule" label="Bookings" value={data.bookings.length} />
+        <Stat kind="evidence" label="Evidence" value={data.evidence.length} />
+        <Stat kind="platform" label="Version" value={data.asset.version} hint="Optimistic concurrency" />
       </StatRow>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.35fr_1fr]">

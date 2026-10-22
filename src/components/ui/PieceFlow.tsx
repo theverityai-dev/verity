@@ -176,7 +176,7 @@ export function FloorBoard({ lanes, label, empty }: { lanes: readonly FloorLane[
             <div className="flex items-start gap-2 px-1 pb-2.5 pt-1">
               <span
                 aria-hidden="true"
-                className="tabular mt-px grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold"
+                className="tabular mt-px grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-medium"
                 style={lane.done ? { backgroundColor: "var(--color-state-completed)", color: "#fff" } : { backgroundColor: "var(--color-control-strong)", color: "var(--color-text-secondary)" }}
               >
                 {lane.done ? <Icon name="check" size={13} /> : i + 1}

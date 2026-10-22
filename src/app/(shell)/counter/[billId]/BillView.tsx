@@ -174,7 +174,7 @@ export function BillView({ bill }: { bill: BillDetail }) {
                 {bill.seller.fssai && <p className="m-0">FSSAI {bill.seller.fssai}</p>}
               </div>
             )}
-            <h2 className="m-0 text-[18px]">{bill.label}</h2>
+            <h2 className="m-0 text-[17px]">{bill.label}</h2>
             <p className="mb-0 mt-1 text-[12px] text-text-tertiary">
               {bill.number
                 ? `${bill.taxFree ? "Invoice" : "Tax invoice"} ${bill.number} · ${new Date(bill.raisedAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`

@@ -72,9 +72,9 @@ async function EvidencePage() {
       />
 
       <StatRow className="mb-6">
-        <Stat label="Captures" value={rows.length} />
-        <Stat label="Inside fence" value={rows.filter((r) => r.fence === "Inside").length} />
-        <Stat label="Outside fence" value={rows.filter((r) => r.fence === "Outside").length} />
+        <Stat kind="evidence" label="Captures" value={rows.length} />
+        <Stat icon="check" state="completed" label="Inside fence" value={rows.filter((r) => r.fence === "Inside").length} />
+        <Stat icon="flag" state="pending" label="Outside fence" value={rows.filter((r) => r.fence === "Outside").length} />
         <Stat
           label="Not evaluated"
           value={rows.filter((r) => r.fence === "Not evaluated").length}

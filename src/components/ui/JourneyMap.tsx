@@ -46,7 +46,7 @@ function NumberDisc({ n, status, selected }: { n: number; status?: JourneyStatus
       ? { backgroundColor: "var(--color-accent)", color: "var(--color-accent-on)" }
       : { backgroundColor: "var(--color-accent-subtle)", color: "var(--color-accent-ink)" };
   return (
-    <span aria-hidden="true" className="tabular grid size-7 shrink-0 place-items-center rounded-full text-[14px] font-bold" style={style}>
+    <span aria-hidden="true" className="tabular grid size-7 shrink-0 place-items-center rounded-full text-[14px] font-medium" style={style}>
       {status === "done" ? <Icon name="check" size={15} /> : n}
     </span>
   );

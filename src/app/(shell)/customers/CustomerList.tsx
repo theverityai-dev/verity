@@ -233,8 +233,8 @@ export function CustomerList({ customers, canCreate = false, canEdit = false, ca
         flush
         title="All customers"
         action={
-          <div className="flex items-center gap-2">
-            <div className="w-56">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 max-sm:w-full">
+            <div className="w-56 max-sm:min-w-0 max-sm:flex-1">
               <Input
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}

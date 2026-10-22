@@ -411,7 +411,7 @@ export function OrderPad({ order, menu }: { order: OrderDetail; menu: MenuCatego
 
             <div className="mt-4 flex items-baseline justify-between border-t border-line pt-3">
               <span className="text-[15px] text-text-secondary">Subtotal</span>
-              <span className="tabular text-[22px] font-bold text-text">{rupees(order.subtotalMinor)}</span>
+              <span className="figure text-[22px] text-text">{rupees(order.subtotalMinor)}</span>
             </div>
             <p className="mb-0 mt-1 text-[13px] text-text-tertiary">Taxes are added when the counter raises the bill.</p>
 

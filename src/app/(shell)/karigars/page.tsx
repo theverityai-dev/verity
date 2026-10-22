@@ -68,7 +68,7 @@ async function KarigarsPage({ searchParams }: { searchParams: Promise<{ show?: s
                     </div>
                     {canMoney && (
                       <div className="shrink-0 text-right">
-                        <p className="tabular m-0 text-[19px] font-bold leading-[24px] tracking-[-0.02em]" style={{ color: w.balanceMinor > 0 ? "var(--color-state-pending)" : undefined }}>{rupees(w.balanceMinor)}</p>
+                        <p className="tabular m-0 text-[20px] font-medium leading-[24px] tracking-[-0.02em]" style={{ color: w.balanceMinor > 0 ? "var(--color-state-pending)" : undefined }}>{rupees(w.balanceMinor)}</p>
                         <p className="m-0 text-[12px] leading-[16px] text-text-tertiary">owed</p>
                       </div>
                     )}

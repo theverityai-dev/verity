@@ -18,7 +18,7 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
         height: size,
         fontSize: Math.round(size * 0.4),
         backgroundColor: `var(--color-hue-${hue}-fill)`,
-        color: `var(--color-hue-${hue}-ink)`,
+        color: `var(--color-hue-${hue}-on)`,
       }}
     >
       {initials(name)}

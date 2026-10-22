@@ -113,7 +113,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
                 onClick={() => setChip(isActive ? {} : chip.patch)}
                 aria-pressed={isActive}
                 className={
-                  "rounded-pill border px-3 py-1 text-[12.5px] font-medium transition-colors " +
+                  "rounded-pill border px-3 py-1 text-[13px] font-medium transition-colors " +
                   (isActive
                     ? "border-transparent bg-accent-subtle text-accent-ink"
                     : "border-line text-text-secondary hover:bg-surface-sunken hover:text-text")
@@ -133,7 +133,7 @@ export function ProspectFilters({ options, viewerId }: { options: ProspectFilter
               aria-checked={view === v}
               onClick={() => setView(v)}
               className={
-                "rounded-full px-3 py-1 text-[12.5px] font-medium capitalize transition-colors " +
+                "rounded-full px-3 py-1 text-[13px] font-medium capitalize transition-colors " +
                 (view === v ? "bg-accent-subtle text-accent-ink" : "text-text-secondary hover:text-text")
               }
             >

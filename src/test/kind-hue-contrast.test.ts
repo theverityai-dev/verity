@@ -49,10 +49,10 @@ describe("kind hues (ADR-046 §3)", () => {
     }
   });
 
-  it("clears 4.5:1 for ink on its own fill, in both themes", () => {
+  it("clears 4.5:1 for the glyph on its own fill, in both themes", () => {
     const failures = KIND_HUES.flatMap((hue) => {
       const fill = token(`color-hue-${hue}-fill`);
-      const ink = token(`color-hue-${hue}-ink`);
+      const ink = token(`color-hue-${hue}-on`);
       return [
         ...(contrastRatio(ink.light, fill.light) < 4.5 ? [`${hue} light ${contrastRatio(ink.light, fill.light).toFixed(2)}`] : []),
         ...(contrastRatio(ink.dark, fill.dark) < 4.5 ? [`${hue} dark ${contrastRatio(ink.dark, fill.dark).toFixed(2)}`] : []),
@@ -95,13 +95,27 @@ describe("kind hues (ADR-046 §3)", () => {
 describe("state pill tokens (ADR-046 §5)", () => {
   const categories = ["draft", "pending", "active", "blocked", "completed", "cancelled"];
 
-  it("clears 4.5:1 for pill ink on its own fill, in both themes", () => {
+  it("clears 4.5:1 for the pill word on its own fill, in both themes", () => {
     const failures = categories.flatMap((c) => {
       const fill = token(`color-state-${c}-fill`);
-      const ink = token(`color-state-${c}-ink`);
+      const ink = token(`color-state-${c}-on`);
       return [
         ...(contrastRatio(ink.light, fill.light) < 4.5 ? [`${c} light ${contrastRatio(ink.light, fill.light).toFixed(2)}`] : []),
         ...(contrastRatio(ink.dark, fill.dark) < 4.5 ? [`${c} dark ${contrastRatio(ink.dark, fill.dark).toFixed(2)}`] : []),
+      ];
+    });
+    expect(failures).toEqual([]);
+  });
+});
+
+describe("state ink as plain text", () => {
+  it("clears 4.5:1 as text on the light canvas and on white, and on the dark surface", () => {
+    const failures = ["draft", "pending", "active", "blocked", "completed", "cancelled"].flatMap((c) => {
+      const ink = token(`color-state-${c}-ink`);
+      return [
+        ...(contrastRatio(ink.light, "#e9edf6") < 4.5 ? [`${c} on light canvas`] : []),
+        ...(contrastRatio(ink.light, "#ffffff") < 4.5 ? [`${c} on white`] : []),
+        ...(contrastRatio(ink.dark, "#1c1c1e") < 4.5 ? [`${c} on dark surface`] : []),
       ];
     });
     expect(failures).toEqual([]);

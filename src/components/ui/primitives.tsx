@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from "react";
+import { Children, isValidElement, type ComponentProps, type CSSProperties, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
 import Link from "next/link";
 import { VeritySymbol } from "@/components/brand/VerityMark";
 import { RequestAccessButton } from "./RequestAccessButton";
@@ -93,7 +93,8 @@ export function Panel({
       {title && (
         <div
           className={cx(
-            "flex items-center justify-between gap-4 px-5 pt-4",
+            // flex-wrap: a wide action (a filter plus a button) drops under the title on a phone instead of pushing the card wider than the screen.
+            "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 pt-4",
             flush ? "pb-3" : "pb-1",
           )}
         >
@@ -192,11 +193,20 @@ export function Stat({
   hint,
   href,
   tone = "default",
+  // kind, icon and state only matter inside a StatRow, which draws each Stat as a StatTile.
+  kind: _kind,
+  icon: _icon,
+  state: _state,
 }: {
   label: string;
   value: number | string;
   hint?: string;
   href?: string;
+  /** ADR-046 kind (hue and glyph from `domains.ts`) for the tile's disc when this Stat sits in a StatRow. */
+  kind?: string;
+  icon?: IconName;
+  /** A disc that counts one state takes that state's colours. Wins over `kind`. */
+  state?: StateTone;
   /** Colours the figure when the number itself is a problem (late, negative). Semantic colours only, never the tint. */
   tone?: "default" | "danger" | "warning";
 }) {
@@ -242,12 +252,11 @@ export function Stat({
 }
 
 /**
- * A band of stats inside ONE card, the way the board groups them.
- *
- * Four separate bordered cards for four numbers is four frames around nothing;
- * the board draws one card with the figures ranged across it. Hairlines run
- * between the columns on desktop only — on a phone they stack, and a vertical
- * rule between stacked blocks points the wrong way.
+ * A row of headline figures. Every `Stat` child is drawn as a `StatTile` (one glass card each, a disc, a label, a
+ * `figure` numeral), so a record page, a list page and a dashboard open with the same card (Task 127, 2026-10-23: the
+ * flat one-card band this used to draw sat beside tile rows on neighbouring screens). Callers are unchanged;
+ * pass `kind`, `icon` or `state` on a `Stat` to give its tile a disc, and `tone` danger or warning becomes the
+ * blocked or pending state. Any other child is rendered as is.
  */
 export function StatRow({
   cols = 4,
@@ -259,16 +268,31 @@ export function StatRow({
   children: ReactNode;
 }) {
   return (
-    <Surface
+    <div
       className={cx(
-        "grid grid-cols-2 divide-line [&>*]:min-w-0",
-        cols === 2 ? "sm:grid-cols-2" : cols === 3 ? "sm:grid-cols-3" : "sm:grid-cols-4",
-        "sm:divide-x",
+        "grid grid-cols-2 gap-3 sm:gap-4 [&>*]:min-w-0",
+        cols === 2 ? "md:grid-cols-2" : cols === 3 ? "md:grid-cols-3" : "md:grid-cols-4",
         className,
       )}
     >
-      {children}
-    </Surface>
+      {Children.map(children, (child) => {
+        if (!isValidElement<ComponentProps<typeof Stat>>(child)) return child;
+        // A cell the page wrote by hand (a state pill, a person) gets the same card the figures have.
+        if (child.type !== Stat) return <Surface className="flex flex-col justify-center p-5 max-sm:p-3.5">{child}</Surface>;
+        const { label, value, hint, href, tone, kind, icon, state } = child.props;
+        return (
+          <StatTile
+            label={label}
+            value={value}
+            hint={hint}
+            href={href}
+            kind={kind}
+            icon={icon}
+            state={state ?? (tone === "danger" ? "blocked" : tone === "warning" ? "pending" : undefined)}
+          />
+        );
+      })}
+    </div>
   );
 }
 
@@ -287,6 +311,18 @@ export function StatRow({
  * strip). This is for 3+ independent, page-level headline metrics — the
  * "Total Customers / Active Projects / Revenue" row a dashboard opens with.
  */
+/**
+ * The hero figure steps down with the length of what it shows, so "₹88,69,250" fits a four-up tile instead of running 39px past it
+ * (found by the demo walk, Task 129 C2). Short values keep the full 52px (34px on a phone); each extra character costs a little
+ * size, down to a floor. Plain arithmetic on the string length: no measuring, so server and browser render the same.
+ */
+export function figureSize(value: string | number): CSSProperties {
+  const length = String(value).length;
+  const desktop = length <= 6 ? 52 : Math.max(24, 52 - (length - 6) * 3.5);
+  const phone = length <= 5 ? 34 : Math.max(22, 34 - (length - 5) * 1.6);
+  return { "--fig": `${desktop}px`, "--fig-sm": `${phone}px` } as CSSProperties;
+}
+
 export function StatTile({
   icon,
   kind,
@@ -324,14 +360,19 @@ export function StatTile({
   // unclassified tile now takes neutral slate rather than the accent.
   const body = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <IconDisc icon={icon} kind={kind} hue={hue ?? (kind || state ? undefined : "slate")} state={state} size="lg" />
+      <div className="flex items-start justify-between gap-2 empty:hidden">
+        {(icon || kind || hue || state) && <IconDisc icon={icon} kind={kind} hue={hue} state={state} size="lg" />}
         {menu}
         {viz && !menu && <div className="min-w-0 shrink">{viz}</div>}
       </div>
       <div>
         <p className="micro m-0">{label}</p>
-        <p className="figure m-0 mt-2 text-[52px] text-text max-sm:text-[34px]">{value}</p>
+        <p
+          className="figure m-0 mt-2 text-[length:var(--fig)] text-text max-sm:text-[length:var(--fig-sm)]"
+          style={figureSize(value)}
+        >
+          {value}
+        </p>
         {hint && <p className="m-0 mt-1 text-[13px] text-text-tertiary max-sm:text-[12px]">{hint}</p>}
       </div>
       {delta && (
@@ -847,11 +888,12 @@ export function StateBadge({ category, label }: { category: string; label?: stri
       )}
       style={
         known
-          ? { backgroundColor: `var(--color-state-${key}-fill)`, color: `var(--color-state-${key}-ink)` }
+          ? { backgroundColor: `var(--color-state-${key}-fill)`, color: `var(--color-state-${key}-on)` }
           : undefined
       }
     >
-      <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", preset.color)} />
+      {/* On a solid fill the dot takes the word's colour; the state colour itself is the fill. */}
+      <span aria-hidden="true" className={cx("size-2 shrink-0 rounded-full", known ? "bg-current" : preset.color)} />
       {/* The tenant's own label when there is one, the category otherwise. */}
       {label ?? preset.label}
     </span>

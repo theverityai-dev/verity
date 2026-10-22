@@ -61,7 +61,7 @@ function Detail({ label, value, mono }: { label: string; value: string; mono?: b
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-[12px] text-text-tertiary">{label}</dt>
-      <dd className={"m-0 break-words text-text " + (mono ? "font-mono text-[12.5px]" : "")}>
+      <dd className={"m-0 break-words text-text " + (mono ? "font-mono text-[13px]" : "")}>
         {value}
       </dd>
     </div>

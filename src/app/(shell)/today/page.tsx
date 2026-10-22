@@ -68,10 +68,10 @@ async function TodayPage({ searchParams }: { searchParams: Promise<{ outlet?: st
 
       {t.sales && (
         <StatRow cols={4} className="mb-6">
-          <Stat label="Sales so far" value={rupees(t.sales.grossMinor)} hint={`${t.sales.bills} bill${t.sales.bills === 1 ? "" : "s"}`} href="/sales-reports" />
-          <Stat label="Average bill" value={rupees(t.sales.avgBillMinor)} />
-          <Stat label="Covers" value={t.sales.covers} hint={t.sales.covers ? `${rupees(t.sales.avgPerCoverMinor)} each` : undefined} />
-          <Stat label="Order to served" value={t.sales.avgTicketMinutes === null ? "—" : `${t.sales.avgTicketMinutes} min`} hint="Average today" />
+          <Stat kind="sales" label="Sales so far" value={rupees(t.sales.grossMinor)} hint={`${t.sales.bills} bill${t.sales.bills === 1 ? "" : "s"}`} href="/sales-reports" />
+          <Stat kind="money" label="Average bill" value={rupees(t.sales.avgBillMinor)} />
+          <Stat kind="party" label="Covers" value={t.sales.covers} hint={t.sales.covers ? `${rupees(t.sales.avgPerCoverMinor)} each` : undefined} />
+          <Stat kind="schedule" label="Order to served" value={t.sales.avgTicketMinutes === null ? "—" : `${t.sales.avgTicketMinutes} min`} hint="Average today" />
         </StatRow>
       )}
 

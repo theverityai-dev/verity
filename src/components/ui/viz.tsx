@@ -21,7 +21,6 @@ import {
 
 const stateVar = (tone: StateTone) => `var(--color-state-${tone})`;
 const hueInk = (hue: KindHue) => `var(--color-hue-${hue}-ink)`;
-const hueFill = (hue: KindHue) => `var(--color-hue-${hue}-fill)`;
 
 /* ---------------------------------- ring ---------------------------------- */
 
@@ -184,7 +183,7 @@ export function Sparkline({
   const last = pts[pts.length - 1]!;
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label}: ${values.join(", ")}`}>
-      {area && <path d={areaPath(pts, height)} fill={hueFill(hue)} />}
+      {area && <path d={areaPath(pts, height)} fill={hueInk(hue)} fillOpacity={0.16} />}
       <path d={linePath(pts)} fill="none" stroke={hueInk(hue)} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={last[0]} cy={last[1]} r={2.25} fill={hueInk(hue)} />
     </svg>
@@ -270,7 +269,7 @@ export function Gauge({
         <path d={track} fill="none" stroke="var(--color-control-strong)" strokeWidth={stroke} strokeLinecap="round" />
         {arc && <path d={arc} fill="none" stroke={stateVar(tone)} strokeWidth={stroke} strokeLinecap="round" />}
       </svg>
-      <span aria-hidden="true" className="tabular -mt-6 text-[17px] font-bold text-text">
+      <span aria-hidden="true" className="tabular -mt-6 text-[17px] font-medium text-text">
         {text}
       </span>
     </span>

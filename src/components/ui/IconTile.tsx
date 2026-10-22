@@ -42,11 +42,11 @@ export type IconTileProps = {
 /** Fill and ink `var()`s for a tile. Exported for components that draw their own shape (charts, avatars). */
 export function tileColours({ kind, hue, state }: Pick<IconTileProps, "kind" | "hue" | "state">) {
   if (state && (STATE_TONES as readonly string[]).includes(state)) {
-    return { fill: `var(--color-state-${state}-fill)`, ink: `var(--color-state-${state}-ink)` };
+    return { fill: `var(--color-state-${state}-fill)`, ink: `var(--color-state-${state}-on)` };
   }
   const tone = hue ?? (kind ? kindPresentation(kind).hue : undefined) ?? "slate";
   const safe = (KIND_HUES as readonly string[]).includes(tone) ? tone : "slate";
-  return { fill: `var(--color-hue-${safe}-fill)`, ink: `var(--color-hue-${safe}-ink)` };
+  return { fill: `var(--color-hue-${safe}-fill)`, ink: `var(--color-hue-${safe}-on)` };
 }
 
 function Tile({ shape, kind, icon, hue, state, size = "md", className }: IconTileProps & { shape: Shape }) {

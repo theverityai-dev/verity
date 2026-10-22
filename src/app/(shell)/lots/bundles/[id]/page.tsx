@@ -68,7 +68,7 @@ async function BundlePage({ params }: { params: Promise<{ id: string }> }) {
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                   <span
                     aria-hidden="true"
-                    className="tabular grid size-8 shrink-0 place-items-center rounded-full text-[14px] font-bold"
+                    className="tabular grid size-8 shrink-0 place-items-center rounded-full text-[14px] font-medium"
                     style={state === "done" ? { backgroundColor: "var(--color-state-completed)", color: "#fff" } : state === "active" ? { backgroundColor: "var(--color-state-active)", color: "#fff" } : { backgroundColor: "var(--color-control-strong)", color: "var(--color-text-secondary)" }}
                   >
                     {state === "done" ? <Icon name="check" size={16} /> : n + 1}

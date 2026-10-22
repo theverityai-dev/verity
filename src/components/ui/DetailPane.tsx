@@ -59,7 +59,7 @@ export function DetailPane({
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-[var(--color-control-strong)] lg:hidden" aria-hidden="true" />
         <div className="flex items-start gap-2 px-4 pb-3 pt-3">
           <div className="min-w-0 flex-1">
-            <h2 className="m-0 flex items-center gap-2 text-[20px] font-bold leading-[25px] text-text">
+            <h2 className="m-0 flex items-center gap-2 text-[20px] font-medium leading-[25px] text-text">
               <span className="min-w-0 break-words">{title}</span>
               {openHref && (
                 <Link href={openHref} aria-label={`Open ${title}`} className="grid size-8 shrink-0 place-items-center rounded-full text-accent-ink hover:bg-[var(--color-control)]">

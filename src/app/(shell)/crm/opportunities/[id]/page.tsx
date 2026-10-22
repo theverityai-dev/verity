@@ -97,7 +97,7 @@ async function OpportunityPage({ params }: { params: Promise<{ id: string }> }) 
       )}
 
       {category === "Cancelled" && lostReason && (
-        <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-blocked-fill)] px-4 py-3 text-[15px] text-[var(--color-state-blocked-ink)]">
+        <p className="mb-4 mt-0 rounded-[12px] bg-[var(--color-state-blocked-fill)] px-4 py-3 text-[15px] text-[var(--color-state-blocked-on)]">
           <strong>Lost: {lostReason}.</strong> {typeof opp.lostNote === "string" ? opp.lostNote : ""}
         </p>
       )}

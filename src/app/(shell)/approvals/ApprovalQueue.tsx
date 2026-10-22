@@ -114,7 +114,7 @@ export function ApprovalQueue({
                             : "text-text-secondary")
                       }
                     >
-                      <span aria-hidden="true" className="text-[10px] leading-none">
+                      <span aria-hidden="true" className="text-[11px] leading-none">
                         {settled ? "●" : current ? "◉" : "○"}
                       </span>
                       {step.role}

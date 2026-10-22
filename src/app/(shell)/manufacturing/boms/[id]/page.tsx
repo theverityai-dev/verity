@@ -44,15 +44,15 @@ async function BomDetailPage({ params }: { params: Promise<{ id: string }> }) {
       />
 
       <StatRow cols={4} className="mb-6">
-        <div className="flex flex-col px-5 py-4">
+        <div className="flex flex-col">
           <span className="flex h-[26px] items-center text-[15px]">
             <StateBadge category={bom.active ? "Active" : "Cancelled"} label={bom.active ? "active" : "archived"} />
           </span>
-          <span className="mt-2 text-[12px] leading-[1.3] text-text-tertiary">State</span>
+          <span className="micro mt-2">State</span>
         </div>
-        <Stat label="Components" value={bom.lines.length} />
-        <Stat label="Orders made" value={bom._count.orders} />
-        <Stat label="Version" value={bom.version} hint="Optimistic concurrency" />
+        <Stat kind="stock" label="Components" value={bom.lines.length} />
+        <Stat kind="production" label="Orders made" value={bom._count.orders} />
+        <Stat kind="platform" label="Version" value={bom.version} hint="Optimistic concurrency" />
       </StatRow>
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.35fr_1fr]">

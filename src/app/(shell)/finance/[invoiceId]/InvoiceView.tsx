@@ -117,7 +117,7 @@ export function InvoiceView({
             )}
           </div>
           <div className="text-right">
-            <p className="tabular m-0 text-[18px] text-text">{invoice.invoiceNumber}</p>
+            <p className="tabular m-0 text-[17px] text-text">{invoice.invoiceNumber}</p>
             <p className="mb-0 mt-1 text-[13px] text-text-secondary">
               {longDate(invoice.issuedAt)}
             </p>
@@ -212,7 +212,7 @@ export function InvoiceView({
             )}
             <div className="mt-2 flex items-baseline justify-between border-t border-line pt-3">
               <dt className="m-0 text-[14px] text-text">Total</dt>
-              <dd className="tabular m-0 text-[18px] text-text">{rupees(invoice.totalPaise)}</dd>
+              <dd className="tabular m-0 text-[17px] text-text">{rupees(invoice.totalPaise)}</dd>
             </div>
             {invoice.paidPaise > 0 && (
               <>

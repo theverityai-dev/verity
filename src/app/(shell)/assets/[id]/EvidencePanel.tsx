@@ -76,7 +76,7 @@ export function EvidencePanel({
                     {item.capturedAt.replace("T", " ").slice(0, 16)}
                   </time>
                 </div>
-                <p className="m-0 mt-1 text-[12.5px] leading-relaxed text-text-secondary">
+                <p className="m-0 mt-1 text-[13px] leading-relaxed text-text-secondary">
                   {item.withinFence === null
                     ? "No geofence evaluated at capture"
                     : item.withinFence

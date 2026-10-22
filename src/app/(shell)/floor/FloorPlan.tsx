@@ -99,7 +99,7 @@ function TableTile({
     >
       <span className="flex items-start justify-between gap-2">
         <span className="min-w-0">
-          <span className="block truncate text-[20px] font-bold leading-6 text-text">{table.label}</span>
+          <span className="block truncate text-[20px] font-medium leading-6 text-text">{table.label}</span>
           <span className="block text-[13px] text-text-secondary">{table.seats} seats</span>
         </span>
         {seated ? (

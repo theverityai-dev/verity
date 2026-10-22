@@ -100,7 +100,7 @@ export function Donut({
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="tabular text-[30px] font-extralight leading-none tracking-[-0.045em] text-text">
+          <span className="figure text-[30px] text-text">
             {centreValue}
           </span>
           <span className="mt-1.5 text-[13px] text-text-tertiary">{centreLabel}</span>
@@ -115,7 +115,7 @@ export function Legend({ segments }: { segments: Segment[] }) {
   return (
     <ul className="m-0 flex list-none flex-col gap-3 p-0">
       {segments.map((s) => (
-        <li key={s.label} className="flex items-center gap-2.5 text-[13.5px]">
+        <li key={s.label} className="flex items-center gap-2.5 text-[13px]">
           <span
             aria-hidden="true"
             className="size-2 shrink-0 rounded-full"
@@ -181,13 +181,13 @@ export function StairFigure({
     <div className="flex min-w-0 flex-col">
       <span
         className={
-          "tabular text-[22px] font-normal leading-none tracking-[-0.02em] " +
+          "figure text-[22px] " +
           (accent ? "text-accent-ink" : "text-text")
         }
       >
         {value}
       </span>
-      <span className="mt-1.5 truncate text-[12.5px] text-text-tertiary">{label}</span>
+      <span className="mt-1.5 truncate text-[13px] text-text-tertiary">{label}</span>
     </div>
   );
 }
@@ -218,13 +218,13 @@ export function FeatureCard({
 
   return (
     <div className="glass-card flex h-full flex-col justify-end rounded-[12px] p-5">
-      <span className="mb-auto inline-flex w-fit items-center gap-2 rounded-pill bg-surface-sunken px-3 py-1.5 text-[12.5px] text-text-secondary">
+      <span className="mb-auto inline-flex w-fit items-center gap-2 rounded-pill bg-surface-sunken px-3 py-1.5 text-[13px] text-text-secondary">
         <span aria-hidden="true" className={"size-[7px] shrink-0 rounded-full " + dot} />
         {pill}
       </span>
       <div className="mt-8 flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <p className="m-0 truncate text-[19px] leading-tight text-text">{title}</p>
+          <p className="m-0 truncate text-[20px] leading-tight text-text">{title}</p>
           <p className="m-0 mt-1.5 truncate text-[13px] text-text-tertiary">{meta}</p>
         </div>
         {action}
