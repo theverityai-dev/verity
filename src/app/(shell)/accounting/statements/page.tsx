@@ -68,8 +68,8 @@ async function StatementsPage({ searchParams }: { searchParams: Promise<{ from?:
       />
 
       <p role="note" className="mb-6 mt-0 rounded-[12px] bg-warning-subtle px-4 py-3 text-[15px] leading-[22px]">
-        These figures cover journal entries, sales invoices and payments received from customers, once an account is chosen for each
-        in Posting setup. Credit notes, purchase bills, supplier payments and job invoices are not posted yet, so they are not here.
+        These figures cover journal entries, sales invoices, job invoices and the payments received on both, once an account is chosen for
+        each in Posting setup. Credit notes, purchase bills and supplier payments are not posted yet, so they are not here.
       </p>
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3">

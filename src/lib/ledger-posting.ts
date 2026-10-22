@@ -22,13 +22,21 @@ export const ROLE_LABELS: Record<AccountRole, string> = {
 export const KIND_ROLES = {
   "trading.sales_invoice": ["receivable", "sales_income", "gst_output"],
   "trading.customer_receipt": ["receivable", "cash", "bank"],
+  // Jobs (the project capability) bill in minor units with one tax figure; both post like the trading equivalents.
+  "project.invoice": ["receivable", "sales_income", "gst_output"],
+  "project.receipt": ["receivable", "cash", "bank"],
 } as const satisfies Record<string, readonly AccountRole[]>;
 export type SourceKind = keyof typeof KIND_ROLES;
 
 export const KIND_LABELS: Record<SourceKind, string> = {
   "trading.sales_invoice": "Sales invoices",
   "trading.customer_receipt": "Payments received from customers",
+  "project.invoice": "Job invoices",
+  "project.receipt": "Payments received on jobs",
 };
+
+/** A void posts its own entry under this kind, reversing the original; it needs no account of its own. */
+export const VOID_KIND = { "project.invoice": "project.invoice_void", "project.receipt": "project.receipt_void" } as const;
 
 export type AccountMapping = Partial<Record<AccountRole, string>>;
 export type PostingLine = { accountId: string; debitMinor: number; creditMinor: number };
@@ -88,6 +96,26 @@ export function customerReceiptLines(doc: ReceiptFigures, mapping: AccountMappin
       { accountId: mapping.receivable!, debitMinor: 0, creditMinor: doc.amountPaise },
     ],
   };
+}
+
+/** A job invoice: the amount is before tax and the tax is one figure, so total = amount + tax. */
+export function jobInvoiceLines(doc: { number: string; amountMinor: number; taxMinor: number }, mapping: AccountMapping): PostingResult {
+  const result = salesInvoiceLines(
+    { invoiceNumber: doc.number, taxablePaise: doc.amountMinor, cgstPaise: doc.taxMinor, sgstPaise: 0, igstPaise: 0, totalPaise: doc.amountMinor + doc.taxMinor },
+    mapping,
+  );
+  return result.ok ? { ...result, memo: `Job invoice ${doc.number}` } : result;
+}
+
+/** Money received on a job: bank, cheque, UPI and "other" land in the bank account, cash in the cash account. */
+export function jobReceiptLines(doc: { method: string; amountMinor: number; reference: string | null }, mapping: AccountMapping): PostingResult {
+  const result = customerReceiptLines({ reference: doc.reference, method: doc.method, amountPaise: doc.amountMinor }, mapping);
+  return result.ok ? { ...result, memo: `Payment received on a job (${doc.method})${doc.reference ? ` ${doc.reference}` : ""}` } : result;
+}
+
+/** The lines of a reversal: every debit becomes the same credit and back. */
+export function reverseLines(lines: PostingLine[]): PostingLine[] {
+  return lines.map((line) => ({ accountId: line.accountId, debitMinor: line.creditMinor, creditMinor: line.debitMinor }));
 }
 
 /** The same balance rule `postJournalEntry` applies, so a consumer can never write an entry the command would refuse. */

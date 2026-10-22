@@ -7,8 +7,12 @@ import {
   ACCOUNT_ROLES,
   KIND_LABELS,
   KIND_ROLES,
+  VOID_KIND,
   customerReceiptLines,
   isBalanced,
+  jobInvoiceLines,
+  jobReceiptLines,
+  reverseLines,
   salesInvoiceLines,
   type AccountMapping,
   type AccountRole,
@@ -33,6 +37,7 @@ import {
  */
 
 export const TRADING_CAPABILITY_ID = "verity.capability.trading";
+export const PROJECT_CAPABILITY_ID = "verity.capability.project";
 const ENTITY_ACCOUNT = "verity.accounting.account";
 const ENTITY_JOURNAL_ENTRY = "verity.accounting.journal_entry";
 const BATCH = 200;
@@ -104,6 +109,76 @@ async function unpostedReceipts(tx: TenantScopedClient, take = BATCH): Promise<R
     LIMIT ${take}`;
 }
 
+type JobInvoiceRow = { id: string; number: string; amount_minor: number; tax_minor: number; issued_on: Date; created_by_id: string | null };
+type JobReceiptRow = { id: string; method: string; amount_minor: number; reference: string | null; received_on: Date; created_by_id: string | null };
+
+async function unpostedJobInvoices(tx: TenantScopedClient, take = BATCH): Promise<JobInvoiceRow[]> {
+  // A voided invoice that never posted is never posted: it is a mistake that was cancelled, not a sale.
+  return tx.$queryRaw<JobInvoiceRow[]>`
+    SELECT i.id, i.number, i.amount_minor, i.tax_minor, i.issued_on, i.created_by_id
+    FROM project_invoice i
+    WHERE i.voided_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.tenant_id = i.tenant_id AND j.source_kind = 'project.invoice' AND j.source_id = i.id)
+    ORDER BY i.issued_on ASC, i.id ASC
+    LIMIT ${take}`;
+}
+
+async function unpostedJobReceipts(tx: TenantScopedClient, take = BATCH): Promise<JobReceiptRow[]> {
+  return tx.$queryRaw<JobReceiptRow[]>`
+    SELECT r.id, r.method, r.amount_minor, r.reference, r.received_on, r.created_by_id
+    FROM project_receipt r
+    WHERE r.voided_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.tenant_id = r.tenant_id AND j.source_kind = 'project.receipt' AND j.source_id = r.id)
+    ORDER BY r.received_on ASC, r.id ASC
+    LIMIT ${take}`;
+}
+
+type VoidedRow = { entry_id: string; source_id: string; voided_at: Date; memo: string | null; posted_by_id: string; actor: string | null };
+
+/**
+ * Reverses the entry of every job invoice or receipt that was voided after it posted (ADR-044 clause 5): a new entry with every
+ * line swapped, linked by reversal_of_id, never an edit. Needs no account mapping, because it undoes exactly what was posted.
+ */
+async function reverseVoided(tx: TenantScopedClient, tenantId: string, kind: "project.invoice" | "project.receipt", run: PostRun): Promise<void> {
+  const voidKind = VOID_KIND[kind];
+  const rows =
+    kind === "project.invoice"
+      ? await tx.$queryRaw<VoidedRow[]>`
+          SELECT j.id AS entry_id, j.source_id, d.voided_at, j.memo, j.posted_by_id,
+                 (SELECT e.actor_user_id FROM domain_event e WHERE e.entity_id = d.id AND e.name = 'verity.project.invoice_voided' ORDER BY e.occurred_at DESC LIMIT 1) AS actor
+            FROM journal_entry j JOIN project_invoice d ON d.id = j.source_id AND d.tenant_id = j.tenant_id
+           WHERE j.source_kind = ${kind} AND d.voided_at IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM journal_entry v WHERE v.tenant_id = j.tenant_id AND v.source_kind = ${voidKind} AND v.source_id = j.source_id)
+           ORDER BY d.voided_at ASC LIMIT ${BATCH}`
+      : await tx.$queryRaw<VoidedRow[]>`
+          SELECT j.id AS entry_id, j.source_id, d.voided_at, j.memo, j.posted_by_id,
+                 (SELECT e.actor_user_id FROM domain_event e WHERE e.entity_id = d.id AND e.name = 'verity.project.receipt_voided' ORDER BY e.occurred_at DESC LIMIT 1) AS actor
+            FROM journal_entry j JOIN project_receipt d ON d.id = j.source_id AND d.tenant_id = j.tenant_id
+           WHERE j.source_kind = ${kind} AND d.voided_at IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM journal_entry v WHERE v.tenant_id = j.tenant_id AND v.source_kind = ${voidKind} AND v.source_id = j.source_id)
+           ORDER BY d.voided_at ASC LIMIT ${BATCH}`;
+  for (const row of rows) {
+    const original = await tx.journalLine.findMany({ where: { journalEntryId: row.entry_id } });
+    const lines = reverseLines(original.map((l) => ({ accountId: l.accountId, debitMinor: l.debitMinor, creditMinor: l.creditMinor })));
+    const memo = `Reversal of: ${row.memo ?? kind}`;
+    const by = row.actor ?? row.posted_by_id;
+    const inserted = await tx.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO journal_entry (id, tenant_id, memo, posted_at, posted_by_id, reversal_of_id, source_kind, source_id)
+      VALUES (gen_random_uuid(), ${tenantId}::uuid, ${memo}, ${row.voided_at}, ${by}::uuid, ${row.entry_id}::uuid, ${voidKind}, ${row.source_id}::uuid)
+      ON CONFLICT (tenant_id, source_kind, source_id) DO NOTHING
+      RETURNING id`;
+    const entryId = inserted[0]?.id;
+    if (!entryId) {
+      run.alreadyPosted += 1;
+      continue;
+    }
+    await tx.journalLine.createMany({
+      data: lines.map((line) => ({ tenantId, journalEntryId: entryId, accountId: line.accountId, debitMinor: line.debitMinor, creditMinor: line.creditMinor })),
+    });
+    run.posted += 1;
+  }
+}
+
 async function post(
   tx: TenantScopedClient,
   tenantId: string,
@@ -153,8 +228,27 @@ async function post(
 /** One pass for one tenant. Idempotent; safe to run from the scheduler, a retry, or a button. */
 export async function postPendingDocuments(tx: TenantScopedClient, tenantId: string): Promise<PostRun> {
   const run: PostRun = { posted: 0, pending: 0, alreadyPosted: 0 };
-  if (!(await isCapabilityActive(tx, tenantId, TRADING_CAPABILITY_ID))) return run;
+  const [tradingActive, projectActive] = await Promise.all([
+    isCapabilityActive(tx, tenantId, TRADING_CAPABILITY_ID),
+    isCapabilityActive(tx, tenantId, PROJECT_CAPABILITY_ID),
+  ]);
+  if (!tradingActive && !projectActive) return run;
   const mapping = await loadMapping(tx);
+
+  if (projectActive) {
+    for (const invoice of await unpostedJobInvoices(tx)) {
+      const result = jobInvoiceLines({ number: invoice.number, amountMinor: invoice.amount_minor, taxMinor: invoice.tax_minor }, mapping);
+      await post(tx, tenantId, "project.invoice", invoice.id, invoice.issued_on, invoice.created_by_id, result, run);
+    }
+    for (const receipt of await unpostedJobReceipts(tx)) {
+      const result = jobReceiptLines({ method: receipt.method, amountMinor: receipt.amount_minor, reference: receipt.reference }, mapping);
+      await post(tx, tenantId, "project.receipt", receipt.id, receipt.received_on, receipt.created_by_id, result, run);
+    }
+    // Receipts first: an invoice cannot be voided while it has live payments, so this is the order the voids happened in.
+    await reverseVoided(tx, tenantId, "project.receipt", run);
+    await reverseVoided(tx, tenantId, "project.invoice", run);
+  }
+  if (!tradingActive) return run;
 
   for (const invoice of await unpostedInvoices(tx)) {
     const result = salesInvoiceLines(
@@ -240,21 +334,31 @@ export const postingSetup: QueryDefinition<Record<string, never>, PostingSetup> 
       isCapabilityActive(ctx.tx, ctx.actor.tenantId, TRADING_CAPABILITY_ID),
     ]);
     const byRole = new Map(maps.map((m) => [m.role, m]));
+    const projectActive = await isCapabilityActive(ctx.tx, ctx.actor.tenantId, PROJECT_CAPABILITY_ID);
     const counts = async (kind: SourceKind) => {
-      if (!tradingActive) return { waiting: 0, posted: 0 };
-      const [waiting, posted] = await Promise.all([
+      const active = kind.startsWith("project.") ? projectActive : tradingActive;
+      if (!active) return { waiting: 0, posted: 0 };
+      const waitingRows =
         kind === "trading.sales_invoice"
-          ? ctx.tx.$queryRaw<Array<{ n: bigint }>>`
+          ? await ctx.tx.$queryRaw<Array<{ n: bigint }>>`
               SELECT count(*) AS n FROM trading_invoice i
               WHERE i.customer_id IS NOT NULL
                 AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.source_kind = ${kind} AND j.source_id = i.id)`
-          : ctx.tx.$queryRaw<Array<{ n: bigint }>>`
-              SELECT count(*) AS n FROM trading_payment p
-              WHERE p.direction = 'in' AND p.customer_id IS NOT NULL
-                AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.source_kind = ${kind} AND j.source_id = p.id)`,
-        ctx.tx.journalEntry.count({ where: { sourceKind: kind } }),
-      ]);
-      return { waiting: Number(waiting[0]?.n ?? 0), posted };
+          : kind === "trading.customer_receipt"
+            ? await ctx.tx.$queryRaw<Array<{ n: bigint }>>`
+                SELECT count(*) AS n FROM trading_payment p
+                WHERE p.direction = 'in' AND p.customer_id IS NOT NULL
+                  AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.source_kind = ${kind} AND j.source_id = p.id)`
+            : kind === "project.invoice"
+              ? await ctx.tx.$queryRaw<Array<{ n: bigint }>>`
+                  SELECT count(*) AS n FROM project_invoice i
+                  WHERE i.voided_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.source_kind = ${kind} AND j.source_id = i.id)`
+              : await ctx.tx.$queryRaw<Array<{ n: bigint }>>`
+                  SELECT count(*) AS n FROM project_receipt r
+                  WHERE r.voided_at IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM journal_entry j WHERE j.source_kind = ${kind} AND j.source_id = r.id)`;
+      return { waiting: Number(waitingRows[0]?.n ?? 0), posted: await ctx.tx.journalEntry.count({ where: { sourceKind: kind } }) };
     };
     const kinds = await Promise.all(
       (Object.keys(KIND_ROLES) as SourceKind[]).map(async (kind) => ({

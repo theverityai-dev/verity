@@ -104,11 +104,10 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
 
 ### P0b-5. Ledger posting (Task 130)
 
-- **Built 2026-10-23, local database only** (`cd7c860e`): sales invoices and customer receipts post through a per-tenant account map, idempotently, with a visible
-  waiting list and a Posting setup screen. Credit notes and voids, purchase bills, supplier payments and **project (job) invoices and receipts** are not posted, so a
-  DSEW balance sheet still omits its jobs. Next: project billing, then reversal on void. See `taskplans/130_ledger_posting_adr_044.md`.
-- **Before the next push (owner):** apply `20261023100000_ledger_posting` (this work) and `20261023110000_piecework_floor_roles` (the Stylified work in another session)
-  to production, or the build gate will refuse the deploy and the previous deployment stays live.
+- **Built and on production** (migration applied 2026-10-23): trading sales invoices and receipts, and DSEW's job invoices and receipts with reversal on void. A tenant
+  must choose its accounts in Accounting, Posting setup before anything posts; until then documents wait with the reason.
+- **Left:** trading credit notes and voids, purchase bills, supplier payments; the DSEW acceptance walk (parity document section 8: the trial balance moves by exactly
+  the invoice and receipt amounts, with real D&S data); a backfill dry-run count; ledger period lock. See `taskplans/130_ledger_posting_adr_044.md`.
 - **Status:** IN PROGRESS.
 
 ---

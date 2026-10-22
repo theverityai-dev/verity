@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accountRoleForMethod, customerReceiptLines, isBalanced, salesInvoiceLines, type AccountMapping } from "./ledger-posting";
+import { accountRoleForMethod, customerReceiptLines, isBalanced, jobInvoiceLines, jobReceiptLines, reverseLines, salesInvoiceLines, type AccountMapping } from "./ledger-posting";
 
 const full: AccountMapping = { receivable: "AR", sales_income: "INC", gst_output: "GST", cash: "CASH", bank: "BANK" };
 const invoice = { invoiceNumber: "SALES/2026-27/0001", taxablePaise: 100_000, cgstPaise: 9_000, sgstPaise: 9_000, igstPaise: 0, totalPaise: 118_000 };
@@ -80,5 +80,34 @@ describe("isBalanced", () => {
     expect(isBalanced([{ accountId: "a", debitMinor: 5, creditMinor: 0 }])).toBe(false);
     expect(isBalanced([{ accountId: "a", debitMinor: 5, creditMinor: 0 }, { accountId: "b", debitMinor: 0, creditMinor: 4 }])).toBe(false);
     expect(isBalanced([{ accountId: "a", debitMinor: 5, creditMinor: 5 }, { accountId: "b", debitMinor: 0, creditMinor: 0 }])).toBe(false);
+  });
+});
+
+describe("job documents and reversals", () => {
+  it("posts a job invoice as amount plus tax, and a tax-free one without a GST account", () => {
+    const taxed = jobInvoiceLines({ number: "DS/001", amountMinor: 1_000_000, taxMinor: 180_000 }, full);
+    expect(taxed.ok && taxed.lines).toEqual([
+      { accountId: "AR", debitMinor: 1_180_000, creditMinor: 0 },
+      { accountId: "INC", debitMinor: 0, creditMinor: 1_000_000 },
+      { accountId: "GST", debitMinor: 0, creditMinor: 180_000 },
+    ]);
+    expect(taxed.ok && taxed.memo).toBe("Job invoice DS/001");
+    expect(jobInvoiceLines({ number: "DS/2", amountMinor: 5, taxMinor: 0 }, { receivable: "AR", sales_income: "INC" }).ok).toBe(true);
+    expect(jobInvoiceLines({ number: "DS/3", amountMinor: 5, taxMinor: 1 }, { receivable: "AR", sales_income: "INC" }).ok).toBe(false);
+  });
+
+  it("sends job receipts by method: cash to cash, everything else to the bank", () => {
+    for (const [method, account] of [["cash", "CASH"], ["upi", "BANK"], ["cheque", "BANK"], ["other", "BANK"]] as const) {
+      const result = jobReceiptLines({ method, amountMinor: 10, reference: null }, full);
+      expect(result.ok && result.lines[0]!.accountId).toBe(account);
+    }
+  });
+
+  it("swaps every line to reverse an entry, and the reversal balances", () => {
+    const original = salesInvoiceLines(invoice, full);
+    if (!original.ok) throw new Error("setup");
+    const reversed = reverseLines(original.lines);
+    expect(reversed[0]).toEqual({ accountId: "AR", debitMinor: 0, creditMinor: 118_000 });
+    expect(isBalanced(reversed)).toBe(true);
   });
 });

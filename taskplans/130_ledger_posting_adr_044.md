@@ -5,7 +5,7 @@ FINISHER P1-1h; split out of Task 129 workstream E2 because it is a capability b
 ADR-017 (one authorization path), ADR-016 (scheduler may enumerate tenants), INV-001, INV-002. Changes no invariant,
 `enforcePolicy()`, or tenant-access path.
 
-## Status: PARTIALLY BUILT 2026-10-23 — steps 1 to 4 and the setup screen for sales invoices and customer receipts (local database; migration `20261023100000_ledger_posting` NOT yet on production)
+## Status: PARTIALLY BUILT 2026-10-23: trading sales invoices and receipts, and job (project) invoices and receipts with reversal on void, are posted; migration `20261023100000_ledger_posting` is on production
 
 Why it is a plan of its own: it needs a migration, a consumer, ten document kinds with different payloads, an account map with a
 setup screen, and a backfill. Doing it as a side task would repeat the habit this repository is trying to leave: breadth that is
@@ -55,3 +55,12 @@ another tenant sees nothing; the unique key holds at the database. ADR-044 amend
 **Not done (each its own small step):** step 5 backfill dry-run beyond the "waiting" count on the setup screen; step 6 statements already read the posted ledger
 but the DSEW acceptance walk has not been run; step 7 period lock; credit notes and voids (a reversal on void), purchase bills and supplier payments, and
 `project` invoices and receipts (DSEW's own billing) are NOT posted. Until project billing posts, a DSEW balance sheet still omits its jobs.
+
+**2026-10-23 (later) — job invoices and receipts post, and a void reverses.** `project.invoice` and `project.receipt` post through the same consumer and the
+same account map (amount plus one tax figure; bank, cheque, UPI and "other" go to the bank account, cash to cash). A job invoice or receipt voided **after**
+it posted gets a reversing entry (every line swapped, `reversal_of_id` set, its own source key `project.invoice_void` / `project.receipt_void`, needs no account
+mapping, attributed to whoever voided it); one voided **before** it posted never posts. Receipts reverse before invoices, the order the voids happened in.
+`src/test/ledger-posting-jobs.test.ts` (7 tests) and three more pure tests: waits unmapped, posts exact figures, idempotent, receipts by method, reversals
+net every account to zero and still balance, a never-posted voided invoice posts nothing, a tax-free invoice needs no GST account.
+**Still not posted:** trading credit notes and voids, purchase bills, supplier payments. DSEW's own billing (jobs) is now in the ledger, so its balance sheet no
+longer omits its jobs once accounts are chosen. **Not done:** the DSEW acceptance walk (section 8 of the parity document), backfill dry-run, period lock.
