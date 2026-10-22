@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { QueryDefinition } from "@/server/platform/query";
+import { hasTenantPermission } from "@/server/platform/authorization";
 import { costPerGoodPiece, daysInStage, wageOf, workerMoney, type PaymentRow } from "./ledger";
 import { LEDGER_SELECT, activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
 import { bundleRow, placementsOf, summariseLot, type BundleRow, type LotRow, type Placement } from "./index";
@@ -14,6 +15,7 @@ import { bundleRow, placementsOf, summariseLot, type BundleRow, type LotRow, typ
 const ENTITY_LOT = "verity.piecework.lot";
 const ENTITY_WORKER = "verity.piecework.worker";
 const ENTITY_BUNDLE = "verity.piecework.bundle";
+const ENTITY_PAYMENT = "verity.piecework.payment";
 const dateInput = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
 async function loadAll(tx: Tx) {
@@ -143,6 +145,9 @@ export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
       money: workerMoney(d.ledger.filter((e) => e.workerId === w.id), d.payments.filter((p) => p.workerId === w.id).map(toPayment)),
     }));
     const dueWorkers = people.filter((p) => p.money.balanceMinor !== 0).map((p) => ({ workerId: p.workerId, name: p.name, balanceMinor: p.money.balanceMinor })).sort((a, b) => b.balanceMinor - a.balanceMinor);
+    // A reader without the payment grant (a supervisor) gets the floor figures and no money at all: not hidden by the page,
+    // absent from the answer, so a direct call to this query cannot recover a wage or a balance.
+    const mayReadMoney = await hasTenantPermission(ctx.tx, ctx.actor.roleId, "Read", ENTITY_PAYMENT);
 
     const stuck = open
       .map((l) => ({ lotId: l.id, number: l.number, days: summariseLot(l, d.bundles.filter((b) => b.lotId === l.id), d.stages, d.names, d.today).daysSinceMovement }))
@@ -167,8 +172,11 @@ export const dashboard: QueryDefinition<Record<string, never>, Dashboard> = {
       .sort((a, b) => b.daysLate - a.daysLate);
 
     return {
-      today: d.today, activeLots, byStage, withWorkers, ready, quality, lotWages,
-      dues: { totalMinor: dueWorkers.reduce((s, w) => s + w.balanceMinor, 0), advanceOutstandingMinor: people.reduce((s, p) => s + p.money.advanceOutstandingMinor, 0), workers: dueWorkers },
+      today: d.today, activeLots, byStage, withWorkers, ready, quality,
+      lotWages: mayReadMoney ? lotWages : [],
+      dues: mayReadMoney
+        ? { totalMinor: dueWorkers.reduce((s, w) => s + w.balanceMinor, 0), advanceOutstandingMinor: people.reduce((s, p) => s + p.money.advanceOutstandingMinor, 0), workers: dueWorkers }
+        : { totalMinor: 0, advanceOutstandingMinor: 0, workers: [] },
       stuck, overdue: { lots: activeLots.filter((l) => l.overdue).length, issues: overdueIssues }, floor, placements, lateIssues,
     };
   },
@@ -309,7 +317,8 @@ export type CostingRow = {
 /** Lot cost so far: WAGES ONLY. Cost per good piece = cost / good finished pieces, with the losses shown beside it. */
 export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]> = {
   key: "verity.piecework.report_costing",
-  entity: ENTITY_LOT,
+  // Wages only, so it is a money report: the same grant as the wage ledger.
+  entity: ENTITY_PAYMENT,
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);

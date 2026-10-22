@@ -27,6 +27,7 @@ import {
   closeDay,
   createBundle,
   createLot,
+  dashboard,
   dayPreview,
   decideApproval,
   defineStage,
@@ -37,6 +38,7 @@ import {
   recordIssue,
   recordReturn,
   registerPieceworkCapability,
+  reportCosting,
   requestApproval,
   reverseEntry,
   setLimits,
@@ -247,5 +249,17 @@ describeDb("capability: the floor (stage scope, approvals, limits, day close)", 
     const sup = team.members.find((m) => m.name === "Supervisor B")!;
     expect(sup).toMatchObject({ role: "Supervisor", allStages: false, stageIds: [stage.stitching!] });
     expect(team.members.find((m) => m.name === "Munshi Ram")!.allStages).toBe(true);
+  });
+
+  it("never lets a wage or a balance reach a supervisor, even by calling the queries directly", async () => {
+    const asMunshi = await executeQuery(munshi, dashboard, {});
+    expect(asMunshi.dues.workers.length + asMunshi.lotWages.length).toBeGreaterThan(0);
+    const asSupervisor = await executeQuery(supA, dashboard, {});
+    expect(asSupervisor.dues).toEqual({ totalMinor: 0, advanceOutstandingMinor: 0, workers: [] });
+    expect(asSupervisor.lotWages).toEqual([]);
+    // The floor figures the dashboard also carries are still there.
+    expect(asSupervisor.activeLots.length).toBeGreaterThan(0);
+    await reject(executeQuery(supA, reportCosting, {}), /holds no Read grant/);
+    expect((await executeQuery(owner, reportCosting, {})).some((r) => r.wagesMinor > 0)).toBe(true);
   });
 });

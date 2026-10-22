@@ -20,7 +20,7 @@ the wage basis agreed for that karigar. Two logins make "only the munshi enters 
 | Daily entry | `/lots/entry` | munshi | Give out (bundle, stage, karigar, pieces, wage basis, due date) or take back (which issue; good, rejected, rework, short), with a live "accounted for X of Y" line |
 | Karigars | `/karigars` | both | Kind (in-house or outside), rate and wage basis per stage, pieces held, balance due |
 | Karigar card | `/karigars/{id}` | both | Work in hand, account of work, rates, advance / recovery / deduction / payment (mode, reference) with Reverse |
-| Owner dashboard | `/lots/dashboard` | both | Quality totals, pending by stage, material with karigars, dues and unrecovered advances, overdue returns, wages by lot |
+| Factory dashboard | `/lots/dashboard` | both | Quality totals, pending by stage, material with karigars, dues and unrecovered advances, overdue returns, wages by lot |
 | Lot reports | `/lots/reports` | both | Lot status, bundle location, work in hand, wage ledger, short / reject / rework, production by process, lot cost so far, ready stock; each downloads for Excel |
 
 Seeded sample: **LOT-0001 Spring formals** (500 planned, 400 cut in four bundles) carries the workbook's own reconciliation
@@ -58,7 +58,7 @@ serialised; tenant isolation; append-only tables at the database; the owner role
 same ledger.
 
 **BUILT, opened in a browser (2026-10-22):** Lots, lot detail, bundle slip, Daily entry return (saved through the screen),
-Owner dashboard, all reports, Karigar card. Two links found wrong during that pass (karigar work-in-hand and bundle issue rows)
+Factory dashboard, all reports, Karigar card. Two links found wrong during that pass (karigar work-in-hand and bundle issue rows)
 were fixed.
 
 **BUILT, not clicked through:** New lot, Cut a bundle, status buttons, Record money, Set a rate, Retire / Restore, Cancel lot,
@@ -122,7 +122,7 @@ only; none of them is on production.
 
 | Login | Role | What to show |
 |---|---|---|
-| `stylified-owner` | Owner | Owner dashboard, Approvals (can approve above the manager limit), Team and limits |
+| `stylified-owner` | Owner | Factory dashboard, Approvals (can approve above the manager limit), Team and limits |
 | `stylified-manager` | Manager | Approvals inbox from a phone; approves within the limit, sees "Needs the owner" above it |
 | `stylified-supervisor-a` | Supervisor, stages Collar and Stitching | `/shopfloor`: late outside unit, Karigar A holds 37 pieces; take back with plus and minus; photo; deduction request; Hindi |
 | `stylified-supervisor-b` | Supervisor, stages Pasting, Kaj, Finishing | A frozen day close with a Hindi note; give out; the shortage write-off request |
