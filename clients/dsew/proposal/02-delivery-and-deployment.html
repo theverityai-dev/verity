@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Verity for D &amp; S Electric Works: delivery and deployment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="verity-doc.css">
+</head>
+<body>
+
+<!--DOC:cover-->
+<section class="cover">
+  <div class="cover-photo" style="background-image:url('assets/web/banner-panel-wiring.webp')"></div>
+  <div class="cover-inner">
+    <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div>
+    <h1>Delivered in stages. Installed on your premises. Proven before go-live.</h1>
+    <p class="sub">How the work is delivered, how it runs on DSEW's own server, the gates it passes before production, and what we need from you.</p>
+    <div class="cover-meta">
+      <div><span class="mono">Prepared for</span><b>D &amp; S Electric Works</b><br>109, Industrial Area Extension, Rau, Indore 453331</div>
+      <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
+      <div><span class="mono">Date</span><b>23 October 2026</b></div>
+      <div><span class="mono">Document</span><b>2 of 5 · Delivery and deployment</b></div>
+    </div>
+    <span class="status">Confidential draft for final review</span>
+  </div>
+</section>
+<!--/DOC:cover-->
+
+<!--DOC:body-->
+<main>
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 2 of 5 · Delivery and deployment</span></div>
+
+<h1 class="page-title">A plan you can hold us to.</h1>
+<p class="lede">Every phase ends in a working demonstration and a written review. Nothing goes live until the gates below have passed on DSEW's own server, and the testing period starts only when the handover is signed.</p>
+
+<h2><span class="num">01</span>Estimated timelines</h2>
+<table>
+<thead><tr><th>Option</th><th>Estimated implementation timeline</th></tr></thead>
+<tbody>
+<tr><td><strong>Option 1: MVP ERP</strong></td><td>Approximately <strong>6 to 8 weeks</strong> from project kickoff</td></tr>
+<tr><td><strong>Option 2: Complete ERP</strong></td><td>Approximately <strong>8 to 12 weeks</strong> from project kickoff</td></tr>
+<tr><td><strong>Option 3: Phased Complete ERP</strong></td><td>Approximately <strong>8 to 12 weeks</strong>, delivered through four phases with defined milestones and acceptance criteria</td></tr>
+</tbody></table>
+<div class="callout warn">
+  <p>These are estimates, not fixed deadlines. They assume the agreed scope, timely access to the data, server, stakeholders and decisions we need, consolidated DSEW feedback, DSEW testing within the review windows, and agreed acceptance criteria. <strong>The final schedule is confirmed when requirements are finalised.</strong> Delays caused by pending DSEW inputs, scope changes, third-party dependencies, additional requirements, or a hosting environment that fails the pre-deployment compatibility check (section 6) revise the schedule by the corresponding time.</p>
+</div>
+<p><strong>Kickoff</strong> is the latest of: signed order; product owner named; requirements inputs delivered (sample documents, numbering conventions, server survey answers, access).</p>
+
+<h2><span class="num">02</span>Option 3: the four phases</h2>
+<p>Each phase ends in a working demonstration and a written review. The phase prices are unchanged by the timeline.</p>
+<table>
+<thead><tr><th>Phase</th><th>Weeks (8-week / 12-week pace)</th><th class="num">Price (₹, ex GST)</th><th>Delivered and accepted when</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Foundation and commercial core</strong></td><td>1-2 / 1-3</td><td class="num">1,20,000</td><td>DSEW can create linked customer, enquiry, quotation, sales order and project records with controlled document numbering, and initial engineering masters and BOM</td></tr>
+<tr><td><strong>2. Supply chain and manufacturing core</strong></td><td>3-4 / 4-6</td><td class="num">1,35,000</td><td>A BOM drives material requirements and availability for a manufacturing job; purchases, receipts and stock movements are recorded; engineering release works</td></tr>
+<tr><td><strong>3. Quality, traceability and operational controls</strong></td><td>5-6 / 7-9</td><td class="num">1,30,000</td><td>Operations, travellers and quality inspections are linked; agreed traceability, testing, dispatch and contract controls work; failed mandatory checks block release</td></tr>
+<tr><td><strong>4. Business modules, validation and go-live</strong></td><td>7-8 / 10-12</td><td class="num">95,000</td><td>Finance, HR and payroll, dashboards, notifications and the documented AI use cases work; end-to-end UAT passes; deployed, trained and handed over</td></tr>
+<tr class="total"><td>Total</td><td>8 to 12 weeks</td><td class="num">4,80,000</td><td></td></tr>
+</tbody></table>
+<table>
+<thead><tr><th style="width:24%">Stage</th><th>What happens</th></tr></thead>
+<tbody>
+<tr><td><strong>Kickoff</strong></td><td>Discovery and architecture: workflows, data model, roles, mock-ups of printed formats and key screens, written module depth and acceptance criteria. <strong>First install on the DSEW VM, HTTPS access, real-phone upload test</strong></td></tr>
+<tr><td><strong>Phase 1 demonstration</strong></td><td>Commercial core</td></tr>
+<tr><td><strong>Phase 2 demonstration</strong></td><td>BOM to material to job, production status, basic MRP. <strong>First backup and restore rehearsal</strong></td></tr>
+<tr><td><strong>Phase 3 demonstration</strong></td><td>Travellers, quality, traceability, testing, dispatch, compliance</td></tr>
+<tr><td><strong>Phase 4 and go-live</strong></td><td>Business modules and AI use cases, full UAT, <strong>final restore test</strong>, deployment, training, handover</td></tr>
+</tbody></table>
+
+<h2><span class="num">03</span>Option 1: the MVP stages</h2>
+<table>
+<thead><tr><th>Stage</th><th>Estimated weeks</th><th>Accepted when</th></tr></thead>
+<tbody>
+<tr><td><strong>Kickoff and specification</strong></td><td>1</td><td>Requirements and module depth signed off; first install on the DSEW VM</td></tr>
+<tr><td><strong>Commercial core</strong></td><td>2-4</td><td>Customer, enquiry, quotation, order, project and numbered documents linked</td></tr>
+<tr><td><strong>Engineering, materials and manufacturing</strong></td><td>3-6</td><td>BOM, purchasing, stock and issue to a manufacturing job; traveller and operations tracked</td></tr>
+<tr><td><strong>Quality, dashboards and go-live</strong></td><td>5-8</td><td>Inspections and quality release gate work; dashboards and notifications; UAT passes; deployed, trained and handed over</td></tr>
+</tbody></table>
+
+<h2><span class="num">04</span>How we work</h2>
+<div class="grid2">
+<div class="card"><h3>Specification and design</h3><p>A signed specification (workflows, roles, numbering, templates, formats, the agreed depth of every module and acceptance criteria), an architecture and database overview, and approved mock-ups.</p></div>
+<div class="card"><h3>Milestones and acceptance</h3><p>DSEW has <strong>5 business days</strong> after each demonstration or delivery to accept it or report material deviations. In-scope defects are corrected and shown again before sign-off. No report in that period means accepted. Payment milestones are in document 1, section 8.</p></div>
+<div class="card"><h3>Issue tracking</h3><p>A shared issue list visible to DSEW from day one, with severity, owner and status. Critical (wrong data, security issue, or work blocked with no workaround) and High (major function impaired) issues block go-live.</p></div>
+<div class="card"><h3>UAT</h3><p>Scripts agreed in advance: enquiry to quotation to order; BOM release; material to job; failed test blocking dispatch; dispatch released after approval; data export; backup and restore. Each scenario is signed off with date, tester and result.</p></div>
+<div class="card"><h3>Definition of done</h3><p>Server-side authorisation, tenant-isolation test, audit entry, validation and error states, automated tests, documentation note, demonstrated in the review.</p></div>
+<div class="card"><h3>Module dependencies</h3><p>Numbering and approval precede BOM release; a released BOM precedes material planning, manufacturing orders and travellers; test templates precede dispatch gating; stock and invoicing data precede finance and dashboards.</p></div>
+</div>
+<p><strong>Changes:</strong> anything beyond the agreed scope needs a written change request with a revised cost or schedule, approved before work. <strong>Remote first:</strong> delivery is remote; on-site work and travel are chargeable separately and need prior approval.</p>
+
+<h2><span class="num">05</span>Environments</h2>
+<ul>
+<li><strong>Company-hosted test environment:</strong> demonstrations and early hands-on use.</li>
+<li><strong>One DSEW Linux VM:</strong> installed at kickoff, used for UAT, and used as production only after the gates pass. A second production VM is not included. If the surveyed host cannot support this, a different arrangement is quoted separately.</li>
+</ul>
+
+<h2><span class="num">06</span>Go-live gates</h2>
+<div class="callout warn"><p>None of the gates below has been completed yet. They are passed with DSEW, on DSEW's host, before production use.</p></div>
+<ol>
+<li>Server survey complete and the DSEW host confirmed suitable.</li>
+<li>Installation and HTTPS access work on the DSEW host, including a real-phone upload.</li>
+<li><strong>Combined backup and restore</strong> of database, files and identity configuration onto a clean environment passes.</li>
+<li>Identity-provider and object-store outage behaviour tested: existing sessions keep working, new sign-ins or uploads fail clearly, quality gates stay enforced.</li>
+<li>UAT scripts pass.</li>
+<li>The data export reconciles with the system.</li>
+</ol>
+<p><strong>Go-live happens when these gates pass and the handover is signed.</strong> The testing period (monthly, for as long as DSEW chooses) starts on that date.</p>
+
+<h3>Pre-deployment compatibility check</h3>
+<p>The hosting environment has not been tested. Before anything is installed on DSEW's host, we run a non-intrusive check in the first days after kickoff and record pass or fail for each dependency. Nothing on the host is changed during it.</p>
+<table>
+<thead><tr><th style="width:22%">Dependency</th><th>What we need</th><th style="width:28%">DSEW provides</th></tr></thead>
+<tbody>
+<tr><td><strong>Host and virtualisation</strong></td><td>Hyper-V role enabled (or a separate small host), hardware virtualisation switched on, room for one VM of 4 vCPU, 16 GB RAM and 500 GB (the Complete ERP and AI may need more)</td><td>Host access; licence confirmation from your Microsoft partner</td></tr>
+<tr><td><strong>Guest operating system</strong></td><td>An Ubuntu Server LTS VM runs under that host</td><td>Installation media access</td></tr>
+<tr><td><strong>Network</strong></td><td>A fixed address and internal DNS name for the VM; gigabit LAN; shop-floor phones and PCs reach it over HTTPS</td><td>DNS entry, firewall rules</td></tr>
+<tr><td><strong>TLS certificate</strong></td><td>A certificate for the internal name, trusted by office PCs and phones</td><td>Certificate or internal certificate authority</td></tr>
+<tr><td><strong>Remote access</strong></td><td>DSEW's VPN, if remote use is wanted</td><td>VPN access</td></tr>
+<tr><td><strong>Internet for install and updates</strong></td><td>Controlled access, or offline media</td><td>Outbound-network policy decision</td></tr>
+<tr><td><strong>Backup and power</strong></td><td>A separate backup target at least equal to the data size; UPS</td><td>Storage and UPS</td></tr>
+<tr><td><strong>Administration</strong></td><td>A named IT contact with the rights needed during the check</td><td>Contact and access</td></tr>
+</tbody></table>
+<p><strong>Outcome.</strong> On a pass, installation proceeds. On a fail, we give a written report and an alternative (a second VM, a dedicated small host, or a different runtime) quoted separately, and the schedule is revised accordingly.</p>
+
+<h2><span class="num">07</span>Running on Windows Server 2019</h2>
+<p>Verity runs on Linux. We do <strong>not</strong> propose running it natively on Windows Server 2019, and we do not recommend Docker Desktop or WSL for production there. The plan is one Ubuntu Server VM under the Hyper-V role on your server, or a small dedicated host. <strong>This has not been tested on your server.</strong> Licensing of the Windows host is for your Microsoft partner.</p>
+
+<h2><span class="num">08</span>Your 15 questions</h2>
+<table>
+<thead><tr><th class="num">#</th><th style="width:24%">Question</th><th>Answer</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td>Architecture and stack</td><td>One web application (TypeScript, Next.js, React), PostgreSQL 16 database, Keycloak sign-in, S3-compatible file storage, Docker. All open source, no licence fee</td></tr>
+<tr><td class="num">2</td><td>Direct on Windows Server 2019?</td><td>No: Linux VM under Hyper-V or a small separate host</td></tr>
+<tr><td class="num">3</td><td>Hardware</td><td>For 15 users: 4 vCPU, 16 GB RAM, 500 GB mirrored SSD, separate backup target, UPS. Confirmed after survey; the Complete ERP and AI may need more</td></tr>
+<tr><td class="num">4</td><td>Database licence</td><td>PostgreSQL, no fee</td></tr>
+<tr><td class="num">5</td><td>Browsers and devices</td><td>Current Chrome, Edge, Firefox; Android and iOS phones and tablets for the shop floor</td></tr>
+<tr><td class="num">6</td><td>Network, remote access</td><td>LAN; remote only through your VPN</td></tr>
+<tr><td class="num">7</td><td>Backup and recovery</td><td>Scripts exist; combined restore is a go-live gate. Recovery time and data-loss window agreed with you</td></tr>
+<tr><td class="num">8</td><td>Security, authentication, audit</td><td>TLS, role-based permissions, per-company data isolation in the database, audit trail the application cannot change or delete, MFA available in Keycloak and enabled if you ask</td></tr>
+<tr><td class="num">9</td><td>Encryption, secure remote access</td><td>TLS in transit; encrypted backups and disk encryption recommended, confirmed at acceptance; VPN for remote use</td></tr>
+<tr><td class="num">10</td><td>Performance and document growth</td><td>Designed for 15 named users; load test is part of acceptance; documents on a separate volume sized with you</td></tr>
+<tr><td class="num">11</td><td>Offline</td><td>In-LAN use needs no internet after install; installs and upgrades need controlled internet or offline media</td></tr>
+<tr><td class="num">12</td><td>Integration, API</td><td>Permissioned REST API. Everything in the offered scope is inside Verity; no external integration is included</td></tr>
+<tr><td class="num">13</td><td>Source code, repository, version control</td><td>Source code of the DSEW-specific deliverables is handed over on full payment, in a repository DSEW controls (document 3)</td></tr>
+<tr><td class="num">14</td><td>Test, staging, production</td><td>Section 5</td></tr>
+<tr><td class="num">15</td><td>Upgrades, maintenance, long-term support</td><td>Versioned releases with tested upgrade and rollback; covered while the testing period runs; once it ends, support restarts only by written agreement</td></tr>
+</tbody></table>
+<p>Modular expansion: new departments, workflows, product families and users are added by configuration or by adding modules to Verity, without redeveloping what is already there.</p>
+
+<h2><span class="num">09</span>User interface</h2>
+<p>A responsive interface for office PCs and shop-floor phones and tablets; searchable, sortable, filterable lists; direct links between related records (a project links to its customer, quotation, order, BOM, job, traveller, tests and documents); changes to approved records follow the revision or amendment path; role-based permissions; printable branded documents. English in this scope; Hindi interface labels are not included.</p>
+
+<h2><span class="num">10</span>What is handed over</h2>
+<p>On full payment: the working, tested application; the modules of the chosen option; the source code of the DSEW-specific deliverables; the architecture overview and database schema for the delivered scope; deployment and configuration instructions; backup and recovery procedures; administrator and user guides; document templates and workflow configuration register; API notes for what the scope uses; test reports and UAT sign-off records; training; administrator credentials through a signed handover checklist; and the testing period terms in document 1.</p>
+
+<h2><span class="num">11</span>Assumptions and exclusions</h2>
+<div class="grid2">
+<div class="card"><h3>Assumed</h3><p>Up to 15 named users, one site, English only; DSEW supplies samples, decisions and a numbering convention; DSEW provides the host, TLS certificates, internal DNS, VPN access, backup storage and a network contact.</p></div>
+<div class="card"><h3>Excluded</h3><p>Anything outside the chosen option's module tables; historical transaction migration; hardware and networking; GST on fees; on-site work and travel; support after the testing period ends; a second VM; independent penetration testing; Hindi interface; attendance-device and e-way bill integration; external AI service charges and AI hardware; DSEW staff time.</p></div>
+</div>
+<p><strong>DSEW's own costs (planning estimates, not quotations):</strong> backup target and UPS ₹0.8 to 1.2 lakh; a new server only if the existing one cannot run the VM, ₹3.5 to 4.5 lakh; platform software licences: none beyond this proposal.</p>
+
+<h2><span class="num">12</span>What we need from you</h2>
+<ol>
+<li>A named product owner (about 3 to 4 hours a week) and leads for quality, engineering, stores and finance.</li>
+<li>A walk-through of one recent job from enquiry to dispatch, and your numbering convention.</li>
+<li>Who drafts, reviews, approves and releases drawings, BOMs and test records; is self-approval ever allowed?</li>
+<li>Samples: drawing, released BOM, quotation, traveller, test report or certificate, packing list, delivery challan, inspection formats and document templates.</li>
+<li>The tests per product family and acceptance limits; how instruments and calibration are tracked.</li>
+<li>Server make, OS build, CPU, RAM, free storage, Hyper-V status, network and VPN set-up, backup destination, IT owner, recovery time and data-loss window you accept, outbound-network policy, UPS.</li>
+<li>Agreement to the licence and ownership terms in document 3 before the order.</li>
+</ol>
+</main>
+<!--/DOC:body-->
+</body>
+</html>

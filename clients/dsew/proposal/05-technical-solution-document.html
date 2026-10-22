@@ -4,108 +4,62 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verity Technical Solution Document for DSEW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="verity-doc.css">
 <style>
-  :root {
-    --ink: #1b1d22;
-    --ink-2: #4a4f58;
-    --ink-3: #6b7280;
-    --line: #d9dce1;
-    --fill: #f3f4f6;
-    --fill-2: #e8ecf2;
-    --accent: #0b4f9c;
-    --accent-soft: #e6eef8;
-    --warn: #8a5a00;
-  }
-  @page {
-    size: A4;
-    margin: 18mm 16mm 20mm 16mm;
-    @bottom-left { content: "PlotArmour · Verity technical solution document for D & S Electric Works"; font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7280; }
-    @bottom-right { content: "Page " counter(page); font: 8pt "Segoe UI", Arial, sans-serif; color: #6b7280; }
-  }
-  @page :first { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
-  * { box-sizing: border-box; }
-  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body {
-    margin: 0; color: var(--ink); background: #fff;
-    font: 9.6pt/1.55 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  }
-  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; color: var(--ink); letter-spacing: -0.01em; }
-  h1 { font-size: 21pt; line-height: 1.2; margin: 0 0 4mm; padding-bottom: 3mm; border-bottom: 2px solid var(--accent); break-after: avoid; }
-  h2 { font-size: 13.5pt; margin: 7mm 0 2.5mm; break-after: avoid; }
-  h3 { font-size: 10.8pt; margin: 5mm 0 1.5mm; color: var(--accent); break-after: avoid; font-family: "Segoe UI", Arial, sans-serif; font-weight: 700; }
-  p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
-  ul, ol { margin: 0 0 3mm; padding-left: 5.2mm; }
-  li { margin-bottom: 1mm; }
-  .sec { break-before: page; }
-  .lead { font-size: 10.6pt; color: var(--ink-2); }
-  .kicker { font: 700 8pt "Segoe UI", Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin: 0 0 1.5mm; }
-
-  table { width: 100%; border-collapse: collapse; margin: 1.5mm 0 4mm; font-size: 8.6pt; line-height: 1.4; }
-  th, td { text-align: left; vertical-align: top; padding: 1.7mm 2.2mm; border-bottom: 1px solid var(--line); }
-  thead th { background: var(--fill-2); font-weight: 700; color: var(--ink); border-bottom: 1.5px solid #b7bec9; }
-  tbody tr:nth-child(even) td { background: #fafbfc; }
-  tr { break-inside: avoid; }
-  td.n, th.n { text-align: right; white-space: nowrap; }
-  table.kv td:first-child { width: 28%; font-weight: 600; color: var(--ink); background: var(--fill); }
-
-  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 2.5mm 3.5mm; margin: 2mm 0 4mm; break-inside: avoid; }
-  .callout p:last-child { margin-bottom: 0; }
-  .callout.note { border-left-color: var(--warn); background: #fbf3e2; }
-  .callout b.t { display: block; font-size: 8pt; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 1mm; }
-  .callout.note b.t { color: var(--warn); }
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-bottom: 3mm; }
-  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
-  .card { border: 1px solid var(--line); border-radius: 2mm; padding: 3mm 3.4mm; break-inside: avoid; }
-  .card h4 { margin: 0 0 1mm; font: 700 9.4pt "Segoe UI", Arial, sans-serif; color: var(--accent); }
-  .card p { margin: 0; font-size: 8.8pt; color: var(--ink-2); }
-  .stat .v { font: 700 16pt Georgia, serif; color: var(--accent); line-height: 1.1; }
-  .stat .l { font-size: 8pt; color: var(--ink-3); margin-top: 1mm; }
-  figure { margin: 3mm 0 4mm; break-inside: avoid; }
-  figcaption { font-size: 8pt; color: var(--ink-3); margin-top: 1mm; }
-  svg { width: 100%; height: auto; display: block; }
-
-  .cover { height: 297mm; padding: 24mm 20mm 18mm; display: flex; flex-direction: column; justify-content: space-between;
-           background: linear-gradient(180deg, #ffffff 0%, #ffffff 62%, #eef3fa 100%); position: relative; overflow: hidden; }
-  .cover .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 9mm; background: var(--accent); }
-  .cover h1 { font-size: 34pt; border: 0; padding: 0; line-height: 1.08; margin: 6mm 0 5mm; }
-  .cover .sub { font-size: 13pt; color: var(--ink-2); max-width: 135mm; }
-  .cover table { font-size: 9pt; max-width: 150mm; }
-  .cover .foot { font-size: 8.6pt; color: var(--ink-3); max-width: 150mm; }
-  .toc { columns: 2; column-gap: 10mm; font-size: 9.4pt; }
-  .toc div { break-inside: avoid; margin-bottom: 1.2mm; }
-  .toc b { color: var(--accent); display: inline-block; width: 8mm; }
+/* Technical Solution Document: scoped additions to verity-doc.css */
+.tsd .kicker { font-family: "IBM Plex Mono", monospace; font-size: 7pt; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); margin: 0 0 1.6mm; }
+.tsd h1 { margin: 0 0 4mm; font-size: 24pt; line-height: 1.08; font-weight: 200; letter-spacing: -0.045em; break-after: avoid; }
+.tsd h4 { margin: 0 0 1mm; font-size: 9.6pt; font-weight: 600; color: var(--blue); }
+.tsd .sec { break-before: page; }
+.tsd .sec:first-child { break-before: auto; }
+.tsd .lead { font-size: 11pt; line-height: 1.5; font-weight: 300; color: var(--sec); }
+.tsd td.n, .tsd th.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tsd tbody tr:nth-child(even) td { background: #fafbfd; }
+.tsd table.kv td:first-child { width: 28%; font-weight: 600; background: #f4f6fa; }
+.tsd .callout b.t { display: block; margin-bottom: 1mm; font-family: "IBM Plex Mono", monospace; font-size: 7pt; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); }
+.tsd .callout.note { background: #fff7e8; box-shadow: inset 0 0 0 .25mm #f1d9a6; }
+.tsd .callout.note b.t { color: var(--warn); }
+.tsd .card p { font-size: 8.8pt; color: var(--sec); margin: 0; }
+.tsd .stat .v { font-size: 17pt; font-weight: 200; letter-spacing: -0.05em; color: var(--ink); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tsd .stat .l { font-size: 8pt; color: var(--tert); margin-top: 1mm; }
+.tsd .grid3 { gap: 3mm; }
+.tsd figure { margin: 3mm 0 4mm; break-inside: avoid; }
+.tsd figcaption { font-size: 8pt; color: var(--tert); margin-top: 1mm; }
+.tsd figure svg { width: 100%; height: auto; display: block; }
+.tsd .toc { columns: 2; column-gap: 10mm; font-size: 9.4pt; }
+.tsd .toc div { break-inside: avoid; margin-bottom: 1.2mm; }
+.tsd .toc b { color: var(--blue); display: inline-block; width: 8mm; font-family: "IBM Plex Mono", monospace; font-size: 8pt; }
 </style>
 </head>
 <body>
 
-<!-- ============================ COVER ============================ -->
+<!--DOC:cover-->
 <section class="cover">
-  <div class="bar"></div>
-  <div style="padding-left:8mm">
-    <p class="kicker">Technical Solution Document · Document 5 of the DSEW proposal package</p>
-    <h1>Verity for<br>D &amp; S Electric Works</h1>
-    <p class="sub">The complete technical description of the solution: platform specification, installable web application,
-    server footprint and load, requirements, security, recovery, module-by-module design, AI options and the acceptance
-    evidence DSEW receives at go-live.</p>
-  </div>
-  <div style="padding-left:8mm">
-    <table class="kv">
-      <tbody>
-        <tr><td>Prepared for</td><td>D &amp; S Electric Works (DSEW), 109, Industrial Area Extension, Rau, Indore 453331, Madhya Pradesh</td></tr>
-        <tr><td>Prepared by</td><td>PlotArmour, 31/44 St 3, Block 17, Vishwas Nagar, Delhi 110032 · GSTIN 07TQDPS9711L1ZT</td></tr>
-        <tr><td>Contact</td><td>team@plotarmour.in · +91 87440 69597</td></tr>
-        <tr><td>Date</td><td>21 October 2026</td></tr>
-        <tr><td>Companion documents</td><td>1 Proposal · 2 Delivery and deployment · 3 Licence and ownership · 4 Company and platform</td></tr>
-        <tr><td>Classification</td><td>Confidential. Prepared for DSEW under the mutual confidentiality agreement</td></tr>
-      </tbody>
-    </table>
-    <p class="foot">Hardware figures for the Complete ERP with AI search are set in section 7 of this document. Figures stated as
-    targets are confirmed at the pre-deployment survey and proven by the acceptance tests in section 15.</p>
+  <div class="cover-photo" style="background-image:url('assets/web/banner-panel-wiring.webp')"></div>
+  <div class="cover-inner">
+    <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div>
+    <h1>One server. Every drawing, job and test traced.</h1>
+    <p class="sub">The complete technical description of the solution: platform specification, installable web application, server footprint and load, requirements, security, recovery, module-by-module design, AI options and the acceptance evidence DSEW receives at go-live.</p>
+    <div class="cover-meta">
+      <div><span class="mono">Prepared for</span><b>D &amp; S Electric Works</b><br>109, Industrial Area Extension, Rau, Indore 453331</div>
+      <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
+      <div><span class="mono">Date</span><b>23 October 2026</b></div>
+      <div><span class="mono">Document</span><b>5 of 5 · Technical solution</b></div>
+    </div>
+    <span class="status">Confidential draft for final review</span>
   </div>
 </section>
+<!--/DOC:cover-->
+
+<!--DOC:body-->
+<main class="tsd">
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 5 of 5 · Technical solution</span></div>
+<p class="footnote">Hardware figures for the Complete ERP with AI search are set in section 7. Figures stated as targets are confirmed at the pre-deployment survey and proven by the acceptance tests in section 15. Companion documents: 1 Proposal · 2 Delivery and deployment · 3 Licence and ownership · 4 Company and platform.</p>
 
 <!-- ============================ CONTENTS ============================ -->
-<section class="sec">
+<section class="sec" style="break-before:auto">
   <h1>Contents</h1>
   <div class="toc">
     <div><b>1</b>Summary for DSEW management and IT</div>
@@ -213,12 +167,12 @@
     <svg viewBox="0 0 760 420" role="img" aria-label="Layered architecture of the Verity solution">
       <defs>
         <style>
-          .b{fill:#fff;stroke:#b7bec9;stroke-width:1}
-          .h{fill:#e8ecf2;stroke:#b7bec9;stroke-width:1}
-          .a{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
-          .t{font:600 12px 'Segoe UI',Arial,sans-serif;fill:#1b1d22}
-          .s{font:11px 'Segoe UI',Arial,sans-serif;fill:#4a4f58}
-          .k{font:700 10px 'Segoe UI',Arial,sans-serif;fill:#0b4f9c;letter-spacing:.08em}
+          svg .b{fill:#fff;stroke:#c9d0dc;stroke-width:1}
+          svg .h{fill:#f1f3f8;stroke:#c9d0dc;stroke-width:1}
+          svg .a{fill:#eaf3ff;stroke:#0b65b3;stroke-width:1.2}
+          svg .t{font:600 12px 'Inter',Arial,sans-serif;fill:#0b0b0f}
+          svg .s{font:11px 'Inter',Arial,sans-serif;fill:#48484e}
+          svg .k{font:700 10px 'Inter',Arial,sans-serif;fill:#0b65b3;letter-spacing:.08em}
         </style>
       </defs>
       <text class="k" x="10" y="16">USER DEVICES (THIN CLIENT)</text>
@@ -353,6 +307,7 @@
     <li><b>Forms and tables</b> are generated from metadata, so adding a field or a column is configuration with permission, validation and audit already applied.</li>
     <li><b>Print templates</b> produce DSEW's branded quotation, traveller, challan, packing list, certificate and report formats.</li>
     <li><b>Capability activation</b>: modules are switched on per tenant, and version pins mean DSEW upgrades on its own schedule.</li>
+    <li><b>Nothing DSEW-specific is hard-coded.</b> Test templates, inspection checklists, approval workflows, manufacturing routes, teams, roles, report and print formats, notification rules, categories and master data are settings held as data and edited by DSEW's administrators, with permission and audit applied. The fixed foundation (tenant isolation, sign-in, the permission check, the audit trail, the closed-record rule) is not configurable by design. The full list and its boundary are in document 1, section 2.</li>
   </ul>
 
   <h2>4.6 Application programming interface</h2>
@@ -609,7 +564,7 @@
   <h2>8.3 Data lifecycle and export</h2>
   <ul>
     <li><b>Retention:</b> closed records stay readable and locked; retention periods for documents are configured per type.</li>
-    <li><b>Export:</b> a documented export of all records as CSV and all files in original form with an index, at handover and once on request during the 12-month period.</li>
+    <li><b>Export:</b> a documented export of all records as CSV and all files in original form with an index, at handover and once on request during the testing period.</li>
     <li><b>Data location:</b> all data is held on DSEW's server. Support access is audited and time-limited.</li>
     <li><b>Deletion:</b> at the end of an engagement, PlotArmour deletes or returns any DSEW material it holds.</li>
   </ul>
@@ -753,11 +708,11 @@
   <figure>
     <svg viewBox="0 0 760 130" role="img" aria-label="Controlled chain from enquiry to dispatch">
       <defs><style>
-        .n{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
-        .g{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2}
-        .x{font:600 11px 'Segoe UI',Arial,sans-serif;fill:#1b1d22;text-anchor:middle}
-        .y{font:10px 'Segoe UI',Arial,sans-serif;fill:#4a4f58;text-anchor:middle}
-        .l{stroke:#6b7280;stroke-width:1.2;marker-end:url(#ar)}
+        svg .n{fill:#eaf3ff;stroke:#0b65b3;stroke-width:1.2}
+        svg .g{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2}
+        svg .x{font:600 11px 'Inter',Arial,sans-serif;fill:#0b0b0f;text-anchor:middle}
+        svg .y{font:10px 'Inter',Arial,sans-serif;fill:#48484e;text-anchor:middle}
+        svg .l{stroke:#6b7280;stroke-width:1.2;marker-end:url(#ar)}
       </style>
       <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8z" fill="#6b7280"/></marker></defs>
       <rect class="n" x="6"   y="30" width="82" height="46" rx="5"/><text class="x" x="47"  y="51">Enquiry</text><text class="y" x="47"  y="66">RFQ / tender</text>
@@ -858,13 +813,13 @@
   <figure>
     <svg viewBox="0 0 760 330" role="img" aria-label="Deployment topology on DSEW premises">
       <defs><style>
-        .c1{fill:#fff;stroke:#b7bec9;stroke-width:1.2}
-        .c2{fill:#e6eef8;stroke:#0b4f9c;stroke-width:1.2}
-        .c3{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2;stroke-dasharray:5 3}
-        .tt{font:600 11.5px 'Segoe UI',Arial,sans-serif;fill:#1b1d22}
-        .ss{font:10.5px 'Segoe UI',Arial,sans-serif;fill:#4a4f58}
-        .ll{stroke:#6b7280;stroke-width:1.2}
-        .kk{font:700 10px 'Segoe UI',Arial,sans-serif;fill:#0b4f9c;letter-spacing:.08em}
+        svg .c1{fill:#fff;stroke:#c9d0dc;stroke-width:1.2}
+        svg .c2{fill:#eaf3ff;stroke:#0b65b3;stroke-width:1.2}
+        svg .c3{fill:#fbf3e2;stroke:#8a5a00;stroke-width:1.2;stroke-dasharray:5 3}
+        svg .tt{font:600 11.5px 'Inter',Arial,sans-serif;fill:#0b0b0f}
+        svg .ss{font:10.5px 'Inter',Arial,sans-serif;fill:#48484e}
+        svg .ll{stroke:#6b7280;stroke-width:1.2}
+        svg .kk{font:700 10px 'Inter',Arial,sans-serif;fill:#0b65b3;letter-spacing:.08em}
       </style></defs>
       <text class="kk" x="10" y="16">DSEW PREMISES</text>
       <rect class="c1" x="6" y="22" width="748" height="300" rx="8" fill="none"/>
@@ -941,7 +896,7 @@
   <p class="kicker">Section 15</p>
   <h1>Acceptance tests and go-live gates</h1>
   <p>Every claim in this document is backed by a test that DSEW sees run and signs off. Production use begins only when all the
-  gates pass, and the 12-month support period starts on the date they pass and the handover is signed.</p>
+  gates pass, and the testing period starts on the date they pass and the handover is signed.</p>
 
   <h2>15.1 Go-live gates</h2>
   <table>
@@ -1028,7 +983,7 @@
   <p class="kicker">Section 17</p>
   <h1>Support, continuity and handover</h1>
 
-  <h2>17.1 Support during the 12-month period</h2>
+  <h2>17.1 Support during the testing period</h2>
   <table class="kv">
     <tbody>
       <tr><td>Channels</td><td>team@plotarmour.in · +91 87440 69597</td></tr>
@@ -1038,6 +993,7 @@
       <tr><td>Included time</td><td>Up to 8 hours a month of testing assistance and maintenance</td></tr>
       <tr><td>Escalation</td><td>Shubhankar Rakshit, CFO · team@plotarmour.in · +91 87440 69597</td></tr>
       <tr><td>Covers</td><td>Defect warranty, testing and UAT assistance, routine maintenance (document 1, section 7)</td></tr>
+      <tr><td>Fee and duration</td><td>₹8,500 per month ex GST, billed monthly from go-live, for as many months as DSEW chooses</td></tr>
     </tbody>
   </table>
 
@@ -1047,7 +1003,7 @@
     <li><b>Source code</b> of the DSEW-specific deliverables is in a repository DSEW controls from full payment.</li>
     <li><b>Runbooks</b> let DSEW's IT team, or another developer, install, back up, restore, upgrade and roll back.</li>
     <li><b>Open components</b> (PostgreSQL, Keycloak, Next.js and others) are standard technology that any competent engineer can maintain, and a licence inventory is provided.</li>
-    <li><b>Data portability:</b> a documented export is available at handover and on request during the 12-month period.</li>
+    <li><b>Data portability:</b> a documented export is available at handover and on request during the testing period.</li>
     <li>Updates to Verity's own components come from PlotArmour; the terms are in document 3.</li>
   </ul>
 
@@ -1128,5 +1084,7 @@
   </div>
 </section>
 
+</main>
+<!--/DOC:body-->
 </body>
 </html>
