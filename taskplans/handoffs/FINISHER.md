@@ -102,7 +102,10 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
   because of the database: `migrationsOnDisk` stat-ed `migration_lock.toml/`, which Linux rejects (ENOTDIR) and Windows accepts. Fixed in `0dc8c8d7`
   and checked against the real `prisma/migrations` on Linux; CI `verify` is green on it. Vercel still reports a failed deployment for that commit,
   which is the gate refusing because production does not yet have the migrations (its build log is not readable from the agent session, so
-  this is inferred, not read). The previous deployment stayed live throughout. To finish:
+  this is inferred, not read).
+  **2026-10-22 evening:** the owner applied the migrations to production; the redeploy (`29dd1a68`) then failed with Vercel's own message "Account is
+  blocked." That is an account-level state (billing, usage or policy) the agent cannot see or fix. Clear it in the Vercel dashboard, redeploy, and
+  look for `[migration-gate] ok` in the build log; that line is the proof that closes this item. The previous deployment stayed live throughout. To finish:
   `prisma migrate deploy` with the production `DIRECT_URL`, then redeploy and look for `[migration-gate] ok` in the build log.
 
 ### P0b-4. Demo readiness: walk the real tenants (seed scripts load .env = production and create Supabase logins when its keys are set: blank SUPABASE_* and set both DB URLs explicitly, on a local database) (Task 129 workstream C), and measure low-end devices (D2)
