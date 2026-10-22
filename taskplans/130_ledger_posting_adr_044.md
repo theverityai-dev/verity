@@ -5,7 +5,7 @@ FINISHER P1-1h; split out of Task 129 workstream E2 because it is a capability b
 ADR-017 (one authorization path), ADR-016 (scheduler may enumerate tenants), INV-001, INV-002. Changes no invariant,
 `enforcePolicy()`, or tenant-access path.
 
-## Status: PENDING 2026-10-22 (design accepted, nothing built)
+## Status: PARTIALLY BUILT 2026-10-23 — steps 1 to 4 and the setup screen for sales invoices and customer receipts (local database; migration `20261023100000_ledger_posting` NOT yet on production)
 
 Why it is a plan of its own: it needs a migration, a consumer, ten document kinds with different payloads, an account map with a
 setup screen, and a backfill. Doing it as a side task would repeat the habit this repository is trying to leave: breadth that is
@@ -41,3 +41,17 @@ of accounts.
 
 After Task 129 B7 is scheduled with DSEW. Start with steps 1 to 4 for `trading` sales invoices and payments only, prove them, then add
 kinds one at a time.
+
+## Progress log
+
+**2026-10-23 — steps 1 to 4 built for trading sales invoices and customer receipts.** Migration `20261023100000_ledger_posting` (journal source key with a
+tenant-scoped unique index, `account_map`, `ledger_posting_pending`, RLS forced on both new tables). Pure rules in `src/lib/ledger-posting.ts` (11 tests).
+Consumer, `set_account_mapping`, `post_documents_now` and `posting_setup` in `src/server/capabilities/accounting/posting.ts`, scheduled on the frequent
+cadence. Screen: Accounting, Posting setup (`/accounting/setup`). `src/test/ledger-posting.test.ts` (9 tests against the real database, runtime role):
+unmapped means pending with the reason and nothing posted; wrong-type and deactivated accounts refused; the trial balance moves by exactly the invoice and
+receipt amounts; a rerun and the button post nothing twice; cash goes to cash and UPI to bank; a tenant with accounting but no trading is untouched;
+another tenant sees nothing; the unique key holds at the database. ADR-044 amendment 3 records two decisions made on the way (no actor, soft dependency).
+
+**Not done (each its own small step):** step 5 backfill dry-run beyond the "waiting" count on the setup screen; step 6 statements already read the posted ledger
+but the DSEW acceptance walk has not been run; step 7 period lock; credit notes and voids (a reversal on void), purchase bills and supplier payments, and
+`project` invoices and receipts (DSEW's own billing) are NOT posted. Until project billing posts, a DSEW balance sheet still omits its jobs.

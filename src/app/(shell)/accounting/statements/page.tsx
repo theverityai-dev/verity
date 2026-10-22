@@ -38,9 +38,10 @@ function Total({ label, minor, strong }: { label: string; minor: number; strong?
 /**
  * Profit and loss and balance sheet, read from the ledger.
  *
- * The notice at the top is not decoration: invoices and payments raised in Trading and Jobs are
- * not posted to this ledger yet (ADR-044), so these figures cover journal entries only. Saying so
- * here is what stops a reader treating a partial ledger as the whole business.
+ * The notice at the top is not decoration: only journal entries, sales invoices and customer
+ * receipts are posted (ADR-044, Task 130). Credit notes, purchase bills and job invoices are not,
+ * so the figures are partial. Saying so here is what stops a reader treating a partial ledger as
+ * the whole business.
  */
 async function StatementsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; asOf?: string }> }) {
   const sp = await searchParams;
@@ -67,8 +68,8 @@ async function StatementsPage({ searchParams }: { searchParams: Promise<{ from?:
       />
 
       <p role="note" className="mb-6 mt-0 rounded-[12px] bg-warning-subtle px-4 py-3 text-[15px] leading-[22px]">
-        These figures cover journal entries only. Invoices, bills and payments raised in Trading and Jobs are not posted to the
-        ledger yet, so they are not here.
+        These figures cover journal entries, sales invoices and payments received from customers, once an account is chosen for each
+        in Posting setup. Credit notes, purchase bills, supplier payments and job invoices are not posted yet, so they are not here.
       </p>
 
       <form method="get" className="mb-6 flex flex-wrap items-end gap-3">

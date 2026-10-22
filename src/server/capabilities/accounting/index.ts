@@ -3,6 +3,7 @@ import { registerContribution } from "@/server/platform/contribution";
 import { registerCommand, ValidationError, type CommandDefinition } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import type { TenantScopedClient } from "@/server/platform/tenancy";
+import { registerPosting, postPendingDocuments } from "./posting";
 import {
   balanceSheet,
   endExclusiveUtc,
@@ -369,7 +370,20 @@ export function registerAccountingCapability(): void {
         shells: ["platform"],
       },
     ],
+    // ADR-044 / Task 130: documents that need a posting are picked up on the same cadence the notification dispatcher uses.
+    schedules: [
+      {
+        key: "verity.accounting.post_documents",
+        label: "Post invoices and receipts to the ledger",
+        cadence: "frequent",
+        run: async ({ tx, tenantId }) => {
+          await postPendingDocuments(tx, tenantId);
+          return {};
+        },
+      },
+    ],
   });
+  registerPosting();
   registerCommand(createAccount);
   registerCommand(setAccountActive);
   registerCommand(postJournalEntry);

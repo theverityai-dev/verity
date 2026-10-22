@@ -98,12 +98,20 @@ async function AccountingPage() {
         title="Accounting"
         description="Chart of accounts, journal entries and the trial balance."
         actions={
-          <Link
-            href="/accounting/statements"
-            className="inline-flex min-h-10 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink no-underline transition-opacity active:opacity-70 max-sm:min-h-11"
-          >
-            Statements
-          </Link>
+          <>
+            <Link
+              href="/accounting/setup"
+              className="inline-flex min-h-10 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink no-underline transition-opacity active:opacity-70 max-sm:min-h-11"
+            >
+              Posting setup
+            </Link>
+            <Link
+              href="/accounting/statements"
+              className="inline-flex min-h-10 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-accent-ink no-underline transition-opacity active:opacity-70 max-sm:min-h-11"
+            >
+              Statements
+            </Link>
+          </>
         }
       />
       <StatTileRow cols={4} className="mb-6">
