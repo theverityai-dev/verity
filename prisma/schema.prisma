@@ -172,6 +172,8 @@ model Tenant {
   // Capability: accounting (Task 72). Back-relations only, as above.
   accounts       Account[]
   journalEntries JournalEntry[]
+  accountMaps    AccountMap[]
+  ledgerPending  LedgerPostingPending[]
   journalLines   JournalLine[]
 
   // Capability: inventory (Task 73). Back-relations only, as above.
@@ -184,6 +186,10 @@ model Tenant {
   pieceworkWorkerRates         PieceworkWorkerRate[]
   pieceworkEntries             PieceworkEntry[]
   pieceworkPayments            PieceworkPayment[]
+  pieceworkStageAssignments    PieceworkStageAssignment[]
+  pieceworkApprovals           PieceworkApproval[]
+  pieceworkSetting             PieceworkSetting?
+  pieceworkDayCloses           PieceworkDayClose[]
   inventoryAttributes          InventoryAttribute[]
   inventoryAttributeValues     InventoryAttributeValue[]
   inventoryItemTemplates       InventoryItemTemplate[]
@@ -4650,6 +4656,7 @@ model Account {
 
   tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lines  JournalLine[]
+  maps   AccountMap[]
 
   @@unique([tenantId, code])
   @@unique([tenantId, id], name: "account_tenant_scoped_id")
@@ -4675,6 +4682,10 @@ model JournalEntry {
   /// original readable and unchanged, which is the whole point.
   reversalOfId String?  @map("reversal_of_id") @db.Uuid
   postedById   String   @map("posted_by_id") @db.Uuid
+  /// The business document this entry posts (ADR-044), e.g. kind "trading.sales_invoice" and that invoice's id. Both null for a
+  /// manual entry. The pair is UNIQUE per tenant, which is what makes posting idempotent.
+  sourceKind   String?  @map("source_kind")
+  sourceId     String?  @map("source_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at")
 
   tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -4683,8 +4694,41 @@ model JournalEntry {
   lines      JournalLine[]
 
   @@unique([tenantId, id], name: "journal_entry_tenant_scoped_id")
+  @@unique([tenantId, sourceKind, sourceId])
   @@index([tenantId, postedAt])
   @@map("journal_entry")
+}
+
+/// Which account plays which role when a business document posts (ADR-044, Task 130). One row per role per tenant. A role with no
+/// row means documents that need it wait in LedgerPostingPending; nothing posts to a default account.
+model AccountMap {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  role      String
+  accountId String   @map("account_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "account_map_account_fkey")
+
+  @@unique([tenantId, role])
+  @@map("account_map")
+}
+
+/// A document that could not post yet, and why. Removed when it posts. Not part of the ledger: the ledger stays append-only.
+model LedgerPostingPending {
+  tenantId      String   @map("tenant_id") @db.Uuid
+  sourceKind    String   @map("source_kind")
+  sourceId      String   @map("source_id") @db.Uuid
+  reason        String
+  firstSeenAt   DateTime @default(now()) @map("first_seen_at")
+  lastCheckedAt DateTime @default(now()) @map("last_checked_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, sourceKind, sourceId])
+  @@map("ledger_posting_pending")
 }
 
 /// One debit or credit leg of a JournalEntry. APPEND-ONLY, same reasoning as
@@ -7657,6 +7701,7 @@ model PieceworkStage {
   tenant  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rates   PieceworkWorkerRate[]
   entries PieceworkEntry[]
+  pieceworkStageAssignments PieceworkStageAssignment[]
 
   @@unique([tenantId, stageKey])
   @@unique([tenantId, sequence])
@@ -7694,6 +7739,7 @@ model PieceworkLot {
   tenant  Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   bundles PieceworkBundle[]
   entries PieceworkEntry[]
+  pieceworkApprovals PieceworkApproval[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -7724,6 +7770,7 @@ model PieceworkBundle {
   parent  PieceworkBundle?  @relation("PieceworkBundleSplit", fields: [parentBundleId], references: [id], onDelete: Restrict)
   children PieceworkBundle[] @relation("PieceworkBundleSplit")
   entries PieceworkEntry[]
+  pieceworkApprovals PieceworkApproval[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -7749,6 +7796,7 @@ model PieceworkWorker {
   rates    PieceworkWorkerRate[]
   entries  PieceworkEntry[]
   payments PieceworkPayment[]
+  pieceworkApprovals PieceworkApproval[]
 
   @@unique([tenantId, name])
   @@map("piecework_worker")
@@ -7821,6 +7869,7 @@ model PieceworkEntry {
   worker   PieceworkWorker @relation(fields: [workerId], references: [id], onDelete: Restrict)
   issue    PieceworkEntry? @relation("PieceworkEntrySettles", fields: [issueId], references: [id], onDelete: Restrict)
   returns  PieceworkEntry[] @relation("PieceworkEntrySettles")
+  pieceworkApprovals PieceworkApproval[]
   reverses PieceworkEntry? @relation("PieceworkEntryReversal", fields: [reversesId], references: [id], onDelete: Restrict)
   reversal PieceworkEntry? @relation("PieceworkEntryReversal")
 
@@ -7856,4 +7905,90 @@ model PieceworkPayment {
 
   @@index([tenantId, workerId])
   @@map("piecework_payment")
+}
+
+/// Which stages a supervisor looks after. Checked by the capability's commands: a user without the all-stages grant
+/// can issue and receive only at an assigned stage. Replaced as a set by the owner; a row is never edited.
+model PieceworkStageAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  stageId     String   @map("stage_id") @db.Uuid
+  createdById String   @map("created_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stage  PieceworkStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, stageId])
+  @@index([tenantId, userId])
+  @@map("piecework_stage_assignment")
+}
+
+/// A request one person raises and another decides: a wage deduction, a shortage write-off, or a lot hold or close.
+/// Pending until decided; a decision names who and when. Approving applies the ordinary change through the same rules.
+model PieceworkApproval {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  /// deduction | writeoff | hold | close. Closed set owned by the capability (APPROVAL_KINDS).
+  kind          String
+  /// pending | approved | declined
+  status        String    @default("pending")
+  lotId         String?   @map("lot_id") @db.Uuid
+  bundleId      String?   @map("bundle_id") @db.Uuid
+  workerId      String?   @map("worker_id") @db.Uuid
+  /// The return entry the rejected or short pieces came from; its photographs are the evidence.
+  entryId       String?   @map("entry_id") @db.Uuid
+  pieces        Int?
+  amountMinor   Int?      @map("amount_minor")
+  reason        String
+  requestedById String    @map("requested_by_id") @db.Uuid
+  requestedAt   DateTime  @default(now()) @map("requested_at")
+  decidedById   String?   @map("decided_by_id") @db.Uuid
+  decidedAt     DateTime? @map("decided_at")
+  decisionNote  String?   @map("decision_note")
+
+  tenant Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot    PieceworkLot?    @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  bundle PieceworkBundle? @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  worker PieceworkWorker? @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  entry  PieceworkEntry?  @relation(fields: [entryId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status])
+  @@index([tenantId, entryId])
+  @@map("piecework_approval")
+}
+
+/// One row per tenant: the limits the owner sets for what a manager may approve alone.
+model PieceworkSetting {
+  id                         String   @id @default(uuid()) @db.Uuid
+  tenantId                   String   @unique @map("tenant_id") @db.Uuid
+  managerDeductionLimitMinor Int      @default(100000) @map("manager_deduction_limit_minor")
+  managerWriteoffLimitPieces Int      @default(5) @map("manager_writeoff_limit_pieces")
+  updatedById                String?  @map("updated_by_id") @db.Uuid
+  updatedAt                  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("piecework_setting")
+}
+
+/// APPEND-ONLY. A supervisor's closed day: the summary is frozen at submission so the owner and manager read exactly
+/// what was handed over. One per supervisor per day.
+model PieceworkDayClose {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  closeDate DateTime @map("close_date") @db.Date
+  summary   Json
+  note      String?
+  /// The language the handover note is written in: en | hi.
+  lang      String   @default("en")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, closeDate])
+  @@index([tenantId, closeDate])
+  @@map("piecework_day_close")
 }

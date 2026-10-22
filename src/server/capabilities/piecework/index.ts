@@ -24,8 +24,11 @@ import {
 import { activeStages, asDate, isoOf, isoOrNull, loadBundles, todayFor, toLedger, type LoadedBundle, type Tx } from "./shared";
 import { dashboard, recentEntries, reportBundleLocation, reportCosting, reportLotStatus, reportProductionByProcess, reportQuality, reportReadyInventory, reportWagePayment, reportWorkInHand } from "./reports";
 
+import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, assertStageAccess, registerFloor } from "./floor";
+
 export * from "./ledger";
 export * from "./reports";
+export * from "./floor";
 
 /**
  * CAPABILITY: Piece-rate lots (`verity.capability.piecework`), built for the Stylified shirt factory from its requirement
@@ -394,6 +397,7 @@ export const recordIssue: CommandDefinition<
     const { worker, day } = await checkWork(ctx.tx, input.bundleId, input.workerId, input.entryDate);
     const stage = await ctx.tx.pieceworkStage.findUnique({ where: { id: input.stageId } });
     if (!stage || !stage.active) throw new ValidationError("E_VALIDATION: stage not found in this tenant");
+    await assertStageAccess(ctx, stage.id);
     if (input.dueDate && input.dueDate < day) throw new ValidationError("E_VALIDATION: the expected return date is before the issue date");
     const rate = await rateFor(ctx.tx, worker.id, stage.id, day);
     if (!rate) throw new ValidationError(`E_VALIDATION: set ${worker.name}'s rate for ${stage.label} first (enter 0 if the work is unpaid)`);
@@ -444,6 +448,7 @@ export const recordReturn: CommandDefinition<
     const issue = await ctx.tx.pieceworkEntry.findUnique({ where: { id: input.issueId } });
     if (!issue || issue.kind !== "issue" || issue.reversesId) throw new ValidationError("E_VALIDATION: issue not found in this tenant");
     if (await ctx.tx.pieceworkEntry.findFirst({ where: { reversesId: issue.id }, select: { id: true } })) throw new ValidationError("E_VALIDATION: that issue was reversed");
+    await assertStageAccess(ctx, issue.stageId);
     const { worker, day } = await checkWork(ctx.tx, issue.bundleId, issue.workerId, input.entryDate);
     const total = input.good + input.rejected + input.rework + input.short;
     if (total < 1) throw new ValidationError("E_VALIDATION: account for at least one piece");
@@ -488,6 +493,7 @@ export const reverseEntry: CommandDefinition<{ entryId: string; note?: string },
     if (!original) throw new ValidationError("E_VALIDATION: entry not found in this tenant");
     if (original.reversesId) throw new ValidationError("E_VALIDATION: a reversal cannot itself be reversed; enter the work again");
     if (await ctx.tx.pieceworkEntry.findFirst({ where: { reversesId: original.id }, select: { id: true } })) throw new ValidationError("E_VALIDATION: that entry is already reversed");
+    await assertMayReverse(ctx, original);
     const bundle = await lockBundle(ctx.tx, original.bundleId);
     if (!bundle || bundle.lot.cancelledAt) throw new ValidationError("E_VALIDATION: that lot is cancelled");
     if (bundle.lot.status === "closed") throw new ValidationError("E_VALIDATION: that lot is closed; reopen it through an approved adjustment first");
@@ -911,6 +917,9 @@ export function registerPieceworkCapability(): void {
   registerContribution({
     capabilityId: PIECEWORK_CAPABILITY,
     navigation: [
+      { href: "/floor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
+      { href: "/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
+      { href: "/floor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/dashboard", label: "Owner dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots", label: "Lots", group: "Production", order: 21, icon: "batch", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots/entry", label: "Daily entry", group: "Production", order: 22, icon: "plus", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
@@ -931,6 +940,7 @@ export function registerPieceworkCapability(): void {
   registerCommand(reverseEntry);
   registerCommand(recordPayment);
   registerCommand(reversePayment);
+  registerFloor();
   registerQuery(listStages);
   registerQuery(listLots);
   registerQuery(lotDetail);
