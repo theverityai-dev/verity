@@ -304,7 +304,8 @@ platform file store, a small label catalogue. Photographs need a new file field,
 both themes (DEMO-READY gate), the migration is applied to production (P0b-3), and Stylified's workspace has a rehearsed
 restore.
 **Source.** `clients/stylified/proposal/`, `clients/stylified/requirement-sheet-review.md`, `taskplans/handoffs/DESIGN_AUDIT.md`.
-**Status.** PLANNED. The pricing reading ("15k incl GST" as ₹15,000 per month inclusive) needs the owner's confirmation.
+**Status.** PLANNED. Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
+Stylified's own Vercel and Supabase accounts is an option quoted later and not promised (ADR-054 keeps Mode D parked; see P2-0).
 
 ## P2: planned build work, unblocked
 
@@ -320,7 +321,9 @@ restore.
   and first-operator steps with tests; run the pilot in the doc's section 10 on throwaway Pro accounts;
   pass the section 11 gate before any real client data.
 - **Done when:** the gate passes and the mode is named in every claim (ADR-031 constraint 1).
-- **Status:** BLOCKED on a person (offer it or not, price, pilot client, support model).
+- **Status:** BLOCKED on a person (offer it or not, price, pilot client, support model). 2026-10-22: Stylified asked for its
+  instance on its own Vercel and Supabase; the owner chose PlotArmour-hosted first with a priced move later, so Mode D stays
+  parked and Stylified is a candidate pilot, not the committed one.
 
 ### P2-1. Remaining export datasets (ADR-037, 125 §7.5)
 

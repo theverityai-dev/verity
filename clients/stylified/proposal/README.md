@@ -22,7 +22,9 @@ The owner gave: ₹25,000 + GST customization; server ₹4,500; maintenance ₹4
 | Decision | Basis |
 |---|---|
 | The three recurring amounts are monthly and add to ₹15,000 | 4,500 + 4,000 + 6,500 = 15,000 exactly |
-| ₹15,000 is **per month, GST included** (₹12,711.86 + ₹2,288.14) | The owner wrote "(15k incl GST)" beside the three amounts. The proposal flags this and states the alternative (₹17,700 if the amounts were before GST) |
+| ₹15,000 is **per month, GST included** (₹12,711.86 + ₹2,288.14) | **Confirmed by the owner, 2026-10-22** |
+| Hosting: PlotArmour-hosted first (Verity's shared hosted deployment); a move to Stylified's own Vercel and Supabase accounts is a priced option offered later, **not promised** | Owner choice, 2026-10-22. ADR-054 (PROPOSED) parks client-owned cloud accounts (Mode D) and bars proposals that promise it until the owner reopens it; `docs/deployment/client-owned-vercel-supabase.md` lists seven open blockers |
+| If the move happens, provider bills stay inside the ₹4,500 server line (accounts in Stylified's name, billed to PlotArmour) | Owner choice, 2026-10-22. Provider floor per the research: Vercel Pro from $20 a month and Supabase Pro about $25 a month plus compute; we carry any excess, with 60 days' notice before changing the fee |
 | One-time fee is ₹29,500 (₹25,000 + 18% IGST ₹4,500), paid 50% at kickoff and 50% on go-live | PlotArmour is registered in Delhi, Stylified is in Punjab, so IGST is expected. The 50/50 split is our proposal |
 | Lock-in is 3 months **from go-live**; minimum commitment ₹74,500 including GST | Lock-in counted from the date the service starts. After it, month to month with 30 days' notice |
 | Up to 10 named users, one unit | Our proposal; more are priced separately |

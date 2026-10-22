@@ -57,7 +57,11 @@
 <tr><td>Files</td><td>Object storage with the same company isolation; used for photographs</td></tr>
 <tr><td>Sign-in</td><td>The platform's identity service; passwords never reach Verity's own tables</td></tr>
 <tr><td>Environments</td><td>A demonstration workspace with fictional data and Stylified's own workspace are separate tenants. Nothing is shared between them</td></tr>
+<tr><td>Deployment shape</td><td>Verity's shared hosted deployment (one application and database for many companies, each isolated as in section 3). A dedicated instance on Stylified's own Vercel and Supabase accounts is <strong>not part of this solution</strong>: see below</td></tr>
 </tbody></table>
+
+<h3>If Stylified later wants its own accounts</h3>
+<p>Running Verity on a customer's own Vercel and Supabase accounts is feasible but not yet built or validated. Our research lists what must be done first: scripting the creation of the restricted database role the application connects as, a scripted first-operator and first-company setup on a fresh Supabase project, a scheduled-jobs setup per instance, separate file and database backups, a release and migration channel for more than one instance, and a support model without a shared console. A rehearsal on throwaway accounts must pass before any real data moves. Provider plans must allow business use (Vercel Pro and Supabase Pro are the minimum; free plans are not suitable). We will quote the move separately once this is done; until then the isolation, backup and security statements in this document describe the shared hosted deployment only.</p>
 <p class="footnote">Provider names and plans can change over the life of the service; the data stays in an Indian region and the isolation rules below do not change.</p>
 
 <h2><span class="num">03</span>Company isolation</h2>
@@ -146,6 +150,7 @@
 <li>The new supervisor, approval, photograph and bilingual work in this project is a plan until it is built and passes its tests.</li>
 <li>Speed on the hosted service is not yet measured; the figures above are from a local build.</li>
 <li>Offline use, SMS or WhatsApp alerts, barcode scanning and the Phase 2 modules are not part of this solution.</li>
+<li>A deployment on Stylified's own Vercel and Supabase accounts is not built, not validated and not part of this solution.</li>
 </ul>
 </main>
 <!--/DOC:body-->
