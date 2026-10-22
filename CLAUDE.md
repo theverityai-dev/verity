@@ -139,6 +139,11 @@ restyling any screen read the `screen-deserves`, `screen-imagery` and `impeccabl
 - **Type = Inter Light display + Plex Mono micro-labels.** Page title weight 200, tracked `-0.045em`; section title 300; card
   title 500; hero figures use `.figure` (weight 200, tabular, `-0.06em`); labels use `.micro` (Plex Mono 11.5px uppercase).
   Body 14px on desktop, 16px on phones, inputs 16px minimum on phones. No bold large numerals, no loose-tracked headings.
+- **Light theme keeps its glass**: the light canvas is a cool blue-grey (`#e9edf6`) so a cell differs from it; never white-on-white. Lite effects
+  (set automatically on weak devices) keeps the lit edge, hairline and shadows and drops only blur, rim and blooms.
+- **Signals are solid, never pastel**: status pills (`StateBadge`) and kind tiles (`IconTile`) are saturated fills with a white (amber: near-black) word,
+  from the `-fill`/`-on`/`-ink` tokens. `-ink` is plain text on glass, never on a `-fill`. Stat strips are `StatTile`s (`StatRow` renders them).
+  One weight ladder: `font-semibold` is 500, `font-bold` is for print only, hero numerals use `.figure`.
 - **Graphics are instruments**: `PieceRing` (ring with tick scale), 24-tick bars, hairline area charts. Colour is state.
 - **Cards are real, fully visible, properly sized**: one clickable object each, no sideways-scrolling cards on desktop, no
   clipped lanes, no tile without a fact and a destination. Grids use `repeat(auto-fit, minmax(...))`.

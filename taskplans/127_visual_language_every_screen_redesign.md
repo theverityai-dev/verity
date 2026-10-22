@@ -12,6 +12,8 @@ content, is the requirement.
 
 ## Status: IN PROGRESS — Phase 1 started 2026-10-16; ADR-046 ACCEPTED
 
+**2026-10-23 consistency pass (committed `9b855275`, ADR-053 amendment).** Light-theme glass fixed (cool canvas, stronger blooms, layered shadows; lite effects keeps edge and shadows). Pills and kind tiles are solid saturated fills with `-fill`/`-on`/`-ink` tokens, in both themes. One stat card everywhere (`StatRow` renders `StatTile`); eight DSEW screens got real kinds and states on their `Stat`s. `font-semibold` maps to 500, headline numerals use `.figure`, stray sizes snapped. **Not browser-walked as the DSEW owner** (the dev servers were OIDC-only); verified on a throwaway preview page in light, dark and lite. The Phase 1 pastel values quoted below are superseded.
+
 **Phase 1 progress (2026-10-16, uncommitted). BUILT and PROVEN** (`kind-hue-contrast.test.ts` 5 tests,
 `viz-geometry.test.ts` 15 tests, `nav-icons.test.ts`; `tsc` 0 errors after `prisma generate`; ESLint clean):
 - Tokens: eight kind hues and six state-pill fill/ink pairs (`globals.css`). The test caught dark brown 8deg from
@@ -72,8 +74,8 @@ Lighthouse accessibility 100 on summary, jobs and job detail (order detail inher
 fixed: "Control panel for transformer test bay" mapped to transformer (control systems now tested first).
 **Glyph review notes (to redraw):** `timesheet` equals `clock`, `milestone` equals `flag`, `stage-dispatch`
 equals the `purchases`/`assets` cube, `tap-changer` reads as a stopwatch.
-**NOT YET DONE in Phase 1:** filled glyph variants; redraw of the existing ~40 glyphs to the new weights; `StatCard` merged into
-`StatTile`; `EmptyState`/`LoadingRows` with icon tiles; `AreaTrend`, `FunnelChart`, `HeatCalendar`, `Waterfall`,
+**NOT YET DONE in Phase 1:** filled glyph variants; redraw of the existing ~40 glyphs to the new weights; ~~`StatCard` merged into
+`StatTile`~~ (done 2026-10-23: `StatCard` wraps `StatTile`, and `StatRow` draws each `Stat` as a `StatTile`); `EmptyState`/`LoadingRows` with icon tiles; `AreaTrend`, `FunnelChart`, `HeatCalendar`, `Waterfall`,
 `Timeline` (built in the phase whose page first needs them). Phase 2 components (`JourneyMap`, `MasterDetail`,
 `DetailPane`, `ChecklistRows`, `ActionBar`) next.
 

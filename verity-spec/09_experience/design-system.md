@@ -172,7 +172,7 @@ targets, quiet surfaces, and one obvious next action.
 *   **Status**: `[DECIDED]` — ADR-046 §4. `IconTile` / `IconDisc` (`src/components/ui/IconTile.tsx`) and `Avatar` read it.
 
 ### REQ-EXPERIENCE-DESIGNSYSTEM-027
-*   **Requirement**: A state is drawn as a tinted opaque pill: a soft fill of the state colour, a dot and a word, ink at least 4.5:1 on its fill in both themes. `StateBadge` is the only implementation. A roll-up of several states shows the highest-attention one.
+*   **Requirement**: A state is drawn as a solid pill: a saturated fill of the state colour, a dot and a word (white; amber takes a near-black word), the word at least 4.5:1 on its fill in both themes (ADR-053 amendment 2026-10-23). Each state and kind hue has `-fill`, `-on` (the word or glyph on that fill) and `-ink` (the colour as plain text on glass; never on its own fill). `StateBadge` is the only implementation. A roll-up of several states shows the highest-attention one.
 *   **Status**: `[DECIDED]` — ADR-046 §5. `StateBadge` changed in place 2026-10-16 (every page inherits it).
 
 ### REQ-EXPERIENCE-DESIGNSYSTEM-028

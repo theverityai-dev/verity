@@ -46,7 +46,7 @@ export const viewport = {
   themeColor: [
     // The canvas colour (ADR-053). This is the colour the OS paints around the viewport, so a
     // mismatch shows as a seam at the top of a phone.
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: light)", color: "#e9edf6" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };

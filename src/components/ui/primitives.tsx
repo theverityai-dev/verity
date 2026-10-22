@@ -59,9 +59,8 @@ export function Surface({
   solid?: boolean;
   className?: string;
 }) {
-  // ADR-033: every card is an iOS inset-grouped cell — opaque, 12px corners, no
-  // border and no shadow. `solid` and `bordered` are kept for callers but no
-  // longer change the material; content is always opaque on iOS.
+  // ADR-053: every card is a frosted-glass cell (`.glass-card`). `solid` and `bordered` are kept
+  // for callers but do not change the material.
   void solid;
   void bordered;
   return <div className={cx("glass-card", className)}>{children}</div>;
@@ -876,7 +875,7 @@ export function StateBadge({ category, label }: { category: string; label?: stri
     color: "bg-[var(--color-text-tertiary)]",
   };
 
-  // ADR-046 §5: a tinted opaque fill of the state colour, a dot and a word, ink >= 4.5:1 on its own
+  // ADR-046 §5 / ADR-053: a solid fill of the state colour, a dot and a word, the word >= 4.5:1 on its own
   // fill. Colour comes from the category only (ADR-009); an unknown category stays the neutral pill.
   const known = category in CATEGORY_PRESENTATION;
   const key = category.toLowerCase();

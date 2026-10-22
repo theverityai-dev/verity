@@ -6,11 +6,11 @@
 <title>Verity Kind Hues</title>
 <!--
   ADR-046 swatch sheet for product-owner sign-off. Values copied from src/app/globals.css
-  (--color-hue-*, --color-state-*-fill|ink). If they differ, globals.css wins and this file is stale.
+  (--color-hue-*, --color-state-*: -fill, -on, -ink). Solid saturated fills since the ADR-053 amendment of 2026-10-23. If they differ, globals.css wins and this file is stale.
 -->
 <style>
   :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { margin: 0; background: #f2f2f7; color: #000; }
+  body { margin: 0; background: #e9edf6; color: #000; }
   main { display: grid; grid-template-columns: 1fr; }
   @media (min-width: 900px) { main { grid-template-columns: 1fr 1fr; } }
   section { padding: 24px 16px 40px; }
@@ -42,23 +42,24 @@
   <section class="dark" id="dark"></section>
 </main>
 <script>
+  // [fill, on, ink]: the tile fill, the glyph or word on it, and the hue as plain text or a chart stroke on the glass.
   const HUES = {
-    indigo:  { light: ["#e4e2f8", "#3e30cf"], dark: ["#3f3d50", "#aca6ed"], use: "Sales" },
-    purple:  { light: ["#f1e3f6", "#9c37be"], dark: ["#47394e", "#d195e4"], use: "Buying, suppliers" },
-    magenta: { light: ["#f5e1ed", "#b62b7c"], dark: ["#4d3745", "#e88cc2"], use: "People, parties" },
-    teal:    { light: ["#deece7", "#117456"], dark: ["#264e43", "#47ebba"], use: "Stock" },
-    cyan:    { light: ["#ddebed", "#0e7181"], dark: ["#254950", "#42d9f0"], use: "Money, tax, ledger" },
-    olive:   { light: ["#e8ebdf", "#5d6e17"], dark: ["#444b2a", "#c4e151"], use: "Evidence, approvals, schedule" },
-    brown:   { light: ["#efe8e2", "#8a5b33"], dark: ["#443d39", "#c2a78e"], use: "Locations, assets" },
-    slate:   { light: ["#e8eaed", "#58687e"], dark: ["#3b3f45", "#9eadc2"], use: "Production, platform, audit" },
+    indigo:  { light: ["#4a3fdc", "#ffffff", "#3e30cf"], dark: ["#4b44c4", "#ffffff", "#aca6ed"], use: "Sales" },
+    purple:  { light: ["#a23fc7", "#ffffff", "#9c37be"], dark: ["#8f3db0", "#ffffff", "#d195e4"], use: "Buying, suppliers" },
+    magenta: { light: ["#c02a82", "#ffffff", "#b62b7c"], dark: ["#b02a76", "#ffffff", "#e88cc2"], use: "People, parties" },
+    teal:    { light: ["#0b8265", "#ffffff", "#117456"], dark: ["#0f7a60", "#ffffff", "#47ebba"], use: "Stock" },
+    cyan:    { light: ["#0a7d90", "#ffffff", "#0e7181"], dark: ["#0d7487", "#ffffff", "#42d9f0"], use: "Money, tax, ledger" },
+    olive:   { light: ["#667a14", "#ffffff", "#5d6e17"], dark: ["#6a7c14", "#ffffff", "#c4e151"], use: "Evidence, approvals, schedule" },
+    brown:   { light: ["#935f33", "#ffffff", "#8a5b33"], dark: ["#8a5a30", "#ffffff", "#c2a78e"], use: "Locations, assets" },
+    slate:   { light: ["#5f7188", "#ffffff", "#58687e"], dark: ["#566579", "#ffffff", "#9eadc2"], use: "Production, platform, audit" },
   };
   const STATES = {
-    Draft:     { light: ["#ececec", "#69696d", "#6c6c70"], dark: ["#3c3c3f", "#aeaeb2", "#aeaeb2"] },
-    Pending:   { light: ["#f4eade", "#995700", "#a86000"], dark: ["#4e3d25", "#ffb340", "#ffb340"] },
-    Active:    { light: ["#dee6fb", "#0040dd", "#0040dd"], dark: ["#243850", "#4fa4ff", "#409cff"] },
-    Blocked:   { light: ["#fadee1", "#cd0014", "#d70015"], dark: ["#4e2d2d", "#ff7870", "#ff6961"] },
-    Completed: { light: ["#e2eee5", "#1e7634", "#1f7a36"], dark: ["#20462b", "#30db5b", "#30db5b"] },
-    Cancelled: { light: ["#ececec", "#69696d", "#6c6c70"], dark: ["#3c3c3f", "#aeaeb2", "#aeaeb2"] },
+    Draft:     { light: ["#636366", "#ffffff", "#69696d"], dark: ["#636366", "#ffffff", "#aeaeb2"] },
+    Pending:   { light: ["#ffb020", "#2b1b00", "#995700"], dark: ["#ffb020", "#2b1b00", "#ffb340"] },
+    Active:    { light: ["#0a5fe0", "#ffffff", "#0040dd"], dark: ["#0a5fe0", "#ffffff", "#4fa4ff"] },
+    Blocked:   { light: ["#dc1b30", "#ffffff", "#cd0014"], dark: ["#dc1b30", "#ffffff", "#ff7870"] },
+    Completed: { light: ["#167f35", "#ffffff", "#1e7634"], dark: ["#167f35", "#ffffff", "#30db5b"] },
+    Cancelled: { light: ["#636366", "#ffffff", "#69696d"], dark: ["#636366", "#ffffff", "#aeaeb2"] },
   };
   const SERIES = ["indigo", "teal", "magenta", "olive", "cyan", "purple", "brown", "slate"];
   const BAR = [62, 48, 70, 35, 55, 42, 28, 50];
@@ -77,21 +78,21 @@
       <p class="lede">Kind hues: icon tiles, discs, avatars and chart series only. Never pills or buttons.</p>
       <h2>Eight kind hues (provisional)</h2><div class="cell">`;
     for (const [n, v] of Object.entries(HUES)) {
-      const [fill, ink] = v[theme];
+      const [fill, on] = v[theme];
       html += `<div class="row">
-        <span class="tile" style="background:${fill};color:${ink}">${GLYPH}</span>
-        <span class="tile disc" style="background:${fill};color:${ink}">${GLYPH}</span>
+        <span class="tile" style="background:${fill};color:${on}">${GLYPH}</span>
+        <span class="tile disc" style="background:${fill};color:${on}">${GLYPH}</span>
         <span class="name">${n}</span>
-        <span class="hex">${fill} / ${ink}<br>${cr(ink, fill)}:1</span>
+        <span class="hex">${fill} / ${on}<br>${cr(on, fill)}:1</span>
         <span class="use">${v.use}</span></div>`;
     }
     html += `</div><h2>State pills (from StateCategory)</h2><div class="cell"><div class="pills">`;
     for (const [n, v] of Object.entries(STATES)) {
-      const [fill, ink, dot] = v[theme];
-      html += `<span class="pill" style="background:${fill};color:${ink}" title="${cr(ink, fill)}:1"><span class="dot" style="background:${dot}"></span>${n}</span>`;
+      const [fill, on] = v[theme];
+      html += `<span class="pill" style="background:${fill};color:${on}" title="${cr(on, fill)}:1"><span class="dot" style="background:${on}"></span>${n}</span>`;
     }
     html += `</div></div><h2>Chart series order (illustration, not data)</h2><div class="cell"><div class="bars">`;
-    SERIES.forEach((n, i) => { html += `<span style="height:${BAR[i]}px;background:${HUES[n][theme][1]}" title="${n}"></span>`; });
+    SERIES.forEach((n, i) => { html += `<span style="height:${BAR[i]}px;background:${HUES[n][theme][2]}" title="${n}"></span>`; });
     html += `</div></div>`;
     el.innerHTML = html;
   }

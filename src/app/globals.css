@@ -209,9 +209,9 @@
    which its scanner cannot see. A plain :root rule was stripped the same way. `static` always emits.
    Found by the 2026-10-16 browser pass: pills and tiles rendered with no fill. */
 @theme static {
-  /* STATE PILL — tinted opaque fill + AA ink per StateCategory (ADR-046 §5).
-     The dot keeps the --color-state-* colour above; ink is adjusted so text on
-     its own fill clears 4.5:1 in both themes. Never keyed off a label. */
+  /* STATE PILL — solid fill + AA word per StateCategory (ADR-046 §5, amended by ADR-053 2026-10-23).
+     The word (`-on`) clears 4.5:1 on its own fill in both themes; the pill dot takes the word's colour.
+     Never keyed off a label. */
   /* Destructive-tinted button label (ADR-033 danger variant). #d70015 measured 4.14:1 on the
      danger-subtle fill in the 2026-10-16 Lighthouse pass; this clears 5:1 on that fill and on the gray hover. */
   --color-danger-ink: light-dark(#bd0010, #ff6961);
@@ -375,16 +375,16 @@
 }
 
 /**
- * MATERIALS (ADR-033). The class names are kept from ADR-024/026 so every
- * screen moves at once; their meaning is now iOS's:
+ * MATERIALS (ADR-053). Class names are kept from ADR-024/026 so every screen moves at once:
  *
  *   .glass-shell    bar material — navigation bar, tab bar, sidebar
- *   .glass-card     an inset-grouped cell: opaque, 12px corners, no border/shadow
+ *   .glass-card     a content cell: frosted gradient fill, 24px blur, hairline, specular rim, soft shadows
+ *   .glass-inset    an inner card or control with a light blur (a cell inside a cell is flat)
  *   .glass-control  a system fill — text fields, gray buttons, segmented controls
  *   .glass-overlay  thick material — menus, popovers, sheets, dialogs
- *   .verity-solid   an opaque cell, identical to .glass-card in this system
+ *   .verity-solid   an opaque cell, for when density or decision safety outranks the material
  *
- * Translucency lives only on bars and overlays, where iOS uses it.
+ * Never blur table rows, badges or status dots. Reduced transparency and lite effects fall back to opaque fills.
  */
 /* NO hand-written `-webkit-backdrop-filter` anywhere in this file. Lightning CSS (Next's CSS pipeline) keeps the prefixed property and
    drops the standard one when both sit in a rule, so Chrome, Edge and Firefox lost the blur entirely and only Safari kept it. It adds the

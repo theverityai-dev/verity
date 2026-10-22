@@ -16,7 +16,7 @@ import type { IconName } from "@/components/ui/icons";
  *
  * Values live in `src/app/globals.css` (`--color-hue-<name>-fill|ink`) and are PROVISIONAL until
  * the owner signs off the swatch sheet. `src/test/kind-hue-contrast.test.ts` holds them to
- * ADR-046 §3: ink >= 4.5:1 on its own fill in both themes, and every chromatic hue >= 20deg
+ * ADR-046 §3: the glyph (`-on`) >= 4.5:1 on its own fill in both themes, and every chromatic hue (`-ink`) >= 20deg
  * from each semantic hue and from the default tint.
  */
 

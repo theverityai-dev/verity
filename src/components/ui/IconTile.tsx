@@ -2,7 +2,7 @@ import { Icon, type IconName } from "./icons";
 import { KIND_HUES, STATE_TONES, kindPresentation, type KindHue, type StateTone } from "./business/domains";
 
 /**
- * A glyph on a soft tinted shape: "what sort of thing is this" (ADR-046).
+ * A white glyph on a solid saturated shape: "what sort of thing is this" (ADR-046, ADR-053).
  *
  * `IconTile` (rounded square) is for list rows and cards; `IconDisc` (circle) is for KPI tiles and
  * numbered markers. Pass either a `kind` (the mapped hue and glyph from `domains.ts`, the normal

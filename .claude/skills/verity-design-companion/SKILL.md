@@ -28,14 +28,22 @@ piece; do not restyle one page by hand.
 - Semantic: `text-success|warning|danger|info` and `-subtle` fills — iOS green/orange/red/blue,
   accessible variants, independent of the tint.
 
-**Materials.** Translucency only on bars (`.glass-shell`: sidebar, nav bar, tab bar) and overlays
-(`.glass-overlay`: menus, popovers, sheets). Content cells are opaque, 12px corners, no border, no
-shadow, no gradient. Never blur a card, row, badge or status dot.
+**Materials (ADR-053, amended 2026-10-23).** A content cell (`.glass-card`, via `Surface`/`Panel`/`StatTile`) is frosted
+glass over a fixed field of blue blooms; `.glass-inset` for an inner card (a cell inside a cell is flat), `.glass-shell` for
+bars, `.glass-overlay` for menus and sheets. In the light theme the cell shows by differing from the cool blue-grey canvas
+(`--color-canvas`), so keep that contrast; never turn a cell white-on-white. Never blur a table row, badge or status dot.
+`prefers-reduced-transparency` and lite effects (`data-effects="lite"`, chosen automatically on weak devices) drop blur, the
+masked rim and the blooms but keep the lit top edge, hairline and shadows.
 
-**Typography.** Keep the existing system font stack (SF Pro on Apple devices; never embed SF Pro).
-iOS text styles: h1 Large Title 34/41 bold (`PageHeader`); card titles Headline 17 semibold (`Panel`);
-section headers footnote 13 uppercase secondary (`SectionHeading`); body 15 wide / 17 phone; secondary
-text 13. Numbers are bold or semibold — never `font-light`/`font-thin`. Inputs at least 16px on phones.
+**Signals.** Status is a solid saturated fill with a white word (amber: near-black): `StateBadge`, `IconDisc state=`, and the
+`--color-state-<state>-fill|on|ink` tokens. Kind hues are solid tiles with a white glyph (`--color-hue-<hue>-fill|on|ink`).
+`-ink` is the colour as plain text on glass; never put `-ink` on `-fill`. Warning is amber, danger is red; do not reuse one for
+the other. No pastel washes, no per-page colours.
+
+**Typography (ADR-053).** Inter plus IBM Plex Mono. Page title weight 200 tracked `-0.045em`; section title 300; card title and
+every emphasised run 500 (`font-semibold` is remapped to 500; `font-bold` is for printed documents only); hero figures use
+`.figure` (200, tabular, `-0.06em`); micro labels use `.micro` (Plex Mono 11.5px uppercase). Sizes: 11, 12, 13, 14, 15, 16,
+17, 20, 22 for text; larger numbers are `.figure`. Body 14 on wide screens, 16 on phones. Inputs at least 16px on phones.
 
 **Controls.** `Button` variants: `primary` iOS filled, `secondary` iOS gray (tint label), `ghost` iOS
 plain, `danger` destructive tinted; 10px corners, semibold, press dims (`active:opacity-70`). Fields are
