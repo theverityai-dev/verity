@@ -6,6 +6,8 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_ENTRY, PIECEWORK_CAPABILITY, bundleDetail, listLots, listWorkers, lotDetail, recentEntries } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, Panel, PermissionDenied, Row, RowList } from "@/components/ui/primitives";
+import { getLang } from "../../shopfloor/lang";
+import { LangToggle } from "../../shopfloor/LangToggle";
 import { EntryScreen, type EntryBundle, type OpenIssue } from "./EntryScreen";
 
 export const dynamic = "force-dynamic";
@@ -16,12 +18,13 @@ async function EntryPage({ searchParams }: { searchParams: Promise<{ lot?: strin
   installCapabilities();
   const actor = await requireActor();
   const { lot: lotParam, bundle: bundleParam } = await searchParams;
+  const { lang, t } = await getLang();
 
   const allowed = await withTenant(actor.tenantId, (tx) => hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_ENTRY));
   if (!allowed) {
     return (
       <>
-        <PageHeader title="Daily entry" description="Pieces given out and taken back." />
+        <PageHeader title={t.dailyEntry} description={t.entryIntro} />
         <PermissionDenied what="entering pieces. Only the munshi records entries" />
       </>
     );
@@ -48,28 +51,29 @@ async function EntryPage({ searchParams }: { searchParams: Promise<{ lot?: strin
 
   return (
     <>
-      <PageHeader title="Daily entry" description="Give a bundle out, or take one back and say where each piece went. Every entry carries the date, the time and your name." />
+      <PageHeader title={t.dailyEntry} description={t.entryIntro} actions={<LangToggle lang={lang} />} />
       <div className="grid items-start gap-6 lg:grid-cols-[1.15fr_1fr]">
-        <Panel title="New entry">
+        <Panel title={t.newEntry}>
           <EntryScreen
             bundles={bundles}
             openIssues={openIssues}
             workers={workers.map((w) => ({ id: w.id, name: w.name, stageIds: w.workTypes.map((t) => t.stageId) }))}
             today={today}
             initialBundleId={bundleParam}
+            lang={lang}
           />
         </Panel>
-        <Panel title="Today's entries" flush>
+        <Panel title={t.todayEntries} flush>
           {recent.length === 0 ? (
-            <p className="m-0 px-5 py-4 text-[14px] text-text-secondary">Nothing entered for today yet.</p>
+            <p className="m-0 px-5 py-4 text-[14px] text-text-secondary">{t.nothingToday}</p>
           ) : (
             <RowList>
               {recent.map((r) => (
                 <Row key={r.id}>
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="text-[14px] font-medium text-text">
-                      {r.isReversal ? "Reversal: " : ""}
-                      {r.bundleNumber} · {r.kind === "issue" ? "Issued" : "Returned"} {Math.abs(r.pieces)} · {r.stage}
+                      {r.isReversal ? "↺ " : ""}
+                      {r.bundleNumber} · {r.kind === "issue" ? t.issued : t.returned} {Math.abs(r.pieces)} · {r.stage}
                     </span>
                     <span className="text-[13px] text-text-secondary">
                       {timeOf(r.time, timeZone)} · {r.karigar}

@@ -5,7 +5,7 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_LOT, PIECEWORK_CAPABILITY, lotDetail } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_LOT, PIECEWORK_CAPABILITY, lotDetail } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
 import { DataTable } from "@/components/ui/DataTable";
@@ -13,6 +13,7 @@ import { FloorBoard, PieceBar } from "@/components/ui/PieceFlow";
 import { ButtonLink, DefinitionList, EmptyState, PageHeader, Panel, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
 import { ProgressBar } from "@/components/ui/viz";
 import { CancelLot, EntryLedger, NewBundleForm, StatusActions } from "./LotActions";
+import { LotRequests } from "./LotRequests";
 import { floorLanes } from "../floor";
 import { STATUS_CATEGORY, STATUS_LABEL, shortDate } from "../format";
 
@@ -23,7 +24,11 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireActor();
 
-  const allowed = await withTenant(actor.tenantId, (tx) => hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT));
+  const { allowed, canChange, canRequest } = await withTenant(actor.tenantId, async (tx) => ({
+    allowed: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT),
+    canChange: await hasTenantPermission(tx, actor.roleId, "ActionExecute", ENTITY_PIECEWORK_LOT),
+    canRequest: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_APPROVAL),
+  }));
   if (!allowed) return <PermissionDenied what="viewing this lot" />;
 
   const lot = await executeQuery(actor, lotDetail, { lotId: id });
@@ -49,6 +54,7 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
           cancelled ? null : (
             <>
               <StatusActions lotId={lot.id} status={lot.status} />
+              {!canChange && canRequest && <LotRequests lotId={lot.id} status={lot.status} />}
               {lot.status === "active" && <NewBundleForm lotId={lot.id} />}
               {lot.status === "active" && (
                 <CommandAccess commands="verity.piecework.record_issue">
