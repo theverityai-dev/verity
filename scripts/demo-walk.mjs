@@ -13,7 +13,6 @@
 //
 // Exit code 1 when any route fails, so a pipeline can gate on it. Output: one screenshot per route/width/theme and a markdown table.
 
-import { chromium } from "playwright";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -57,6 +56,8 @@ export function judge({ status, pageErrors, consoleErrors, overflowX, clippedCar
 }
 
 async function main() {
+  // Loaded here, not at the top, so the pure helpers can be imported by tests without pulling in a browser library.
+  const { chromium } = await import("@playwright/test");
   const base = arg("base");
   const state = arg("state");
   if (!base || !state) throw new Error("usage: demo-walk.mjs --base <url> --state <storage-state.json> [--tenant name] [--routes auto]");
