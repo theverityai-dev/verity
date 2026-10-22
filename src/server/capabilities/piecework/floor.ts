@@ -316,7 +316,7 @@ async function registers(tx: Tx, st: FloorState) {
       const requested = mineApprovals.filter((a) => a.status === "pending").reduce((s, a) => s + (a.pieces ?? 0), 0);
       const short = r.shortPieces ?? 0;
       return {
-        entryId: r.id, bundleId: r.bundleId, bundleNumber: bundleNo.get(r.bundleId) ?? "", lotNumber: st.lots.get(r.lotId)?.number ?? "", stageLabel: stageLabel.get(r.stageId) ?? "",
+        entryId: r.id, bundleId: r.bundleId, bundleNumber: bundleNo.get(r.bundleId) ?? "", lotNumber: st.lots.get(r.lotId)?.number ?? "", cover: st.lots.get(r.lotId)?.cover ?? null, stageLabel: stageLabel.get(r.stageId) ?? "",
         workerName: st.workers.get(r.workerId) ?? "A karigar", short, writtenOff, requested, open: Math.max(0, short - writtenOff - requested), date: isoOf(r.entryDate),
         ageDays: daysBetween(isoOf(r.entryDate), st.today), note: r.note,
       };
