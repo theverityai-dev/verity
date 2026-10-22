@@ -174,8 +174,6 @@ model Tenant {
   journalEntries JournalEntry[]
   accountMaps    AccountMap[]
   ledgerPending  LedgerPostingPending[]
-  accountMaps    AccountMap[]
-  ledgerPending  LedgerPostingPending[]
   journalLines   JournalLine[]
 
   // Capability: inventory (Task 73). Back-relations only, as above.
@@ -4688,10 +4686,6 @@ model JournalEntry {
   /// manual entry. The pair is UNIQUE per tenant, which is what makes posting idempotent.
   sourceKind   String?  @map("source_kind")
   sourceId     String?  @map("source_id") @db.Uuid
-  /// The business document this entry posts (ADR-044), e.g. kind "trading.sales_invoice" and that invoice's id. Both null for a
-  /// manual entry. The pair is UNIQUE per tenant, which is what makes posting idempotent.
-  sourceKind   String?  @map("source_kind")
-  sourceId     String?  @map("source_id") @db.Uuid
   createdAt    DateTime @default(now()) @map("created_at")
 
   tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -4701,41 +4695,8 @@ model JournalEntry {
 
   @@unique([tenantId, id], name: "journal_entry_tenant_scoped_id")
   @@unique([tenantId, sourceKind, sourceId])
-  @@unique([tenantId, sourceKind, sourceId])
   @@index([tenantId, postedAt])
   @@map("journal_entry")
-}
-
-/// Which account plays which role when a business document posts (ADR-044, Task 130). One row per role per tenant. A role with no
-/// row means documents that need it wait in LedgerPostingPending; nothing posts to a default account.
-model AccountMap {
-  id        String   @id @default(uuid()) @db.Uuid
-  tenantId  String   @map("tenant_id") @db.Uuid
-  role      String
-  accountId String   @map("account_id") @db.Uuid
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
-
-  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  account Account @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Restrict, onUpdate: NoAction, map: "account_map_account_fkey")
-
-  @@unique([tenantId, role])
-  @@map("account_map")
-}
-
-/// A document that could not post yet, and why. Removed when it posts. Not part of the ledger: the ledger stays append-only.
-model LedgerPostingPending {
-  tenantId      String   @map("tenant_id") @db.Uuid
-  sourceKind    String   @map("source_kind")
-  sourceId      String   @map("source_id") @db.Uuid
-  reason        String
-  firstSeenAt   DateTime @default(now()) @map("first_seen_at")
-  lastCheckedAt DateTime @default(now()) @map("last_checked_at")
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@id([tenantId, sourceKind, sourceId])
-  @@map("ledger_posting_pending")
 }
 
 /// Which account plays which role when a business document posts (ADR-044, Task 130). One row per role per tenant. A role with no

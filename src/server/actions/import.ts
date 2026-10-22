@@ -31,8 +31,9 @@ import { toActionFailure, type ActionResult } from "@/server/platform/action-err
  * "import anything" path (this capability's own non-goal).
  */
 
-export const IMPORT_KINDS = ["customer", "supplier", "product"] as const;
-export type ImportKind = (typeof IMPORT_KINDS)[number];
+import type { ImportKind } from "@/lib/import-kinds";
+// ImportKind lives in a plain module: a "use server" file may export only async functions.
+export type { ImportKind };
 
 export type ImportPreviewRow = { row: number; data: unknown };
 export type ImportPreviewIssue = { row: number; raw: Record<string, string>; errors: string[] };

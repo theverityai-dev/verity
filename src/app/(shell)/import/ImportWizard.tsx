@@ -11,11 +11,10 @@ import {
   ErrorState,
 } from "@/components/ui/primitives";
 import { DataTable, type Column } from "@/components/ui/DataTable";
+import { IMPORT_KINDS, type ImportKind } from "@/lib/import-kinds";
 import {
-  IMPORT_KINDS,
   runImportPreview,
   runImportCommit,
-  type ImportKind,
   type ImportPreviewSummary,
   type ImportCommitSummary,
 } from "@/server/actions/import";

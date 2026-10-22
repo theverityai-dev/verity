@@ -695,7 +695,8 @@ export function Field({
       </label>
       {children}
       {hint && !error && (
-        <p id={hintId} className="m-0 text-[12px] text-text-tertiary">
+        // overflow-wrap: a hint may carry an unbroken token (a column list, an id) that must wrap rather than run past its card on a phone.
+        <p id={hintId} className="m-0 text-[12px] text-text-tertiary [overflow-wrap:anywhere]">
           {hint}
         </p>
       )}

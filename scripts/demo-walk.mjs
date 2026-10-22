@@ -101,8 +101,41 @@ async function main() {
         }
         const facts = await page.evaluate(() => ({
           overflowX: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
-          // Content wider than its card is a defect whether the card hides it (clipped) or lets it spill out (overflowing).
-          clippedCards: [...document.querySelectorAll(".glass-card")].filter((el) => el.scrollWidth > el.clientWidth + 2).length,
+          // Content that runs past its card's right edge, whether the card hides it or lets it spill. Anything inside a horizontal
+          // scroller (a wide table with its own scrollbar) is the scroller's business, not a defect. Text is measured as text, because
+          // a long figure overflows its tile without its element's box ever being wider than the tile.
+          clippedCards: [...document.querySelectorAll(".glass-card")].filter((card) => {
+            const edge = card.getBoundingClientRect().right;
+            const scrolls = (el) => {
+              for (let p = el; p && p !== card; p = p.parentElement) {
+                const overflowX = getComputedStyle(p).overflowX;
+                if (overflowX === "auto" || overflowX === "scroll") return true;
+              }
+              return false;
+            };
+            const boxes = [...card.querySelectorAll("*")].some((el) => {
+              const r = el.getBoundingClientRect();
+              return r.width > 0 && r.height > 0 && r.right > edge + 2 && !scrolls(el);
+            });
+            if (boxes) return true;
+            const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (!node.textContent?.trim() || scrolls(node.parentElement)) continue;
+              // Visually hidden text (screen-reader labels) and text deliberately truncated with an ellipsis are not clipped content.
+              const own = node.parentElement.getBoundingClientRect();
+              if (own.width <= 2 || own.height <= 2) continue;
+              let truncated = false;
+              for (let p = node.parentElement; p && p !== card.parentElement; p = p.parentElement) {
+                if (getComputedStyle(p).textOverflow === "ellipsis") truncated = true;
+              }
+              if (truncated) continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              const r = range.getBoundingClientRect();
+              if (r.width > 0 && r.right > edge + 2) return true;
+            }
+            return false;
+          }).length,
           bodyText: document.body?.innerText?.slice(0, 2000) ?? "",
         })).catch(() => ({ overflowX: 0, clippedCards: 0, bodyText: "" }));
         const verdict = judge({ status, pageErrors, consoleErrors, ...facts });

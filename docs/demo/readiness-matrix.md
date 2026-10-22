@@ -4,9 +4,10 @@ Task 129 workstream C. **DEMO-READY** means: a seeded demo tenant exists, a rese
 capability has been opened at desktop (1280) and phone (390) width, light and dark, with real data and no defect left unlogged.
 Server tests alone never earn the word. This file records evidence; it does not assert it.
 
-**Today nothing is DEMO-READY.** No demo tenant has been walked with the harness yet. The harness itself was proven on a throwaway
-stack on 2026-10-22 (it caught a deliberate 404 and classed a locked screen as FORBIDDEN), so the next step is to run it, not to
-build more.
+**Today nothing is DEMO-READY.** Two tenants have been **ROUTE-WALKED** (below): every navigation route opened as that tenant's
+owner at 1280 and 390, light and dark, on a local database, with no unlogged defect. ROUTE-WALKED is a step short of DEMO-READY on
+purpose: it proves pages load and fit, not that the data tells a story, that the main flow works end to end, or that screens this
+login cannot open (the "forbidden" ones) are fine. A person still opens each tenant's main flow before it earns the word.
 
 ## How to walk a tenant
 
@@ -30,9 +31,9 @@ Facts below were read from the repository on 2026-10-22; "last walked" is the on
 
 | Tenant (as seeded) | Capabilities it is for | Seed | Restore | Last walked |
 |---|---|---|---|---|
-| D & S Electric Works | project, manufacturing, trading, accounting, document, relationship (CRM), hr, evidence, inventory | `npm run seed:dsew`, then `seed:dsew-roles`, `-people`, `-profile`, `-billing`, `-ledger`, `-hero`, `-passport`; `seed-dsew-documents.ts`, `seed-dsew-crm.ts` | `npm run reset:demo` (dry run) then with `--yes`; flagged `demo=true` tenants only | never |
-| Colonel Kebabz | dinein (menu, bills, kitchen tickets, self-order), recipe, coupon, loyalty, finance, attendance, complaint, location | `prisma/seed-colonel-kebabz.ts` | no tenant-specific reset script; `reset-demo.ts` with `DEMO_TENANT_NAME` | never |
-| Stylified | piecework (lots, bundles, karigars), inventory style master | `prisma/seed-stylified.ts` | `reset-demo.ts` with `DEMO_TENANT_NAME=Stylified` | never |
+| D & S Electric Works | project, manufacturing, trading, accounting, document, relationship (CRM), hr, evidence, inventory | `npm run seed:dsew`, then `seed:dsew-roles`, `-people`, `-profile`, `-billing`, `-ledger`, `-hero`, `-passport`; `seed-dsew-documents.ts`, `seed-dsew-crm.ts` | `npm run reset:demo` (dry run) then with `--yes`; flagged `demo=true` tenants only | **ROUTE-WALKED 2026-10-23**: 77 routes x 4 = 308 visits, 244 ok, 64 forbidden (16 plywood/trading routes DSEW's capabilities do not include), 0 failures. [Report](evidence/walk-d-s-electric-works-2026-10-22.md). Not covered: main flows, other roles |
+| Colonel Kebabz | dinein (menu, bills, kitchen tickets, self-order), recipe, coupon, loyalty, finance, attendance, complaint, location | `prisma/seed-colonel-kebabz.ts` | no tenant-specific reset script; `reset-demo.ts` with `DEMO_TENANT_NAME` | never. **Cannot be walked locally yet:** its seed throws unless a live Supabase URL and service key are set (it creates a real login); DSEW and Stylified accept an OIDC subject instead |
+| Stylified | piecework (lots, bundles, karigars), inventory style master | `prisma/seed-stylified.ts` | `reset-demo.ts` with `DEMO_TENANT_NAME=Stylified` | **ROUTE-WALKED 2026-10-23** as the owner: 77 routes x 4, 284 ok, 24 forbidden (6 routes: audit, people, the Munshi's `/lots/entry`, and the shop-floor pages being built in another session), 0 failures. [Report](evidence/walk-stylified-2026-10-22.md). The Munshi (floor) login was not walked |
 | Plywood demo | plywood, trading, location, asset, evidence | `npm run seed:plywood` | the seed deletes only the plywood capability's own rows for its tenant | never |
 | PlotArmour Studio | outreach | `prisma/seed-pa-oms.ts` | `reset-demo.ts` with `DEMO_TENANT_NAME="PlotArmour Studio"` (needs the demo flag) | never |
 
@@ -46,6 +47,15 @@ inside one of the tenants above or not shown at all; the first walk of each tena
 be deleted.
 
 ## Known problems found while preparing this (fixed or open)
+
+- **Found by the first real walk, 2026-10-23, all fixed:** the Import page crashed on first render (`IMPORT_KINDS`, a constant exported from a
+  `"use server"` file, is not an array in the browser; every such export is now banned by `src/test/use-server-exports.test.ts`); the CRM
+  Follow-ups page raised a hydration error because its day buckets depend on the viewer's time zone (it now renders once mounted); stat tiles let a
+  figure like "₹88,69,250" run 39px past the tile (the figure now steps down with its length); a panel header with a filter and a button pushed the
+  Customers card wider than a 390px screen (headers now wrap); an unbroken column list on Import ran past its card (hints now wrap).
+- **How to repeat the walk locally:** seed on a local database with the production variables blanked, serve the app in OIDC mode, mint a session
+  cookie for the seeded owner with the throwaway local secret, and run `npm run demo:walk`. The seed scripts load `.env` unless you set
+  `DIRECT_URL` and `DATABASE_URL` yourself.
 
 - **Fixed 2026-10-22:** the frosted blur was not rendering in Chrome, Edge or Firefox. A hand-written `-webkit-backdrop-filter` made
   the build drop the standard property; `getComputedStyle(...).backdropFilter` was `none` on every glass cell. Guarded by

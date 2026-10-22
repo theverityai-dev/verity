@@ -424,6 +424,8 @@ Code compiling is not completion.
 - **PROVEN** — foundation behavior validated by passing tests.
 - **DEMONSTRATED** — a hypothetical capability modeled on the foundation (on paper).
 - **NOT YET BUILT** — business capability intentionally unimplemented.
+- **ROUTE-WALKED** — every navigation route of a seeded demo tenant opened as its owner at desktop and 390px in both themes with no
+  failure (`npm run demo:walk`, report in `docs/demo/evidence/`). A step short of DEMO-READY: it proves pages load and fit, not that a flow works.
 - **DEMO-READY** — BUILT, with a seeded demo tenant, a working reset command, and every screen opened at desktop and 390px in
   both themes with real data and no unlogged defect (evidence in `docs/demo/readiness-matrix.md`). Server tests alone never
   earn this word.
