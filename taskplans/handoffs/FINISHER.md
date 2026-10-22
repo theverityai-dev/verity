@@ -92,22 +92,6 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
 - **Done when:** runbook section 9 passes on the target and the dated record is committed; only then say "validated on Mode B for D&S".
 - **Status:** BLOCKED on a person (DSEW server survey; a Linux VM or machine for DSEW).
 
-### P0b-3. Apply the migration gate to production (Task 129 A2 / old P0-2)
-
-- **What:** `scripts/assert-migrations-applied.mjs` is in `npm run build`. It only protects production once
-  `20261022200000_applied_migrations_gate` exists there.
-- **How:** with the product owner's go: `prisma migrate deploy` with `DIRECT_URL` (also applies any other pending migration),
-  then push a preview, then `main`, and record `[migration-gate] ok` from the build log.
-- **Status:** WAITING for the product owner. The pushes up to `7689a4fa` failed on Vercel and in CI because of a bug in the gate itself, not
-  because of the database: `migrationsOnDisk` stat-ed `migration_lock.toml/`, which Linux rejects (ENOTDIR) and Windows accepts. Fixed in `0dc8c8d7`
-  and checked against the real `prisma/migrations` on Linux; CI `verify` is green on it. Vercel still reports a failed deployment for that commit,
-  which is the gate refusing because production does not yet have the migrations (its build log is not readable from the agent session, so
-  this is inferred, not read).
-  **2026-10-22 evening:** the owner applied the migrations to production; the redeploy (`29dd1a68`) then failed with Vercel's own message "Account is
-  blocked." That is an account-level state (billing, usage or policy) the agent cannot see or fix. Clear it in the Vercel dashboard, redeploy, and
-  look for `[migration-gate] ok` in the build log; that line is the proof that closes this item. The previous deployment stayed live throughout. To finish:
-  `prisma migrate deploy` with the production `DIRECT_URL`, then redeploy and look for `[migration-gate] ok` in the build log.
-
 ### P0b-4. Demo readiness: walk the real tenants (seed scripts load .env = production and create Supabase logins when its keys are set: blank SUPABASE_* and set both DB URLs explicitly, on a local database) (Task 129 workstream C), and measure low-end devices (D2)
 
 - **What:** The Demo Readiness Matrix (`docs/demo/readiness-matrix.md`), the route-walk harness (`npm run demo:walk`) and lite
@@ -602,6 +586,11 @@ Do not pick these up without a fresh product-owner decision (`CLAUDE.md` stop co
 ## Recently removed
 
 (Newest first. One line each: date, item, commit. Keep the last 10.)
+
+- 2026-10-22: P0b-3, migration gate on production (Task 129 A2). The owner applied the migrations; the next deploy (`29dd1a68`) went Ready and
+  `0d3e0fa2` is the live production deployment, after `eff9c4c8` (before the migrations) had failed. Proof is that deploy history; the
+  `[migration-gate] ok` build-log line was not read (the CLI cannot reach that team's logs). An interim "Account is blocked" message on
+  `29dd1a68` cleared by itself or by the owner.
 
 - 2026-10-22: old P0-1, readiness flapping on `scheduler_stale`. Already fixed by `ef929e27`: a stale scheduler now
   reports `degraded` with HTTP 200 (core checks only return 503), proven by `readiness-degraded` and

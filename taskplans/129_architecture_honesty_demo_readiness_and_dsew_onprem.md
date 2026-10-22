@@ -118,7 +118,7 @@ database change without the product owner's go.
 
 A1, A2, A3 → B1-B4 (in parallel with C1-C2) → B5-B6 → D1 → C3 → B7 when the survey is answered → E.
 
-## 10. Closure, 2026-10-22: what is finished, and the five things only a person or a device can finish
+## 10. Closure, 2026-10-22: what is finished, and the four things only a person or a device can finish (plus Task 130)
 
 **Finished and committed:** A1, A2 (built and proven locally), A3 (Linux result), B1 to B6 (rehearsed), C1 and C2 (harness proven, not
 yet run on a real tenant), D1, E1, E2 (decision; build moved to Task 130), E3. Also done on the way: the CI `knip` failure from the demo
@@ -127,10 +127,8 @@ the frosted-blur fix.
 
 **Gated outside the repository (each is in FINISHER with exact steps):**
 
-1. **Apply the migrations to production (A2 proof).** A read of the production database was refused for this session, as it should be
-   without the owner at the keyboard. The pushes up to `7689a4fa` failed on Vercel and in CI, and the cause was a bug in the gate (it stat-ed
-   `migration_lock.toml/`, which Linux rejects and Windows accepts), now fixed and checked on Linux. Windows-only testing hid it, which is
-   why the plan's rule is that a deploy-path script is proven on Linux. The previous deployment stayed live.
+1. ~~Apply the migrations to production (A2 proof).~~ **Done 2026-10-22:** the owner applied them; deploys failed before and went Ready
+   after (`eff9c4c8` failed, `29dd1a68` and `0d3e0fa2` Ready), which is the gate working. The build-log line `[migration-gate] ok` was not read.
 2. **B7: validate Mode B on hardware matching DSEW.** Needs DSEW's server survey and a Linux machine or VM.
 3. **A real phone:** camera upload over HTTPS with the CA installed, HEIC photos, and D2 (a throttled trace, glass vs lite).
 4. **C3 and C4: walk the five demo tenants.** Needs each seeded on a local database. The seed scripts load `.env` (production) and
