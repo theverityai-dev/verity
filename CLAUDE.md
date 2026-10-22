@@ -115,51 +115,39 @@ Conflict resolution: **Safety > Truth > Coherence > Usefulness > Simplicity > Fl
 Every concrete technology choice must cite its authority using one of:
 `Authority: V2-ADR-[N]` | `Authority: Bible V2 [section]` | `Authority: Spec V2 [REQ-ID]` | `Authority: EXISTING INFRASTRUCTURE` | `Authority: IMPLEMENTATION DECISION REQUIRED`.
 
-## Experience System — iOS (ADR-033, 2026-10-05; supersedes the visual parts of ADR-011/012/023/024/025/026)
+## Experience System — Obsidian frosted glass (ADR-053, 2026-10-22; supersedes the visual rules of ADR-033)
 
-**Every surface — all client workspaces and HQ — follows Apple's iOS Human Interface Guidelines.**
-Full text: `verity-spec/17_decisions/adr/adr-033.md`. Tokens live in `src/app/globals.css`; the
-shared shapes live in `src/components/ui/primitives.tsx`, `Modal.tsx`, `DataTable.tsx` and the shells
-(`ShellChrome.tsx`, `HqChrome.tsx`). Change those, not individual pages.
+**Every surface, for every client, in dark and light, is one design.** Full text: `verity-spec/17_decisions/adr/adr-053.md`.
+Tokens live in `src/app/globals.css`; shared shapes in `src/components/ui/primitives.tsx`, `PieceFlow.tsx`, `Modal.tsx`,
+`DataTable.tsx` and the shells (`ShellChrome.tsx`, `HqChrome.tsx`). Change those, not individual pages. Before building or
+restyling any screen read the `screen-deserves`, `screen-imagery` and `impeccable` skills.
 
-- **Colour = iOS system colours.** Canvas `systemGroupedBackground` (`#F2F2F7` / `#000000`); cells
-  `secondarySystemGroupedBackground` (`#FFFFFF` / `#1C1C1E`); system fills for fields and gray buttons;
-  iOS separators. Labels use Apple's increased-contrast secondary/tertiary values so text keeps AA.
-- **Tint (accent) defaults to iOS systemBlue `#0A84FF`**, still configurable through the existing
-  presets. Never hard-code a tint; everything derives from `--accent-seed`. Fill/ink contrast is
-  computed in `src/server/platform/accent.ts`. `text-accent-ink` is tint-coloured text (AA-checked).
-- **Semantic colours are iOS system green/orange/red/blue (accessible variants)** and stay independent
-  of the tint.
-- **Materials only where iOS uses them**: bars (sidebar, navigation bar, tab bar) and overlays (menus,
-  popovers, sheets). Content is opaque inset-grouped cells — 12px corners, no border, no shadow, no
-  gradient. The atmospheric field and grain are gone. Class names are kept with iOS meanings:
-  `.glass-shell` bar, `.glass-card`/`.verity-solid` cell, `.glass-control` system fill, `.glass-overlay`
-  thick material.
-- **Typography: keep the current system font stack** (renders SF Pro on Apple devices; SF Pro is not
-  embedded — its licence forbids web use). iOS text styles: page title Large Title 34/41 bold; card
-  title Headline 17 semibold; body 15 on wide screens, 17 on phones; footnote 13 for secondary text and
-  uppercase section headers. Inputs are at least 16px on phones (no iOS Safari zoom). Big numbers are
-  bold, never light.
-- **Controls**: buttons are iOS filled (primary), gray (secondary, tint label), plain (ghost) and
-  destructive-tinted (danger), 10px corners, semibold, press dims; rounded system-fill text fields;
-  capsule filter chips; selection circles; 44pt touch targets.
-- **Lists of lines** (order pad, purchase order, BOM, bill, invoice): the same item added again
-  raises its quantity instead of stacking a line; quantity uses `QuantityStepper` (minus, typed
-  number, plus); a line is removable until committed, then reversed with a reason; picking an item
-  already listed folds the lines (`assignLineItem`, `src/lib/line-list.ts`). Checklist: the
-  verity-usage-qa skill's "Line-list basics pass".
-- **Navigation**: Large title at the top of each page; iPadOS sidebar on wide screens (selected row =
-  tint fill, white label; tinted glyphs); iOS tab bar on phones (client shell and HQ); dialogs are
-  bottom sheets on phones and centred form sheets on wider screens, with a gray circular close button.
-- **Motion**: iOS spring and sheet curves; `prefers-reduced-motion` cross-fades;
-  `prefers-reduced-transparency` makes every material opaque.
-- **Never trade accessibility for appearance** (ADR-011 constraint 1, kept). WCAG AA in both themes.
-- **The Verity mark stays monochrome** and is never tinted (ADR-012, kept). Light and dark are one system.
+- **Colours are Verity's own**: black, graphite, the iOS-blue tint (default `#0A84FF`, from `--accent-seed`, AA-paired in
+  `accent.ts`), and system green, orange and red for status. Never hard-code a tint or a per-page colour.
+- **Material = frosted glass, dim and soft.** `.glass-card` is a cell: translucent gradient fill, 24px blur, hairline, a soft
+  diagonal gradient rim (`::after`) and a fading top highlight (`::before`). Under it a fixed light field of four blue blooms
+  (`body::before`). `.glass-inset` for an inner card, `.glass-shell` for bars, `.glass-overlay` for menus and sheets. A cell
+  inside a cell is flat. Never blur table rows, badges or status dots. `prefers-reduced-transparency` makes everything solid.
+- **Type = Inter Light display + Plex Mono micro-labels.** Page title weight 200, tracked `-0.045em`; section title 300; card
+  title 500; hero figures use `.figure` (weight 200, tabular, `-0.06em`); labels use `.micro` (Plex Mono 11.5px uppercase).
+  Body 14px on desktop, 16px on phones, inputs 16px minimum on phones. No bold large numerals, no loose-tracked headings.
+- **Graphics are instruments**: `PieceRing` (ring with tick scale), 24-tick bars, hairline area charts. Colour is state.
+- **Cards are real, fully visible, properly sized**: one clickable object each, no sideways-scrolling cards on desktop, no
+  clipped lanes, no tile without a fact and a destination. Grids use `repeat(auto-fit, minmax(...))`.
+- **Pictures**: thumbnails, covers, evidence photos, banners and empty-state art where the data has them
+  (`screen-imagery`); never blank, always a typed tile or initials as fallback. Client images belong to that client only.
+- **Feedback is instant**: a top navigation bar starts on the click (`NavProgress`), every card-link and button has a pressed
+  state, route changes show a page-shaped skeleton (`RouteLoading`), commands show pending text and disable.
+- **Controls**: filled primary, gray secondary, plain ghost, destructive-tinted danger; 10px corners; 44pt touch targets on phones.
+- **Lists of lines** (order pad, purchase order, BOM, bill, invoice): the same item added again raises its quantity;
+  `QuantityStepper`; removable until committed, then reversed with a reason (`assignLineItem`, `src/lib/line-list.ts`).
+- **Navigation**: iPadOS-style sidebar on wide screens (selected row = tinted pill with a soft rim), iOS tab bar on phones,
+  dialogs are bottom sheets on phones and centred sheets on wider screens.
+- **Never trade accessibility for appearance**: WCAG AA in both themes, checked on the composited glass colour. The Verity mark
+  stays monochrome and is never tinted (ADR-012).
 
-Anti-regression: no translucency on content cells, rows, badges or status dots; no gradients or glows on
-surfaces; no light-weight display numerals; no hard-coded tint; no semantic colour equal to the tint;
-no new per-page colours outside the tokens.
-
+Anti-regression: no translucency on rows, badges or status dots; no gradient text; no hard offset shadows; no new per-page
+colours; no bold big numerals; no clipped or sideways-scrolling card strips on desktop; no card with nothing to open.
 ## Constitutional invariants (non-negotiable)
 
 - **INV-001** Strict tenancy isolation — every read/write filtered by tenant; no cross-tenant foreign keys.

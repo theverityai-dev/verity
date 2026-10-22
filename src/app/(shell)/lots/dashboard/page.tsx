@@ -7,7 +7,7 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_LOT, ENTITY_PIECEWORK_PAYMENT, PIECEWORK_CAPABILITY, dashboard } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { Icon } from "@/components/ui/icons";
-import { BarList, FloorBoard, PieceBar } from "@/components/ui/PieceFlow";
+import { BarList, FloorBoard, PieceBar, PieceRing } from "@/components/ui/PieceFlow";
 import { PageHeader, Panel, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
 import { STATUS_CATEGORY, STATUS_LABEL, rupees, shortDate } from "../format";
 import { floorLanes } from "../floor";
@@ -50,26 +50,49 @@ async function OwnerDashboardPage() {
         description={`${shortDate(d.today)}. ${plural(d.activeLots.length, "lot")} in work, ${plural(d.floor.length, "bundle")} on the floor, ${plural(out, "piece")} out with karigars.`}
       />
 
-      <div className="mb-6 grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <Surface className="p-5">
-          <h2 className="m-0 mb-4 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Where the pieces are</h2>
-          {inWork === 0 ? (
-            <p className="m-0 text-[15px] text-text-secondary">No bundle is on the floor.</p>
-          ) : (
-            <PieceBar
-              size="lg"
-              label="Every piece on the floor"
-              total={inWork}
-              counts={onFloor}
-            />
+      <div className="mb-6 grid items-stretch gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <Surface className="flex flex-wrap items-center justify-between gap-x-8 gap-y-6 p-7">
+          <div className="min-w-0 flex-1 basis-[15rem]">
+            <p className="micro m-0">Good pieces ready</p>
+            <p className="figure m-0 mt-3 text-[clamp(84px,9vw,140px)] text-text">{onFloor.ready}</p>
+            <p className="m-0 mt-3 max-w-[34ch] text-[14px] leading-[22px] text-text-secondary">
+              of {inWork} pieces on the floor. {out} {out === 1 ? "is" : "are"} with karigars right now.
+            </p>
+          </div>
+          {inWork > 0 && (
+            <PieceRing label="Every piece on the floor" total={inWork} counts={onFloor} size={216}>
+              <div>
+                <p className="figure m-0 text-[34px] text-text">{Math.round((onFloor.ready / inWork) * 100)}%</p>
+                <p className="micro m-0">of the floor</p>
+              </div>
+            </PieceRing>
           )}
-          <p className="m-0 mt-4 max-w-[60ch] text-[13px] leading-[18px] text-text-tertiary">
-            Rework is not output until it is accepted. Short means pieces that did not come back and cannot be found. Good, rejected, rework and short are never mixed.
+          <dl className="m-0 grid w-full grid-cols-2 gap-x-6 gap-y-4 border-t border-[var(--color-line)] pt-5 sm:grid-cols-5">
+            {(
+              [
+                ["Ready", onFloor.ready, "var(--color-state-completed)"],
+                ["With karigars", onFloor.out, "var(--color-state-active)"],
+                ["Rework", onFloor.rework, "var(--color-state-pending)"],
+                ["Rejected", onFloor.rejected, "var(--color-state-blocked)"],
+                ["Short", onFloor.short, "var(--color-state-draft)"],
+              ] as const
+            ).map(([name, value, color]) => (
+              <div key={name}>
+                <dt className="micro flex items-center gap-2">
+                  <span aria-hidden="true" className="size-[7px] rounded-full" style={{ backgroundColor: color }} />
+                  {name}
+                </dt>
+                <dd className="figure m-0 mt-1 text-[30px] text-text">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="m-0 w-full max-w-[64ch] text-[13px] leading-[18px] text-text-tertiary">
+            Rework is not output until it is accepted. Short means pieces that did not come back and cannot be found. They are never mixed with good.
           </p>
         </Surface>
 
-        <Surface className="p-5">
-          <h2 className="m-0 mb-3 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Needs attention</h2>
+        <Surface className="flex flex-col p-6">
+          <h2 className="m-0 mb-3 text-[17px] font-medium leading-[22px] tracking-[-0.02em]">Needs attention</h2>
           {d.lateIssues.length === 0 && idle.length === 0 ? (
             <p className="m-0 flex items-center gap-2 text-[15px] text-text-secondary">
               <span aria-hidden="true" style={{ color: "var(--color-state-completed)" }}><Icon name="check" size={18} /></span>
@@ -79,7 +102,7 @@ async function OwnerDashboardPage() {
             <ul className="m-0 flex list-none flex-col gap-3 p-0">
               {d.lateIssues.slice(0, 4).map((l) => (
                 <li key={`${l.bundleId}-${l.workerId}-${l.stageLabel}`} className="list-none">
-                  <Link href={`/lots/bundles/${l.bundleId}`} className="block rounded-[10px] bg-[var(--color-surface-sunken)] px-3 py-2.5 no-underline transition-colors hover:bg-[var(--color-control)]">
+                  <Link href={`/lots/bundles/${l.bundleId}`} className="glass-inset block rounded-[14px] px-3.5 py-3 no-underline transition-[transform] duration-150 hover:-translate-y-px">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="text-[15px] font-semibold text-text">{l.bundleNumber} · {l.workerName}</span>
                       <span className="shrink-0 text-[13px] font-semibold" style={{ color: "var(--color-state-blocked)" }}>{plural(l.daysLate, "day")} late</span>
@@ -90,7 +113,7 @@ async function OwnerDashboardPage() {
               ))}
               {idle.map((s) => (
                 <li key={s.lotId} className="list-none">
-                  <Link href={`/lots/${s.lotId}`} className="block rounded-[10px] bg-[var(--color-surface-sunken)] px-3 py-2.5 no-underline transition-colors hover:bg-[var(--color-control)]">
+                  <Link href={`/lots/${s.lotId}`} className="glass-inset block rounded-[14px] px-3.5 py-3 no-underline transition-[transform] duration-150 hover:-translate-y-px">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="text-[15px] font-semibold text-text">{s.number}</span>
                       <span className="shrink-0 text-[13px] text-text-secondary">{plural(s.days ?? 0, "day")} since it moved</span>
@@ -99,6 +122,15 @@ async function OwnerDashboardPage() {
                 </li>
               ))}
             </ul>
+          )}
+          {canWage && (
+            <Link href="/karigars" className="glass-inset mt-auto block rounded-[16px] px-4 py-3.5 no-underline transition-[transform] duration-150 hover:-translate-y-px">
+              <p className="micro m-0">Owed to karigars</p>
+              <p className="figure m-0 mt-1 text-[40px] text-text">{rupees(d.dues.totalMinor)}</p>
+              <p className="m-0 mt-1 text-[13px] leading-[18px] text-text-secondary">
+                {plural(d.dues.workers.length, "karigar")} to pay{d.dues.advanceOutstandingMinor > 0 ? `, ${rupees(d.dues.advanceOutstandingMinor)} of advance not yet recovered` : ""}
+              </p>
+            </Link>
           )}
         </Surface>
       </div>
@@ -149,7 +181,7 @@ async function OwnerDashboardPage() {
               <p className="m-0 text-[15px] text-text-secondary">Every karigar&apos;s account is square.</p>
             ) : (
               <>
-                <p className="tabular m-0 mb-4 text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-text">{rupees(d.dues.totalMinor)}</p>
+                <p className="tabular m-0 mb-4 text-[28px] font-extralight leading-[1.1] tracking-[-0.045em] text-text">{rupees(d.dues.totalMinor)}</p>
                 <BarList
                   tone="pending"
                   label="Balance due to each karigar"

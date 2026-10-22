@@ -22,6 +22,7 @@ import {
   type NavArea,
   type NavItem,
 } from "@/components/shell/ShellChrome";
+import { NavProgress } from "@/components/shell/NavProgress";
 import { isIconName } from "@/components/ui/icons";
 
 export const dynamic = "force-dynamic";
@@ -263,6 +264,8 @@ export default async function ShellLayout({
   const supportSession = !active.isPlatform && memberships.some((m) => m.isPlatform);
 
   return (
+    <>
+    <NavProgress />
     <ShellChrome
       areas={areas}
       userLabel={userLabel}
@@ -283,5 +286,6 @@ export default async function ShellLayout({
       )}
       <CommandAccessProvider commandKeys={commandKeys}>{children}</CommandAccessProvider>
     </ShellChrome>
+    </>
   );
 }

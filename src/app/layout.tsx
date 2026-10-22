@@ -19,14 +19,14 @@ import "./globals.css";
  */
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["100", "300", "400", "500", "600"],
+  weight: ["200", "300", "400", "500", "600"],
   variable: "--font-inter",
   display: "swap",
 });
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "500"],
   variable: "--font-plex-mono",
   display: "swap",
 });
@@ -42,8 +42,8 @@ export const viewport = {
   // Never block zoom; some users need it and the layout does not depend on it.
   maximumScale: 5,
   themeColor: [
-    // iOS systemGroupedBackground (ADR-033). This is the colour the OS paints
-    // around the viewport, so a mismatch shows as a seam at the top of a phone.
+    // The canvas colour (ADR-053). This is the colour the OS paints around the viewport, so a
+    // mismatch shows as a seam at the top of a phone.
     { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
     { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],

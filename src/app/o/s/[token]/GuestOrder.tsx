@@ -133,7 +133,7 @@ export function GuestOrder({ token, initial }: { token: string; initial: GuestVi
   if (ended) {
     return (
       <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-2 px-5 py-16">
-        <h1 className="m-0 text-[34px] font-bold leading-[41px] tracking-[-0.02em] text-text">This visit has ended</h1>
+        <h1 className="m-0 text-[34px] font-extralight leading-[41px] tracking-[-0.045em] text-text">This visit has ended</h1>
         <p className="m-0 text-[17px] text-text-secondary">Please scan the code on your table again, or ask a waiter.</p>
       </main>
     );
@@ -143,7 +143,7 @@ export function GuestOrder({ token, initial }: { token: string; initial: GuestVi
     <main className="mx-auto flex max-w-xl flex-col gap-6 px-4 pb-28 pt-8">
       <header className="flex flex-col gap-1 px-1">
         <p className="m-0 text-[13px] uppercase tracking-[0.02em] text-text-secondary">{view.outletName}</p>
-        <h1 className="m-0 text-[34px] font-bold leading-[41px] tracking-[-0.02em] text-text">{pickup ? "Order for pickup" : `Table ${view.tableLabel}`}</h1>
+        <h1 className="m-0 text-[34px] font-extralight leading-[41px] tracking-[-0.045em] text-text">{pickup ? "Order for pickup" : `Table ${view.tableLabel}`}</h1>
       </header>
 
       <div role="status" aria-live="polite">

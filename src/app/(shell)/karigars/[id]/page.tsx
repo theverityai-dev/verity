@@ -59,7 +59,7 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
           <div className="min-w-0">
             <p className="m-0 text-[13px] leading-[18px] text-text-secondary">{ledger.worker.active ? (out > 0 ? `Holding ${out} pieces now` : "Holding nothing now") : "Retired"}</p>
             {canMoney && (
-              <p className="tabular m-0 text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-text">
+              <p className="tabular m-0 text-[28px] font-extralight leading-[1.1] tracking-[-0.045em] text-text">
                 {rupees(money.balanceMinor)} <span className="text-[15px] font-normal text-text-secondary">owed</span>
               </p>
             )}

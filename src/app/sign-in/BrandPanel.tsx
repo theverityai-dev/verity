@@ -22,7 +22,7 @@ export function BrandPanel() {
         <VerityLockup size={30} className="text-text" />
 
         <div className="my-auto max-w-[480px] pb-24">
-          <p className="m-0 text-balance text-[44px] font-bold leading-[1.08] tracking-[-0.02em] text-text">
+          <p className="m-0 text-balance text-[44px] font-extralight leading-[1.08] tracking-[-0.045em] text-text">
             Know what needs you today.
           </p>
           <p className="m-0 mt-5 max-w-[44ch] text-[17px] leading-relaxed text-text-secondary">

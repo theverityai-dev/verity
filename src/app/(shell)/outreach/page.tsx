@@ -586,7 +586,7 @@ async function OutreachPage({
                           </p>
                         </div>
                       </div>
-                      <span className="tabular text-[24px] font-bold text-text">{team.pipeline}</span>
+                      <span className="tabular text-[24px] font-extralight text-text">{team.pipeline}</span>
                     </div>
 
                     {progress != null ? (

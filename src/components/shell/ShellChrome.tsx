@@ -213,19 +213,20 @@ export function ShellChrome({
                       // iPadOS sidebar row: the selected row is a tint fill
                       // with white label and glyph; the rest are plain label
                       // text with tinted glyphs (ADR-033).
-                      "flex h-10 items-center rounded-[10px] text-[15px] no-underline " +
+                      "flex h-10 items-center rounded-[10px] text-[14px] no-underline " +
                       "transition-[background-color,color] duration-200 " +
                       (rail ? "justify-center px-0 " : "gap-3 px-3 ") +
+                      // ADR-053: the selected row is a quiet tinted pill with tint-coloured text, not a solid block.
                       (current
-                        ? "bg-accent font-semibold text-accent-on"
-                        : "text-text hover:bg-[var(--color-control)]")
+                        ? "bg-accent-subtle font-semibold text-accent-ink shadow-[inset_0_0_0_1px_var(--glass-rim-2),inset_0_1px_0_var(--glass-hi)]"
+                        : "font-medium text-text-secondary hover:bg-[var(--color-control)] hover:text-text")
                     }
                   >
                     {item.icon && (
                       <Icon
                         name={item.icon}
                         size={20}
-                        className={current ? "text-accent-on" : "text-accent-ink"}
+                        className={current ? "text-accent-ink" : "text-text-tertiary"}
                       />
                     )}
                     <span className={rail ? "sr-only" : "truncate"}>{item.label}</span>

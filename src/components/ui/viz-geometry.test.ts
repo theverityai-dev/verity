@@ -106,6 +106,13 @@ describe("initials and stableIndex", () => {
     expect(initials("  ")).toBe("?");
   });
 
+  it("ignores brackets and punctuation", () => {
+    expect(initials("Karigar C (pasting)")).toBe("KC");
+    expect(initials("Karigar E (finishing)")).toBe("KE");
+    expect(initials("(only)")).toBe("?");
+    expect(initials("Sharma Collar Works")).toBe("SW");
+  });
+
   it("is stable and in range", () => {
     expect(stableIndex("IIT Indore", 8)).toBe(stableIndex("IIT Indore", 8));
     expect(stableIndex("anything", 8)).toBeGreaterThanOrEqual(0);

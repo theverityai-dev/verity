@@ -92,7 +92,13 @@ export function stepStatus(index: number, current: number): StepStatus {
 
 /** Up to two initials from a name: "Ravi Kumar Shah" -> "RS", "IIT Indore" -> "II". */
 export function initials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
+  // Brackets and punctuation are never initials: "Karigar C (pasting)" is KC, not "K(".
+  const words = name
+    .replace(/\([^)]*\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.replace(/^[^\p{L}\p{N}]+/u, ""))
+    .filter(Boolean);
   if (words.length === 0) return "?";
   const first = words[0]![0] ?? "";
   const last = words.length > 1 ? (words[words.length - 1]![0] ?? "") : "";

@@ -73,7 +73,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ token: 
               <Icon name="check" size={30} />
             </span>
           </span>
-          <h1 className="m-0 mt-6 text-[30px] font-bold leading-[35px] tracking-[-0.025em]">{passport.product}</h1>
+          <h1 className="m-0 mt-6 text-[30px] font-extralight leading-[35px] tracking-[-0.045em]">{passport.product}</h1>
           {passport.reference && (
             <p className="m-0 mt-2 font-mono text-[13px] tracking-[0.04em]" style={{ color: mute }}>
               {passport.reference}

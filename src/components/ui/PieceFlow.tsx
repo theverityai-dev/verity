@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Icon } from "./icons";
 
 /**
@@ -29,6 +29,8 @@ const PARTS = [
   { key: "short", label: "Short", color: "var(--color-state-draft)" },
 ] as const;
 
+const TICKS = 24;
+
 /** Pieces of a bundle (or a lot, or the whole factory) accounted for by where they are. The rest is "Waiting". */
 export function PieceBar({
   counts,
@@ -49,13 +51,32 @@ export function PieceBar({
   const waiting = Math.max(0, total - accounted);
   const height = size === "lg" ? "h-4" : size === "md" ? "h-2.5" : "h-1.5";
   const summary = [...PARTS.map((p) => `${counts[p.key]} ${p.label.toLowerCase()}`), `${waiting} waiting`].join(", ");
+  // ADR-053: the small bar is a 24-tick scale (one tick is a 24th of the whole), the larger bars are continuous.
+  const ticks: string[] = [];
+  if (size === "sm") {
+    for (const p of PARTS) {
+      const n = counts[p.key];
+      if (n <= 0) continue;
+      const t = Math.max(1, Math.round((n / whole) * TICKS));
+      for (let i = 0; i < t && ticks.length < TICKS; i++) ticks.push(p.color);
+    }
+    while (ticks.length < TICKS) ticks.push("var(--color-control-strong)");
+  }
   return (
     <figure className="m-0 min-w-0">
-      <div role="img" aria-label={`${label}: ${summary}`} className={`flex w-full overflow-hidden rounded-full bg-[var(--color-control-strong)] ${height}`}>
-        {PARTS.map((p) =>
-          counts[p.key] > 0 ? <span key={p.key} className="h-full" style={{ width: `${(counts[p.key] / whole) * 100}%`, backgroundColor: p.color }} /> : null,
-        )}
-      </div>
+      {size === "sm" ? (
+        <div role="img" aria-label={`${label}: ${summary}`} className="grid h-3.5 w-full gap-[2px]" style={{ gridTemplateColumns: `repeat(${TICKS}, minmax(0, 1fr))` }}>
+          {ticks.map((c, i) => (
+            <i key={i} className="rounded-[2px]" style={{ backgroundColor: c }} />
+          ))}
+        </div>
+      ) : (
+        <div role="img" aria-label={`${label}: ${summary}`} className={`flex w-full gap-[2px] overflow-hidden rounded-full bg-[var(--color-control-strong)] ${height}`}>
+          {PARTS.map((p) =>
+            counts[p.key] > 0 ? <span key={p.key} className="h-full" style={{ width: `${(counts[p.key] / whole) * 100}%`, minWidth: 4, backgroundColor: p.color }} /> : null,
+          )}
+        </div>
+      )}
       {legend && (
         <ul className="m-0 mt-2.5 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-[13px] text-text-secondary">
           {PARTS.filter((p) => counts[p.key] > 0).map((p) => (
@@ -111,11 +132,11 @@ function Card({ card }: { card: FloorCard }) {
   return (
     <Link
       href={card.href}
-      className="group block rounded-[10px] bg-[var(--color-surface)] p-3 no-underline transition-colors hover:bg-[var(--color-surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
+      className="glass-inset group block rounded-[16px] p-3.5 no-underline transition-[transform,box-shadow] duration-150 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[16px] font-bold leading-[20px] tracking-[-0.01em] text-text">{card.title}</span>
-        <span className="tabular text-[13px] text-text-secondary">{card.total} pcs</span>
+        <span className="text-[20px] font-light leading-[24px] tracking-[-0.03em] text-text">{card.title}</span>
+        <span className="micro tabular">{card.total} pcs</span>
       </div>
       <p className="m-0 mt-0.5 truncate text-[13px] leading-[18px] text-text-secondary">{card.subtitle}</p>
       <div className="mt-2.5">
@@ -144,10 +165,14 @@ export function FloorBoard({ lanes, label, empty }: { lanes: readonly FloorLane[
   const bundles = lanes.reduce((s, l) => s + l.cards.length, 0);
   if (bundles === 0 && empty) return <>{empty}</>;
   return (
-    <div role="group" aria-label={label} className="-mx-1 overflow-x-auto px-1 pb-1">
-      <ol className="m-0 grid list-none auto-cols-[minmax(216px,1fr)] grid-flow-col gap-3 p-0 max-lg:snap-x max-lg:snap-mandatory">
+    <div role="group" aria-label={label}>
+      {/* One column per lane while they fit (never less than 160px each), then they wrap: no lane is ever clipped or hidden behind a sideways scroll. */}
+      <ol
+        className="m-0 grid list-none gap-3 p-0"
+        style={{ "--n": lanes.length, gridTemplateColumns: "repeat(auto-fit, minmax(max(160px, calc((100% - (var(--n) - 1) * 12px) / var(--n))), 1fr))" } as CSSProperties}
+      >
         {lanes.map((lane, i) => (
-          <li key={lane.key} className="flex min-w-0 snap-start list-none flex-col rounded-[12px] bg-[var(--color-surface-sunken)] p-2.5">
+          <li key={lane.key} className="flex min-w-0 list-none flex-col rounded-[20px] bg-[var(--glass-2)] p-2.5 shadow-[inset_0_0_0_1px_var(--color-line)]">
             <div className="flex items-start gap-2 px-1 pb-2.5 pt-1">
               <span
                 aria-hidden="true"
@@ -157,8 +182,8 @@ export function FloorBoard({ lanes, label, empty }: { lanes: readonly FloorLane[
                 {lane.done ? <Icon name="check" size={13} /> : i + 1}
               </span>
               <div className="min-w-0">
-                <h3 className="m-0 truncate text-[15px] font-semibold leading-[20px] text-text">{lane.label}</h3>
-                <p className="m-0 text-[13px] leading-[18px] text-text-secondary">{lane.tally}</p>
+                <h3 className="m-0 truncate text-[15px] font-medium leading-[20px] tracking-[-0.02em] text-text">{lane.label}</h3>
+                <p className="micro m-0">{lane.tally}</p>
               </div>
             </div>
             <ul className="m-0 flex list-none flex-1 flex-col gap-2 p-0">
@@ -177,6 +202,36 @@ export function FloorBoard({ lanes, label, empty }: { lanes: readonly FloorLane[
           </li>
         ))}
       </ol>
+    </div>
+  );
+}
+
+/* -------------------------------- piece ring ------------------------------- */
+
+/**
+ * The instrument gauge (ADR-053): a thin ring split into the five piece classes over a tick scale, with a figure in the
+ * middle. Colour is state; the legend lives beside it as text, so the ring is never the only carrier of a figure.
+ */
+export function PieceRing({ counts, total, label, size = 240, children }: { counts: PieceCounts; total: number; label: string; size?: number; children?: ReactNode }) {
+  const r = 108;
+  const c = 2 * Math.PI * r;
+  const whole = Math.max(total, PARTS.reduce((s, p) => s + counts[p.key], 0), 1);
+  const present = PARTS.filter((p) => counts[p.key] > 0);
+  const lens = present.map((p) => (counts[p.key] / whole) * c);
+  const arcs = present.map((p, i) => ({ key: p.key, color: p.color, dash: Math.max(lens[i]! - 1.2, 0.5), offset: -lens.slice(0, i).reduce((s, x) => s + x, 0) }));
+  const summary = PARTS.map((p) => `${counts[p.key]} ${p.label.toLowerCase()}`).join(", ");
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg viewBox="0 0 272 272" width={size} height={size} role="img" aria-label={`${label}: ${summary}, of ${whole}`}>
+        <circle cx="136" cy="136" r="130" fill="none" stroke="var(--color-line)" strokeWidth="10" strokeDasharray="1.4 11.9" />
+        <g transform="rotate(-90 136 136)" fill="none" strokeWidth="9">
+          <circle cx="136" cy="136" r={r} stroke="var(--color-track)" />
+          {arcs.map((a) => (
+            <circle key={a.key} cx="136" cy="136" r={r} stroke={a.color} strokeDasharray={`${a.dash} ${c}`} strokeDashoffset={a.offset} />
+          ))}
+        </g>
+      </svg>
+      {children && <div className="absolute inset-0 grid place-items-center text-center">{children}</div>}
     </div>
   );
 }

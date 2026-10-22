@@ -98,7 +98,7 @@ export function Panel({
           )}
         >
           {/* iOS Headline: 17 semibold. */}
-          <h2 className="m-0 text-[17px] leading-[22px] tracking-[-0.02em]">{title}</h2>
+          <h2 className="m-0 text-[17px] font-medium leading-[22px] tracking-[-0.02em]">{title}</h2>
           {action}
         </div>
       )}
@@ -132,31 +132,29 @@ export function PageHeader({
   wrapTitle?: boolean;
 }) {
   return (
-    <header className="mb-6">
+    <header className="enter mb-7">
       {back && (
         <Link
           href={back.href}
-          className="mb-1 inline-flex min-h-8 items-center gap-0.5 text-[15px] text-accent-ink no-underline hover:underline"
+          className="mb-1.5 inline-flex min-h-8 items-center gap-0.5 text-[14px] font-medium text-text-secondary no-underline transition-colors hover:text-text"
         >
           <Icon name="chevronRight" size={16} className="rotate-180" />
           {back.label}
         </Link>
       )}
-      <div className="min-w-0">
-        <h1 className={wrapTitle ? "break-words" : "truncate"}>{title}</h1>
-        {description && (
-          <p className="mb-0 mt-1.5 max-w-[62ch] text-[15px] leading-[20px] text-text-secondary">
-            {description}
-          </p>
-        )}
+      {/* ADR-053: the title and its actions share one row on wide screens, as in every
+          reference dashboard; on a phone the actions drop under the title. */}
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0 flex-1 basis-[22rem]">
+          <h1 className={wrapTitle ? "break-words" : "truncate"}>{title}</h1>
+          {description && (
+            <p className="mb-0 mt-1.5 max-w-[64ch] text-[14px] leading-[22px] text-text-secondary">
+              {description}
+            </p>
+          )}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      {/* Page actions read as a toolbar under the masthead rather than beside
-          the title. That is where the board puts an action — at the head of the
-          content it acts on — and it is the only placement that cannot collide
-          with the shell controls sharing the title's row. */}
-      {actions && (
-        <div className="mt-5 flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
-      )}
     </header>
   );
 }
@@ -166,7 +164,7 @@ export function SectionHeading({ children, note }: { children: ReactNode; note?:
   return (
     <div className="mb-3 flex items-baseline justify-between gap-4">
       {/* iOS grouped-list section header: footnote, uppercase, secondary. */}
-      <h2 className="m-0 px-4 text-[13px] font-normal uppercase leading-[18px] tracking-[0.02em] text-text-secondary">
+      <h2 className="micro m-0 px-4">
         {children}
       </h2>
       {note && <span className="text-[13px] text-text-tertiary">{note}</span>}
@@ -206,7 +204,7 @@ export function Stat({
     <>
       <span
         className={
-          "tabular text-[28px] font-bold leading-[34px] tracking-[0.01em] " +
+          "figure text-[40px] " +
           (tone === "danger"
             ? "text-danger"
             : tone === "warning"
@@ -217,7 +215,7 @@ export function Stat({
       >
         {value}
       </span>
-      <span className="mt-1 text-[13px] leading-[18px] text-text-secondary">{label}</span>
+      <span className="micro mt-2">{label}</span>
       {hint && <span className="mt-auto pt-3 text-[12px] text-text-tertiary">{hint}</span>}
     </>
   );
@@ -332,8 +330,8 @@ export function StatTile({
         {viz && !menu && <div className="min-w-0 shrink">{viz}</div>}
       </div>
       <div>
-        <p className="tabular m-0 text-[28px] font-bold leading-[34px] text-text max-sm:text-[22px] max-sm:leading-[28px]">{value}</p>
-        <p className="m-0 mt-0.5 text-[15px] text-text-secondary max-sm:text-[13px]">{label}</p>
+        <p className="micro m-0">{label}</p>
+        <p className="figure m-0 mt-2 text-[52px] text-text max-sm:text-[34px]">{value}</p>
         {hint && <p className="m-0 mt-1 text-[13px] text-text-tertiary max-sm:text-[12px]">{hint}</p>}
       </div>
       {delta && (
@@ -393,7 +391,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 // ADR-024 motion: press feedback on pointer-down territory, not click — apple-design skill §1.
 // ADR-033: iOS button styles. Pressed state dims, as UIKit buttons do.
 const BUTTON_BASE =
-  "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-[color,background-color,opacity,transform] duration-150 active:opacity-70 " +
+  "inline-flex items-center justify-center gap-1.5 rounded-[10px] font-semibold transition-[color,background-color,opacity,transform] duration-150 active:scale-[0.97] active:opacity-80 " +
   "disabled:cursor-not-allowed disabled:opacity-40 whitespace-nowrap cursor-pointer";
 
 // 44pt minimum touch target (HIG and WCAG) for md; sm is the compact in-row size used inside tables.

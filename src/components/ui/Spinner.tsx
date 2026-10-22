@@ -49,9 +49,21 @@ export function RouteLoading() {
   // used where one exists) shouldn't feel like it's making an event of
   // loading. `md` plus the already-present `aria-label="Loading"` covers
   // the audit's "labelled compact spinner for unknown work" half.
+  // ADR-053 audit: a lone spinner in an empty area reads as "nothing happened". The skeleton keeps the page's own
+  // rhythm (title, a hero and its side card, a row of cards) so the layout does not jump when the content arrives.
   return (
-    <div className="flex h-full min-h-[50vh] w-full items-center justify-center">
-      <Spinner size="md" />
+    <div role="status" aria-label="Loading" className="w-full">
+      <SkeletonBlock className="h-10 w-72 max-w-full rounded-xl" />
+      <SkeletonBlock className="mt-3 h-4 w-96 max-w-full" />
+      <div className="mt-7 grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <SkeletonBlock className="h-72 rounded-[22px]" />
+        <SkeletonBlock className="h-72 rounded-[22px]" />
+      </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <SkeletonBlock key={i} className="h-40 rounded-[22px]" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -63,5 +75,5 @@ export function RouteLoading() {
  * (every accent preset, light/dark), so this needs no color work of its own.
  */
 export function SkeletonBlock({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-lg bg-surface-sunken motion-reduce:animate-none ${className}`} />;
+  return <div className={`animate-pulse rounded-lg bg-[var(--color-control)] shadow-[inset_0_0_0_1px_var(--color-line)] motion-reduce:animate-none ${className}`} />;
 }

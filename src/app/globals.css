@@ -1,17 +1,16 @@
 @import "tailwindcss";
 
 /**
- * Verity Experience System — iOS (ADR-033, 2026-10-05).
+ * Verity Experience System — Obsidian, frosted glass (ADR-053, 2026-10-22; supersedes ADR-033's visual rules).
  *
  * AUTHORITY
  *   1. Security and tenancy invariants (nothing here touches them).
- *   2. ADR-033 — the interface follows Apple's iOS Human Interface Guidelines,
- *      on every shell (client workspaces and HQ).
+ *   2. ADR-053 — frosted-glass cells over a blue light field, Inter Light display type with Plex Mono
+ *      micro-labels, on every shell (client workspaces and HQ), dark and light.
  *   3. ADR-011 constraint 1 — WCAG AA on both themes is never traded for a look.
  *
- * Values are iOS system colours. Where Apple's default secondary/tertiary label
- * would fall below AA on the web, Apple's own increased-contrast variant is used
- * instead, so the interface reads as iOS and still passes.
+ * Colours are Verity's own: black, graphite, the iOS-blue tint, and system green, orange and red for
+ * status. Where a label would fall below AA on the glass, the increased-contrast value is used.
  *
  * TWO SYSTEMS, DELIBERATELY SEPARATE
  *   BRAND    the Verity mark and wordmark. Fixed, monochrome. Never tinted.
@@ -26,23 +25,44 @@
    *   sunken   tertiarySystemGroupedBackground (a cell inside a cell)
    * ------------------------------------------------------------------- */
   --color-canvas: light-dark(#f2f2f7, #000000);
-  --color-surface: light-dark(#ffffff, #1c1c1e);
-  --color-surface-elevated: light-dark(#ffffff, #2c2c2e);
-  --color-surface-sunken: light-dark(#f2f2f7, #2c2c2e);
-  /* systemFill family: the grey fill iOS uses for text fields, gray buttons
-     and segmented controls. */
-  --color-control: light-dark(rgb(118 118 128 / 0.12), rgb(118 118 128 / 0.24));
-  --color-control-strong: light-dark(rgb(118 118 128 / 0.20), rgb(118 118 128 / 0.36));
-  /* Bar material base (navigation bar, tab bar, sidebar). */
-  --color-chrome: light-dark(rgb(249 249 249 / 0.94), rgb(22 22 24 / 0.92));
+  --color-surface: light-dark(#ffffff, #141416);
+  --color-surface-elevated: light-dark(#ffffff, #1c1c1e);
+  /* A cell inside a glass cell: a faint wash, never an opaque grey slab, so inner panels sit in the glass. */
+  --color-surface-sunken: light-dark(rgb(60 60 67 / 0.06), rgb(255 255 255 / 0.05));
+  /* Fill family (ADR-053): text fields, gray buttons, segmented controls. */
+  --color-control: light-dark(rgb(60 60 67 / 0.08), rgb(255 255 255 / 0.08));
+  --color-control-strong: light-dark(rgb(60 60 67 / 0.14), rgb(255 255 255 / 0.14));
+  /* Bar material base (navigation bar, tab bar, sidebar): glass over the light field. */
+  --color-chrome: light-dark(rgb(255 255 255 / 0.58), rgb(8 10 14 / 0.55));
+
+  /* ---------------------------------------------------------------------
+   * GLASS (ADR-053) — the frosted material and the light field it floats on.
+   *   glass-1/2  the cell's gradient fill, top-left to bottom-right
+   *   glass-3    an inset control or inner card (flat, one blur level per stack)
+   *   rim-1/2    the specular edge; hi the inner top highlight
+   *   bloom-1..4 four large blue blooms fixed behind the content
+   * ------------------------------------------------------------------- */
+  /* Dimmed after review (2026-10-22: "too much glass, keep it dim and subtle, soft edges"): low fill contrast,
+     rims at a whisper, blooms at roughly half strength, a soft long shadow. */
+  --glass-1: light-dark(rgb(255 255 255 / 0.80), rgb(255 255 255 / 0.075));
+  --glass-2: light-dark(rgb(255 255 255 / 0.58), rgb(255 255 255 / 0.022));
+  --glass-3: light-dark(rgb(255 255 255 / 0.62), rgb(255 255 255 / 0.05));
+  --glass-rim-1: light-dark(rgb(255 255 255 / 1), rgb(255 255 255 / 0.24));
+  --glass-rim-2: light-dark(rgb(10 100 200 / 0.20), rgb(113 184 255 / 0.18));
+  --glass-hi: light-dark(rgb(255 255 255 / 0.95), rgb(255 255 255 / 0.20));
+  --glass-shadow: light-dark(rgb(40 50 90 / 0.30), rgb(0 0 0 / 0.85));
+  --bloom-1: light-dark(rgb(10 132 255 / 0.22), rgb(10 132 255 / 0.26));
+  --bloom-2: light-dark(rgb(64 156 255 / 0.20), rgb(64 156 255 / 0.15));
+  --bloom-3: light-dark(rgb(0 64 221 / 0.12), rgb(0 64 221 / 0.24));
+  --bloom-4: light-dark(rgb(113 184 255 / 0.26), rgb(113 184 255 / 0.10));
 
   /* ---------------------------------------------------------------------
    * LABELS — label / secondaryLabel / tertiaryLabel, increased-contrast
    * variants for secondary and tertiary so small text clears 4.5:1.
    * ------------------------------------------------------------------- */
   --color-text: light-dark(#000000, #ffffff);
-  --color-text-secondary: light-dark(#3c3c43cc, #ebebf5c7);
-  --color-text-tertiary: light-dark(#636366, #aeaeb2);
+  --color-text-secondary: light-dark(#48484e, #c5c5ce);
+  --color-text-tertiary: light-dark(#636366, #9b9ba3);
 
   /* Kept as tokens because components reference them; on iOS every one of
      these is a material over the canvas, approximated by the matching fill. */
@@ -54,10 +74,10 @@
   /* ---------------------------------------------------------------------
    * SEPARATORS — iOS separator / opaqueSeparator.
    * ------------------------------------------------------------------- */
-  --color-line: light-dark(rgb(60 60 67 / 0.18), rgb(84 84 88 / 0.48));
-  --color-line-strong: light-dark(rgb(60 60 67 / 0.29), rgb(84 84 88 / 0.65));
-  --color-separator: light-dark(rgb(60 60 67 / 0.29), rgb(84 84 88 / 0.65));
-  --color-track: light-dark(rgb(120 120 128 / 0.16), rgb(120 120 128 / 0.32));
+  --color-line: light-dark(rgb(60 60 67 / 0.12), rgb(255 255 255 / 0.08));
+  --color-line-strong: light-dark(rgb(60 60 67 / 0.26), rgb(255 255 255 / 0.20));
+  --color-separator: light-dark(rgb(60 60 67 / 0.26), rgb(255 255 255 / 0.20));
+  --color-track: light-dark(rgb(120 120 128 / 0.18), rgb(255 255 255 / 0.10));
 
   /* ---------------------------------------------------------------------
    * TINT — derived in CSS from one seed (`--accent-seed`, stamped on <html>
@@ -137,16 +157,16 @@
   --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
   --radius-pill: 999px;
 
-  /* Grouped cells carry no shadow on iOS. Shadows exist only on floating
-     things: menus, popovers, sheets. */
+  /* ADR-053: glass cells float on a long, faint ambient shadow; floating things go higher. */
   --shadow-highlight: 0 0 0 transparent;
-  --shadow-sm: 0 0 0 transparent;
-  --shadow-md: 0 4px 16px light-dark(rgb(0 0 0 / 0.10), rgb(0 0 0 / 0.45));
-  --shadow-lg: 0 10px 40px light-dark(rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.6));
+  --shadow-sm: 0 1px 2px light-dark(rgb(40 50 90 / 0.10), rgb(0 0 0 / 0.5));
+  --shadow-card: 0 44px 70px -44px var(--glass-shadow);
+  --shadow-md: 0 8px 24px -8px light-dark(rgb(40 50 90 / 0.22), rgb(0 0 0 / 0.6));
+  --shadow-lg: 0 20px 56px -14px light-dark(rgb(40 50 90 / 0.30), rgb(0 0 0 / 0.75));
 
   /* iOS materials: strong blur and saturation, nearly opaque base. */
   --blur-glass: 20px;
@@ -158,7 +178,7 @@
   --ease-out: cubic-bezier(0.25, 0.1, 0.25, 1);
   --ease-slide: cubic-bezier(0.32, 0.72, 0, 1);
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter), "Segoe UI", sans-serif;
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
@@ -255,34 +275,44 @@
     background: var(--color-canvas);
     isolation: isolate;
   }
+  /* ADR-053: the light field. Four large blue blooms fixed behind everything, so the glass above has
+     something to bend. Painted once, never animated, and dropped when transparency is reduced. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 560px at 64% -10%, var(--bloom-1), transparent 66%),
+      radial-gradient(620px 520px at 8% 34%, var(--bloom-2), transparent 68%),
+      radial-gradient(700px 560px at 96% 56%, var(--bloom-3), transparent 68%),
+      radial-gradient(760px 520px at 38% 92%, var(--bloom-4), transparent 70%);
+  }
 
-  /* iOS text styles. Body is 15 (Subheadline) on wide, dense operate screens
-     and 17 (Body) on phones; inputs are 16+ on phones so iOS Safari does not
-     zoom the page when a field is focused. */
+  /* ADR-053 text. Body is 14 on wide, dense operate screens and 16 on phones; inputs are 16+ on
+     phones so iOS Safari does not zoom the page when a field is focused. */
   html, body {
     color: var(--color-text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", var(--font-inter),
-      "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.4;
-    letter-spacing: -0.01em;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.006em;
+    font-feature-settings: "cv11", "ss01";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     -webkit-tap-highlight-color: transparent;
   }
   @media (max-width: 639px) {
-    html, body { font-size: 17px; }
+    html, body { font-size: 16px; }
     input, select, textarea { font-size: 16px !important; }
   }
 
   h1, h2, h3 { margin: 0; }
-  /* Large Title, Title 3, Headline. */
-  h1 { font-size: 34px; line-height: 41px; font-weight: 700; letter-spacing: 0.01em; }
-  h2 { font-size: 20px; line-height: 25px; font-weight: 600; letter-spacing: 0.02em; }
-  h3 { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.02em; }
-  @media (max-width: 639px) {
-    h1 { font-size: 30px; line-height: 36px; }
-  }
+  /* ADR-053: Inter Light display, tracked in, never out. */
+  h1 { font-size: clamp(32px, 3.4vw, 46px); line-height: 1.05; font-weight: 200; letter-spacing: -0.045em; }
+  h2 { font-size: 22px; line-height: 28px; font-weight: 300; letter-spacing: -0.035em; }
+  h3 { font-size: 16px; line-height: 22px; font-weight: 500; letter-spacing: -0.02em; }
 
   ::selection { background: var(--color-accent-subtle); color: var(--color-text); }
   :root { accent-color: var(--color-accent); caret-color: var(--color-accent); }
@@ -322,12 +352,74 @@
  */
 .glass-shell {
   background: var(--color-chrome);
-  backdrop-filter: blur(var(--blur-glass)) var(--glass-optics);
+  backdrop-filter: blur(30px) saturate(1.7);
+  -webkit-backdrop-filter: blur(30px) saturate(1.7);
 }
 
+/* ADR-053 cell: frosted gradient fill, hairline, inner top highlight, and a specular rim (bright on the
+   top-left edges, cool blue on the bottom-right) drawn with inset shadows, so no pseudo-element or
+   positioning is needed and an absolutely placed card keeps working. */
 .glass-card {
-  background: var(--color-surface);
+  background: linear-gradient(150deg, var(--glass-1), var(--glass-2));
+  backdrop-filter: blur(24px) saturate(1.45);
+  -webkit-backdrop-filter: blur(24px) saturate(1.45);
   border-radius: var(--radius-xl);
+  box-shadow: inset 0 0 0 1px var(--color-line), var(--shadow-card);
+}
+/* The rim and the top highlight are what make the glass read as glass rather than a grey box: a one-pixel gradient
+   edge (bright top-left, fading to nothing, cool blue bottom-right) and a hairline that fades out toward both ends.
+   Painted with pseudo-elements, so a card that is placed absolutely or fixed keeps its own positioning. */
+.glass-card:not(.absolute):not(.fixed):not(.sticky) { position: relative; }
+.glass-card::before,
+.glass-card::after { content: ""; position: absolute; pointer-events: none; }
+.glass-card::after {
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, var(--glass-rim-1), transparent 38%, transparent 62%, var(--glass-rim-2));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.glass-card::before {
+  left: 24px;
+  right: 24px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--glass-hi), transparent);
+}
+/* A cell inside a cell is flat: one blur level per stack. */
+.glass-card .glass-card {
+  background: var(--glass-3);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+.glass-card .glass-card::before,
+.glass-card .glass-card::after { display: none; }
+
+/* An inner control or card that sits on the canvas or a lane, with its own light blur. */
+.glass-inset {
+  background: var(--glass-3);
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+  box-shadow: inset 0 0 0 1px var(--color-line);
+}
+
+/* Micro-label and hero figure (ADR-053). */
+.micro {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+.figure {
+  font-weight: 200;
+  letter-spacing: -0.06em;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
 }
 
 .glass-control {
@@ -347,7 +439,7 @@
 /* A popover nested inside a card cannot blur what lies outside the card, so it
    goes nearly opaque: legibility outranks translucency. */
 :is(.glass-card, .glass-control, .glass-shell) .glass-overlay {
-  --color-glass-4: light-dark(rgb(255 255 255 / 0.98), rgb(44 44 46 / 0.98));
+  --color-glass-4: light-dark(rgb(255 255 255 / 0.98), rgb(28 32 40 / 0.98));
 }
 /* Lift a card holding an open popover above its siblings so the list is not
    painted under the next card. */
@@ -398,7 +490,9 @@
   .glass-shell, .glass-overlay {
     backdrop-filter: none;
   }
-  .glass-shell { background: light-dark(#f9f9f9, #161618); }
+  .glass-shell { background: light-dark(#ffffff, #0e0f12); }
+  .glass-card, .glass-inset { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--color-surface); }
+  body::before { display: none; }
   .glass-overlay { background: var(--color-surface-elevated); }
 }
 
@@ -466,3 +560,22 @@
 }
 
 .tabular { font-variant-numeric: tabular-nums; }
+
+/* Pressed feedback (ADR-053 audit, 2026-10-22: "clicks feel so delayed because of no onclick animation").
+   Every card-link answers the pointer on the frame it lands: a quick press, released with a soft ease. The
+   navigation bar and the route skeleton cover the time the server then needs. Collapses under reduced motion. */
+a.glass-inset, a:has(> .glass-card), button.glass-inset {
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+a.glass-inset:active, a:has(> .glass-card):active, button.glass-inset:active { transform: scale(0.985); }
+
+/* One authored entrance for cards and lists: rise and fade once, exponential ease-out. */
+@keyframes verity-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .enter { animation: verity-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .enter-1 { animation-delay: 0.04s; }
+  .enter-2 { animation-delay: 0.08s; }
+  .enter-3 { animation-delay: 0.12s; }
+  .enter-4 { animation-delay: 0.16s; }
+}
