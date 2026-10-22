@@ -92,25 +92,18 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
 - **Done when:** runbook section 9 passes on the target and the dated record is committed; only then say "validated on Mode B for D&S".
 - **Status:** BLOCKED on a person (DSEW server survey; a Linux VM or machine for DSEW).
 
-### P0b-2. Disabling a person's Verity access has no screen
-
-- **What:** `disableMembership` / `restoreMembership` (ADR-049) are tested commands that nothing in `src/app` calls.
-  Offboarding on Mode B needs two steps (disable in Keycloak, disable in Verity); the second can only be run by an engineer today.
-- **How:** An HQ/People action on a member row with a required reason, using the existing command and the shared Modal/FormModal
-  (forms open as sheets). ADR-049 is still PROPOSED: get it accepted first.
-- **Done when:** an administrator disables and restores a member from the People screen; an existing session ends at its next
-  request, proven by the existing `membership-disable` test plus one browser check.
-- **Status:** NOT STARTED
-
 ### P0b-3. Apply the migration gate to production (Task 129 A2 / old P0-2)
 
 - **What:** `scripts/assert-migrations-applied.mjs` is in `npm run build`. It only protects production once
   `20261022200000_applied_migrations_gate` exists there.
 - **How:** with the product owner's go: `prisma migrate deploy` with `DIRECT_URL` (also applies any other pending migration),
   then push a preview, then `main`, and record `[migration-gate] ok` from the build log.
-- **Status:** WAITING for the product owner's go (touches production).
+- **Status:** WAITING for the product owner. The latest push (`b09a319e` and the commits before it) failed its Vercel build, most likely the
+  gate refusing a build whose migrations production lacks (the build log could not be read from the agent session; run
+  `npx vercel inspect <deployment> --logs` to confirm). The previous deployment is still live. To clear it: `prisma migrate deploy` with
+  the production `DIRECT_URL`, then redeploy and look for `[migration-gate] ok`.
 
-### P0b-4. Demo readiness: walk the real tenants (Task 129 workstream C), and measure low-end devices (D2)
+### P0b-4. Demo readiness: walk the real tenants (seed scripts load .env = production and create Supabase logins when its keys are set: blank SUPABASE_* and set both DB URLs explicitly, on a local database) (Task 129 workstream C), and measure low-end devices (D2)
 
 - **What:** The Demo Readiness Matrix (`docs/demo/readiness-matrix.md`), the route-walk harness (`npm run demo:walk`) and lite
   effects (Appearance: Automatic, Full glass, Lite) are built. **No demo tenant has been walked**, so nothing is DEMO-READY. Low-end
@@ -123,10 +116,11 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
 - **Done when:** each tenant's row has a dated walk with zero unlogged defects; D2 has numbers.
 - **Status:** NOT STARTED for the tenant walks; harness and lite mode DONE (`81ad10db`, this commit).
 
-### P0b-5. Accounting posting and the deployment-mode ADR (Task 129 workstream E)
+### P0b-5. Ledger posting (Task 130)
 
-- **What:** ADR-044 (ledger posting) still PROPOSED; no ADR yet records "hosted default, DSEW Mode B, Modes C and D parked".
-- **Status:** NOT STARTED. ADR-044 acceptance needs the product owner.
+- **What:** ADR-044 is ACCEPTED (2026-10-22, outbox plus a consumer with its own progress). Nothing is built. The plan, steps and
+  done-when are in `taskplans/130_ledger_posting_adr_044.md`; this replaces old P1-1h's "waits for ADR acceptance".
+- **Status:** NOT STARTED
 
 ---
 

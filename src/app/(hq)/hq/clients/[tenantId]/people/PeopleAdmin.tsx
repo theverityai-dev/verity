@@ -11,7 +11,9 @@ import {
   Input,
   Panel,
   Select,
+  Textarea,
 } from "@/components/ui/primitives";
+import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { runClientCommand } from "@/server/actions/hq";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { PersonRow } from "@/server/platform/administration";
@@ -46,6 +48,9 @@ export function PeopleAdmin({
   const [search, setSearch] = useState("");
   const [inviting, setInviting] = useState(false);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
+  // ADR-049: ending (or giving back) a person's access asks for a reason, which is written to the audit trail.
+  const [accessChange, setAccessChange] = useState<{ person: PersonRow; mode: "disable" | "restore" } | null>(null);
+  const [reason, setReason] = useState("");
   const [pending, startTransition] = useTransition();
 
   const visible = useMemo(() => {
@@ -104,6 +109,52 @@ export function PeopleAdmin({
           </Button>
         </div>
       </div>
+
+      <Modal
+        open={accessChange !== null}
+        onClose={() => {
+          setAccessChange(null);
+          setReason("");
+        }}
+        title={accessChange?.mode === "restore" ? "Restore access" : "Disable access"}
+        description={
+          accessChange?.mode === "restore"
+            ? `${accessChange.person.displayName} will be able to sign in to this client again with the same role.`
+            : `${accessChange?.person.displayName ?? "This person"} is signed out at their next action and cannot return until access is restored. Their role and place are kept.`
+        }
+        footer={
+          <>
+            <ModalCancel
+              disabled={pending}
+              onClose={() => {
+                setAccessChange(null);
+                setReason("");
+              }}
+            />
+            <Button
+              variant={accessChange?.mode === "restore" ? "primary" : "danger"}
+              disabled={pending || reason.trim().length < 3}
+              onClick={() => {
+                if (!accessChange) return;
+                run(
+                  accessChange.mode === "restore" ? "verity.platform.restore_membership" : "verity.platform.disable_membership",
+                  { membershipId: accessChange.person.membershipId, reason: reason.trim() },
+                  () => {
+                    setAccessChange(null);
+                    setReason("");
+                  },
+                );
+              }}
+            >
+              {pending ? "Saving…" : accessChange?.mode === "restore" ? "Restore access" : "Disable access"}
+            </Button>
+          </>
+        }
+      >
+        <Field label="Reason" htmlFor="access-reason" required hint="At least 3 characters. Recorded in the audit trail with your name.">
+          <Textarea id="access-reason" value={reason} onChange={(event) => setReason(event.target.value)} rows={3} maxLength={500} />
+        </Field>
+      </Modal>
 
       {inviting && (
         <div className="mb-6">
@@ -242,10 +293,10 @@ export function PeopleAdmin({
                     <td className="border-b border-line px-3 py-3 text-[13px]">
                       <span
                         className={
-                          person.state === "Suspended" ? "text-warning" : "text-text-secondary"
+                          person.state === "Suspended" || person.disabled ? "text-warning" : "text-text-secondary"
                         }
                       >
-                        {person.state}
+                        {person.disabled ? "Access disabled" : person.state}
                       </span>
                     </td>
                     <td className="border-b border-line px-3 py-3">
@@ -261,6 +312,13 @@ export function PeopleAdmin({
                           }
                         >
                           {person.state === "Suspended" ? "Restore" : "Suspend"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={pending}
+                          onClick={() => setAccessChange({ person, mode: person.disabled ? "restore" : "disable" })}
+                        >
+                          {person.disabled ? "Restore access" : "Disable access"}
                         </Button>
                         <Button
                           size="sm"

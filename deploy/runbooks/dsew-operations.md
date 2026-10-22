@@ -63,10 +63,11 @@ To remove someone **both** steps are needed, because they do different things:
 
 1. Disable the account in Keycloak so they cannot sign in again (Keycloak is reachable only from this server, not from the office:
    `docker compose exec keycloak /opt/keycloak/bin/kcadm.sh ...`, or ask for the administrator console to be opened temporarily).
-2. In Verity, disable their access. This ends any session they already have, at its next request. **There is no screen for this
-   yet** (the command exists and is tested, ADR-049, but nothing in the application calls it); until one is added, Verity
-   support runs it for you. Without this step an already signed-in person keeps working until their session expires (1 hour idle,
-   8 hours at most).
+2. In Verity, disable their access: sign in as an operator (the account made with `VERITY_OPERATOR_EMAIL` at install, see
+   `deploy/scripts/bootstrap.sh`), open HQ, the client, People, and choose **Disable access** on their row. It asks for a reason,
+   which is kept in the audit trail. They are signed out at their next action and cannot return until someone chooses **Restore
+   access**; their role and place are kept. Without this step an already signed-in person keeps working until their session expires
+   (1 hour idle, 8 hours at most).
 
 ## 5. Backups
 

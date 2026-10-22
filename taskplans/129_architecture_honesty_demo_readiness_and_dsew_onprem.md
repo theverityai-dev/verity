@@ -9,7 +9,7 @@ too". Grounded in: `taskplans/handoffs/FINISHER.md` (P0-1, P0-2, P1-2), `clients
 extends Task 125 and the DSEW phase plan. Authorises no new business capability and changes no invariant, `enforcePolicy()`,
 INV-001 or ADR-017.
 
-## Status: IN PROGRESS 2026-10-22 (A, B1-B6, C1-C2, D1, E1 built; B7, C3-C4, D2, E2-E3 open)
+## Status: CLOSED 2026-10-22 for everything that can be done without a person or a device. Five items are gated outside the repository and are carried in FINISHER (see section 10)
 
 Per-item status lives in the tables below and is mirrored in `FINISHER.md`. Nothing here is called complete until its
 "Done when" holds.
@@ -22,7 +22,7 @@ Per-item status lives in the tables below and is mirrored in `FINISHER.md`. Noth
 | 2 | Screens proven at the server but never opened in a browser; known failing conformance tests; no green full-suite record | A3 and workstream C |
 | 3 | Deployment sprawl: Modes A, B, C and a proposed D | Decision D2; workstream E |
 | 4 | A push can reach production before its migration (caused an outage 2026-10-20); readiness flapping | A2; readiness already fixed by `ef929e27` (scheduler staleness now reports `degraded`, HTTP 200) |
-| 5 | Accounting does not post to the ledger; Odoo/ERPNext parity is being rebuilt by hand | DSEW P1-1h (ADR-044 acceptance), E2 |
+| 5 | Accounting does not post to the ledger; Odoo/ERPNext parity is being rebuilt by hand | ADR-044 accepted with two amendments; the build is Task 130 |
 | 6 | Visual system changed six times in six weeks; 24px blur on every cell is a risk on cheap phones and old office PCs | Workstream D |
 | 7 | `CLAUDE.md` contradicts itself and the code (scope list, forbidden pattern 8 vs ADR-053, stale ADR highlights) | A1 |
 | 8 | Bus factor of one person plus agent sessions; docs are the control plane and drift | A1 and the standing rule in section 2 |
@@ -105,8 +105,8 @@ on a DSEW-like local VM and are labelled as such. Windows Server 2019 compatibil
 | Id | Item | Done when |
 |---|---|---|
 | E1 | New ADR (PROPOSED) amending ADR-031 to "A default, B for DSEW, C and D parked"; check the ADR register for the number first | ADR exists; proposal documents and `CLAUDE.md` use its wording. **ADR-054 written, PROPOSED 2026-10-22;** `CLAUDE.md` cites it. DSEW proposal wording not yet checked against it |
-| E2 | Accounting posting: obtain acceptance of ADR-044, then build posting per FINISHER P1-1h. No third ledger path before acceptance | ADR-044 ACCEPTED or amended; posting handlers proven |
-| E3 | Prune: move complete or superseded taskplans out of the active list; keep `00_STATUS_INDEX.md` as the register | active `taskplans/` lists only live work |
+| E2 | Accounting posting: obtain acceptance of ADR-044, then build posting per FINISHER P1-1h. No third ledger path before acceptance | ADR-044 ACCEPTED or amended; posting handlers proven. **ADR-044 ACCEPTED with two amendments 2026-10-22** (outbox; the consumer keeps its own progress because `delivered_at` belongs to notifications). The build is its own plan, `taskplans/130_ledger_posting_adr_044.md`, because it needs a migration, a consumer, ten document kinds, an account map and a backfill |
+| E3 | Prune: move complete or superseded taskplans out of the active list; keep `00_STATUS_INDEX.md` as the register | active `taskplans/` lists only live work. **DONE (conservative):** of 32 completed plans still in the folder, 24 are cited by code, the Bible or `CLAUDE.md` (several are authority documents) and stay; the 8 that nothing cites moved to `taskplans/archive/` and their index rows were repointed |
 
 ## 8. Non-goals
 
@@ -117,3 +117,22 @@ database change without the product owner's go.
 ## 9. Order of work
 
 A1, A2, A3 → B1-B4 (in parallel with C1-C2) → B5-B6 → D1 → C3 → B7 when the survey is answered → E.
+
+## 10. Closure, 2026-10-22: what is finished, and the five things only a person or a device can finish
+
+**Finished and committed:** A1, A2 (built and proven locally), A3 (Linux result), B1 to B6 (rehearsed), C1 and C2 (harness proven, not
+yet run on a real tenant), D1, E1, E2 (decision; build moved to Task 130), E3. Also done on the way: the CI `knip` failure from the demo
+walk (`b09a319e`), ADR-049 accepted and its screen built (HQ People: Disable access / Restore access with a required reason), and
+the frosted-blur fix.
+
+**Gated outside the repository (each is in FINISHER with exact steps):**
+
+1. **Apply the migrations to production (A2 proof).** A read of the production database was refused for this session, as it should be
+   without the owner at the keyboard. The latest push failed its Vercel build; that is consistent with the gate refusing a build whose
+   migrations production lacks, but the build log could not be read from here to confirm it. The previous deployment stays live.
+2. **B7: validate Mode B on hardware matching DSEW.** Needs DSEW's server survey and a Linux machine or VM.
+3. **A real phone:** camera upload over HTTPS with the CA installed, HEIC photos, and D2 (a throttled trace, glass vs lite).
+4. **C3 and C4: walk the five demo tenants.** Needs each seeded on a local database. The seed scripts load `.env` (production) and
+   create Supabase logins when its keys are present, so they must be run with the production variables blanked; do that deliberately,
+   not as a side effect of a test run.
+5. **Task 130:** the posting build.
