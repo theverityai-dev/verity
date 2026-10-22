@@ -144,6 +144,61 @@ else
   fi
 fi
 
+# ── 7. Mode B (private network) ────────────────────────────────────────────
+# Task 129 B1/B3. Only checked when the env file says Mode B. Each check names a failure that is silent: sign-in loops at the
+# wrong issuer, an upload that signs for a name no browser can reach, or an identity provider still on its default account.
+if mode_b_enabled; then
+  app_host="$(env_value VERITY_APP_HOST)"; idp_host="$(env_value VERITY_IDP_HOST)"; files_host="$(env_value VERITY_FILES_HOST)"
+  for key in VERITY_APP_HOST VERITY_IDP_HOST VERITY_FILES_HOST VERITY_IDP_URL; do
+    [ -n "$(env_value "${key}")" ] || fail "Mode B but ${key} is empty"
+  done
+  if [ -n "${app_host}" ] && { [ "${app_host}" = "${idp_host}" ] || [ "${app_host}" = "${files_host}" ] || [ "${idp_host}" = "${files_host}" ]; }; then
+    fail "VERITY_APP_HOST, VERITY_IDP_HOST and VERITY_FILES_HOST must be three different names"
+  fi
+
+  kc_user="$(env_value KEYCLOAK_ADMIN)"
+  case "${kc_user}" in
+    ""|admin|administrator|root|keycloak|CHANGE_ME*) fail "KEYCLOAK_ADMIN is empty, a default account name, or still the example placeholder" ;;
+  esac
+  for key in KEYCLOAK_ADMIN_PASSWORD KEYCLOAK_DB_PASSWORD VERITY_OIDC_CLIENT_SECRET; do
+    value="$(env_value "${key}")"
+    case "${value}" in
+      CHANGE_ME*) fail "${key} is still the example placeholder" ;;
+      "")         fail "${key} is empty" ;;
+      *) [ "${#value}" -ge 24 ] || fail "${key} is shorter than 24 characters" ;;
+    esac
+  done
+
+  # The three public names must be the ones the settings actually use, or sign-in and uploads fail with a plain "not reachable".
+  case "$(env_value VERITY_PUBLIC_URL)" in https://"${app_host}"|https://"${app_host}":*) ;; *) fail "VERITY_PUBLIC_URL must be on VERITY_APP_HOST (${app_host})" ;; esac
+  case "$(env_value VERITY_OIDC_ISSUER)" in https://"${idp_host}"/*|https://"${idp_host}":*/*) ;; *) fail "VERITY_OIDC_ISSUER must be on VERITY_IDP_HOST (${idp_host})" ;; esac
+  case "$(env_value VERITY_S3_ENDPOINT)" in https://"${files_host}"|https://"${files_host}":*) ;; *) fail "VERITY_S3_ENDPOINT must be the browser-reachable https name on VERITY_FILES_HOST (${files_host}); an internal name such as http://objects:9000 cannot be reached by a phone, so presigned uploads would fail" ;; esac
+
+  TLS_DIR="${DEPLOY_DIR}/config/tls"
+  for f in root.crt server.crt server.key; do
+    [ -f "${TLS_DIR}/${f}" ] || fail "${TLS_DIR}/${f} is missing (run deploy/scripts/make-internal-ca.sh, or supply your own certificate)"
+  done
+  if [ -f "${TLS_DIR}/server.key" ]; then
+    mode="$(file_mode "${TLS_DIR}/server.key" || true)"
+    case "${mode}" in 600|400) ;; *) fail "${TLS_DIR}/server.key is mode ${mode:-unknown}; run: chmod 600 ${TLS_DIR}/server.key" ;; esac
+  fi
+  if [ -f "${TLS_DIR}/root.key" ]; then
+    warn "the CA private key (${TLS_DIR}/root.key) is still on this server; move it to offline storage, nothing needs it after the certificate is issued"
+  fi
+  if [ -f "${TLS_DIR}/server.crt" ] && command -v openssl >/dev/null 2>&1; then
+    openssl x509 -in "${TLS_DIR}/server.crt" -noout -checkend $((30 * 86400)) >/dev/null 2>&1 \
+      || fail "the server certificate expires within 30 days or is unreadable"
+    for name in "${app_host}" "${idp_host}" "${files_host}"; do
+      openssl x509 -in "${TLS_DIR}/server.crt" -noout -ext subjectAltName 2>/dev/null | grep -qE "DNS:${name}(,|$)" \
+        || fail "the server certificate does not list ${name}"
+    done
+  fi
+  [ -f "${DEPLOY_DIR}/config/keycloak/realm-dsew.json" ] || fail "the Keycloak realm file is missing (run deploy/scripts/render-keycloak-realm.sh)"
+  pass "Mode B (names, Keycloak credentials, certificate, realm)"
+else
+  pass "deployment mode A (Mode B checks not applicable)"
+fi
+
 # ── Result ─────────────────────────────────────────────────────────────────
 if [ "${FAILURES}" -gt 0 ]; then
   die "${FAILURES} preflight check(s) failed — refusing to proceed"

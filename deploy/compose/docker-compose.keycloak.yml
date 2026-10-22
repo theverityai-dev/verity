@@ -1,0 +1,108 @@
+# Self-hosted identity overlay for Mode B (private network): Keycloak with its own PostgreSQL.
+#
+# Authority: Task 129 B1; clients/dsew/deployment-readiness-audit.md section 10 stage 2; ADR-020 (OIDC browser identity),
+# ADR-031 (Mode B is not promised; DSEW is its validation target), ADR-032 (public origin is configured).
+#
+# Compose it with the base file (install.sh does when VERITY_DEPLOYMENT_MODE=B):
+#   docker compose -f docker-compose.yml -f docker-compose.keycloak.yml ...
+#
+# Keycloak keeps ITS OWN database, in its own volume. Verity's database never holds identity-provider data and Keycloak never
+# connects to it, so a Verity restore cannot overwrite accounts and a Keycloak upgrade cannot touch tenant data.
+#
+# Users are created by an administrator (deploy/scripts/provision-oidc-user.sh), never self-registered, and Verity never calls
+# the Keycloak admin API (that would be a new identity binding and needs its own ADR). Offboarding is two steps: disable the
+# Keycloak account (no new sign-ins) and disable the Verity membership (ADR-049, ends existing sessions at the next check).
+#
+# TLS terminates at the reverse proxy (docker-compose.proxy.yml). Keycloak speaks HTTP on the compose network only; nothing here
+# publishes a port.
+#
+# IMAGE: quay.io/keycloak/keycloak:26.0 -> sha256:09a381c7... (digest is what is trusted; the tag is for the reader).
+
+services:
+  keycloak-db:
+    image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - DAC_OVERRIDE
+      - FOWNER
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    environment:
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in the env file (deploy/scripts/install.sh generates one)}
+      POSTGRES_DB: keycloak
+      TZ: UTC
+    volumes:
+      - verity-keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0@sha256:09a381c715ab0b111835b70f2905955274843a219c6f27efb348e4d9f4086858
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    # `start` is production mode: it refuses to run without a hostname and refuses plain-HTTP admin access from outside.
+    # --import-realm creates the realm once, on first start, from the rendered file; it never overwrites an existing realm.
+    command: ["start", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD in the env file}
+      # The public address browsers and Verity use for the issuer. Must equal VERITY_OIDC_ISSUER's origin.
+      KC_HOSTNAME: ${VERITY_IDP_URL:?set VERITY_IDP_URL in the env file (https://<idp host>[:port])}
+      # TLS is the proxy's job. X-Forwarded-* headers are trusted because only the proxy can reach this port.
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN in the env file}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD in the env file (deploy/scripts/install.sh generates one)}
+      TZ: UTC
+    volumes:
+      - ../config/keycloak/realm-dsew.json:/opt/keycloak/data/import/realm-dsew.json:ro
+    # NO PORTS. Reached over the compose network by the proxy (and by the operator script through `compose exec`).
+    healthcheck:
+      # Keycloak 26 serves health on the management port 9000. The image has no curl, so use bash's /dev/tcp.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  web:
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
+volumes:
+  verity-keycloak-db-data:

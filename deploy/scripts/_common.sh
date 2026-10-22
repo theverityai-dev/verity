@@ -53,12 +53,17 @@ require_env_file() {
 
 # Docker Compose invocation, pinned to this package's files and project name so
 # an operator's shell cwd cannot change which deployment a command touches.
+# VERITY_COMPOSE_PROJECT (default "verity") exists so a rehearsal can run beside a real deployment on one host without
+# touching its containers or volumes; set it for EVERY script of that rehearsal.
 compose() {
   local files=(-f "${COMPOSE_DIR}/docker-compose.yml")
   if bundled_storage_enabled; then
     files+=(-f "${COMPOSE_DIR}/docker-compose.bundled-storage.yml")
   fi
-  docker compose --project-name verity --env-file "${ENV_FILE}" "${files[@]}" "$@"
+  if mode_b_enabled; then
+    files+=(-f "${COMPOSE_DIR}/docker-compose.keycloak.yml" -f "${COMPOSE_DIR}/docker-compose.proxy.yml")
+  fi
+  docker compose --project-name "${VERITY_COMPOSE_PROJECT:-verity}" --env-file "${ENV_FILE}" "${files[@]}" "$@"
 }
 
 # Builds every image this release needs: the application (web, scheduler) AND the operator
@@ -70,6 +75,14 @@ build_images() {
   compose --profile tools build tools
 }
 
+# Mode B (private network, ADR-031; Task 129): Keycloak, the TLS proxy and the bundled object store, all on this host.
+# Read from the env file, not the caller's shell, so upgrade, backup and restore see the same stack the install built
+# without every operator command having to be re-run with a variable.
+mode_b_enabled() {
+  [ -f "${ENV_FILE}" ] || return 1
+  [ "$(env_value VERITY_DEPLOYMENT_MODE)" = "B" ]
+}
+
 # Whether the bundled object store (docker-compose.bundled-storage.yml) is part of this deployment.
 #
 # VERITY_WITH_BUNDLED_STORAGE=1 is the setting. VERITY_WITH_MINIO=1 is a DEPRECATED alias, kept so an
@@ -79,6 +92,7 @@ build_images() {
 _BUNDLED_STORAGE_WARNED=0
 bundled_storage_enabled() {
   [ "${VERITY_WITH_BUNDLED_STORAGE:-0}" = "1" ] && return 0
+  mode_b_enabled && return 0
   if [ "${VERITY_WITH_MINIO:-0}" = "1" ]; then
     if [ "${_BUNDLED_STORAGE_WARNED}" = "0" ]; then
       _BUNDLED_STORAGE_WARNED=1

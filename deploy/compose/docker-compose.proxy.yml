@@ -1,0 +1,88 @@
+# TLS reverse-proxy overlay for Mode B (private network): Caddy in front of Verity, Keycloak and the object store.
+#
+# Authority: Task 129 B3; clients/dsew/deployment-readiness-audit.md blockers B3 and B6; ADR-032 (the public origin is
+# configured as VERITY_PUBLIC_URL and never derived from request headers, and production refuses a non-https origin).
+#
+# Compose it with the base file and the keycloak and bundled-storage overlays (install.sh does when VERITY_DEPLOYMENT_MODE=B).
+#
+# CERTIFICATES are supplied, not obtained: deploy/scripts/make-internal-ca.sh creates an internal root CA and one server
+# certificate covering the three hostnames, or DSEW's own certificate and key are placed at deploy/config/tls/server.{crt,key}.
+# Caddy's automatic HTTPS is off because there is no public DNS name for it to prove. The root certificate (root.crt) is what
+# DSEW installs on PCs and phones; it is also mounted into `web` (NODE_EXTRA_CA_CERTS) so the server can reach Keycloak by its
+# public https name, which is what makes the issuer identical for the browser and the server.
+#
+# ONE PORT NUMBER, INSIDE AND OUT. The host and the container use the same VERITY_HTTPS_PORT (443 in production). The issuer
+# and presigned URLs carry that port, and containers resolve the three hostnames to this service through network aliases, so
+# a different internal port would make the same URL unreachable from inside the compose network.
+#
+# IMAGE: caddy:2.10-alpine -> sha256:4c6e91c6... (v2.10.2, observed and pull-tested 2026-10-22).
+
+services:
+  proxy:
+    image: caddy:2.10-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # Binding 443 inside the container.
+      - NET_BIND_SERVICE
+      # Reading the certificate and its 0600 key, which belong to the host user that ran install.sh. Read-only: it does not
+      # allow writing or executing anything.
+      - DAC_READ_SEARCH
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    ports:
+      - "${VERITY_HTTPS_BIND:-0.0.0.0}:${VERITY_HTTPS_PORT:-443}:${VERITY_HTTPS_PORT:-443}"
+    environment:
+      VERITY_APP_HOST: ${VERITY_APP_HOST:?set VERITY_APP_HOST in the env file}
+      VERITY_IDP_HOST: ${VERITY_IDP_HOST:?set VERITY_IDP_HOST in the env file}
+      VERITY_FILES_HOST: ${VERITY_FILES_HOST:?set VERITY_FILES_HOST in the env file}
+      VERITY_HTTPS_PORT: ${VERITY_HTTPS_PORT:-443}
+      VERITY_APP_URL: ${VERITY_PUBLIC_URL:?set VERITY_PUBLIC_URL in the env file}
+    volumes:
+      - ../proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../config/tls:/tls:ro
+      - verity-proxy-data:/data
+      - verity-proxy-config:/config
+    networks:
+      default:
+        aliases:
+          - ${VERITY_APP_HOST}
+          - ${VERITY_IDP_HOST}
+          - ${VERITY_FILES_HOST}
+    # No dependency on web: install.sh starts the proxy before migrations, and Caddy resolves its upstreams per request, so a
+    # web that is not up yet answers 502 rather than stopping the proxy from starting.
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      objects:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://127.0.0.1:${VERITY_HTTPS_PORT:-443}/ 2>&1 | grep -qv 'Connection refused' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  web:
+    environment:
+      # The internal root CA, so the server's own fetch of the issuer and JWKS over https validates.
+      NODE_EXTRA_CA_CERTS: /tls/root.crt
+    volumes:
+      - ../config/tls/root.crt:/tls/root.crt:ro
+
+  tools:
+    # ensure-bucket and the operator provisioning script reach the object store and Keycloak by their public https names.
+    environment:
+      NODE_EXTRA_CA_CERTS: /tls/root.crt
+    volumes:
+      - ../config/tls/root.crt:/tls/root.crt:ro
+
+volumes:
+  verity-proxy-data:
+  verity-proxy-config:

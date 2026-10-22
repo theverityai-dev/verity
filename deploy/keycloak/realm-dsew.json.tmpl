@@ -1,0 +1,60 @@
+{
+  "realm": "dsew",
+  "displayName": "Verity",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "maxFailureWaitSeconds": 900,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 28800,
+  "passwordPolicy": "length(10) and notUsername",
+  "clients": [
+    {
+      "clientId": "verity-web",
+      "name": "Verity",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "@@CLIENT_SECRET@@",
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "rootUrl": "@@APP_ORIGIN@@",
+      "baseUrl": "@@APP_ORIGIN@@",
+      "redirectUris": ["@@APP_ORIGIN@@/api/auth/oidc/callback"],
+      "webOrigins": ["@@APP_ORIGIN@@"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "@@APP_ORIGIN@@/*",
+        "access.token.lifespan": "300"
+      },
+      "defaultClientScopes": ["profile", "email", "roles"],
+      "optionalClientScopes": [],
+      "protocolMappers": [
+        {
+          "name": "verity-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "verity-web",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ]
+}

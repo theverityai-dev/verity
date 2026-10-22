@@ -53,6 +53,31 @@ if (!storageImage) {
 } else if (storageImage[2] === "latest") {
   failures.push("the bundled object-store image must not use the latest tag");
 }
+// Mode B overlays (Task 129): every image is a version tag AND an exact digest, every service drops all capabilities and
+// forbids privilege gain, and only the proxy publishes a port. Identity and its database are reachable on the compose
+// network only.
+const keycloakOverlay = parse(await readFile(new URL("deploy/compose/docker-compose.keycloak.yml", root), "utf8"));
+for (const [file, overlay] of [
+  ["docker-compose.keycloak.yml", keycloakOverlay],
+  ["docker-compose.proxy.yml", parse(await readFile(new URL("deploy/compose/docker-compose.proxy.yml", root), "utf8"))],
+]) {
+  for (const [name, service] of Object.entries(overlay?.services ?? {})) {
+    if (!service?.image) continue; // a service that only adjusts web or tools
+    if (!/^\S+:[^\s@]+@sha256:[a-f0-9]{64}$/.test(service.image) || /:latest@/.test(service.image)) {
+      failures.push(`${file}: ${name} image must be pinned as <image>:<version>@sha256:<digest>, not latest`);
+    }
+    if (!(service.cap_drop ?? []).includes("ALL")) failures.push(`${file}: ${name} must drop all capabilities`);
+    if (!(service.security_opt ?? []).includes("no-new-privileges:true")) failures.push(`${file}: ${name} must set no-new-privileges`);
+    if (service.ports && name !== "proxy") failures.push(`${file}: ${name} must not publish a host port (only the proxy does)`);
+  }
+}
+const keycloakEnvironment = keycloakOverlay?.services?.keycloak?.environment ?? {};
+for (const forbidden of ["DATABASE_URL", "DIRECT_URL", "POSTGRES_SUPERUSER_PASSWORD", "VERITY_APP_PASSWORD", "VERITY_SESSION_SECRET"]) {
+  if (Object.hasOwn(keycloakEnvironment, forbidden)) failures.push(`keycloak must not receive ${forbidden}: it must not be able to reach Verity's database`);
+}
+if ((keycloakOverlay?.services?.keycloak?.command ?? [])[0] !== "start") {
+  failures.push("keycloak must run in production mode (`start`), never start-dev");
+}
 if (packageJson.engines?.node !== "22.x") {
   failures.push("package.json must declare the Node 22 runtime line");
 }

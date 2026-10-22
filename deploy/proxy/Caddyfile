@@ -1,0 +1,64 @@
+# Reverse proxy for Mode B (Task 129 B3). Environment placeholders ({$NAME}) are resolved by Caddy at start; this file holds
+# no secret. Certificates are supplied by deploy/config/tls (see docker-compose.proxy.yml), so automatic HTTPS is off.
+{
+	auto_https off
+	admin off
+}
+
+# Verity application.
+https://{$VERITY_APP_HOST}:{$VERITY_HTTPS_PORT} {
+	tls /tls/server.crt /tls/server.key
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	reverse_proxy web:3000
+}
+
+# Keycloak. Caddy sets X-Forwarded-Proto/Host/For; Keycloak trusts them (KC_PROXY_HEADERS=xforwarded) because only this
+# service can reach its port.
+https://{$VERITY_IDP_HOST}:{$VERITY_HTTPS_PORT} {
+	tls /tls/server.crt /tls/server.key
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	# The admin console is for the operator on the host (compose exec / kcadm), not for the LAN.
+	@admin path /admin /admin/* /realms/master /realms/master/*
+	respond @admin 404
+	reverse_proxy keycloak:8080
+}
+
+# Object store (SeaweedFS S3 gateway). Browsers upload straight to presigned URLs on this origin, so it needs CORS for the
+# application origin. Host is passed through unchanged, which is what keeps the S3 v4 signature valid.
+https://{$VERITY_FILES_HOST}:{$VERITY_HTTPS_PORT} {
+	tls /tls/server.crt /tls/server.key
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+	@preflight method OPTIONS
+	handle @preflight {
+		header Access-Control-Allow-Origin "{$VERITY_APP_URL}"
+		header Access-Control-Allow-Methods "GET, PUT, HEAD, OPTIONS"
+		header Access-Control-Allow-Headers "*"
+		header Access-Control-Max-Age "600"
+		header Vary "Origin"
+		respond 204
+	}
+	handle {
+		# The gateway adds permissive CORS headers of its own. Two Access-Control-Allow-Origin values make a browser refuse the
+		# response, so the upstream's are replaced, not supplemented: this proxy is the single source of CORS policy.
+		reverse_proxy objects:9000 {
+			header_down Access-Control-Allow-Origin "{$VERITY_APP_URL}"
+			header_down Access-Control-Allow-Methods "GET, PUT, HEAD, OPTIONS"
+			header_down Access-Control-Allow-Headers "*"
+			header_down Access-Control-Expose-Headers "ETag"
+			header_down Vary "Origin"
+		}
+	}
+}

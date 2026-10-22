@@ -156,7 +156,10 @@ describe("conformance: architectural boundaries", () => {
     const offenders = SOURCES.filter((file) => {
       const rel = relative(ROOT, file);
       if (!rel.startsWith("src/server/")) return false;
-      return /from "react"|\.tsx$/.test(rel) || /from "react"/.test(readFileSync(file, "utf8"));
+      if (/\.tsx$/.test(rel)) return true;
+      // `cache` is Next's per-request memoisation: no component, hook or JSX. auth.ts uses it so one request resolves an
+      // identity once (9598fcb4). Any other React import is UI in the server layer and still fails.
+      return [...readFileSync(file, "utf8").matchAll(/import\s+([^;]*?)\s+from "react"/g)].some((m) => m[1]!.trim() !== "{ cache }");
     }).map((f) => relative(ROOT, f));
     expect(offenders).toEqual([]);
   });
@@ -171,6 +174,9 @@ describe("conformance: capability contracts (Phase E)", () => {
    */
   const DECLARED_DEPENDENCIES: Record<string, string[]> = {
     location: [],
+    // Piece-rate lots and the karigar ledger (Stylified). Install migration 20261021300000 declares no dependency: stages,
+    // lots, workers, entries and payments reference each other and the inventory style master by keyed id only.
+    piecework: [],
     asset: ["location"],
     evidence: ["location"],
     scheduling: ["asset"],
@@ -558,6 +564,10 @@ describeDb("conformance: database enforcement", () => {
         "outreach_research_entry",
         "outreach_team_weekly_assessment",
         "outreach_weekly_report",
+        // Piece-rate ledger (20261021300000): entries, payments and per-worker rates are facts, never edited.
+        "piecework_entry",
+        "piecework_payment",
+        "piecework_worker_rate",
         "security_audit_event",
         "stock_ledger_entry",
         "trading_invoice",

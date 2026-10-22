@@ -81,6 +81,8 @@ tmp-010-inspect.mts
 # Deployment package: generated credentials and dumps (Task 42).
 # The example template is committed; the filled-in file never is.
 deploy/config/verity.env
+deploy/config/tls/
+deploy/config/keycloak/
 deploy/backups/
 
 # Audit and browser-automation artefacts. Screenshots taken during a UI
