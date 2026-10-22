@@ -1,4 +1,5 @@
 import type { CommandContext } from "@/server/platform/command";
+import { readUrlFor } from "@/server/platform/files";
 import { computeBundle, type BundlePosition, type LedgerEntry, type StageRef, type WageBasis } from "./ledger";
 
 export type Tx = CommandContext["tx"];
@@ -50,6 +51,35 @@ export const toLedger = (r: EntryRow): LedgerEntry => ({
 export async function activeStages(tx: Tx): Promise<Array<StageRef & { stageKey: string }>> {
   const rows = await tx.pieceworkStage.findMany({ where: { active: true }, orderBy: { sequence: "asc" } });
   return rows.map((s) => ({ id: s.id, sequence: s.sequence, label: s.label, stageKey: s.stageKey }));
+}
+
+/**
+ * A lot's picture, as a short-lived link: the newest photograph taken for the lot (platform Evidence about it), else the still the
+ * demo tenant was seeded with. Never blank and never an error: a deployment with no file storage, or a photo that cannot be read,
+ * simply has no cover and the screen shows a typed tile. Only the lots named are looked up, so a list does not sign every lot.
+ */
+export async function lotCovers(tx: Tx, lots: Array<{ id: string; customFields: unknown }>): Promise<Map<string, string | null>> {
+  const out = new Map<string, string | null>();
+  const seeded = (custom: unknown): string | null => {
+    const c = (custom as { coverImage?: unknown } | null)?.coverImage;
+    return typeof c === "string" && c.startsWith("/") ? c : null;
+  };
+  const rows = lots.length === 0 ? [] : await tx.evidence.findMany({
+    where: { entityKey: "verity.piecework.lot", entityId: { in: lots.map((l) => l.id) }, kind: "Photo", fileId: { not: null } },
+    orderBy: { capturedAt: "desc" },
+    select: { entityId: true, fileId: true },
+  });
+  const newest = new Map<string, string>();
+  for (const r of rows) if (!newest.has(r.entityId)) newest.set(r.entityId, r.fileId!);
+  for (const l of lots) {
+    let url: string | null = null;
+    const file = newest.get(l.id);
+    if (file) {
+      try { url = await readUrlFor(tx, file); } catch { url = null; }
+    }
+    out.set(l.id, url ?? seeded(l.customFields));
+  }
+  return out;
 }
 
 export type LoadedBundle = {

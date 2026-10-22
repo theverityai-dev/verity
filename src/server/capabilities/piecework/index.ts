@@ -21,7 +21,7 @@ import {
   type PaymentRow,
   type WageBasis,
 } from "./ledger";
-import { activeStages, asDate, isoOf, isoOrNull, loadBundles, todayFor, toLedger, type LoadedBundle, type Tx } from "./shared";
+import { LEDGER_SELECT, activeStages, asDate, isoOf, isoOrNull, loadBundles, lotCovers, todayFor, toLedger, type LoadedBundle, type Tx } from "./shared";
 import { dashboard, recentEntries, reportBundleLocation, reportCosting, reportLotStatus, reportProductionByProcess, reportQuality, reportReadyInventory, reportWagePayment, reportWorkInHand } from "./reports";
 
 import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, assertStageAccess, registerFloor } from "./floor";
@@ -636,6 +636,8 @@ export type LotRow = {
   id: string; number: string; name: string | null; design: string; status: LotStatus | "cancelled"; fabricType: string | null;
   plannedPieces: number; bundles: number; bundledPieces: number; readyPieces: number; rejectedPieces: number; shortPieces: number; reworkPieces: number; pendingPieces: number;
   stageLabel: string | null; location: string; dueDate: string | null; overdue: boolean; daysSinceMovement: number | null; createdAt: string;
+  /** A link to the lot's picture, filled by the queries that show one (list and detail); null otherwise. */
+  cover: string | null;
 };
 
 export function summariseLot(
@@ -655,7 +657,7 @@ export function summariseLot(
     pendingPieces: sum((p) => p.stages.reduce((s, x) => s + x.pending, 0)),
     stageLabel: where.stageLabel, location: where.location, dueDate: due,
     overdue: due !== null && due < today && !["completed", "closed", "cancelled"].includes(status),
-    daysSinceMovement: last === null ? null : daysSinceMovement({ lastMovementDate: last }, today), createdAt: lot.createdAt.toISOString(),
+    daysSinceMovement: last === null ? null : daysSinceMovement({ lastMovementDate: last }, today), createdAt: lot.createdAt.toISOString(), cover: null,
   };
 }
 
@@ -671,7 +673,10 @@ export const listLots: QueryDefinition<{ status?: LotRow["status"] }, LotRow[]> 
     const bundles = await loadBundles(ctx.tx, stages);
     const names = new Map(workers.map((w) => [w.id, w.name]));
     const rows = lots.map((l) => summariseLot(l, bundles.filter((b) => b.lotId === l.id), stages, names, today));
-    return input.status ? rows.filter((r) => r.status === input.status) : rows;
+    const shown = input.status ? rows.filter((r) => r.status === input.status) : rows;
+    // Pictures only for the lots in work: a year of closed lots is not signed on every visit to the list.
+    const covers = await lotCovers(ctx.tx, lots.filter((l) => shown.some((r) => r.id === l.id && ["active", "hold", "draft"].includes(r.status))));
+    return shown.map((r) => ({ ...r, cover: covers.get(r.id) ?? null }));
   },
 };
 
@@ -763,8 +768,10 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
     const reversedIds = new Set(rows.filter((r) => r.reversesId).map((r) => r.reversesId!));
     const live = bundles.filter((b) => !b.cancelledAt);
 
+    const cover = (await lotCovers(ctx.tx, [lot])).get(lot.id) ?? null;
     return {
       ...summariseLot(lot, bundles, stages, names, today),
+      cover,
       note: lot.note, cancelReason: lot.cancelReason, startDate: isoOrNull(lot.startDate),
       stages: sumStages(live.map((b) => b.position), stages),
       bundleRows: bundles.map((b) => bundleRow(b, lot.number, stages, names, today)),
@@ -827,7 +834,7 @@ export const listWorkers: QueryDefinition<{ includeInactive?: boolean }, WorkerR
   handler: async (ctx, input) => {
     const [workers, stages, rates, entries, payments, today] = await Promise.all([
       ctx.tx.pieceworkWorker.findMany({ where: input.includeInactive ? {} : { active: true }, orderBy: { name: "asc" } }),
-      activeStages(ctx.tx), ctx.tx.pieceworkWorkerRate.findMany(), ctx.tx.pieceworkEntry.findMany(), ctx.tx.pieceworkPayment.findMany(), todayFor(ctx.tx),
+      activeStages(ctx.tx), ctx.tx.pieceworkWorkerRate.findMany(), ctx.tx.pieceworkEntry.findMany({ select: LEDGER_SELECT }), ctx.tx.pieceworkPayment.findMany({ select: { workerId: true, kind: true, amountMinor: true, reversesId: true } }), todayFor(ctx.tx),
     ]);
     return workers.map((w) => {
       const mine = entries.filter((e) => e.workerId === w.id).map((e) => toLedger(e));

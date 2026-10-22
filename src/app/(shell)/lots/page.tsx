@@ -9,6 +9,7 @@ import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
 import { PieceBar, StagePips } from "@/components/ui/PieceFlow";
 import { ButtonLink, EmptyState, FilterChipRow, PageHeader, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
+import { Cover } from "@/components/ui/Cover";
 import { DefineStageForm, NewLotForm } from "./LotForms";
 import { STATUS_CATEGORY, STATUS_LABEL, shortDate } from "./format";
 
@@ -94,7 +95,8 @@ async function LotsPage({ searchParams }: { searchParams: Promise<{ show?: strin
                 <Link href={`/lots/${l.id}`} className="block no-underline transition-transform duration-150 hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]">
                   <Surface className="h-full p-5">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                      <Cover src={l.cover} label={l.number} size={64} rounded={14} />
+                      <div className="min-w-0 flex-1">
                         <p className="m-0 text-[13px] font-semibold leading-[18px] tracking-[0.02em] text-text-secondary">{l.number}</p>
                         <h2 className="m-0 mt-0.5 truncate text-[20px] font-semibold leading-[24px] tracking-[-0.02em] text-text">{l.name ?? l.design}</h2>
                         <p className="m-0 truncate text-[14px] leading-[20px] text-text-secondary">{[l.name ? l.design : null, l.fabricType].filter(Boolean).join(" · ") || " "}</p>

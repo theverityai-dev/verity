@@ -1,6 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
+import { Cover } from "@/components/ui/Cover";
 import type { Labels } from "./labels";
+
+export { Cover };
 
 export type FloorTab = "floor" | "take-back" | "give-out" | "register" | "day-close";
 
@@ -29,19 +31,6 @@ export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
         </Link>
       ))}
     </nav>
-  );
-}
-
-/** A lot or bundle picture: the lot's cover photograph, or a typed tile carrying the lot number when it has none. */
-export function Cover({ src, label, size = 56 }: { src: string | null; label: string; size?: number }) {
-  const px = { width: size, height: size };
-  if (src) {
-    return <Image src={src} alt="" width={size} height={size} unoptimized className="shrink-0 rounded-[12px] object-cover" style={px} />;
-  }
-  return (
-    <span aria-hidden="true" className="grid shrink-0 place-items-center rounded-[12px] bg-[var(--color-control)] text-[11px] font-medium tracking-[0.04em] text-text-secondary" style={px}>
-      {label.replace(/^LOT-0*/, "L")}
-    </span>
   );
 }
 

@@ -14,6 +14,8 @@ import { ButtonLink, DefinitionList, EmptyState, PageHeader, Panel, PermissionDe
 import { ProgressBar } from "@/components/ui/viz";
 import { CancelLot, EntryLedger, NewBundleForm, StatusActions } from "./LotActions";
 import { LotRequests } from "./LotRequests";
+import { LotCover } from "./LotCover";
+import { Cover } from "@/components/ui/Cover";
 import { floorLanes } from "../floor";
 import { STATUS_CATEGORY, STATUS_LABEL, shortDate } from "../format";
 
@@ -24,10 +26,11 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireActor();
 
-  const { allowed, canChange, canRequest } = await withTenant(actor.tenantId, async (tx) => ({
+  const { allowed, canChange, canRequest, canPhoto } = await withTenant(actor.tenantId, async (tx) => ({
     allowed: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT),
     canChange: await hasTenantPermission(tx, actor.roleId, "ActionExecute", ENTITY_PIECEWORK_LOT),
     canRequest: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_APPROVAL),
+    canPhoto: await hasTenantPermission(tx, actor.roleId, "Create", "verity.evidence.evidence"),
   }));
   if (!allowed) return <PermissionDenied what="viewing this lot" />;
 
@@ -77,6 +80,7 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:gap-10">
           <div className="min-w-0">
             <div className="mb-4 flex flex-wrap items-center gap-3">
+              <Cover src={lot.cover} label={lot.number} size={72} rounded={16} />
               <StateBadge category={STATUS_CATEGORY[lot.status]!} label={STATUS_LABEL[lot.status]} />
               <span className="text-[15px] text-text-secondary">
                 {lot.bundles === 0 ? "No bundle cut yet" : `${lot.bundles} bundle${lot.bundles === 1 ? "" : "s"}, ${lot.bundledPieces} pieces`}
@@ -102,7 +106,10 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
               />
             </div>
           </div>
-          <DefinitionList items={facts} />
+          <div className="flex flex-col gap-4">
+            <DefinitionList items={facts} />
+            {canPhoto && !cancelled && <LotCover lotId={lot.id} hasCover={lot.cover !== null} />}
+          </div>
         </div>
       </Surface>
 

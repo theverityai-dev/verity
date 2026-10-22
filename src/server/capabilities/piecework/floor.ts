@@ -3,7 +3,7 @@ import { registerCommand, ValidationError, type ActorContext, type CommandContex
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { ForbiddenError, hasTenantPermission } from "@/server/platform/authorization";
 import { canMoveLot, daysBetween, type LotStatus } from "./ledger";
-import { activeStages, asDate, isoOf, loadBundles, todayFor, type LoadedBundle, type Tx } from "./shared";
+import { activeStages, asDate, isoOf, loadBundles, lotCovers, todayFor, type LoadedBundle, type Tx } from "./shared";
 
 /**
  * The floor: what a supervisor, a manager and the owner need on top of the piece-rate ledgers (Stylified MVP, proposal
@@ -261,18 +261,14 @@ type FloorState = {
   issues: FloorIssue[]; waiting: FloorWaiting[]; bundles: LoadedBundle[];
 };
 
-const coverOf = (custom: unknown): string | null => {
-  const c = (custom as { coverImage?: unknown } | null)?.coverImage;
-  return typeof c === "string" && c.startsWith("/") ? c : null;
-};
-
 async function floorState(tx: Tx, actor: ActorContext): Promise<FloorState> {
   const [scope, stages, today, lotRows, workerRows] = await Promise.all([
     stageScopeOf(tx, actor), activeStages(tx), todayFor(tx),
     tx.pieceworkLot.findMany({ where: { cancelledAt: null }, select: { id: true, number: true, name: true, design: true, status: true, customFields: true } }),
     tx.pieceworkWorker.findMany({ select: { id: true, name: true } }),
   ]);
-  const lots = new Map(lotRows.map((l) => [l.id, { number: l.number, name: l.name ?? l.design, cover: coverOf(l.customFields), status: l.status }]));
+  const covers = await lotCovers(tx, lotRows.filter((l) => l.status === "active"));
+  const lots = new Map(lotRows.map((l) => [l.id, { number: l.number, name: l.name ?? l.design, cover: covers.get(l.id) ?? null, status: l.status }]));
   const workers = new Map(workerRows.map((w) => [w.id, w.name]));
   // Only the lots in work: the floor never shows a closed lot, so its bundles are not derived at all.
   const activeLotIds = lotRows.filter((l) => l.status === "active").map((l) => l.id);
