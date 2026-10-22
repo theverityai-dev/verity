@@ -80,13 +80,14 @@ Needs Docker, Node and this repository. Database: a copy of a migrated local Pos
 from `verity_clean` and brought up to date with `npx prisma migrate deploy`; the migrations are
 `20261021200000_inventory_style_master`, `20261021300000_capability_piecework` and
 `20261022100000_piecework_bundles_quality`). The last one refuses to run if any piecework rows exist; reset the demo tenant first
-where they do. Identity: the local Keycloak realm `dsew` with two logins, `stylified-munshi` and `stylified-owner`. Seed (never
+where they do. Identity: the local Keycloak realm `dsew` with five logins (below). Seed (never
 through the npm `seed:*` scripts or any shell that has the production `.env` loaded, and with the Supabase variables blank):
 
 ```
 DATABASE_URL, DIRECT_URL   the local database
 STYLIFIED_MUNSHI_SUB       the munshi login's Keycloak user id
 STYLIFIED_OWNER_SUB        the owner login's Keycloak user id
+STYLIFIED_MANAGER_SUB, STYLIFIED_SUPERVISOR_A_SUB, STYLIFIED_SUPERVISOR_B_SUB   the other three (optional)
 node prisma/run-seed.cjs seed-stylified.ts
 ```
 
@@ -113,3 +114,28 @@ Not run in the formal sense (`obvious-basics-checklist` and the Odoo and ERPNext
 | Audit of who did what | Every line shows who entered it; the platform audit records commands; no owner viewer yet |
 
 This is a first pass by the builder, not the formal gate.
+
+## 6. The floor: roles, logins and the walk (2026-10-23)
+
+Local logins, all in the Keycloak realm `dsew`, all with the local-only dev password `Stylified-Demo-1`. They exist on this machine
+only; none of them is on production.
+
+| Login | Role | What to show |
+|---|---|---|
+| `stylified-owner` | Owner | Owner dashboard, Approvals (can approve above the manager limit), Team and limits |
+| `stylified-manager` | Manager | Approvals inbox from a phone; approves within the limit, sees "Needs the owner" above it |
+| `stylified-supervisor-a` | Supervisor, stages Collar and Stitching | `/shopfloor`: late outside unit, Karigar A holds 37 pieces; take back with plus and minus; photo; deduction request; Hindi |
+| `stylified-supervisor-b` | Supervisor, stages Pasting, Kaj, Finishing | A frozen day close with a Hindi note; give out; the shortage write-off request |
+| `stylified-munshi` | Munshi | Daily entry (Hindi or English), lots, bundles, karigars, wages |
+
+The supervisor screens live at `/shopfloor` (the existing `/floor` is the dine-in floor plan): My floor, Take back, Give out, Rework
+and short, Close the day, and the karigar quick view. Approvals is `/shopfloor/approvals`, the owner's Team and limits
+`/shopfloor/team`. A supervisor who opens the wages page is refused; a supervisor at a stage that is not theirs is refused by the
+server, not merely hidden.
+
+Reset and reseed: `DEMO_TENANT_NAME=Stylified npx tsx prisma/reset-demo.ts --yes`, then the seed command above. The seed makes three
+pending approvals (a deduction inside the limit, a write-off, a deduction above the limit) and one closed day.
+
+Defect photographs need file storage. On a machine with the Supabase variables blank (the local run) the camera step shows
+"File storage is not set up on this server" and the rest of the screen works; on the hosted deployment the photo is stored and shows in
+the register and in the approval.

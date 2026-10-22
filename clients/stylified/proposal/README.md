@@ -33,3 +33,7 @@ The owner gave: ₹25,000 + GST customization; server ₹4,500; maintenance ₹4
 
 Not stated by the owner and therefore proposals to confirm: payment split, user limit, support hours, backup retention
 (daily, 30 days), liability cap, governing law (Delhi courts), the 30-day validity.
+
+## Documents follow the build (2026-10-23)
+
+After the floor was built, documents 1, 2 and 5 were edited to say only what exists: the roles matrix matches the seeded grants (a manager may record payments and sees wages; limits apply to approvals), "mark found" was dropped from the shortage register (a found piece is a manager reversal), the approval record is kept in the piece-rate capability rather than the platform approval substrate, the language is chosen per device, alerts are cards on My floor and in Approvals, lot pictures are set up with Stylified, and a defect photograph is added right after a return is saved.

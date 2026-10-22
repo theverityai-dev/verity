@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-22** (against `main` at `5a6ba739`; Task 129 block P0b added, old P0-1 removed)
+**Last updated: 2026-10-23** (Task 130 steps 1 to 4 built, locally; demo walk run on two tenants)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -92,24 +92,24 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
 - **Done when:** runbook section 9 passes on the target and the dated record is committed; only then say "validated on Mode B for D&S".
 - **Status:** BLOCKED on a person (DSEW server survey; a Linux VM or machine for DSEW).
 
-### P0b-4. Demo readiness: walk the real tenants (seed scripts load .env = production and create Supabase logins when its keys are set: blank SUPABASE_* and set both DB URLs explicitly, on a local database) (Task 129 workstream C), and measure low-end devices (D2)
+### P0b-4. Demo readiness: finish the walk (Task 129 workstream C), and measure low-end devices (D2)
 
-- **What:** The Demo Readiness Matrix (`docs/demo/readiness-matrix.md`), the route-walk harness (`npm run demo:walk`) and lite
-  effects (Appearance: Automatic, Full glass, Lite) are built. **No demo tenant has been walked**, so nothing is DEMO-READY. Low-end
-  performance is unmeasured (a headless scroll test cannot see GPU cost).
-- **Why:** The owner sells by showing screens. A 404, a clipped card or a console error in front of a buyer is the failure this
-  prevents. The frosted blur was also found not to render in Chrome/Edge/Firefox (fixed; see the matrix).
-- **How:** For each tenant in the matrix: seed on a local database, save a session, run `npm run demo:walk`, fix defects in shared
-  primitives, commit evidence under `docs/demo/evidence/`, update the matrix row. Order: D & S Electric Works, Stylified, Colonel
-  Kebabz, plywood, PlotArmour. Then take one throttled trace of a floor screen on a real Android phone, glass vs lite.
-- **Done when:** each tenant's row has a dated walk with zero unlogged defects; D2 has numbers.
-- **Status:** NOT STARTED for the tenant walks; harness and lite mode DONE (`81ad10db`, this commit).
+- **Done 2026-10-23:** the route-walk harness ran for real on two tenants, seeded locally (DSEW, Stylified), as their owners, at 1280 and 390, light and dark:
+  DSEW 244 ok / 64 forbidden / 0 failures; Stylified 284 / 24 / 0. Reports in `docs/demo/evidence/`. It found and fixed five real defects (Import page crash,
+  Follow-ups hydration error, stat-tile figure overflow, Customers header overflow on a phone, an unbroken hint on Import). This is ROUTE-WALKED, not DEMO-READY.
+- **Still to do:** (1) a person opens each tenant's main flow before it earns DEMO-READY; (2) walk the Stylified **Munshi** (floor) login and the DSEW worker logins;
+  (3) the three tenants not walked: Colonel Kebabz (its seed needs a live Supabase to create a login: give it an OIDC-subject option like DSEW's first), the plywood
+  demo and PlotArmour Studio; (4) D2: a throttled trace on a real low-end phone, glass vs lite (a headless run cannot see GPU cost).
+- **Status:** IN PROGRESS.
 
 ### P0b-5. Ledger posting (Task 130)
 
-- **What:** ADR-044 is ACCEPTED (2026-10-22, outbox plus a consumer with its own progress). Nothing is built. The plan, steps and
-  done-when are in `taskplans/130_ledger_posting_adr_044.md`; this replaces old P1-1h's "waits for ADR acceptance".
-- **Status:** NOT STARTED
+- **Built 2026-10-23, local database only** (`cd7c860e`): sales invoices and customer receipts post through a per-tenant account map, idempotently, with a visible
+  waiting list and a Posting setup screen. Credit notes and voids, purchase bills, supplier payments and **project (job) invoices and receipts** are not posted, so a
+  DSEW balance sheet still omits its jobs. Next: project billing, then reversal on void. See `taskplans/130_ledger_posting_adr_044.md`.
+- **Before the next push (owner):** apply `20261023100000_ledger_posting` (this work) and `20261023110000_piecework_floor_roles` (the Stylified work in another session)
+  to production, or the build gate will refuse the deploy and the previous deployment stays live.
+- **Status:** IN PROGRESS.
 
 ---
 
@@ -293,7 +293,7 @@ platform file store, a small label catalogue. Photographs need a new file field,
 both themes (DEMO-READY gate), the migration is applied to production (P0b-3), and Stylified's workspace has a rehearsed
 restore.
 **Source.** `clients/stylified/proposal/`, `clients/stylified/requirement-sheet-review.md`, `taskplans/handoffs/DESIGN_AUDIT.md`.
-**Status.** PLANNED. Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
+**Status.** BUILT locally 2026-10-23, not yet DEMO-READY on a hosted tenant: roles, stage scope, approvals with limits, day close, supervisor screens S1 to S6 at `/shopfloor`, Approvals, Team and limits, Hindi and English on daily entry and the floor screens, lot hold and close requests, seed with five logins. 30 database tests pass (23 core, 7 floor). Walked in a browser at 390 px and desktop in both themes with no console error. Still open: the production migration `20261023110000_piecework_floor_roles` (with `20261022100000`), defect photographs on a deployment with file storage, a recorded DEMO-READY walk, lot cover upload, the speed work (proxy session check, layout queries, dashboard history), and the rehearsed restore. Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
 Stylified's own Vercel and Supabase accounts is an option quoted later and not promised (ADR-054 keeps Mode D parked; see P2-0).
 
 ## P2: planned build work, unblocked

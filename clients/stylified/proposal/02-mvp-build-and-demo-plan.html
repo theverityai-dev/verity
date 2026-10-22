@@ -44,7 +44,7 @@
 </tbody></table>
 
 <h2><span class="num">02</span>What already exists</h2>
-<p>These parts of the cycle are built and covered by automated tests (28 logic tests and 23 database tests for the piece-rate core, plus the platform's tenancy and permission tests). They have been opened in a browser on a local copy with fictional data. They are <strong>not yet on a Stylified workspace</strong>.</p>
+<p>These parts of the cycle are built and covered by automated tests (28 logic tests and 30 database tests for the piece-rate core and the floor, plus the platform's tenancy and permission tests). They have been opened in a browser on a local copy with fictional data. They are <strong>not yet on a Stylified workspace</strong>.</p>
 <table>
 <thead><tr><th>Area</th><th>What works today</th></tr></thead>
 <tbody>
@@ -60,16 +60,16 @@
 <table>
 <thead><tr><th>Item</th><th>Who it is for</th><th>Status</th></tr></thead>
 <tbody>
-<tr><td>Role set: Owner, Manager, Supervisor, Munshi, with the matrix in section 4</td><td>All</td><td><span class="tag new">new</span></td></tr>
-<tr><td>Supervisor stage assignment (which stages a supervisor looks after)</td><td>Owner sets, Supervisor limited by it</td><td><span class="tag new">new</span></td></tr>
-<tr><td>Supervisor screens S1 to S6 (section 5)</td><td>Supervisor</td><td><span class="tag new">new</span></td></tr>
-<tr><td>Approvals: deduction, shortage write-off, lot hold or close, with limits the owner sets</td><td>Manager, Owner</td><td><span class="tag new">new</span></td></tr>
-<tr><td>Photographs: a lot cover photo, and defect photos on rejected or rework entries</td><td>Munshi, Supervisor, Owner</td><td><span class="tag new">new</span></td></tr>
-<tr><td>Bilingual Hindi and English labels on daily entry and all supervisor screens</td><td>Munshi, Supervisor</td><td><span class="tag new">new</span></td></tr>
-<tr><td>In-app alerts for late returns and open shortages</td><td>Supervisor, Manager, Owner</td><td><span class="tag new">new</span></td></tr>
+<tr><td>Role set: Owner, Manager, Supervisor, Munshi, with the matrix in section 4</td><td>All</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Supervisor stage assignment (which stages a supervisor looks after)</td><td>Owner sets, Supervisor limited by it</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Supervisor screens S1 to S6 (section 5)</td><td>Supervisor</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Approvals: deduction, shortage write-off, lot hold or close, with limits the owner sets</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Photographs: defect photos on rejected or rework entries; lot pictures set up with you at go-live</td><td>Munshi, Supervisor, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Bilingual Hindi and English labels on daily entry and all supervisor screens</td><td>Munshi, Supervisor</td><td><span class="tag in">built</span></td></tr>
+<tr><td>In-app alerts for late returns, open shortages and requests waiting</td><td>Supervisor, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Speed work: fewer database round trips per page, instant press feedback, a loading bar</td><td>All</td><td><span class="tag new">in progress</span></td></tr>
 <tr><td>Lots, bundles, slips, issue and return, rework, wages, money, dashboard, reports</td><td>Owner, Manager, Munshi</td><td><span class="tag in">exists</span></td></tr>
-<tr><td>Seeded demonstration with fictional data and a reset command; half-day training; go-live on Stylified's workspace</td><td>All</td><td><span class="tag new">new</span></td></tr>
+<tr><td>Seeded demonstration with fictional data and a reset command</td><td>All</td><td><span class="tag in">built</span></td></tr><tr><td>Half-day training; go-live on Stylified's workspace</td><td>All</td><td><span class="tag new">at go-live</span></td></tr>
 </tbody></table>
 
 <h2><span class="num">04</span>Roles and what each can do</h2>
@@ -78,22 +78,22 @@
 <thead><tr><th>Action</th><th>Owner</th><th>Manager</th><th>Supervisor</th><th>Munshi</th></tr></thead>
 <tbody>
 <tr><td>See the factory dashboard and all lots</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
-<tr><td>See wage rates, wages and balances</td><td>Yes</td><td>Balances only</td><td>No</td><td>Own entries</td></tr>
+<tr><td>See wage rates, wages and balances</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
 <tr><td>Cut a bundle, print a slip</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
 <tr><td>Give a bundle out (issue)</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
 <tr><td>Take a bundle back and inspect (return)</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
 <tr><td>Reissue rework</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
 <tr><td>Raise a shortage</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
 <tr><td>Write off a shortage</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td></tr>
-<tr><td>Record an advance, recovery or payment</td><td>Yes</td><td>Within limit</td><td>No</td><td>Yes</td></tr>
+<tr><td>Record an advance, recovery or payment</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
 <tr><td>Record a deduction</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td></tr>
 <tr><td>Reverse a wrong entry (with a reason)</td><td>Yes</td><td>Yes</td><td>Own entries, same day</td><td>Own entries, same day</td></tr>
 <tr><td>Activate, hold or complete a lot</td><td>Yes</td><td>Yes</td><td>Request a hold</td><td>No</td></tr>
 <tr><td>Close a lot</td><td>Yes</td><td>Approves within limit</td><td>No</td><td>No</td></tr>
-<tr><td>Reports</td><td>All</td><td>All except wage ledger</td><td>Floor reports</td><td>Today's entries</td></tr>
+<tr><td>Lot reports and dashboards</td><td>All</td><td>All</td><td>Floor screens only</td><td>All</td></tr>
 <tr><td>Users, roles, stage assignments, limits</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
 </tbody></table>
-<p class="footnote">The exact limits (for example the rupee amount a manager may approve) are set by the owner on screen. The workbook's matrix is confirmed with Stylified at kickoff.</p>
+<p class="footnote">The limits a manager may approve alone (a rupee amount for deductions, a number of pieces for write-offs and lot closes) are set by the owner on the Team and limits screen; above them only the owner can approve. Nobody can decide their own request. The workbook's matrix is confirmed with Stylified at kickoff.</p>
 
 <h2><span class="num">05</span>The supervisor screens</h2>
 <p>Supervisors work standing on the floor with a phone, so these screens are designed phone-first: one task per screen, large touch targets, counts entered with plus and minus controls, and no wage figures anywhere. On a desktop they use the same layout, wider.</p>
@@ -111,8 +111,8 @@
 <ul>
 <li>Choose the issue coming back (cards grouped by karigar, each showing pieces out).</li>
 <li>Enter good, rejected, rework and short with plus and minus steppers. A live line reads "accounted for 96 of 98, 2 will stay open"; it turns red if the total is more than the pieces out, and Save stays disabled.</li>
-<li>Rejected and rework need a reason (stitch defect, measurement, stain, hole, other) and accept a photograph taken with the phone camera.</li>
-<li>Saving writes one entry that cannot be edited later, only reversed with a reason. If rejected pieces would justify a wage deduction, the screen offers "Request deduction", which goes to the manager.</li>
+<li>Rejected and rework need a reason (stitch defect, measurement, stain, hole, other). Right after saving, a photograph can be taken with the phone camera and attached to the entry.</li>
+<li>Saving writes one entry that cannot be edited later, only reversed with a reason (a supervisor reverses their own entry on the same day; the manager any entry). If rejected pieces would justify a wage deduction, the screen offers "Request deduction", which goes to the manager.</li>
 </ul></div>
 
 <div class="screen"><h3>S3 · Give out</h3><div class="mono who">Supervisor · phone and desktop</div>
@@ -125,7 +125,7 @@
 <div class="screen"><h3>S4 · Rework and shortage register</h3><div class="mono who">Supervisor, Manager</div>
 <ul>
 <li>Every open rework piece by bundle and age, with the reason and photograph from when it came back. One tap reissues it.</li>
-<li>Every open shortage (pieces that did not come back and cannot be found). The supervisor can mark one found, or request a write-off, which goes to the manager with the history.</li>
+<li>Every open shortage (pieces that did not come back and cannot be found). The supervisor can request a write-off, which goes to the manager with the history. A piece that turns up later is corrected by the manager reversing the return and entering it again.</li>
 <li>Nothing here changes a good count: rework is not output until it is redone and accepted.</li>
 </ul></div>
 
@@ -190,10 +190,10 @@
 <ul>
 <li><strong>Roles.</strong> Four roles are created from permissions (an action on a record type within a scope). No role name is fixed in the code.</li>
 <li><strong>Stage assignment.</strong> A small record links a supervisor to the stages they look after. The piece-rate commands check it before accepting an issue or a return from a supervisor. The platform's own scope list is not changed.</li>
-<li><strong>Approvals.</strong> A request record (deduction, write-off, hold, close) with a state, an amount or quantity, the people involved and the decision. The existing approval substrate of the platform is reused.</li>
-<li><strong>Photographs.</strong> A file reference on the lot (cover) and on a return entry (evidence), stored in the platform file store with the same company isolation as every other record.</li>
-<li><strong>Bilingual labels.</strong> A small label catalogue for the daily-entry and supervisor screens; the language is chosen per user.</li>
-<li><strong>Alerts.</strong> Events for late returns and open shortages, shown in the notification bell. No SMS or WhatsApp in the MVP.</li>
+<li><strong>Approvals.</strong> A request record (deduction, write-off, hold, close) with a state, an amount or quantity, the people involved and the decision. The request is kept inside the piece-rate capability, with the same company isolation as every other record; approving applies the ordinary change (a deduction entry, a lot status) through the same rules as any other user.</li>
+<li><strong>Photographs.</strong> A defect photograph is platform Evidence about the return entry, uploaded in two steps and checked before it is recorded, stored in the platform file store with the same company isolation as every other record. Lot pictures are set up with you.</li>
+<li><strong>Bilingual labels.</strong> A small label catalogue for the daily-entry and supervisor screens; the language is chosen on each device and remembered there.</li>
+<li><strong>Alerts.</strong> Late returns, open shortages and requests waiting for a decision are shown as alert cards on My floor and in Approvals. No SMS or WhatsApp in the MVP.</li>
 </ul>
 
 <h2><span class="num">09</span>The demonstration</h2>
@@ -205,7 +205,7 @@
 <tr><td>2</td><td>Munshi</td><td>Cut a bundle, print the slip, give it to a karigar</td><td>Gapless numbering, bilingual slip with QR, due date</td></tr>
 <tr><td>3</td><td>Supervisor (phone)</td><td>My floor, then take a bundle back</td><td>Stage-scoped view, counting steppers, "accounted for 96 of 98", a photograph on a rejected piece</td></tr>
 <tr><td>4</td><td>Supervisor</td><td>Try to take back more pieces than are out</td><td>The screen refuses with the figures</td></tr>
-<tr><td>5</td><td>Supervisor</td><td>Reissue the rework; raise a shortage</td><td>Rework flag, shortage register, request to the manager</td></tr>
+<tr><td>5</td><td>Supervisor</td><td>Reissue the rework; request a write-off for a shortage</td><td>Rework flag, shortage register, request to the manager</td></tr>
 <tr><td>6</td><td>Manager (phone)</td><td>Approve a deduction and decline a write-off</td><td>Approvals inbox with the photograph and the facts</td></tr>
 <tr><td>7</td><td>Supervisor</td><td>Close the day with a Hindi note</td><td>Day summary the owner can read</td></tr>
 <tr><td>8</td><td>Owner</td><td>Open the karigar's account and the reports</td><td>Wages on the agreed basis, advance recovered, CSV download</td></tr>
@@ -217,12 +217,12 @@
 <li>All four roles can sign in, and each sees only the screens in section 4. A supervisor cannot issue or receive at a stage that is not assigned to them, tested with a second supervisor.</li>
 <li>The reconciliation from your sheet reproduces exactly: 100 = 94 + 2 + 1 + 2 + 1 open.</li>
 <li>A return that accounts for more pieces than are out is refused with the figures; a correction is a reversal, and both rows stay.</li>
-<li>A rejected or rework entry accepts a photograph, and the photograph shows on the bundle and in the approval.</li>
+<li>A rejected or rework entry accepts a photograph, and the photograph shows in the register and in the approval.</li>
 <li>A deduction or write-off above the manager's limit cannot be approved by the manager; the owner can.</li>
 <li>A closed lot cannot be changed.</li>
 <li>Every screen in this document opens at desktop width and at 390 px phone width, in both light and dark themes, with the demonstration data and no unrecorded defect.</li>
 <li>Hindi labels show on daily entry and every supervisor screen for a user whose language is Hindi.</li>
-<li>The demonstration reset command restores the data in under a minute.</li>
+<li>The demonstration reset command restores the data in a few minutes.</li>
 <li>A backup is taken and a restore is rehearsed on the Stylified workspace before go-live.</li>
 </ol>
 

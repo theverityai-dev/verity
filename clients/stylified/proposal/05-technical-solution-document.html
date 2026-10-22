@@ -92,7 +92,7 @@
 <tr><td>Payment</td><td>Advance, recovery, deduction or payment, amount, mode, reference, reason</td><td>Append-only; amounts are whole paise, so there is no rounding drift</td></tr>
 <tr><td>Stage assignment <span class="tag new">new</span></td><td>A supervisor and a stage</td><td>Set by the owner; checked by the commands</td></tr>
 <tr><td>Approval request <span class="tag new">new</span></td><td>Kind (deduction, write-off, hold, close), subject, amount or pieces, requester, state, decision and reason</td><td>Decided once; above-limit requests need the owner</td></tr>
-<tr><td>Evidence photo <span class="tag new">new</span></td><td>A file reference on a rejected or rework entry; a cover photo reference on a lot</td><td>Stored with company isolation; never a public link</td></tr>
+<tr><td>Evidence photo <span class="tag new">new</span></td><td>Platform Evidence about a rejected or rework return entry; lot pictures set up with you</td><td>Stored with company isolation; never a public link</td></tr>
 <tr><td>Day close <span class="tag new">new</span></td><td>Supervisor, date, summary figures at the time, a note</td><td>Frozen once submitted</td></tr>
 </tbody></table>
 
@@ -138,7 +138,7 @@
 <thead><tr><th>Layer</th><th>What is covered</th></tr></thead>
 <tbody>
 <tr><td>Logic tests</td><td>28 tests on the piece-rate calculations, using the requirement sheet's own examples</td></tr>
-<tr><td>Database tests</td><td>23 tests against a real database: reconciliation, over-issue and over-return refusals, rework pool, the three wage bases, payment guards, reversal rules, concurrent entries, append-only rules, the owner role refused every write, company isolation</td></tr>
+<tr><td>Database tests</td><td>30 tests against a real database: stage scope for supervisors, approvals within the owner's limits, the frozen day close, reconciliation, over-issue and over-return refusals, rework pool, the three wage bases, payment guards, reversal rules, concurrent entries, append-only rules, the owner role refused every write, company isolation</td></tr>
 <tr><td>Platform tests</td><td>Identity, membership, tenant isolation and permission tests that every capability inherits</td></tr>
 <tr><td>Browser checks</td><td>Every screen opened in dark and light on desktop and at 390 px, with the demonstration data, before go-live; defects are logged and fixed</td></tr>
 <tr><td>Acceptance</td><td>The ten criteria in document 2, section 10, run with Stylified</td></tr>
