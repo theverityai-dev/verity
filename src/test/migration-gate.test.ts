@@ -1,6 +1,10 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import { prisma } from "@/server/platform/db";
 import { migrationsOnDisk, missingMigrations } from "../../scripts/assert-migrations-applied.mjs";
@@ -23,6 +27,16 @@ describe("missingMigrations", () => {
 
   it("treats an empty database as missing everything", () => {
     expect(missingMigrations(["a", "b"], [])).toEqual(["a", "b"]);
+  });
+});
+
+describe("migrationsOnDisk", () => {
+  it("lists migration directories and ignores files beside them (migration_lock.toml broke the gate on Linux)", () => {
+    const dir = mkdtempSync(join(tmpdir(), "verity-migrations-"));
+    mkdirSync(join(dir, "20261001000000_a"));
+    mkdirSync(join(dir, "20261002000000_b"));
+    writeFileSync(join(dir, "migration_lock.toml"), "provider = postgresql");
+    expect(migrationsOnDisk(pathToFileURL(dir + "/")).sort()).toEqual(["20261001000000_a", "20261002000000_b"]);
   });
 });
 

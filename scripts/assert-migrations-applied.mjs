@@ -10,7 +10,7 @@
 // Emergency bypass: VERITY_SKIP_MIGRATION_GATE=1. It prints a loud warning and exists so a database outage cannot also block
 // a rollback deploy. Do not leave it set.
 
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const MIGRATIONS_DIR = new URL("../prisma/migrations/", import.meta.url);
@@ -25,8 +25,12 @@ export function missingMigrations(onDisk, applied) {
   return [...onDisk].sort().filter((name) => !have.has(name));
 }
 
+// Directories only: prisma/migrations also holds migration_lock.toml. (An earlier version stat-ed "<name>/" for every entry, which
+// Windows accepts for a file and Linux rejects with ENOTDIR, so the gate worked locally and failed every production build.)
 export function migrationsOnDisk(dir = MIGRATIONS_DIR) {
-  return readdirSync(dir).filter((name) => statSync(new URL(`${name}/`, dir)).isDirectory());
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 }
 
 async function main() {

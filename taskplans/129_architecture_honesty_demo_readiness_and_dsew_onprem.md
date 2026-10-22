@@ -128,8 +128,9 @@ the frosted-blur fix.
 **Gated outside the repository (each is in FINISHER with exact steps):**
 
 1. **Apply the migrations to production (A2 proof).** A read of the production database was refused for this session, as it should be
-   without the owner at the keyboard. The latest push failed its Vercel build; that is consistent with the gate refusing a build whose
-   migrations production lacks, but the build log could not be read from here to confirm it. The previous deployment stays live.
+   without the owner at the keyboard. The pushes up to `7689a4fa` failed on Vercel and in CI, and the cause was a bug in the gate (it stat-ed
+   `migration_lock.toml/`, which Linux rejects and Windows accepts), now fixed and checked on Linux. Windows-only testing hid it, which is
+   why the plan's rule is that a deploy-path script is proven on Linux. The previous deployment stayed live.
 2. **B7: validate Mode B on hardware matching DSEW.** Needs DSEW's server survey and a Linux machine or VM.
 3. **A real phone:** camera upload over HTTPS with the CA installed, HEIC photos, and D2 (a throttled trace, glass vs lite).
 4. **C3 and C4: walk the five demo tenants.** Needs each seeded on a local database. The seed scripts load `.env` (production) and

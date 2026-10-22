@@ -98,10 +98,10 @@ BUILT, REHEARSED and NOT TESTED is that file's tables; this block lists only wha
   `20261022200000_applied_migrations_gate` exists there.
 - **How:** with the product owner's go: `prisma migrate deploy` with `DIRECT_URL` (also applies any other pending migration),
   then push a preview, then `main`, and record `[migration-gate] ok` from the build log.
-- **Status:** WAITING for the product owner. The latest push (`b09a319e` and the commits before it) failed its Vercel build, most likely the
-  gate refusing a build whose migrations production lacks (the build log could not be read from the agent session; run
-  `npx vercel inspect <deployment> --logs` to confirm). The previous deployment is still live. To clear it: `prisma migrate deploy` with
-  the production `DIRECT_URL`, then redeploy and look for `[migration-gate] ok`.
+- **Status:** WAITING for the product owner. The pushes up to `7689a4fa` failed on Vercel and in CI because of a bug in the gate itself, not
+  because of the database: `migrationsOnDisk` stat-ed `migration_lock.toml/`, which Linux rejects (ENOTDIR) and Windows accepts. Fixed in the
+  commit after `7689a4fa` and checked against the real `prisma/migrations` on Linux. The previous deployment stayed live throughout. To finish:
+  `prisma migrate deploy` with the production `DIRECT_URL`, then redeploy and look for `[migration-gate] ok` in the build log.
 
 ### P0b-4. Demo readiness: walk the real tenants (seed scripts load .env = production and create Supabase logins when its keys are set: blank SUPABASE_* and set both DB URLs explicitly, on a local database) (Task 129 workstream C), and measure low-end devices (D2)
 
