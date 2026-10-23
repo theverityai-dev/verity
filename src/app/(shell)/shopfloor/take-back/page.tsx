@@ -3,7 +3,7 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_ENTRY, PIECEWORK_CAPABILITY, floorOverview } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_ENTRY, PIECEWORK_CAPABILITY, floorOverview, floorReasons } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, PermissionDenied } from "@/components/ui/primitives";
 import { shortDate } from "../../lots/format";
@@ -22,13 +22,13 @@ async function TakeBackPage({ searchParams }: { searchParams: Promise<{ issue?: 
   const { issue } = await searchParams;
   const allowed = await withTenant(actor.tenantId, (tx) => hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_ENTRY));
   if (!allowed) return <PermissionDenied what="taking pieces back" />;
-  const f = await executeQuery(actor, floorOverview, {});
+  const [f, reasons] = await Promise.all([executeQuery(actor, floorOverview, {}), executeQuery(actor, floorReasons, {})]);
 
   return (
     <>
       <PageHeader title={t.takeBack} description={shortDate(f.today)} actions={<LangToggle lang={lang} />} />
       <FloorTabs active="take-back" t={t} />
-      <TakeBack lang={lang} issues={f.issues} initialIssueId={issue} today={f.today} />
+      <TakeBack lang={lang} issues={f.issues} initialIssueId={issue} today={f.today} reasons={reasons} />
     </>
   );
 }

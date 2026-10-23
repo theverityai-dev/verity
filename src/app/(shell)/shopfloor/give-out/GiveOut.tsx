@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
@@ -13,9 +14,14 @@ import { runFloorCommand } from "../actions";
 import { Cover } from "../FloorChrome";
 
 const ISSUE = "verity.piecework.record_issue";
+const ACKS = ["signature", "attested"] as const;
 
 /**
- * S3. A bundle waiting at one of my stages is a card with its lot's picture. Choosing it shows which karigars are set up for
+ * S3 · Give out. The receiver's count is the truth: the supervisor says how many pieces they handed over, the karigar counts them,
+ * and what is recorded is the karigar's count, so a miscount at the door never becomes a loss on the floor. A handover that differs
+ * shows up as a case. Several bundles given to one karigar in a row share one challan.
+ *
+ * A bundle waiting at one of my stages is a card with its lot's picture. Choosing it shows which karigars are set up for
  * that stage and what each already holds; a karigar with no rate for the stage is shown as such and refused by the ledger,
  * never silently paid at zero. No rate or wage appears here: the supervisor sees whether a rate exists, not what it is.
  */
@@ -32,7 +38,9 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
   const [workerId, setWorkerId] = useState("");
   const [pieces, setPieces] = useState(1);
   const [due, setDue] = useState("");
-  const [basis, setBasis] = useState("");
+  const [counted, setCounted] = useState(1);
+  const [ack, setAck] = useState<(typeof ACKS)[number]>("signature");
+  const [last, setLast] = useState<{ number: string; workerId: string } | null>(null);
 
   const card = waiting.find((w) => `${w.bundleId}:${w.stageId}` === key);
   const reworkOnly = card ? card.toIssue === 0 && card.reworkPool > 0 : false;
@@ -41,19 +49,21 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
   const worker = workers.find((w) => w.id === workerId);
   // Only karigars set up for this stage are offered: a supervisor cannot set a rate, and the ledger refuses an unrated worker anyway.
   const eligible = card ? workers.filter((w) => w.stageIds.includes(card.stageId)) : workers;
-  const valid = card !== undefined && worker !== undefined && eligible.some((w) => w.id === worker.id) && pieces >= 1 && pieces <= room;
+  const valid = card !== undefined && worker !== undefined && eligible.some((w) => w.id === worker.id) && pieces >= 1 && pieces <= room && counted >= 1 && counted <= pieces;
 
-  const choose = (w: FloorWaiting) => { setKey(`${w.bundleId}:${w.stageId}`); setRework(false); setPieces(Math.max(1, w.toIssue || w.reworkPool)); setDone(null); setFailure(null); };
+  const choose = (w: FloorWaiting) => { setKey(`${w.bundleId}:${w.stageId}`); setRework(false); const n = Math.max(1, w.toIssue || w.reworkPool); setPieces(n); setCounted(n); setDone(null); setFailure(null); };
+  const joins = last !== null && last.workerId === workerId;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!card || !valid) return;
     setFailure(null);
     start(async () => {
-      const result = await runFloorCommand(ISSUE, { bundleId: card.bundleId, stageId: card.stageId, workerId, pieces, isRework: asRework || undefined, wageBasis: basis || undefined, dueDate: due || undefined }, "/shopfloor");
+      const result = await runFloorCommand<{ id: string; challanNumber: string }>(ISSUE, { bundleId: card.bundleId, stageId: card.stageId, workerId, pieces: counted, sentPieces: pieces, ackMethod: ack, challanNumber: joins ? last!.number : undefined, isRework: asRework || undefined, dueDate: due || undefined }, "/shopfloor");
       if (result.ok) {
-        setDone(`${t.gaveOut}: ${pieces} · ${card.bundleNumber} → ${worker?.name}`);
-        setKey(""); setWorkerId(""); setDue(""); setBasis("");
+        setDone(`${t.gaveOut}: ${counted} · ${card.bundleNumber} → ${worker?.name}`);
+        setLast({ number: result.data.challanNumber, workerId });
+        setKey(""); setDue("");
         router.refresh();
       } else setFailure(result);
     });
@@ -61,7 +71,12 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
 
   return (
     <form className="flex flex-col gap-6" onSubmit={submit}>
-      {done && <p role="status" className="m-0 rounded-[12px] bg-state-completed-fill px-4 py-3 text-[15px] font-medium text-state-completed-on">{done}</p>}
+      {done && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-state-completed-fill px-4 py-3 text-[15px] font-medium text-state-completed-on">
+          <span>{done}{last ? ` · ${last.number}` : ""}</span>
+          {last && <Link href={`/shopfloor/challan/${last.number}`} className="inline-flex min-h-11 items-center rounded-[10px] bg-[rgba(255,255,255,0.22)] px-4 font-semibold text-state-completed-on no-underline active:scale-[0.98]">{t.printChallan}</Link>}
+        </div>
+      )}
       {failure && <ErrorState title={t.refusedTitle} message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
 
       {!card ? (
@@ -118,21 +133,25 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
             )}
 
             <div className="flex min-h-[60px] items-center justify-between gap-3">
-              <span className="text-[17px] font-medium text-text">{t.pieces} <span className="text-[13px] font-normal text-text-secondary">({room})</span></span>
-              <QuantityStepper label={t.pieces} value={pieces} onChange={setPieces} min={1} max={Math.max(1, room)} />
+              <span className="text-[17px] font-medium text-text">{t.handingOver} <span className="text-[13px] font-normal text-text-secondary">({room})</span></span>
+              <QuantityStepper label={t.handingOver} value={pieces} onChange={(n) => { setPieces(n); setCounted(Math.min(counted === pieces ? n : counted, n)); }} min={1} max={Math.max(1, room)} />
             </div>
+            <div className="flex min-h-[60px] items-center justify-between gap-3">
+              <span className="text-[17px] font-medium text-text">{t.karigarCounted}</span>
+              <QuantityStepper label={t.karigarCounted} value={counted} onChange={setCounted} min={1} max={Math.max(1, pieces)} />
+            </div>
+            {counted !== pieces && <p role="status" className="m-0 rounded-[12px] px-4 py-3 text-[14px] font-medium" style={{ background: "var(--color-control)", color: "var(--color-state-pending-ink, var(--color-text))" }}>{t.countDiffers}</p>}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={t.dueBack} htmlFor="go-due"><DateField id="go-due" value={due} onChange={setDue} min={today} /></Field>
-              <Field label={t.wagePaidOn} htmlFor="go-basis">
-                <Select id="go-basis" value={basis} onChange={(e) => setBasis(e.target.value)}>
-                  <option value="">{t.usualBasis}</option>
-                  <option value="issued">{t.basisIssued}</option>
-                  <option value="good">{t.basisGood}</option>
-                  <option value="returned">{t.basisReturned}</option>
+              <Field label={t.confirmedBy} htmlFor="go-ack">
+                <Select id="go-ack" value={ack} onChange={(e) => setAck(e.target.value as (typeof ACKS)[number])}>
+                  <option value="signature">{t.ackSigned}</option>
+                  <option value="attested">{t.ackAttested}</option>
                 </Select>
               </Field>
             </div>
+            {joins && <p className="m-0 text-[13px] text-text-secondary">{t.challan}: {last!.number}</p>}
           </Surface>
 
           <div className="sticky bottom-3 z-10">

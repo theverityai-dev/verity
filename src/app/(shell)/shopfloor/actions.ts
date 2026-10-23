@@ -17,12 +17,13 @@ export async function setFloorLanguage(lang: string): Promise<void> {
  * Runs a piece-rate command for the floor screens. The platform command returns the wage an entry earned; a supervisor never
  * sees money, so it is dropped here before the result leaves the server.
  */
-export async function runFloorCommand<T extends Record<string, unknown> = Record<string, unknown>>(key: string, input: unknown, revalidate: string): Promise<ActionResult<Omit<T, "wageMinor">>> {
+export async function runFloorCommand<T extends Record<string, unknown> = Record<string, unknown>>(key: string, input: unknown, revalidate: string): Promise<ActionResult<Omit<T, "wageMinor" | "chargeRequestedMinor"> & { chargeRequested?: boolean }>> {
   const result = await runCommand<T>(key, input, revalidate);
   if (result.ok && result.data && typeof result.data === "object") {
-    const { wageMinor: _dropped, ...safe } = result.data as T & { wageMinor?: number };
-    void _dropped;
-    return { ok: true, data: safe as Omit<T, "wageMinor"> };
+    // The charge asked for short pieces is money too: the supervisor learns THAT one was asked, never how much.
+    const { wageMinor: _wage, chargeRequestedMinor: charge, ...safe } = result.data as T & { wageMinor?: number; chargeRequestedMinor?: number };
+    void _wage;
+    return { ok: true, data: { ...safe, chargeRequested: (charge ?? 0) > 0 } as Omit<T, "wageMinor" | "chargeRequestedMinor"> & { chargeRequested?: boolean } };
   }
-  return result as ActionResult<Omit<T, "wageMinor">>;
+  return result as ActionResult<Omit<T, "wageMinor" | "chargeRequestedMinor"> & { chargeRequested?: boolean }>;
 }

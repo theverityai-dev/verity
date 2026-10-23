@@ -12,7 +12,6 @@ import { shortDate } from "../format";
 const CANCEL = "verity.piecework.cancel_lot";
 const REVERSE = "verity.piecework.reverse_entry";
 const STATUS = "verity.piecework.set_lot_status";
-const BUNDLE = "verity.piecework.create_bundle";
 
 function useAction(onDone?: () => void) {
   const router = useRouter();
@@ -54,49 +53,6 @@ export function StatusActions({ lotId, status }: { lotId: string; status: string
           <ErrorState title="The lot did not change" message={failure.message} issues={failure.issues} retryable={failure.retryable} />
         </div>
       )}
-    </>
-  );
-}
-
-/** Cut a new bundle: its net pieces. The slip number is given by the system. */
-export function NewBundleForm({ lotId }: { lotId: string }) {
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [failure, setFailure] = useState<ActionFailure | null>(null);
-  const [pending, startTransition] = useTransition();
-  return (
-    <>
-      <CommandButton commands={BUNDLE} variant="secondary" onClick={() => setOpen(true)}>Cut a bundle</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="Cut a bundle" description="Count the pieces in the bundle. The bundle gets its own number and a printable slip. Sizes are not tracked; a note can say the mix.">
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
-            setFailure(null);
-            const text = (name: string) => String(formData.get(name) ?? "").trim();
-            startTransition(async () => {
-              const result = await runCommand<{ id: string; number: string }>(BUNDLE, { lotId, netPieces: Number(text("pieces")), sizeNote: text("mix") || undefined }, `/lots/${lotId}`);
-              if (result.ok) {
-                setOpen(false);
-                router.push(`/lots/bundles/${result.data!.id}/slip`);
-              } else setFailure(result);
-            });
-          }}
-        >
-          {failure && <ErrorState title="Could not cut the bundle" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Net pieces" htmlFor="bundle-pieces" required>
-              <Input id="bundle-pieces" name="pieces" type="number" inputMode="numeric" min={1} step={1} required autoFocus />
-            </Field>
-            <Field label="Size mix (optional note)" htmlFor="bundle-mix">
-              <Input id="bundle-mix" name="mix" maxLength={200} placeholder="for example M and L" />
-            </Field>
-          </div>
-          <div className="flex gap-2">
-            <CommandButton commands={BUNDLE} type="submit" variant="primary" disabled={pending}>{pending ? "Cutting…" : "Cut bundle and open slip"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
     </>
   );
 }

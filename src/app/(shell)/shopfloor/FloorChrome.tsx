@@ -4,10 +4,10 @@ import type { Labels } from "./labels";
 
 export { Cover };
 
-export type FloorTab = "floor" | "take-back" | "give-out" | "register" | "day-close";
+export type FloorTab = "floor" | "take-back" | "give-out" | "cases" | "register" | "day-close";
 
 /**
- * The strip every floor screen shares: five places a supervisor goes, as large pills that wrap onto a second row on a
+ * The strip every floor screen shares: six places a supervisor goes, as large pills that wrap onto a second row on a
  * phone, so none is hidden off screen. The active one is the tinted pill, as in the iPadOS sidebar.
  */
 export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
@@ -15,6 +15,7 @@ export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
     ["floor", "/shopfloor", t.myFloor],
     ["take-back", "/shopfloor/take-back", t.takeBack],
     ["give-out", "/shopfloor/give-out", t.giveOut],
+    ["cases", "/shopfloor/cases", t.cases],
     ["register", "/shopfloor/register", t.register],
     ["day-close", "/shopfloor/day-close", t.dayClose],
   ];

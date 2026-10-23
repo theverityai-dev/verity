@@ -20,8 +20,8 @@ export type SlipData = {
  * with Hindi beside each English label, and a QR that opens the bundle. No size is printed. On screen it is a preview
  * with a Print button; only the slip itself prints.
  */
-export function SlipDoc({ slip }: { slip: SlipData }) {
-  const body = (
+export function SlipCard({ slip }: { slip: SlipData }) {
+  return (
     <article className="w-[10cm] border-2 border-black p-4 text-black" style={{ background: "#fff" }}>
       <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em]">{slip.business}{slip.demo ? " · demo" : ""}</p>
       <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-3">
@@ -45,6 +45,10 @@ export function SlipDoc({ slip }: { slip: SlipData }) {
       <p className="m-0 mt-3 border-t border-black pt-2 text-[11px]">{slip.design} · कटिंग / Cut {slip.cutOn}</p>
     </article>
   );
+}
+
+export function SlipDoc({ slip }: { slip: SlipData }) {
+  const body = <SlipCard slip={slip} />;
 
   return (
     <>

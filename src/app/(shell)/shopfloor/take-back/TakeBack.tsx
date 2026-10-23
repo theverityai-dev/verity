@@ -20,14 +20,15 @@ const daysBetween = (from: string, to: string) => Math.max(1, Math.round((Date.p
 const REQUEST = "verity.piecework.request_approval";
 const ENTRY_ENTITY = "verity.piecework.entry";
 
-type Saved = { entryId: string; rejected: number; rework: number; short: number; open: number; issue: FloorIssue };
+type Saved = { entryId: string; rejected: number; rework: number; short: number; open: number; issue: FloorIssue; challan: string; chargeRequested: boolean };
+export type ReasonChoice = { labelEn: string; labelHi: string; active: boolean };
 
 /**
  * S2. Counts are entered with plus and minus, so a mistyped digit cannot add a zero. The line under the counters says what
  * the ledger will accept, in the chosen language, and Save stays disabled while the counts exceed what is out. After saving
  * the entry cannot be edited, only reversed, so the follow-ups (a photograph, a deduction request) hang off the saved entry.
  */
-export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; issues: FloorIssue[]; initialIssueId?: string; today: string }) {
+export function TakeBack({ lang, issues, initialIssueId, today, reasons }: { lang: Lang; issues: FloorIssue[]; initialIssueId?: string; today: string; reasons: { defect: ReasonChoice[]; short: ReasonChoice[] } }) {
   const t = LABELS[lang];
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -38,6 +39,7 @@ export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; 
   const [rework, setRework] = useState(0);
   const [short, setShort] = useState(0);
   const [reason, setReason] = useState("");
+  const [shortReason, setShortReason] = useState("");
   const [detail, setDetail] = useState("");
   const [saved, setSaved] = useState<Saved | null>(null);
 
@@ -45,7 +47,7 @@ export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; 
   const total = good + rejected + rework + short;
   const open = issue?.open ?? 0;
   const needsReason = rejected + rework > 0;
-  const valid = issue !== undefined && total > 0 && total <= open && (!needsReason || reason !== "");
+  const valid = issue !== undefined && total > 0 && total <= open && (!needsReason || reason !== "") && (short === 0 || shortReason !== "");
 
   const byWorker = useMemo(() => {
     const m = new Map<string, FloorIssue[]>();
@@ -53,20 +55,22 @@ export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; 
     return [...m.entries()];
   }, [issues]);
 
-  const reasons: Array<[string, string]> = [["stitch", t.reasonStitch], ["measure", t.reasonMeasure], ["stain", t.reasonStain], ["hole", t.reasonHole], ["other", t.reasonOther]];
-  const reasonLabel = (k: string) => LABELS.en[`reason${k[0]!.toUpperCase()}${k.slice(1)}` as "reasonStitch"] ?? k;
+  // The factory words its own reasons, in both languages. The English wording is what is recorded, so the manager reads one thing.
+  const label = (r: ReasonChoice) => (lang === "hi" ? r.labelHi : r.labelEn);
+  const defectChoices = reasons.defect.filter((r) => r.active);
+  const shortChoices = reasons.short.filter((r) => r.active);
 
-  const reset = () => { setGood(0); setRejected(0); setRework(0); setShort(0); setReason(""); setDetail(""); };
+  const reset = () => { setGood(0); setRejected(0); setRework(0); setShort(0); setReason(""); setShortReason(""); setDetail(""); };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!issue || !valid) return;
     setFailure(null);
     start(async () => {
-      const note = needsReason ? [reasonLabel(reason), detail.trim()].filter(Boolean).join(": ") : detail.trim() || undefined;
-      const result = await runFloorCommand<{ id: string; open: number }>(RETURN, { issueId: issue.issueId, good, rejected, rework, short, note }, "/shopfloor");
+      const note = [needsReason ? reason : "", short > 0 ? shortReason : "", detail.trim()].filter(Boolean).join(": ") || undefined;
+      const result = await runFloorCommand<{ id: string; open: number; challanNumber: string }>(RETURN, { issueId: issue.issueId, good, rejected, rework, short, note }, "/shopfloor");
       if (result.ok) {
-        setSaved({ entryId: result.data.id, rejected, rework, short, open: result.data.open, issue });
+        setSaved({ entryId: result.data.id, rejected, rework, short, open: result.data.open, issue, challan: result.data.challanNumber, chargeRequested: result.data.chargeRequested === true });
         reset();
         router.refresh();
       } else setFailure(result);
@@ -139,14 +143,24 @@ export function TakeBack({ lang, issues, initialIssueId, today }: { lang: Lang; 
           </p>
           <p className="m-0 -mt-3 px-1 text-[13px] text-text-tertiary">{t.shortExplain}</p>
 
-          {needsReason && (
+          {(needsReason || short > 0) && (
             <Surface className="flex flex-col gap-4 p-4">
-              <Field label={t.reason} htmlFor="tb-reason" required>
-                <Select id="tb-reason" value={reason} onChange={(e) => setReason(e.target.value)} required>
-                  <option value="" disabled>{t.reasonRequired}</option>
-                  {reasons.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-                </Select>
-              </Field>
+              {needsReason && (
+                <Field label={t.reason} htmlFor="tb-reason" required>
+                  <Select id="tb-reason" value={reason} onChange={(e) => setReason(e.target.value)} required>
+                    <option value="" disabled>{t.reasonRequired}</option>
+                    {defectChoices.map((r) => <option key={r.labelEn} value={r.labelEn}>{label(r)}</option>)}
+                  </Select>
+                </Field>
+              )}
+              {short > 0 && (
+                <Field label={t.reasonShort} htmlFor="tb-short" required>
+                  <Select id="tb-short" value={shortReason} onChange={(e) => setShortReason(e.target.value)} required>
+                    <option value="" disabled>{t.reasonRequired}</option>
+                    {shortChoices.map((r) => <option key={r.labelEn} value={r.labelEn}>{label(r)}</option>)}
+                  </Select>
+                </Field>
+              )}
               <Field label={t.reasonNote} htmlFor="tb-detail">
                 <Input id="tb-detail" value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} />
               </Field>
@@ -190,6 +204,8 @@ function AfterSave({ lang, saved, onAnother }: { lang: Lang; saved: Saved; onAno
       <Surface className="p-5">
         <p role="status" className="m-0 text-[17px] font-semibold text-text">{t.entered}: {saved.issue.bundleNumber} · {saved.issue.workerName}</p>
         <p className="m-0 mt-1 text-[14px] text-text-secondary">{saved.open === 0 ? t.fullySettled : `${saved.open} ${t.willStayOpen}.`}</p>
+        {saved.short > 0 && <p className="m-0 mt-2 text-[14px] text-text-secondary">{saved.chargeRequested ? t.shortCharged : t.shortExplain} <Link href="/shopfloor/cases" className="font-medium text-accent-ink">{t.cases}</Link></p>}
+        <p className="m-0 mt-3"><Link href={`/shopfloor/challan/${saved.challan}`} className="inline-flex min-h-11 items-center rounded-[10px] bg-[var(--color-control)] px-4 text-[15px] font-semibold text-text no-underline active:scale-[0.98]">{t.printChallan} · {saved.challan}</Link></p>
       </Surface>
 
       {hasDefect && (
