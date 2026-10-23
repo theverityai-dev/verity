@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { DateField } from "@/components/ui/DateTimePicker";
-import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Field, Input } from "@/components/ui/primitives";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -29,10 +29,11 @@ export function NewLotForm() {
       <CommandButton commands={CREATE_LOT} variant="primary" onClick={() => setOpen(true)}>
         New lot
       </CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="New lot" description="The system gives the lot its own number. It starts as a draft; start it when cutting begins. Bundles are cut from it afterwards." width="lg">
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
+      <FormModal
+        open={open} onClose={() => setOpen(false)} title="New lot" description="The system gives the lot its own number. It starts as a draft; start it when cutting begins. Bundles are cut from it afterwards." width="lg"
+        submitLabel="Create lot" pendingLabel="Creating…"
+        pending={pending} failure={failure} failureTitle="Could not create the lot"
+        onSubmit={(formData) => {
             setFailure(null);
             const text = (name: string) => String(formData.get(name) ?? "").trim();
             startTransition(async () => {
@@ -50,8 +51,7 @@ export function NewLotForm() {
               } else setFailure(result);
             });
           }}
-        >
-          {failure && <ErrorState title="Could not create the lot" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Lot name" htmlFor="lot-name" hint="What the factory calls it, for example Spring formals.">
               <Input id="lot-name" name="name" maxLength={120} autoFocus />
@@ -75,14 +75,7 @@ export function NewLotForm() {
           <Field label="Note" htmlFor="lot-note">
             <Input id="lot-note" name="note" maxLength={500} />
           </Field>
-          <div className="flex gap-2">
-            <CommandButton commands={CREATE_LOT} type="submit" variant="primary" disabled={pending}>
-              {pending ? "Creating…" : "Create lot"}
-            </CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }
@@ -99,10 +92,11 @@ export function DefineStageForm({ next }: { next: number }) {
       <CommandButton commands={DEFINE_STAGE} variant="primary" onClick={() => setOpen(true)}>
         {next === 1 ? "Set up the first stage" : "Add a stage"}
       </CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title={`Stage ${next}`} description="Stages run in the order you add them, for example Pasting, Collar & Cuff, Stitching, Button / Kaj, Finishing. They cannot change once work is recorded.">
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
+      <FormModal
+        open={open} onClose={() => setOpen(false)} title={`Stage ${next}`} description="Stages run in the order you add them, for example Pasting, Collar & Cuff, Stitching, Button / Kaj, Finishing. They cannot change once work is recorded."
+        submitLabel="Add stage" pendingLabel="Adding…"
+        pending={pending} failure={failure} failureTitle="Could not add the stage"
+        onSubmit={(formData) => {
             setFailure(null);
             const label = String(formData.get("label") ?? "").trim();
             startTransition(async () => {
@@ -113,19 +107,11 @@ export function DefineStageForm({ next }: { next: number }) {
               } else setFailure(result);
             });
           }}
-        >
-          {failure && <ErrorState title="Could not add the stage" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      >
           <Field label="Stage name" htmlFor="stage-label" required>
             <Input id="stage-label" name="label" required maxLength={80} autoFocus />
           </Field>
-          <div className="flex gap-2">
-            <CommandButton commands={DEFINE_STAGE} type="submit" variant="primary" disabled={pending}>
-              {pending ? "Adding…" : "Add stage"}
-            </CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }

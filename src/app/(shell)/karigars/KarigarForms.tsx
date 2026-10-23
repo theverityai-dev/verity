@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Field, Input, Select } from "@/components/ui/primitives";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { BASIS_LABEL, toPaise } from "../lots/format";
@@ -20,10 +20,11 @@ export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: 
   return (
     <>
       <CommandButton commands={DEFINE} variant="primary" onClick={() => setOpen(true)}>New karigar or unit</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="New karigar or outside unit" description="Name, contact, and for each kind of work the rate per piece and what it is paid on. A rate of 0 means the work is unpaid." width="lg">
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
+      <FormModal
+        open={open} onClose={() => setOpen(false)} title="New karigar or outside unit" description="Name, contact, and for each kind of work the rate per piece and what it is paid on. A rate of 0 means the work is unpaid." width="lg"
+        submitLabel="Add karigar" pendingLabel="Adding…"
+        pending={pending} failure={failure} failureTitle="Could not add the karigar"
+        onSubmit={(formData) => {
             setFailure(null);
             const text = (name: string) => String(formData.get(name) ?? "").trim();
             const rates = stages.flatMap((s) => {
@@ -38,8 +39,7 @@ export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: 
               } else setFailure(result);
             });
           }}
-        >
-          {failure && <ErrorState title="Could not add the karigar" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Name" htmlFor="karigar-name" required><Input id="karigar-name" name="name" required maxLength={120} autoFocus /></Field>
             <Field label="Mobile number" htmlFor="karigar-mobile"><Input id="karigar-mobile" name="mobile" type="tel" inputMode="tel" maxLength={20} /></Field>
@@ -65,12 +65,7 @@ export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: 
               </div>
             ))}
           </fieldset>
-          <div className="flex gap-2">
-            <CommandButton commands={DEFINE} type="submit" variant="primary" disabled={pending}>{pending ? "Adding…" : "Add karigar"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }

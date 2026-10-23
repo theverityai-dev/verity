@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input, Row, RowList, Select } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { BASIS_LABEL, PAYMENT_LABEL, rupees, shortDate, toPaise } from "../../lots/format";
@@ -39,16 +39,16 @@ export function RecordMoney({ workerId, name, balanceMinor, advanceOutstandingMi
   return (
     <>
       <CommandButton commands={PAY} variant="primary" onClick={() => setOpen(true)}>Advance, payment or deduction</CommandButton>
-      <Modal open={open} onClose={() => { clear(); setOpen(false); }} title={`Money for ${name}`} description={`Balance due now: ${rupees(balanceMinor)}. Advance not yet recovered: ${rupees(advanceOutstandingMinor)}. A payment cannot be more than the balance due.`}>
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
+      <FormModal
+        open={open} onClose={() => { clear(); setOpen(false); }} title={`Money for ${name}`} description={`Balance due now: ${rupees(balanceMinor)}. Advance not yet recovered: ${rupees(advanceOutstandingMinor)}. A payment cannot be more than the balance due.`}
+        submitLabel="Save" pendingLabel="Saving…"
+        pending={pending} failure={failure} failureTitle="Could not record it"
+        onSubmit={(formData) => {
             const amount = toPaise(String(formData.get("amount") ?? ""));
             const text = (n: string) => String(formData.get(n) ?? "").trim();
             run(PAY, { workerId, kind, amountMinor: amount ?? 0, mode: moves ? text("mode") || undefined : undefined, reference: text("reference") || undefined, note: text("note") || undefined });
           }}
-        >
-          {failure && <ErrorState title="Could not record it" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Type" htmlFor="money-kind" required>
               <Select id="money-kind" value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -69,12 +69,7 @@ export function RecordMoney({ workerId, name, balanceMinor, advanceOutstandingMi
             <Field label="Reference" htmlFor="money-ref"><Input id="money-ref" name="reference" maxLength={120} /></Field>
           </div>
           <Field label={kind === "deduction" ? "Reason (required)" : "Note"} htmlFor="money-note" required={kind === "deduction"}><Input id="money-note" name="note" maxLength={300} required={kind === "deduction"} /></Field>
-          <div className="flex gap-2">
-            <CommandButton commands={PAY} type="submit" variant="primary" disabled={pending}>{pending ? "Saving…" : "Save"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }
@@ -85,15 +80,15 @@ export function ChangeRate({ workerId, name, stages }: { workerId: string; name:
   return (
     <>
       <CommandButton commands={RATE} variant="secondary" onClick={() => setOpen(true)}>Set a rate</CommandButton>
-      <Modal open={open} onClose={() => { clear(); setOpen(false); }} title={`Rate for ${name}`} description="A new rate applies from today. Work already returned keeps the rate it was paid at.">
-        <form
-          className="flex flex-col gap-4"
-          action={(formData) => {
+      <FormModal
+        open={open} onClose={() => { clear(); setOpen(false); }} title={`Rate for ${name}`} description="A new rate applies from today. Work already returned keeps the rate it was paid at."
+        submitLabel="Set rate" pendingLabel="Saving…"
+        pending={pending} failure={failure} failureTitle="Could not set the rate"
+        onSubmit={(formData) => {
             const paise = toPaise(String(formData.get("rate") ?? ""));
             run(RATE, { workerId, stageId: String(formData.get("stage")), rateMinor: paise ?? -1, wageBasis: String(formData.get("basis")) });
           }}
-        >
-          {failure && <ErrorState title="Could not set the rate" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Work" htmlFor="rate-stage" required>
               <Select id="rate-stage" name="stage" defaultValue={stages[0]?.id}>{stages.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</Select>
@@ -103,12 +98,7 @@ export function ChangeRate({ workerId, name, stages }: { workerId: string; name:
               <Select id="rate-basis" name="basis" defaultValue="good">{Object.entries(BASIS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
             </Field>
           </div>
-          <div className="flex gap-2">
-            <CommandButton commands={RATE} type="submit" variant="primary" disabled={pending}>{pending ? "Saving…" : "Set rate"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }
