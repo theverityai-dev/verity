@@ -881,13 +881,16 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
     const stageLabel = new Map(stages.map((s) => [s.id, s.label]));
     const reversedIds = new Set(rows.filter((r) => r.reversesId).map((r) => r.reversesId!));
     const live = bundles.filter((b) => !b.cancelledAt);
+    // The lot's own route: a stage its rate card skips is not one of its lanes.
+    const skipped = new Set((await ctx.tx.pieceworkLotRate.findMany({ where: { lotId: lot.id, skipped: true }, select: { stageId: true } })).map((r) => r.stageId));
+    const route = stages.filter((s) => !skipped.has(s.id));
 
     const cover = (await lotCovers(ctx.tx, [lot])).get(lot.id) ?? null;
     return {
       ...summariseLot(lot, bundles, stages, names, today),
       cover,
       note: lot.note, cancelReason: lot.cancelReason, startDate: isoOrNull(lot.startDate),
-      stages: sumStages(live.map((b) => b.position), stages),
+      stages: sumStages(live.map((b) => b.position), route),
       bundleRows: bundles.map((b) => bundleRow(b, lot.number, stages, names, today)),
       placements: bundles.flatMap((b) => placementsOf(b, lot.number, lot.name ?? lot.design, names, today)),
       entries: rows.map((r) => {

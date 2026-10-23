@@ -64,3 +64,21 @@ The system ends at ready garments. Dispatch is not in it.
 | **My karigars** | Allot work to people without phones | People cards: holding now, due, quality rate |
 | **Karigar account** | Pay | Earned, advance, deductions, paid, balance |
 | **Settings** | Change how the factory works | One page with a section per setting above |
+
+## Built (2026-10-24, local demo only, not on production)
+
+| Screen | Route | State |
+|---|---|---|
+| Production settings (stages, default rates, lost-piece charge, reasons in two languages, challan heading, manager limits) | `/lots/settings` | built, walked locally |
+| Fabric: stock per fabric, roll cards, receive many rolls, roll page with movements | `/fabric`, `/fabric/[id]` | built, walked locally |
+| Roll labels with QR | `/fabric/labels` | built |
+| Lot: rate card (rate per stage, lost-piece charge, skip a stage), fabric used, one-step cut with slips | `/lots/[id]`, `/lots/[id]/slips` | built, walked locally |
+| Give out with the karigar's count, confirmation method, shared challan | `/shopfloor/give-out` | built; server proven by tests, screen not yet walked |
+| Take back with the factory's own reasons | `/shopfloor/take-back` | built; server proven by tests, screen not yet walked |
+| Challan to print | `/shopfloor/challan/[number]` | built, walked locally |
+| Cases | `/shopfloor/cases` | built, walked locally |
+| Ready garments | `/lots/ready` | built |
+
+Not built, still open: the Scan screen (camera or scanner opens a roll or bundle), costing by category and bundle split or merge (second
+part), Hindi on the office screens (the floor screens have it). Production still needs migration `20261024100000_piecework_flow`, which
+waits for the owner's go-ahead.
