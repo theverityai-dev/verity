@@ -39,7 +39,7 @@ Every reduction is a named removal, reconciled to the standard edition's own sta
 | AI adapter layer in cross-module integration and deployment (25,000 to 20,000) | n/a | 5,000 |
 | Documented AI use cases (module 19, removed) | n/a | 15,000 |
 | Workflow automation in module 18 (15,000 to 10,000; renamed "Notifications and approval workflows") | n/a | 5,000 |
-| MVP re-pricing: modules 1 to 7 down a further 5,000 each (35,000) and the four implementation lines down 5,000 together (2,000 + 2,000 + 1,000 + 0 on the design/deployment lines as shown in the table); scope unchanged. Owner: "even the module prices will also be apt" | 40,000 | n/a |
+| MVP re-pricing: modules 1 to 7 down a further 5,000 each (35,000) and the implementation lines down 5,000 together (requirements 2,000, testing 2,000, documentation 1,000, deployment unchanged); core quality and dashboards take only the AI cut; scope unchanged. Owner: "even the module prices will also be apt" | 40,000 | n/a |
 | **Total** | **85,000** | **1,00,000** |
 
 Check: 3,25,000 - 85,000 = 2,40,000 and 4,80,000 - 1,00,000 = 3,80,000. Dispatch (10,000) and Contracts (10,000) are
