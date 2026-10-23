@@ -30,6 +30,7 @@
   "verity.outreach.team_weekly_member_breakdown": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.outreach.team_weekly_rollup": "Read query, not referenced by a screen; serves the API and agent channel.",
   "verity.outreach.weekly_report_due_sweep": "Scheduled job (POST /api/scheduled), not a person's action.",
+  "verity.piecework.create_bundle": "Superseded on screen by cut_lot (fabric and bundles in one step); kept as the single-bundle command for scripts, imports and the agent channel.",
   "verity.project.add_task_dependency": "Task dependencies belong to the undecided project-management scope (Gantt/Kanban/dependencies); no screen until the product owner authorizes it.",
   "verity.relationship.list_companies": "Reviewed 2026-10-20: the /crm/companies screen calls it by key through the record object descriptor (ADR-051 listQuery), so the string lives in objects.ts, not in the page.",
   "verity.relationship.list_opportunities": "Reviewed 2026-10-20: the pipeline board and table call it through the record object descriptor (ADR-051 listQuery).",
