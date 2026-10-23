@@ -21,14 +21,14 @@ the documents); prompts are in `assets/image-prompts.md`.
 
 | | Standard edition (documents 1 to 5) | Recalculated edition |
 |---|---|---|
-| Option 1, MVP (ex GST) | ₹3,25,000 | ₹2,80,000 |
+| Option 1, MVP (ex GST) | ₹3,25,000 | ₹2,40,000 |
 | Option 2 and 3, Complete ERP (ex GST) | ₹4,80,000 | ₹3,80,000 |
 | Testing period, per month (ex GST) | ₹8,500 | ₹8,500 (unchanged) |
 | AI | Adapters inside every module; documented use cases in Options 2 and 3 | None; deferred, quoted on request |
 | Workflow automation | Escalations, cross-module triggers, automated documents | Deferred; approvals and reminders stay |
 | VM sizing | 4 vCPU, 16 GB; 32 GB with AI search | 4 vCPU, 16 GB |
 
-### How the recalculated prices were derived (owner brief, 2026-10-23: MVP 280, Complete 380, ex GST; ₹8.5k a month kept)
+### How the recalculated prices were derived (owner brief, 2026-10-23: MVP 240 (first 280, then lowered), Complete 380, ex GST; ₹8.5k a month kept)
 
 Every reduction is a named removal, reconciled to the standard edition's own stated AI ranges (₹40,000 to ₹50,000 in the MVP,
 ₹80,000 to ₹90,000 in the Complete ERP):
@@ -39,10 +39,11 @@ Every reduction is a named removal, reconciled to the standard edition's own sta
 | AI adapter layer in cross-module integration and deployment (25,000 to 20,000) | n/a | 5,000 |
 | Documented AI use cases (module 19, removed) | n/a | 15,000 |
 | Workflow automation in module 18 (15,000 to 10,000; renamed "Notifications and approval workflows") | n/a | 5,000 |
-| **Total** | **45,000** | **1,00,000** |
+| MVP re-pricing: modules 1 to 7 down a further 5,000 each (35,000) and the four implementation lines down 5,000 together (2,000 + 2,000 + 1,000 + 0 on the design/deployment lines as shown in the table); scope unchanged. Owner: "even the module prices will also be apt" | 40,000 | n/a |
+| **Total** | **85,000** | **1,00,000** |
 
-Check: 3,25,000 - 45,000 = 2,80,000 and 4,80,000 - 1,00,000 = 3,80,000. Dispatch (10,000) and Contracts (10,000) are
-unchanged because they are already at the smallest module price. Payment keeps 30/30/30/10 (MVP 84,000 x 3 + 28,000;
+Check: 3,25,000 - 85,000 = 2,40,000 and 4,80,000 - 1,00,000 = 3,80,000. Dispatch (10,000) and Contracts (10,000) are
+unchanged because they are already at the smallest module price. Payment keeps 30/30/30/10 (MVP 72,000 x 3 + 24,000;
 Complete 1,14,000 x 3 + 38,000). Option 3 phases: 1,05,000 + 1,10,000 + 1,10,000 + 55,000 = 3,80,000.
 
 The per-line allocation of the cut is ours (the standard edition never published per-module AI amounts, only the totals),
