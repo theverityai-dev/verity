@@ -570,6 +570,7 @@ describeDb("conformance: database enforcement", () => {
         "piecework_day_close",
         "piecework_entry",
         "piecework_payment",
+        "piecework_roll_move",
         "piecework_worker_rate",
         "security_audit_event",
         "stock_ledger_entry",

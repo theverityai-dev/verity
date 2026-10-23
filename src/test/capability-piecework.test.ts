@@ -224,7 +224,7 @@ describeDb("capability: piece-rate lots, bundles and the karigar ledger", () => 
     const lot = (await executeCommand(munshi, createLot, { design: "D-2", plannedPieces: 20 })).id;
     await executeCommand(munshi, setLotStatus, { lotId: lot, to: "active" });
     const b = (await executeCommand(munshi, createBundle, { lotId: lot, netPieces: 20 })).id;
-    await reject(issue(b, "pasting", "E", 20), /set Karigar E \(no rate\)'s rate for Pasting first/);
+    await reject(issue(b, "pasting", "E", 20), /no rate for Pasting.*Karigar E \(no rate\)'s own rate first/);
     await executeCommand(munshi, setWorkerRate, { workerId: worker.E!, stageId: stage.pasting!, rateMinor: 0, wageBasis: "good" });
     const i = await issue(b, "pasting", "E", 20);
     expect((await back(i.id, { good: 20 })).wageMinor).toBe(0);

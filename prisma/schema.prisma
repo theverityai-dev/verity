@@ -190,6 +190,10 @@ model Tenant {
   pieceworkApprovals           PieceworkApproval[]
   pieceworkSetting             PieceworkSetting?
   pieceworkDayCloses           PieceworkDayClose[]
+  pieceworkLotRates            PieceworkLotRate[]
+  pieceworkReasons             PieceworkReason[]
+  pieceworkRolls               PieceworkRoll[]
+  pieceworkRollMoves           PieceworkRollMove[]
   inventoryAttributes          InventoryAttribute[]
   inventoryAttributeValues     InventoryAttributeValue[]
   inventoryItemTemplates       InventoryItemTemplate[]
@@ -7694,6 +7698,8 @@ model PieceworkStage {
   label     String
   sequence  Int
   active    Boolean  @default(true)
+  /// What this stage pays per piece (paise) when neither the lot nor the worker sets a rate. Null: no default.
+  defaultRateMinor Int? @map("default_rate_minor")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   version   Int      @default(1)
@@ -7702,6 +7708,7 @@ model PieceworkStage {
   rates   PieceworkWorkerRate[]
   entries PieceworkEntry[]
   pieceworkStageAssignments PieceworkStageAssignment[]
+  lotRates PieceworkLotRate[]
 
   @@unique([tenantId, stageKey])
   @@unique([tenantId, sequence])
@@ -7740,6 +7747,8 @@ model PieceworkLot {
   bundles PieceworkBundle[]
   entries PieceworkEntry[]
   pieceworkApprovals PieceworkApproval[]
+  lotRates PieceworkLotRate[]
+  rollMoves PieceworkRollMove[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -7859,6 +7868,13 @@ model PieceworkEntry {
   reversesId  String?  @unique @map("reverses_id") @db.Uuid
   entryDate   DateTime @map("entry_date") @db.Date
   note        String?
+  /// The number on the paper challan handed over with this issue or return (CH-0001). Null on a reversal.
+  challanNumber String? @map("challan_number")
+  /// Issue only: what the sender handed over. `pieces` is what the receiver counted (their count is the truth); a difference is a
+  /// handover difference and the remainder stays available with the sender.
+  sentPieces  Int?     @map("sent_pieces")
+  /// How the receiver acknowledged: signature (on the challan) | pin | attested (by the supervisor) | app.
+  ackMethod   String?  @map("ack_method")
   enteredById String   @map("entered_by_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
@@ -7965,6 +7981,10 @@ model PieceworkSetting {
   tenantId                   String   @unique @map("tenant_id") @db.Uuid
   managerDeductionLimitMinor Int      @default(100000) @map("manager_deduction_limit_minor")
   managerWriteoffLimitPieces Int      @default(5) @map("manager_writeoff_limit_pieces")
+  /// What a lost piece costs the worker who held it (paise), unless the lot's rate card says otherwise. Null: no charge is raised.
+  defaultLostPieceChargeMinor Int? @map("default_lost_piece_charge_minor")
+  challanTitle   String? @map("challan_title")
+  challanAddress String? @map("challan_address")
   updatedById                String?  @map("updated_by_id") @db.Uuid
   updatedAt                  DateTime @default(now()) @updatedAt @map("updated_at")
 
@@ -7991,4 +8011,101 @@ model PieceworkDayClose {
   @@unique([userId, closeDate])
   @@index([tenantId, closeDate])
   @@map("piecework_day_close")
+}
+
+/// The rate card of one lot: what a stage pays per piece on THIS lot (it wins over a worker's own rate and the stage default), what a
+/// lost piece costs the worker there, and whether the lot skips the stage (the route is configurable per lot). One row per lot and
+/// stage; a change affects entries made afterwards only, because every receive snapshots the rate it was paid at.
+model PieceworkLotRate {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @map("tenant_id") @db.Uuid
+  lotId                String   @map("lot_id") @db.Uuid
+  stageId              String   @map("stage_id") @db.Uuid
+  rateMinor            Int?     @map("rate_minor")
+  lostPieceChargeMinor Int?     @map("lost_piece_charge_minor")
+  /// issued | good | returned; null means the worker's own basis (or good).
+  wageBasis            String?  @map("wage_basis")
+  skipped              Boolean  @default(false)
+  updatedById          String?  @map("updated_by_id") @db.Uuid
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at")
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot    PieceworkLot   @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  stage  PieceworkStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+
+  @@unique([lotId, stageId])
+  @@index([tenantId, lotId])
+  @@map("piecework_lot_rate")
+}
+
+/// A reason a person picks when pieces are rejected, sent for rework (kind defect) or short (kind short). Data, so each factory words
+/// its own, in English and Hindi.
+model PieceworkReason {
+  id        String  @id @default(uuid()) @db.Uuid
+  tenantId  String  @map("tenant_id") @db.Uuid
+  /// defect | short
+  kind      String
+  reasonKey String  @map("reason_key")
+  labelEn   String  @map("label_en")
+  labelHi   String  @map("label_hi")
+  active    Boolean @default(true)
+  sortOrder Int     @default(0) @map("sort_order")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, kind, reasonKey])
+  @@map("piecework_reason")
+}
+
+/// A roll of fabric with a number (R-0001, gapless) and a printed QR label. Quantity is in hundredths of the unit (metres or
+/// kilograms) so it stays an integer; the balance is what was received plus every movement (derived from PieceworkRollMove).
+model PieceworkRoll {
+  id            String    @id @default(uuid()) @db.Uuid
+  tenantId      String    @map("tenant_id") @db.Uuid
+  number        String
+  sequenceNo    Int       @map("sequence_no")
+  fabricType    String    @map("fabric_type")
+  /// m | kg
+  unit          String    @default("m")
+  quantityCenti Int       @map("quantity_centi")
+  supplier      String?
+  invoiceNumber String?   @map("invoice_number")
+  /// Paise per unit, when the invoice rate is entered; lets fabric cost follow the metres a lot actually used.
+  rateMinor     Int?      @map("rate_minor")
+  receivedOn    DateTime  @map("received_on") @db.Date
+  note          String?
+  cancelledAt   DateTime? @map("cancelled_at")
+  createdById   String    @map("created_by_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  moves  PieceworkRollMove[]
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, sequenceNo])
+  @@index([tenantId, invoiceNumber])
+  @@map("piecework_roll")
+}
+
+/// APPEND-ONLY. Fabric issued from a roll to a lot (negative), returned from a lot (positive), or adjusted with a reason.
+model PieceworkRollMove {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  rollId      String   @map("roll_id") @db.Uuid
+  /// issue | return | adjust
+  kind        String
+  deltaCenti  Int      @map("delta_centi")
+  lotId       String?  @map("lot_id") @db.Uuid
+  reason      String?
+  movedOn     DateTime @map("moved_on") @db.Date
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roll   PieceworkRoll @relation(fields: [rollId], references: [id], onDelete: Restrict)
+  lot    PieceworkLot? @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, rollId])
+  @@index([tenantId, lotId])
+  @@map("piecework_roll_move")
 }

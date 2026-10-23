@@ -25,10 +25,16 @@ import { LEDGER_SELECT, activeStages, asDate, isoOf, isoOrNull, loadBundles, lot
 import { dashboard, recentEntries, reportBundleLocation, reportCosting, reportLotStatus, reportProductionByProcess, reportQuality, reportReadyInventory, reportWagePayment, reportWorkInHand } from "./reports";
 
 import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, assertStageAccess, registerFloor } from "./floor";
+import { effectiveRate, lostPieceCharge, registerSetup } from "./setup";
+import { applyMove, registerFabric, ENTITY_PIECEWORK_ROLL } from "./fabric";
+import { registerViews } from "./views";
 
 export * from "./ledger";
 export * from "./reports";
 export * from "./floor";
+export * from "./setup";
+export * from "./fabric";
+export * from "./views";
 
 /**
  * CAPABILITY: Piece-rate lots (`verity.capability.piecework`), built for the Stylified shirt factory from its requirement
@@ -99,12 +105,22 @@ async function userNames(tx: Tx, ids: string[]): Promise<Map<string, string>> {
   return new Map(rows.map((u) => [u.id, u.party.displayName]));
 }
 
-type RateRow = { effectiveFrom: string; rateMinor: number; wageBasis: WageBasis };
+export const ACK_METHODS = ["signature", "pin", "attested", "app"] as const;
+const CHALLAN_SERIES = "piecework.challan";
+export const challanNumber = (seq: number) => `CH-${String(seq).padStart(4, "0")}`;
 
-/** The rate and basis in force for a worker at a stage on a date, or null when none has ever been set. */
-async function rateFor(tx: Tx, workerId: string, stageId: string, date: string): Promise<RateRow | null> {
-  const rows = await tx.pieceworkWorkerRate.findMany({ where: { workerId, stageId } });
-  return rateOn(rows.map((r) => ({ effectiveFrom: isoOf(r.effectiveFrom), rateMinor: r.rateMinor, wageBasis: r.wageBasis as WageBasis })), date);
+/**
+ * The number on the paper handed over with a movement. A new number is taken (gapless) unless the caller joins one already issued today
+ * to the same karigar, so a stack of bundles given together is one challan.
+ */
+async function challanFor(tx: Tx, tenantId: string, workerId: string, join: string | undefined): Promise<string> {
+  if (join) {
+    const mine = await tx.pieceworkEntry.findFirst({ where: { challanNumber: join, workerId }, select: { id: true } });
+    if (!mine) throw new ValidationError("E_VALIDATION: that challan was not made out to this karigar");
+    return join;
+  }
+  const { sequenceNumber } = await allocateSequence(tx, tenantId, CHALLAN_SERIES, "all");
+  return challanNumber(sequenceNumber);
 }
 
 async function bundleOf(tx: Tx, bundleId: string): Promise<LoadedBundle> {
@@ -270,6 +286,62 @@ export const createBundle: CommandDefinition<{ lotId: string; netPieces: number;
   },
 };
 
+/**
+ * Cutting a lot, in one step: the fabric it took from the rolls and the bundles it was cut into, each with a numbered slip and a QR.
+ * A draft lot is started by its first cut (stages must exist). `groups` says "12 bundles of 25 pieces, size M" without twelve calls.
+ */
+export const cutLot: CommandDefinition<
+  { lotId: string; groups: Array<{ copies: number; netPieces: number; sizeNote?: string }>; fabric?: Array<{ rollId: string; quantityCenti: number }> },
+  { bundleIds: string[]; numbers: string[]; pieces: number }
+> = {
+  key: "verity.piecework.cut_lot",
+  entity: ENTITY_PIECEWORK_BUNDLE,
+  verb: "Create",
+  input: z.object({
+    lotId: uuid,
+    groups: z.array(z.object({
+      copies: z.number().int().min(1).max(200),
+      netPieces: z.number().int().min(1).max(MAX_PIECES),
+      sizeNote: z.string().trim().max(200).optional(),
+    })).min(1).max(30),
+    fabric: z.array(z.object({ rollId: uuid, quantityCenti: z.number().int().min(1).max(100_000_000) })).max(60).optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    const lot = await ctx.tx.pieceworkLot.findUnique({ where: { id: input.lotId } });
+    if (!lot) throw new ValidationError("E_VALIDATION: lot not found in this tenant");
+    if (lot.cancelledAt) throw new ValidationError("E_VALIDATION: that lot is cancelled");
+    if (lot.status !== "active" && lot.status !== "draft") throw new ValidationError(`E_VALIDATION: bundles can be cut only on a draft or active lot; this one is ${lot.status}`);
+    if (lot.status === "draft" && !(await ctx.tx.pieceworkStage.findFirst({ where: { active: true }, select: { id: true } }))) {
+      throw new ValidationError("E_VALIDATION: set up the stages before cutting the first lot");
+    }
+    const total = input.groups.reduce((s, g) => s + g.copies * g.netPieces, 0);
+    if (total > MAX_PIECES) throw new ValidationError("E_VALIDATION: that is more pieces than one cut can hold");
+    const rolls = (input.fabric ?? []).map((f) => f.rollId);
+    if (new Set(rolls).size !== rolls.length) throw new ValidationError("E_VALIDATION: one line per roll");
+  },
+  handler: async (ctx, input) => {
+    const lot = await ctx.tx.pieceworkLot.findUniqueOrThrow({ where: { id: input.lotId } });
+    for (const f of input.fabric ?? []) await applyMove(ctx.tx, ctx.actor.tenantId, ctx.actor.userId, { rollId: f.rollId, kind: "issue", quantityCenti: f.quantityCenti, lotId: lot.id });
+    if (lot.status === "draft") await ctx.tx.pieceworkLot.update({ where: { id: lot.id }, data: { status: "active", version: { increment: 1 } } });
+    const bundleIds: string[] = [];
+    const numbers: string[] = [];
+    let pieces = 0;
+    for (const g of input.groups) {
+      for (let i = 0; i < g.copies; i++) {
+        // Gapless and never reused: this is the number printed on the slip.
+        const { sequenceNumber } = await allocateSequence(ctx.tx, ctx.actor.tenantId, BUNDLE_SERIES, "all");
+        const bundle = await ctx.tx.pieceworkBundle.create({
+          data: { tenantId: ctx.actor.tenantId, lotId: lot.id, number: bundleNumber(sequenceNumber), sequenceNo: sequenceNumber, netPieces: g.netPieces, sizeNote: g.sizeNote ?? null, createdById: ctx.actor.userId },
+        });
+        bundleIds.push(bundle.id);
+        numbers.push(bundle.number);
+        pieces += g.netPieces;
+      }
+    }
+    return { result: { bundleIds, numbers, pieces }, events: bundleIds.map((id) => ({ name: "verity.piecework.bundle_created", entityId: id })) };
+  },
+};
+
 /* ================================== workers ================================= */
 
 type RateInput = { stageId: string; rateMinor: number; wageBasis?: WageBasis; effectiveFrom?: string };
@@ -376,8 +448,8 @@ async function checkWork(tx: Tx, bundleId: string, workerId: string, date: strin
 }
 
 export const recordIssue: CommandDefinition<
-  { bundleId: string; stageId: string; workerId: string; pieces: number; isRework?: boolean; wageBasis?: WageBasis; entryDate?: string; dueDate?: string; note?: string },
-  { id: string; wageMinor: number }
+  { bundleId: string; stageId: string; workerId: string; pieces: number; sentPieces?: number; ackMethod?: (typeof ACK_METHODS)[number]; challanNumber?: string; isRework?: boolean; wageBasis?: WageBasis; entryDate?: string; dueDate?: string; note?: string },
+  { id: string; wageMinor: number; challanNumber: string }
 > = {
   key: "verity.piecework.record_issue",
   entity: ENTITY_PIECEWORK_ENTRY,
@@ -386,7 +458,11 @@ export const recordIssue: CommandDefinition<
     bundleId: uuid,
     stageId: uuid,
     workerId: uuid,
+    /** What the RECEIVER counted. Their count is the truth; whatever the sender says they handed over goes in `sentPieces`. */
     pieces: z.number().int().min(1).max(MAX_PIECES),
+    sentPieces: z.number().int().min(1).max(MAX_PIECES).optional(),
+    ackMethod: z.enum(ACK_METHODS).optional(),
+    challanNumber: z.string().trim().regex(/^CH-\d{4,}$/).optional(),
     isRework: z.boolean().optional(),
     wageBasis: wageBasis.optional(),
     entryDate: isoDate.optional(),
@@ -394,13 +470,17 @@ export const recordIssue: CommandDefinition<
     note: z.string().trim().max(300).optional(),
   }),
   preconditions: async (ctx, input) => {
-    const { worker, day } = await checkWork(ctx.tx, input.bundleId, input.workerId, input.entryDate);
+    const { bundle, worker, day } = await checkWork(ctx.tx, input.bundleId, input.workerId, input.entryDate);
     const stage = await ctx.tx.pieceworkStage.findUnique({ where: { id: input.stageId } });
     if (!stage || !stage.active) throw new ValidationError("E_VALIDATION: stage not found in this tenant");
     await assertStageAccess(ctx, stage.id);
     if (input.dueDate && input.dueDate < day) throw new ValidationError("E_VALIDATION: the expected return date is before the issue date");
-    const rate = await rateFor(ctx.tx, worker.id, stage.id, day);
-    if (!rate) throw new ValidationError(`E_VALIDATION: set ${worker.name}'s rate for ${stage.label} first (enter 0 if the work is unpaid)`);
+    const skipped = await ctx.tx.pieceworkLotRate.findFirst({ where: { lotId: bundle.lotId, stageId: stage.id, skipped: true }, select: { id: true } });
+    if (skipped) throw new ValidationError(`E_VALIDATION: ${bundle.lot.number} does not use ${stage.label}`);
+    const rate = await effectiveRate(ctx.tx, worker.id, stage.id, bundle.lotId, day);
+    if (!rate) throw new ValidationError(`E_VALIDATION: no rate for ${stage.label} on ${bundle.lot.number}: set the lot's rate, the stage's default rate or ${worker.name}'s own rate first (enter 0 if the work is unpaid)`);
+    if (input.sentPieces !== undefined && input.sentPieces < input.pieces) throw new ValidationError("E_VALIDATION: the receiver cannot have counted more than the sender handed over; correct the sent quantity");
+    if (input.challanNumber) await challanFor(ctx.tx, ctx.actor.tenantId, worker.id, input.challanNumber);
 
     const loaded = await bundleOf(ctx.tx, input.bundleId);
     const here = loaded.position.stages.find((s) => s.stageId === stage.id)!;
@@ -413,24 +493,26 @@ export const recordIssue: CommandDefinition<
   handler: async (ctx, input) => {
     const day = input.entryDate ?? (await todayFor(ctx.tx));
     const bundle = await ctx.tx.pieceworkBundle.findUniqueOrThrow({ where: { id: input.bundleId } });
-    const rate = (await rateFor(ctx.tx, input.workerId, input.stageId, day))!;
+    const rate = (await effectiveRate(ctx.tx, input.workerId, input.stageId, bundle.lotId, day))!;
     const basis = input.wageBasis ?? rate.wageBasis;
     // Wage on issued pieces accrues now, at today's rate; the other bases accrue on the return, at that day's rate.
     const rateMinor = basis === "issued" ? rate.rateMinor : null;
+    const challan = await challanFor(ctx.tx, ctx.actor.tenantId, input.workerId, input.challanNumber);
     const row = await ctx.tx.pieceworkEntry.create({
       data: {
         tenantId: ctx.actor.tenantId, lotId: bundle.lotId, bundleId: bundle.id, stageId: input.stageId, workerId: input.workerId,
-        kind: "issue", pieces: input.pieces, isRework: input.isRework ?? false, wageBasis: basis, rateMinor,
+        kind: "issue", pieces: input.pieces, sentPieces: input.sentPieces ?? input.pieces, ackMethod: input.ackMethod ?? null, challanNumber: challan,
+        isRework: input.isRework ?? false, wageBasis: basis, rateMinor,
         dueDate: input.dueDate ? asDate(input.dueDate) : null, entryDate: asDate(day), note: input.note ?? null, enteredById: ctx.actor.userId,
       },
     });
-    return { result: { id: row.id, wageMinor: rateMinor === null ? 0 : rateMinor * input.pieces }, events: [{ name: "verity.piecework.pieces_issued", entityId: row.id }] };
+    return { result: { id: row.id, wageMinor: rateMinor === null ? 0 : rateMinor * input.pieces, challanNumber: challan }, events: [{ name: "verity.piecework.pieces_issued", entityId: row.id }] };
   },
 };
 
 export const recordReturn: CommandDefinition<
-  { issueId: string; good: number; rejected: number; rework: number; short: number; entryDate?: string; note?: string },
-  { id: string; open: number; wageMinor: number }
+  { issueId: string; good: number; rejected: number; rework: number; short: number; challanNumber?: string; entryDate?: string; note?: string },
+  { id: string; open: number; wageMinor: number; challanNumber: string; chargeRequestedMinor: number }
 > = {
   key: "verity.piecework.record_return",
   entity: ENTITY_PIECEWORK_ENTRY,
@@ -441,6 +523,7 @@ export const recordReturn: CommandDefinition<
     rejected: z.number().int().min(0).max(MAX_PIECES),
     rework: z.number().int().min(0).max(MAX_PIECES),
     short: z.number().int().min(0).max(MAX_PIECES),
+    challanNumber: z.string().trim().regex(/^CH-\d{4,}$/).optional(),
     entryDate: isoDate.optional(),
     note: z.string().trim().max(300).optional(),
   }),
@@ -459,26 +542,46 @@ export const recordReturn: CommandDefinition<
     if (total > line.open) throw new ValidationError(`E_VALIDATION: ${worker.name} has only ${line.open} pieces still open on this issue; you accounted for ${total}`);
     if (issue.wageBasis !== "issued") {
       const stage = await ctx.tx.pieceworkStage.findUniqueOrThrow({ where: { id: issue.stageId } });
-      if (!(await rateFor(ctx.tx, worker.id, issue.stageId, day))) throw new ValidationError(`E_VALIDATION: set ${worker.name}'s rate for ${stage.label} first (enter 0 if the work is unpaid)`);
+      if (!(await effectiveRate(ctx.tx, worker.id, issue.stageId, issue.lotId, day))) throw new ValidationError(`E_VALIDATION: no rate for ${stage.label}: set the lot's rate, the stage's default rate or ${worker.name}'s own rate first (enter 0 if the work is unpaid)`);
     }
+    if (input.challanNumber) await challanFor(ctx.tx, ctx.actor.tenantId, issue.workerId, input.challanNumber);
   },
   handler: async (ctx, input) => {
     const issue = await ctx.tx.pieceworkEntry.findUniqueOrThrow({ where: { id: input.issueId } });
     const day = input.entryDate ?? (await todayFor(ctx.tx));
     const basis = issue.wageBasis as WageBasis;
-    const rateMinor = basis === "issued" ? null : (await rateFor(ctx.tx, issue.workerId, issue.stageId, day))!.rateMinor;
+    const rateMinor = basis === "issued" ? null : (await effectiveRate(ctx.tx, issue.workerId, issue.stageId, issue.lotId, day))!.rateMinor;
     const total = input.good + input.rejected + input.rework + input.short;
+    const challan = await challanFor(ctx.tx, ctx.actor.tenantId, issue.workerId, input.challanNumber);
     const row = await ctx.tx.pieceworkEntry.create({
       data: {
         tenantId: ctx.actor.tenantId, lotId: issue.lotId, bundleId: issue.bundleId, stageId: issue.stageId, workerId: issue.workerId,
         kind: "receive", pieces: total, goodPieces: input.good, rejectedPieces: input.rejected, reworkPieces: input.rework, shortPieces: input.short,
-        issueId: issue.id, isRework: issue.isRework, wageBasis: basis, rateMinor, entryDate: asDate(day), note: input.note ?? null, enteredById: ctx.actor.userId,
+        issueId: issue.id, isRework: issue.isRework, wageBasis: basis, rateMinor, challanNumber: challan, entryDate: asDate(day), note: input.note ?? null, enteredById: ctx.actor.userId,
       },
     });
     const after = await bundleOf(ctx.tx, issue.bundleId);
     const open = after.position.stages.flatMap((s) => s.issues).find((i) => i.issueId === issue.id)?.open ?? 0;
     const counted = basis === "good" ? input.good : basis === "returned" ? input.good + input.rejected + input.rework : 0;
-    return { result: { id: row.id, open, wageMinor: rateMinor === null ? 0 : rateMinor * counted }, events: [{ name: "verity.piecework.pieces_returned", entityId: row.id }] };
+
+    // A short piece costs the karigar who held it. Never silent: it is a request a manager or the owner decides (within their limits).
+    let chargeRequestedMinor = 0;
+    const perPiece = input.short > 0 ? await lostPieceCharge(ctx.tx, issue.lotId, issue.stageId) : null;
+    if (perPiece !== null) {
+      chargeRequestedMinor = perPiece * input.short;
+      const [stage, bundleRow] = await Promise.all([
+        ctx.tx.pieceworkStage.findUniqueOrThrow({ where: { id: issue.stageId } }),
+        ctx.tx.pieceworkBundle.findUniqueOrThrow({ where: { id: issue.bundleId } }),
+      ]);
+      await ctx.tx.pieceworkApproval.create({
+        data: {
+          tenantId: ctx.actor.tenantId, kind: "deduction", requestedById: ctx.actor.userId, lotId: issue.lotId, bundleId: issue.bundleId, workerId: issue.workerId,
+          entryId: row.id, amountMinor: chargeRequestedMinor,
+          reason: `${input.short} piece${input.short === 1 ? "" : "s"} short at ${stage.label} on ${bundleRow.number} (${challan})`,
+        },
+      });
+    }
+    return { result: { id: row.id, open, wageMinor: rateMinor === null ? 0 : rateMinor * counted, challanNumber: challan, chargeRequestedMinor }, events: [{ name: "verity.piecework.pieces_returned", entityId: row.id }] };
   },
 };
 
@@ -497,9 +600,19 @@ export const reverseEntry: CommandDefinition<{ entryId: string; note?: string },
     const bundle = await lockBundle(ctx.tx, original.bundleId);
     if (!bundle || bundle.lot.cancelledAt) throw new ValidationError("E_VALIDATION: that lot is cancelled");
     if (bundle.lot.status === "closed") throw new ValidationError("E_VALIDATION: that lot is closed; reopen it through an approved adjustment first");
+    if (original.kind === "receive" && await ctx.tx.pieceworkApproval.findFirst({ where: { entryId: original.id, kind: "deduction", status: "approved" }, select: { id: true } })) {
+      throw new ValidationError("E_VALIDATION: a charge for the short pieces on this return was already applied to the karigar's account; reverse that deduction first");
+    }
   },
   handler: async (ctx, input) => {
     const o = await ctx.tx.pieceworkEntry.findUniqueOrThrow({ where: { id: input.entryId } });
+    if (o.kind === "receive") {
+      // The return it charged is being undone, so the request to charge for it is withdrawn.
+      await ctx.tx.pieceworkApproval.updateMany({
+        where: { entryId: o.id, kind: "deduction", status: "pending" },
+        data: { status: "declined", decidedById: ctx.actor.userId, decidedAt: new Date(), decisionNote: "The return was reversed" },
+      });
+    }
     const row = await ctx.tx.pieceworkEntry.create({
       data: {
         tenantId: ctx.actor.tenantId, lotId: o.lotId, bundleId: o.bundleId, stageId: o.stageId, workerId: o.workerId, kind: o.kind, pieces: o.pieces,
@@ -733,6 +846,7 @@ export type LotDetail = LotRow & {
   entries: Array<{
     id: string; entryDate: string; createdAt: string; bundleNumber: string; stageLabel: string; workerName: string; kind: "issue" | "receive"; pieces: number;
     good: number; rejected: number; rework: number; short: number; wageMinor: number; isReversal: boolean; reversed: boolean; isRework: boolean; enteredBy: string; note: string | null;
+    challan: string | null; sent: number | null; ackMethod: string | null;
   }>;
 };
 
@@ -783,6 +897,7 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
           id: r.id, entryDate: isoOf(r.entryDate), createdAt: r.createdAt.toISOString(), bundleNumber: bundleNo.get(r.bundleId) ?? "", stageLabel: stageLabel.get(r.stageId) ?? "",
           workerName: names.get(r.workerId) ?? "A worker", kind: e.kind, pieces: s * e.pieces, good: s * e.good, rejected: s * e.rejected, rework: s * e.rework, short: s * e.short,
           wageMinor: 0, isReversal: r.reversesId !== null, reversed: reversedIds.has(r.id), isRework: r.isRework, enteredBy: users.get(r.enteredById) ?? "Munshi", note: r.note,
+          challan: r.challanNumber, sent: r.sentPieces, ackMethod: r.ackMethod,
         };
       }),
     };
@@ -927,6 +1042,10 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
       { href: "/shopfloor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
+      { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
+      { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
+      { href: "/lots/ready", label: "Ready garments", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/settings", label: "Production settings", group: "Production", order: 26, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/dashboard", label: "Factory dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots", label: "Lots", group: "Production", order: 21, icon: "batch", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots/entry", label: "Daily entry", group: "Production", order: 22, icon: "plus", requiresEntity: ENTITY_PIECEWORK_WORKER, shells },
@@ -948,6 +1067,10 @@ export function registerPieceworkCapability(): void {
   registerCommand(recordPayment);
   registerCommand(reversePayment);
   registerFloor();
+  registerSetup();
+  registerFabric();
+  registerViews();
+  registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);
   registerQuery(lotDetail);

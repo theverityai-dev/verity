@@ -377,14 +377,20 @@ export const floorWorkers: QueryDefinition<Record<string, never>, FloorWorker[]>
   entity: ENTRY_ENTITY,
   input: z.object({}),
   handler: async (ctx) => {
-    const [workers, rates, st] = await Promise.all([
+    const [workers, rates, st, defaulted] = await Promise.all([
       ctx.tx.pieceworkWorker.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
       ctx.tx.pieceworkWorkerRate.findMany({ select: { workerId: true, stageId: true } }),
       floorState(ctx.tx, ctx.actor),
+      // A stage with a default rate can be given to any karigar; the others only to those with a rate of their own.
+      ctx.tx.pieceworkStage.findMany({ where: { active: true, defaultRateMinor: { not: null } }, select: { id: true } }),
     ]);
     const held = new Map<string, number>();
     for (const i of st.issues) held.set(i.workerId, (held.get(i.workerId) ?? 0) + i.open);
-    return workers.map((w) => ({ id: w.id, name: w.name, kind: w.kind, stageIds: [...new Set(rates.filter((r) => r.workerId === w.id).map((r) => r.stageId))], piecesHeld: held.get(w.id) ?? 0 }));
+    return workers.map((w) => ({
+      id: w.id, name: w.name, kind: w.kind,
+      stageIds: [...new Set([...rates.filter((r) => r.workerId === w.id).map((r) => r.stageId), ...defaulted.map((s) => s.id)])],
+      piecesHeld: held.get(w.id) ?? 0,
+    }));
   },
 };
 

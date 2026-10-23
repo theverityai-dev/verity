@@ -112,8 +112,20 @@ export async function loadBundles(
     : (await tx.pieceworkEntry.findMany({ where: { bundleId: { in: bundles.map((b) => b.id) } }, select: LEDGER_SELECT })).map((e) => toLedger(e));
   const byBundle = new Map<string, LedgerEntry[]>();
   for (const e of entries) byBundle.set(e.bundleId, [...(byBundle.get(e.bundleId) ?? []), e]);
+  // A lot's route is the factory's stages minus the ones its rate card skips (a lot with no stitching stage, say).
+  const skipRows = await tx.pieceworkLotRate.findMany({ where: { skipped: true, lotId: { in: [...new Set(bundles.map((b) => b.lotId))] } }, select: { lotId: true, stageId: true } });
+  const routes = new Map<string, StageRef[]>();
+  const routeOf = (lotId: string): StageRef[] => {
+    let route = routes.get(lotId);
+    if (!route) {
+      const skipped = new Set(skipRows.filter((r) => r.lotId === lotId).map((r) => r.stageId));
+      route = skipped.size === 0 ? stages : stages.filter((s) => !skipped.has(s.id));
+      routes.set(lotId, route);
+    }
+    return route;
+  };
   return bundles.map((b) => {
     const rows = byBundle.get(b.id) ?? [];
-    return { id: b.id, lotId: b.lotId, number: b.number, netPieces: b.netPieces, sizeNote: b.sizeNote, createdAt: b.createdAt, cancelledAt: b.cancelledAt, entries: rows, position: computeBundle(b.id, b.netPieces, stages, rows) };
+    return { id: b.id, lotId: b.lotId, number: b.number, netPieces: b.netPieces, sizeNote: b.sizeNote, createdAt: b.createdAt, cancelledAt: b.cancelledAt, entries: rows, position: computeBundle(b.id, b.netPieces, routeOf(b.lotId), rows) };
   });
 }
