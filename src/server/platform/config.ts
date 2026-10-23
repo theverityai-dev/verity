@@ -106,6 +106,20 @@ const configSchema = z.object({
       supabaseAnonKey: z.string().optional(),
 
       /**
+       * How a Supabase session is confirmed on each page (Supabase deployments only).
+       *
+       * `server` (default): ask the auth server every time (`getUser`). A revoked or banned session ends at once; the price is one
+       * network round trip to the provider per page.
+       * `local`: verify the access token's signature and expiry here (`getClaims`). No round trip, but a session revoked at the
+       * provider stays valid until its access token expires (an hour by default). Removing a person's access inside Verity
+       * (membership disable, ADR-049) is read from the database on every request and is immediate either way.
+       *
+       * Left as `server` until the product owner decides the trade; it changes how fast a revoked session stops, which is a
+       * security property, not an implementation detail.
+       */
+      supabaseSessionCheck: z.enum(["server", "local"]).default("server"),
+
+      /**
        * Private signing material only. JWT_SECRET is a legacy deployment alias;
        * the public Supabase anon key is never a signing-secret fallback.
        */
@@ -291,6 +305,7 @@ function loadConfig(): RuntimeConfig {
       provider: env("VERITY_AUTH_PROVIDER"),
       supabaseUrl: env("NEXT_PUBLIC_SUPABASE_URL"),
       supabaseAnonKey: env("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+      supabaseSessionCheck: env("VERITY_SUPABASE_SESSION_CHECK"),
       jwtSecret:
         env("SUPABASE_JWT_SECRET") ??
         env("VERITY_SESSION_SECRET") ??

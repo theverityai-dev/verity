@@ -66,13 +66,20 @@ async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise
   });
 }
 
+/** OIDC deployments (the local demo environment, the on-premise profile): the IdP `sub` of each existing login, by email. */
+const OIDC_SUBS: Record<string, string | undefined> = {
+  "worker@dsew.demo": process.env.DSEW_WORKER_SUB,
+  "supervisor@dsew.demo": process.env.DSEW_SUPERVISOR_SUB,
+};
+
 async function main() {
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to create the logins");
+  const oidc = ROLES.every((r) => OIDC_SUBS[r.email]);
+  if (!oidc && (!SUPABASE_URL || !SERVICE_ROLE_KEY)) throw new Error("Set DSEW_WORKER_SUB and DSEW_SUPERVISOR_SUB (OIDC), or SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to create the logins");
   const tenants = await admin.$queryRaw<Array<{ id: string }>>`
     SELECT id FROM public.tenant WHERE custom_fields->>'demoFor' = 'dsew'`;
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
+  const supabase = oidc ? null : createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   const shared = password();
   let generated = !process.env.DSEW_WORKER_PASSWORD;
 
@@ -100,7 +107,16 @@ async function main() {
       generated = false;
       continue;
     }
-    const created = await supabase.auth.admin.createUser({
+    if (oidc) {
+      await withTenant(tenantId, async (tx) => {
+        const identity = await provisionIdentity(tx, { organizationId, authUserId: OIDC_SUBS[spec.email]!, displayName: spec.person, email: spec.email });
+        await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId, ...(spec.stageKinds ? { customFields: { stageKinds: spec.stageKinds } } : {}) } });
+      });
+      console.log(`${spec.name}: linked ${spec.email} to its IdP login`);
+      generated = false;
+      continue;
+    }
+    const created = await supabase!.auth.admin.createUser({
       email: spec.email,
       password: shared,
       email_confirm: true,
@@ -113,7 +129,7 @@ async function main() {
         await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId, ...(spec.stageKinds ? { customFields: { stageKinds: spec.stageKinds } } : {}) } });
       });
     } catch (error) {
-      await supabase.auth.admin.deleteUser(created.data.user.id).catch(() => {});
+      await supabase!.auth.admin.deleteUser(created.data.user.id).catch(() => {});
       throw error;
     }
     console.log(`${spec.name}: created ${spec.email}`);

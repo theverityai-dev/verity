@@ -117,7 +117,7 @@ This is a first pass by the builder, not the formal gate.
 
 ## 6. The floor: roles, logins and the walk (2026-10-23)
 
-Local logins, all in the Keycloak realm `dsew`, all with the local-only dev password `Stylified-Demo-1`. They exist on this machine
+Local logins (created by `bash scripts/demo-env.sh up`, see `docs/demo/test-logins.md`), all in the Keycloak realm `dsew`, all with the local-only dev password `Demo-1234`. They exist on this machine
 only; none of them is on production.
 
 | Login | Role | What to show |

@@ -61,7 +61,8 @@ const passwords: Record<string, string> = {};
 
 async function ensureLogin(email: string, displayName: string): Promise<string> {
   const supabase = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-  const password = suggestPassword();
+  // STYLIFIED_PASSWORD gives every demo login one known password (a demonstration, shown to a prospect); unset, each is generated.
+  const password = process.env.STYLIFIED_PASSWORD ?? suggestPassword();
   const created = await supabase.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { display_name: displayName } });
   if (created.error || !created.data.user) throw new Error(`could not create the login ${email}: ${created.error?.message}`);
   createdAuthUsers.push(created.data.user.id);

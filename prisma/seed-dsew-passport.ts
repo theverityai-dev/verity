@@ -47,11 +47,14 @@ async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise
   });
 }
 
-/** Instrument readings for the checks that require evidence, by checkpoint key. */
-const READINGS: Record<string, Record<string, unknown>> = {
-  ir_test: { instrument: "5 kV megger", reading: "2,400 MΩ", note: "HV to LV and to earth, 60 s" },
-  hv_withstand: { instrument: "HV test set", reading: "28 kV applied for 60 s; 2x rated induced, no breakdown" },
-  uniformity: { instrument: "3-axis gaussmeter", reading: "within specification" },
+/** Instrument readings for the measured checks, by checkpoint key: numeric, in the check's own unit (same figures as the hero journey). */
+const READINGS: Record<string, { value: number; condition: string; instrument: string }> = {
+  ratio_test: { value: 0.21, condition: "all taps, 11 kV to 415 V", instrument: "TTR meter" },
+  ir_test: { value: 2400, condition: "HV to LV and earth, 60 s, after drying", instrument: "5 kV megger" },
+  hv_withstand: { value: 28, condition: "applied 60 s, no breakdown", instrument: "HV test set" },
+  noload_loss: { value: 312, condition: "at rated voltage", instrument: "Power analyser" },
+  load_loss: { value: 1560, condition: "at 120 °C reference", instrument: "Power analyser" },
+  temp_rise: { value: 82, condition: "at rated load, class F winding", instrument: "Winding RTD" },
 };
 
 async function main() {
@@ -106,20 +109,37 @@ async function main() {
       label: string;
       requireEvidence?: boolean;
       requireRemarks?: boolean;
+      measure?: { unit: string };
     }>;
     for (const cp of checkpoints) {
       let evidenceId: string | undefined;
-      if (cp.requireEvidence) {
+      if (cp.measure) {
+        // A measured check wants a numeric Reading in its own unit, and a photo record of the instrument where it asks for one.
+        const r = READINGS[cp.key] ?? { value: 0, condition: "demo", instrument: "demo" };
+        const reading = await withTenant(tenantId, async (tx) => {
+          const photo = cp.requireEvidence
+            ? await tx.evidence.create({
+                data: {
+                  tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",
+                  uri: "demo://instrument-photo", capturedAt: new Date(), capturedById: owner.userId,
+                },
+              })
+            : null;
+          return tx.evidence.create({
+            data: {
+              tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Reading",
+              capturedAt: new Date(), capturedById: owner.userId,
+              payload: { value: r.value, unit: cp.measure!.unit, condition: r.condition, instrument: r.instrument, ...(photo ? { photoEvidenceId: photo.id } : {}) } as never,
+            },
+          });
+        });
+        evidenceId = reading.id;
+      } else if (cp.requireEvidence) {
         const evidence = await withTenant(tenantId, (tx) =>
           tx.evidence.create({
             data: {
-              tenantId,
-              entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION,
-              entityId: op.id,
-              kind: "Reading",
-              capturedAt: new Date(),
-              capturedById: owner.userId,
-              payload: (READINGS[cp.key] ?? { reading: "recorded" }) as never,
+              tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",
+              uri: "demo://photo", capturedAt: new Date(), capturedById: owner.userId,
             },
           }),
         );

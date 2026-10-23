@@ -53,6 +53,8 @@ project, as their own tenant with their own Supabase login. They are synthetic a
 
 ## 3. Running it locally
 
+**Quickest way:** `bash scripts/demo-env.sh up` builds the whole local environment (database, Keycloak logins, this tenant and Stylified, the application on `http://localhost:3000`) and prints a login for every DSEW user (`dsew-owner`, `dsew-supervisor`, `dsew-worker`) with one shared password. See `docs/demo/test-logins.md`. The manual steps below are what that script does.
+
 Needs Docker, Node, and the repo. Database: a disposable Postgres 16 on port 55432 with every migration applied
 (`npx prisma migrate deploy`). Identity: Keycloak 26 with a realm `dsew` that has a client `verity-web`
 (confidential, PKCE S256, redirect `http://localhost:3000/api/auth/oidc/callback`) and one user whose **id is a UUID**

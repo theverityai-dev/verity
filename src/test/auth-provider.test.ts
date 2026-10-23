@@ -245,3 +245,56 @@ describeDb("resolveActor()/listMemberships(): identity mapping", () => {
     expect(await resolveActor()).toBeNull();
   });
 });
+
+describe("VERITY_SUPABASE_SESSION_CHECK", () => {
+  const getUser = vi.fn();
+  const getClaims = vi.fn();
+
+  function mockBoth() {
+    getUser.mockReset();
+    getClaims.mockReset();
+    vi.doMock("@supabase/ssr", () => ({ createServerClient: createServerClient.mockReturnValue({ auth: { getUser, getClaims } }) }));
+    vi.doMock("next/headers", () => ({ cookies: vi.fn().mockResolvedValue(fakeCookieStore()) }));
+  }
+
+  afterEach(() => {
+    delete process.env.VERITY_SUPABASE_SESSION_CHECK;
+  });
+
+  it("asks the auth server by default, so a revoked session ends at once", async () => {
+    mockBoth();
+    getUser.mockResolvedValue({ data: { user: null }, error: { message: "session revoked" } });
+    getClaims.mockResolvedValue({ data: { claims: { sub: "33333333-3333-3333-3333-333333333333" } }, error: null });
+
+    const { getAuthUser } = await import("@/server/platform/auth");
+    expect(await getAuthUser()).toBeNull();
+    expect(getUser).toHaveBeenCalledTimes(1);
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it("verifies the token locally when set to local, with no call to the auth server", async () => {
+    process.env.VERITY_SUPABASE_SESSION_CHECK = "local";
+    mockBoth();
+    getClaims.mockResolvedValue({ data: { claims: { sub: "33333333-3333-3333-3333-333333333333", email: "person@example.com", role: "authenticated" } }, error: null });
+
+    const { getAuthUser } = await import("@/server/platform/auth");
+    const principal = await getAuthUser();
+    expect(principal).toEqual({ id: "33333333-3333-3333-3333-333333333333", email: "person@example.com" });
+    expect(Object.keys(principal!).sort()).toEqual(["email", "id"]);
+    expect(getUser).not.toHaveBeenCalled();
+  });
+
+  it("local mode still refuses an invalid or absent token", async () => {
+    process.env.VERITY_SUPABASE_SESSION_CHECK = "local";
+    mockBoth();
+    getClaims.mockResolvedValue({ data: null, error: { message: "invalid JWT" } });
+    const { getAuthUser } = await import("@/server/platform/auth");
+    expect(await getAuthUser()).toBeNull();
+  });
+
+  it("refuses a value that is neither server nor local", async () => {
+    process.env.VERITY_SUPABASE_SESSION_CHECK = "sometimes";
+    mockBoth();
+    await expect(import("@/server/platform/auth")).rejects.toThrow();
+  });
+});

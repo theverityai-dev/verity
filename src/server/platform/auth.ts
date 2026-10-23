@@ -120,6 +120,15 @@ class SupabaseAuthProvider implements AuthProvider {
 
   async getPrincipal(): Promise<Principal | null> {
     const supabase = await createSupabaseServerClient();
+    // VERITY_SUPABASE_SESSION_CHECK=local verifies the token here (no round trip; a revoked session lives until the token
+    // expires). The default asks the auth server. See config.ts for the trade.
+    if (runtimeConfig.auth.supabaseSessionCheck === "local") {
+      const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+      const sub = claims?.claims?.sub;
+      if (claimsError || !sub) return null;
+      const email = claims?.claims?.email;
+      return { id: sub, email: typeof email === "string" ? email : null };
+    }
     // getUser() re-validates with the auth server; getSession() trusts the cookie.
     const { data, error } = await supabase.auth.getUser();
     if (error || !data.user) return null;
