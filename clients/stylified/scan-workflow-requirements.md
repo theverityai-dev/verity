@@ -3,6 +3,20 @@
 This is a reading of a WhatsApp chat in Hinglish, not a signed requirement. Items marked **ASK** are not clear from the chat and must
 be confirmed with Ayushmaan before anything is built.
 
+## Decisions (2026-10-23, from the owner; these replace the matching ASK items below)
+
+1. **Keep the existing stages** (Pasting, Collar and Cuff, Stitching, Button and Kaj, Finishing). Stages stay tenant data, so they remain editable.
+2. **A supervisor covers the department where workers have no phone.** They see those workers' profiles, allot work to them (give out), mark it done
+   for them and scan out the quantities. Any discrepancy belongs to the **worker** who held the pieces; the worker answers, and the **supervisor above**
+   answers for how it is resolved.
+3. **Make everything configurable**: stages, workers, supervisors, and the rates. ₹45 on lot 108 was an example. So rates are set **per lot and stage**
+   (taking precedence over a worker's own rate), and so is the charge for a lost piece.
+4. **Lost pieces are charged to the worker, not the supervisor.** (Sent 100, received 98: the 2 are charged to the worker who held them.)
+
+What this builds first: a per-lot, per-stage rate card; an automatic **charge request to the worker** when pieces are short (still decided by the
+manager or owner within their limits, so nothing is deducted silently); a "My karigars" view for a supervisor; and scanning a bundle's code to open its
+take-back. Not yet built: rolls, challans, handover between stages with its own confirmation.
+
 ## What the chat says
 
 1. **Fabric rolls carry a barcode.** Scan a roll, get which fabric it is; enter how much was used and from which lot.
