@@ -569,6 +569,7 @@ describeDb("conformance: database enforcement", () => {
         // Piece-rate ledger (20261021300000): entries, payments and per-worker rates are facts, never edited.
         "piecework_day_close",
         "piecework_entry",
+        "piecework_lot_cost",
         "piecework_payment",
         "piecework_roll_move",
         "piecework_worker_rate",

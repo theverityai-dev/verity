@@ -163,8 +163,65 @@ export const readyGarments: QueryDefinition<Record<string, never>, ReadyLot[]> =
   },
 };
 
+/* ================================== scan ================================== */
+
+export type ScanResult =
+  | { kind: "bundle"; id: string; number: string; lotId: string; lotNumber: string; lotName: string; netPieces: number; sizeNote: string | null; cover: string | null; cancelled: boolean }
+  | { kind: "roll"; id: string; number: string }
+  | { kind: "lot"; id: string; number: string; name: string }
+  | { kind: "challan"; number: string }
+  | { kind: "none"; code: string };
+
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+
+/**
+ * What a scanned or typed code is. A QR printed by Verity carries an address (…/lots/bundles/<id>, …/fabric/<id>); a person types
+ * the number on the paper (B-0007, R-0003, LOT-0002, CH-0021). Only the tenant's own records are found (RLS), and a roll is
+ * returned as its number and id alone: the roll page decides for itself who may see fabric.
+ */
+export const lookupCode: QueryDefinition<{ code: string }, ScanResult> = {
+  key: "verity.piecework.lookup_code",
+  entity: ENTRY_ENTITY,
+  input: z.object({ code: z.string().trim().min(1).max(500) }),
+  handler: async (ctx, input) => {
+    const raw = input.code.trim();
+    const byPath = (re: string) => new RegExp(re, "i").exec(raw)?.[1]?.toLowerCase() ?? null;
+    const bundleId = byPath(`/lots/bundles/(${UUID})`);
+    const rollId = byPath(`/fabric/(${UUID})`);
+    const lotId = !bundleId ? byPath(`/lots/(${UUID})`) : null;
+    const code = raw.toUpperCase().replace(/\s+/g, "");
+    const num = (prefix: string) => {
+      const m = new RegExp(`^${prefix}-?0*(\\d{1,9})$`).exec(code);
+      return m ? `${prefix}-${m[1]!.padStart(4, "0")}` : null;
+    };
+
+    const bundleWhere = bundleId ? { id: bundleId } : num("B") ? { number: num("B")! } : null;
+    if (bundleWhere) {
+      const b = await ctx.tx.pieceworkBundle.findFirst({ where: bundleWhere, include: { lot: true } });
+      if (b) {
+        const cover = (await lotCovers(ctx.tx, [b.lot])).get(b.lot.id) ?? null;
+        return { kind: "bundle", id: b.id, number: b.number, lotId: b.lotId, lotNumber: b.lot.number, lotName: b.lot.name ?? b.lot.design, netPieces: b.netPieces, sizeNote: b.sizeNote, cover, cancelled: b.cancelledAt !== null };
+      }
+    }
+    const rollWhere = rollId ? { id: rollId } : num("R") ? { number: num("R")! } : null;
+    if (rollWhere) {
+      const r = await ctx.tx.pieceworkRoll.findFirst({ where: rollWhere, select: { id: true, number: true } });
+      if (r) return { kind: "roll", id: r.id, number: r.number };
+    }
+    const lotWhere = lotId ? { id: lotId } : num("LOT") ? { number: num("LOT")! } : null;
+    if (lotWhere) {
+      const l = await ctx.tx.pieceworkLot.findFirst({ where: lotWhere, select: { id: true, number: true, name: true, design: true } });
+      if (l) return { kind: "lot", id: l.id, number: l.number, name: l.name ?? l.design };
+    }
+    const challan = num("CH");
+    if (challan && (await ctx.tx.pieceworkEntry.findFirst({ where: { challanNumber: challan }, select: { id: true } }))) return { kind: "challan", number: challan };
+    return { kind: "none", code: raw.slice(0, 80) };
+  },
+};
+
 export function registerViews(): void {
   registerQuery(challanSheet);
   registerQuery(floorCases);
   registerQuery(readyGarments);
+  registerQuery(lookupCode);
 }

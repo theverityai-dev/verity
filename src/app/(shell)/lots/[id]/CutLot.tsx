@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Button, Field, Input, Select } from "@/components/ui/primitives";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -35,8 +35,7 @@ export function CutLot({ lotId, lotNumber, rolls, label = "Cut the lot" }: { lot
   const rollOf = (id: string) => rolls?.find((r) => r.id === id);
   const fabricOk = fabric.every((f) => f.rollId && centi(f.amount) >= 1 && centi(f.amount) <= (rollOf(f.rollId)?.balanceCenti ?? 0));
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     setFailure(null);
     start(async () => {
       const result = await runCommand<{ bundleIds: string[] }>(CUT, {
@@ -50,9 +49,12 @@ export function CutLot({ lotId, lotNumber, rolls, label = "Cut the lot" }: { lot
   return (
     <>
       <CommandButton commands={CUT} variant="primary" onClick={() => setOpen(true)}>{label}</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title={`Cut ${lotNumber}`} description="Say where the fabric came from and what the cut gave. Every bundle gets its own number and a slip with a QR.">
-        <form className="flex flex-col gap-6" onSubmit={submit}>
-          {failure && <ErrorState title="The lot was not cut" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      <FormModal
+        open={open} onClose={() => setOpen(false)} width="lg"
+        title={`Cut ${lotNumber}`} description="Say where the fabric came from and what the cut gave. Every bundle gets its own number and a slip with a QR."
+        submitLabel="Cut and open the slips" pendingLabel="Cutting…" submitDisabled={!okGroups || !fabricOk}
+        pending={pending} failure={failure} failureTitle="The lot was not cut" onSubmit={submit}
+      >
 
           {rolls !== null && (
             <fieldset className="m-0 flex min-w-0 flex-col gap-3 border-0 p-0">
@@ -96,12 +98,7 @@ export function CutLot({ lotId, lotNumber, rolls, label = "Cut the lot" }: { lot
           <p role="status" className="m-0 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[15px] font-medium text-text">
             {okGroups ? `${bundles} bundle${bundles === 1 ? "" : "s"}, ${pieces.toLocaleString("en-IN")} pieces` : "Fill in how many bundles and how many pieces in each."}
           </p>
-          <div className="flex gap-2">
-            <CommandButton commands={CUT} type="submit" variant="primary" disabled={pending || !okGroups || !fabricOk}>{pending ? "Cutting…" : "Cut and open the slips"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }

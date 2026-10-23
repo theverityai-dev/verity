@@ -194,6 +194,7 @@ model Tenant {
   pieceworkReasons             PieceworkReason[]
   pieceworkRolls               PieceworkRoll[]
   pieceworkRollMoves           PieceworkRollMove[]
+  pieceworkLotCosts            PieceworkLotCost[]
   inventoryAttributes          InventoryAttribute[]
   inventoryAttributeValues     InventoryAttributeValue[]
   inventoryItemTemplates       InventoryItemTemplate[]
@@ -7749,6 +7750,7 @@ model PieceworkLot {
   pieceworkApprovals PieceworkApproval[]
   lotRates PieceworkLotRate[]
   rollMoves PieceworkRollMove[]
+  costs    PieceworkLotCost[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -8108,4 +8110,28 @@ model PieceworkRollMove {
   @@index([tenantId, rollId])
   @@index([tenantId, lotId])
   @@map("piecework_roll_move")
+}
+
+/// APPEND-ONLY. A cost a lot carried beyond fabric and wages (thread, buttons, packing, washing ...). The category is the factory's own
+/// word (snapshotted). A cost shared by several lots is split by pieces cut; the rows of one split share batchId. A mistake is a reversal.
+model PieceworkLotCost {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  lotId       String   @map("lot_id") @db.Uuid
+  category    String
+  amountMinor Int      @map("amount_minor")
+  note        String?
+  incurredOn  DateTime @map("incurred_on") @db.Date
+  batchId     String?  @map("batch_id") @db.Uuid
+  reversesId  String?  @unique @map("reverses_id") @db.Uuid
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot      PieceworkLot      @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  reverses PieceworkLotCost? @relation("PieceworkLotCostReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkLotCost? @relation("PieceworkLotCostReversal")
+
+  @@index([tenantId, lotId])
+  @@map("piecework_lot_cost")
 }

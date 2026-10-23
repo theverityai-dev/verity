@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Button, ErrorState, Field, Input, Row, RowList } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { shortDate } from "../format";
@@ -63,18 +63,17 @@ export function CancelLot({ lotId, number }: { lotId: string; number: string }) 
   return (
     <>
       <CommandButton commands={CANCEL} variant="ghost" onClick={() => setOpen(true)}>Cancel lot</CommandButton>
-      <Modal open={open} onClose={() => { clear(); setOpen(false); }} title={`Cancel ${number}?`} description="Only a lot with no work recorded can be cancelled. Its number is never reused.">
-        <form className="flex flex-col gap-4" action={(formData) => run(CANCEL, { lotId, reason: String(formData.get("reason") ?? "").trim() })}>
-          {failure && <ErrorState title="Could not cancel the lot" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-          <Field label="Reason" htmlFor="cancel-reason" required>
-            <Input id="cancel-reason" name="reason" required minLength={3} maxLength={300} autoFocus />
-          </Field>
-          <div className="flex gap-2">
-            <CommandButton commands={CANCEL} type="submit" variant="danger" disabled={pending}>{pending ? "Cancelling…" : "Cancel this lot"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Keep it</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormModal
+        open={open} onClose={() => { clear(); setOpen(false); }} destructive
+        title={`Cancel ${number}?`} description="Only a lot with no work recorded can be cancelled. Its number is never reused."
+        submitLabel="Cancel this lot" pendingLabel="Cancelling…"
+        pending={pending} failure={failure} failureTitle="Could not cancel the lot"
+        onSubmit={(formData) => run(CANCEL, { lotId, reason: String(formData.get("reason") ?? "").trim() })}
+      >
+        <Field label="Reason" htmlFor="cancel-reason" required>
+          <Input id="cancel-reason" name="reason" required minLength={3} maxLength={300} autoFocus />
+        </Field>
+      </FormModal>
     </>
   );
 }

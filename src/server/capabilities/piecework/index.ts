@@ -28,6 +28,8 @@ import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, 
 import { effectiveRate, lostPieceCharge, registerSetup } from "./setup";
 import { applyMove, registerFabric, ENTITY_PIECEWORK_ROLL } from "./fabric";
 import { registerViews } from "./views";
+import { registerCosts } from "./costs";
+import { registerRebundle } from "./rebundle";
 
 export * from "./ledger";
 export * from "./reports";
@@ -35,6 +37,8 @@ export * from "./floor";
 export * from "./setup";
 export * from "./fabric";
 export * from "./views";
+export * from "./costs";
+export * from "./rebundle";
 
 /**
  * CAPABILITY: Piece-rate lots (`verity.capability.piecework`), built for the Stylified shirt factory from its requirement
@@ -1042,6 +1046,7 @@ export function registerPieceworkCapability(): void {
   registerContribution({
     capabilityId: PIECEWORK_CAPABILITY,
     navigation: [
+      { href: "/shopfloor/scan", label: "Scan", group: "Production", order: 17.5, icon: "search", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
       { href: "/shopfloor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
@@ -1073,6 +1078,8 @@ export function registerPieceworkCapability(): void {
   registerSetup();
   registerFabric();
   registerViews();
+  registerCosts();
+  registerRebundle();
   registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);

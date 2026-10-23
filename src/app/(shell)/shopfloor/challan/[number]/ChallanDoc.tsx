@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable no-restricted-syntax -- print-only document table, as InvoiceDoc: the challan is paper handed to a karigar; DataTable's on-screen chrome has no place on it. */
 
 import Link from "next/link";
 import { Button, Panel } from "@/components/ui/primitives";

@@ -54,6 +54,8 @@ export function FormModal({
   onSubmit,
   width,
   destructive = false,
+  submitDisabled = false,
+  pendingLabel = "Saving…",
   children,
 }: {
   title: string;
@@ -68,6 +70,10 @@ export function FormModal({
   width?: "sm" | "md" | "lg";
   /** Renders the submit as a destructive action (reversals, voids). */
   destructive?: boolean;
+  /** Keeps the submit disabled while the form is incomplete (the server still refuses anything wrong). */
+  submitDisabled?: boolean;
+  /** What the submit says while the command runs ("Cutting…"). */
+  pendingLabel?: string;
   children: ReactNode;
 }) {
   const formId = useId();
@@ -81,8 +87,8 @@ export function FormModal({
       footer={
         <>
           <ModalCancel onClose={onClose} disabled={pending} />
-          <Button type="submit" form={formId} variant={destructive ? "danger" : "primary"} disabled={pending}>
-            {pending ? "Saving…" : submitLabel}
+          <Button type="submit" form={formId} variant={destructive ? "danger" : "primary"} disabled={pending || submitDisabled}>
+            {pending ? pendingLabel : submitLabel}
           </Button>
         </>
       }

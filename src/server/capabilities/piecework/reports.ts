@@ -310,11 +310,11 @@ export const reportProductionByProcess: QueryDefinition<Record<string, never>, P
 export type CostingRow = {
   lotNumber: string; design: string; plannedPieces: number; goodPieces: number; rejectedPieces: number; reworkPieces: number; shortPieces: number;
   wagesMinor: number;
-  /** Not recorded yet (the other cost categories arrive with the costing stage). Null, never zero. */
-  otherMinor: null; totalMinor: number; perGoodPieceMinor: number | null;
+  /** Fabric at each roll's invoice rate (null when no roll carried a rate), other costs by category, less charges recovered. */
+  fabricMinor: number | null; otherMinor: number; recoveredMinor: number; totalMinor: number; perGoodPieceMinor: number | null;
 };
 
-/** Lot cost so far: WAGES ONLY. Cost per good piece = cost / good finished pieces, with the losses shown beside it. */
+/** Lot cost so far: fabric + wages + other costs - charges recovered. Cost per good piece = cost / good finished pieces, losses beside it. */
 export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]> = {
   key: "verity.piecework.report_costing",
   // Wages only, so it is a money report: the same grant as the wage ledger.
@@ -322,15 +322,32 @@ export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]>
   input: z.object({}),
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
+    // The other parts of cost, read once for every lot rather than once per lot.
+    const [costs, recovered, moves] = await Promise.all([
+      ctx.tx.pieceworkLotCost.findMany({ select: { lotId: true, amountMinor: true, reversesId: true } }),
+      ctx.tx.pieceworkApproval.findMany({ where: { kind: "deduction", status: "approved", entryId: { not: null } }, select: { lotId: true, amountMinor: true } }),
+      ctx.tx.pieceworkRollMove.findMany({ where: { kind: { in: ["issue", "return"] } }, select: { lotId: true, deltaCenti: true, roll: { select: { rateMinor: true } } } }),
+    ]);
+    const sumBy = <T,>(rows: T[], key: (r: T) => string | null, value: (r: T) => number) => {
+      const m = new Map<string, number>();
+      for (const r of rows) { const k = key(r); if (k) m.set(k, (m.get(k) ?? 0) + value(r)); }
+      return m;
+    };
+    const other = sumBy(costs, (c) => c.lotId, (c) => (c.reversesId ? -1 : 1) * c.amountMinor);
+    const back = sumBy(recovered, (a) => a.lotId, (a) => a.amountMinor ?? 0);
+    const priced = moves.filter((m) => m.roll.rateMinor !== null);
+    const fabric = sumBy(priced, (m) => m.lotId, (m) => Math.round((-m.deltaCenti * m.roll.rateMinor!) / 100));
     return d.lots.filter((l) => !l.cancelledAt).map((l): CostingRow => {
       const mine = d.bundles.filter((b) => b.lotId === l.id && !b.cancelledAt);
       const ids = new Set(mine.map((b) => b.id));
       const wagesMinor = d.ledger.filter((e) => ids.has(e.bundleId)).reduce((s, e) => s + wageOf(e), 0);
       const good = mine.reduce((s, b) => s + b.position.ready, 0);
+      const total = (fabric.get(l.id) ?? 0) + wagesMinor + (other.get(l.id) ?? 0) - (back.get(l.id) ?? 0);
       return {
         lotNumber: l.number, design: l.design, plannedPieces: l.plannedPieces, goodPieces: good,
         rejectedPieces: mine.reduce((s, b) => s + b.position.rejected, 0), reworkPieces: mine.reduce((s, b) => s + b.position.reworkOpen, 0), shortPieces: mine.reduce((s, b) => s + b.position.short, 0),
-        wagesMinor, otherMinor: null, totalMinor: wagesMinor, perGoodPieceMinor: costPerGoodPiece(wagesMinor, good),
+        wagesMinor, fabricMinor: fabric.get(l.id) ?? null, otherMinor: other.get(l.id) ?? 0, recoveredMinor: back.get(l.id) ?? 0,
+        totalMinor: total, perGoodPieceMinor: costPerGoodPiece(total, good),
       };
     });
   },

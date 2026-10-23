@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Field, Input, Select } from "@/components/ui/primitives";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 
@@ -29,8 +29,7 @@ export function MoveFabric({ rollId, unit, balanceCenti, lots }: { rollId: strin
   const centi = Math.round(Number(amount) * 100);
   const valid = centi >= 1 && (!needsLot || lotId !== "") && (needsLot || reason.trim().length >= 3) && (kind !== "issue" && kind !== "adjust_less" ? true : centi <= balanceCenti);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     setFailure(null);
     start(async () => {
       const result = await runCommand(MOVE, {
@@ -47,9 +46,12 @@ export function MoveFabric({ rollId, unit, balanceCenti, lots }: { rollId: strin
   return (
     <>
       <CommandButton commands={MOVE} variant="secondary" onClick={() => setOpen(true)}>Move fabric</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="Move fabric" description={`${(balanceCenti / 100).toLocaleString("en-IN")} ${unit} on the roll now.`}>
-        <form className="flex flex-col gap-4" onSubmit={submit}>
-          {failure && <ErrorState title="That was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      <FormModal
+        open={open} onClose={() => setOpen(false)}
+        title="Move fabric" description={`${(balanceCenti / 100).toLocaleString("en-IN")} ${unit} on the roll now.`}
+        submitLabel="Save movement" submitDisabled={!valid}
+        pending={pending} failure={failure} failureTitle="That was not saved" onSubmit={submit}
+      >
           <Field label="What happened" htmlFor="mv-kind">
             <Select id="mv-kind" value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
               {KINDS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
@@ -71,12 +73,7 @@ export function MoveFabric({ rollId, unit, balanceCenti, lots }: { rollId: strin
               <Input id="mv-why" value={reason} onChange={(e) => setReason(e.target.value)} minLength={3} maxLength={300} placeholder="damp patch cut away" required />
             </Field>
           )}
-          <div className="flex gap-2">
-            <CommandButton commands={MOVE} type="submit" variant="primary" disabled={pending || !valid}>{pending ? "Saving…" : "Save"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }
@@ -90,22 +87,21 @@ export function CancelRoll({ rollId, number }: { rollId: string; number: string 
   return (
     <>
       <CommandButton commands={CANCEL} variant="ghost" onClick={() => setOpen(true)}>Cancel roll</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title={`Cancel ${number}?`} description="Only a roll that has never moved can be cancelled, for an entry made twice. Its number is not reused.">
-        <form className="flex flex-col gap-4" action={(fd) => {
+      <FormModal
+        open={open} onClose={() => setOpen(false)} destructive
+        title={`Cancel ${number}?`} description="Only a roll that has never moved can be cancelled, for an entry made twice. Its number is not reused."
+        submitLabel="Cancel this roll" pendingLabel="Cancelling…"
+        pending={pending} failure={failure} failureTitle="Could not cancel the roll"
+        onSubmit={(fd) => {
           setFailure(null);
           start(async () => {
             const result = await runCommand(CANCEL, { rollId, reason: String(fd.get("reason") ?? "").trim() }, "/fabric");
             if (result.ok) router.push("/fabric"); else setFailure(result);
           });
-        }}>
-          {failure && <ErrorState title="Could not cancel the roll" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-          <Field label="Reason" htmlFor="cr-why" required><Input id="cr-why" name="reason" required minLength={3} maxLength={300} autoFocus /></Field>
-          <div className="flex gap-2">
-            <CommandButton commands={CANCEL} type="submit" variant="danger" disabled={pending}>{pending ? "Cancelling…" : "Cancel this roll"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Keep it</Button>
-          </div>
-        </form>
-      </Modal>
+        }}
+      >
+        <Field label="Reason" htmlFor="cr-why" required><Input id="cr-why" name="reason" required minLength={3} maxLength={300} autoFocus /></Field>
+      </FormModal>
     </>
   );
 }

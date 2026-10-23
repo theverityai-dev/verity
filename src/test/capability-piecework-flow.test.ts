@@ -15,6 +15,7 @@ import {
   ENTITY_PIECEWORK_BUNDLE,
   ENTITY_PIECEWORK_ENTRY,
   ENTITY_PIECEWORK_LOT,
+  ENTITY_PIECEWORK_LOT_COST,
   ENTITY_PIECEWORK_LOT_RATE,
   ENTITY_PIECEWORK_PAYMENT,
   ENTITY_PIECEWORK_REASON,
@@ -26,6 +27,7 @@ import {
   ENTITY_PIECEWORK_WORKER,
   PIECEWORK_CAPABILITY,
   assignStages,
+  addLotCost,
   cancelRoll,
   challanSheet,
   createBundle,
@@ -50,6 +52,12 @@ import {
   reorderStages,
   reverseEntry,
   saveReasons,
+  lookupCode,
+  lotCosting,
+  mergeBundles,
+  reverseLotCost,
+  splitBundle,
+  splitByWeight,
   setLotRates,
   setLotStatus,
   setProductionSettings,
@@ -85,7 +93,7 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
   type Grant = [string, PermissionVerb[]];
   const ALL = [
     ENTITY_PIECEWORK_STAGE, ENTITY_PIECEWORK_LOT, ENTITY_PIECEWORK_BUNDLE, ENTITY_PIECEWORK_WORKER, ENTITY_PIECEWORK_ENTRY, ENTITY_PIECEWORK_PAYMENT,
-    ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_REASON, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_STAGE_ASSIGNMENT,
+    ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_REASON, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ENTITY_PIECEWORK_LOT_COST,
   ];
 
   async function person(name: string, roleName: string, grants: Grant[]): Promise<ActorContext> {
@@ -308,5 +316,70 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     await reject(executeCommand(owner, reorderStages, { stageIds: [stage.finishing!, stage.stitching!, stage.pasting!] }), /cannot change once work has been recorded/);
     await reject(executeCommand(owner, updateStage, { stageId: stage.pasting!, active: false }), /has work recorded/);
     await reject(executeCommand(supervisor, updateStage, { stageId: stage.pasting!, label: "Gluing" }), /holds no Edit grant/);
+  });
+
+  it("splits a shared cost across lots by pieces cut, exactly, and costs a lot from fabric, wages, other costs and recoveries", async () => {
+    expect(splitByWeight(1000, [1, 1, 1])).toEqual([334, 333, 333]);
+    expect(splitByWeight(10_001, [300, 100])).toEqual([7501, 2500]);
+
+    const a = await lotWith(300, "Cost A");
+    const b = await lotWith(100, "Cost B");
+    const shared = await executeCommand(owner, addLotCost, { lotIds: [a.lotId, b.lotId], category: "Thread", amountMinor: 10_001, note: "One thread invoice" });
+    expect(shared.parts).toEqual([{ lotId: a.lotId, amountMinor: 7501 }, { lotId: b.lotId, amountMinor: 2500 }]);
+    const own = await executeCommand(owner, addLotCost, { lotIds: [a.lotId], category: "Packing", amountMinor: 2000 });
+
+    const issued = await executeCommand(owner, recordIssue, { bundleId: a.bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 300 });
+    await executeCommand(owner, recordReturn, { issueId: issued.id, good: 300, rejected: 0, rework: 0, short: 0 });
+
+    let cost = await executeQuery(owner, lotCosting, { lotId: a.lotId });
+    expect(cost.other).toEqual([{ category: "Thread", amountMinor: 7501 }, { category: "Packing", amountMinor: 2000 }]);
+    expect(cost.wagesMinor).toBe(300 * 200);
+    expect(cost.totalMinor).toBe(7501 + 2000 + 60_000);
+
+    // A wrong line is reversed, never edited, and reversing twice is refused.
+    await executeCommand(owner, reverseLotCost, { costId: own.ids[0]!, reason: "entered on the wrong lot" });
+    await reject(executeCommand(owner, reverseLotCost, { costId: own.ids[0]!, reason: "again" }), /already reversed/);
+    cost = await executeQuery(owner, lotCosting, { lotId: a.lotId });
+    expect(cost.otherMinor).toBe(7501);
+
+    // A lot with nothing cut cannot take a share; the floor never sees costs.
+    const empty = (await executeCommand(owner, createLot, { design: "Nothing cut", plannedPieces: 10 })).id;
+    await reject(executeCommand(owner, addLotCost, { lotIds: [a.lotId, empty], category: "Thread", amountMinor: 500 }), /no pieces cut yet/);
+    await reject(executeQuery(supervisor, lotCosting, { lotId: a.lotId }), /holds no Read grant/);
+  });
+
+  it("re-bundles at the cutting table only, before any work, and keeps the old numbers", async () => {
+    const lotId = (await executeCommand(owner, createLot, { design: "Rebundle", plannedPieces: 120 })).id;
+    const cut = await executeCommand(owner, cutLot, { lotId, groups: [{ copies: 2, netPieces: 60 }] });
+    const [first, second] = cut.bundleIds as [string, string];
+
+    await reject(executeCommand(owner, splitBundle, { bundleId: first, parts: [{ netPieces: 30 }, { netPieces: 20 }] }), /add up to 50/);
+    const split = await executeCommand(owner, splitBundle, { bundleId: first, parts: [{ netPieces: 30, sizeNote: "M" }, { netPieces: 30, sizeNote: "L" }] });
+    expect(split.numbers).toHaveLength(2);
+    const parent = await withTenant(tenantId, (tx) => tx.pieceworkBundle.findUniqueOrThrow({ where: { id: first } }));
+    expect(parent.cancelledAt).not.toBeNull();
+    const child = await withTenant(tenantId, (tx) => tx.pieceworkBundle.findUniqueOrThrow({ where: { id: split.bundleIds[0]! } }));
+    expect(child).toMatchObject({ parentBundleId: first, netPieces: 30, sizeNote: "M" });
+
+    const merged = await executeCommand(owner, mergeBundles, { bundleIds: [split.bundleIds[1]!, second] });
+    expect((await withTenant(tenantId, (tx) => tx.pieceworkBundle.findUniqueOrThrow({ where: { id: merged.bundleId } }))).netPieces).toBe(90);
+
+    // Once a bundle is given out it moves in parts, so it is never re-bundled.
+    await executeCommand(owner, recordIssue, { bundleId: merged.bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 10 });
+    await reject(executeCommand(owner, splitBundle, { bundleId: merged.bundleId, parts: [{ netPieces: 45 }, { netPieces: 45 }] }), /has work recorded/);
+    await reject(executeCommand(owner, mergeBundles, { bundleIds: [merged.bundleId, split.bundleIds[0]!] }), /has work recorded/);
+  });
+
+  it("finds what a scanned or typed code is, inside the tenant only", async () => {
+    const { lotId, bundleId } = await lotWith(10, "Scan me");
+    const bundle = await withTenant(tenantId, (tx) => tx.pieceworkBundle.findUniqueOrThrow({ where: { id: bundleId } }));
+    const lot = await withTenant(tenantId, (tx) => tx.pieceworkLot.findUniqueOrThrow({ where: { id: lotId } }));
+    expect(await executeQuery(supervisor, lookupCode, { code: `https://app.example/lots/bundles/${bundleId}` })).toMatchObject({ kind: "bundle", id: bundleId });
+    expect(await executeQuery(supervisor, lookupCode, { code: bundle.number.toLowerCase().replace("-", " ") })).toMatchObject({ kind: "bundle", id: bundleId });
+    expect(await executeQuery(supervisor, lookupCode, { code: lot.number })).toMatchObject({ kind: "lot", id: lotId });
+    const roll = await executeCommand(owner, receiveRolls, { fabricType: "Scan cloth", quantitiesCenti: [100] });
+    expect(await executeQuery(supervisor, lookupCode, { code: roll.numbers[0]! })).toEqual({ kind: "roll", id: roll.rollIds[0], number: roll.numbers[0] });
+    expect(await executeQuery(supervisor, lookupCode, { code: "B-999999" })).toMatchObject({ kind: "none" });
+    expect(await executeQuery(supervisor, lookupCode, { code: `/lots/bundles/${randomUUID()}` })).toMatchObject({ kind: "none" });
   });
 });

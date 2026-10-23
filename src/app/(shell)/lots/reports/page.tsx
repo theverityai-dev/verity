@@ -141,14 +141,14 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
           <ReportTable
             title="Lot cost so far"
             filename="lot-cost.csv"
-            note="Wages only. The other cost categories are recorded in a later stage. Cost per good piece = cost so far ÷ good finished pieces; it is blank when there are none, and the losses stay visible beside it."
+            note="Fabric (at each roll's invoice rate) + wages + other costs, less what was charged to karigars for lost pieces. Cost per good piece = cost so far ÷ good finished pieces; it is blank when there are none, and the losses stay visible beside it. Add other costs on the lot's page."
             columns={[
               { key: "lot", header: "Lot", subKey: "design" }, { key: "planned", header: "Planned", numeric: true }, { key: "good", header: "Good", numeric: true },
-              { key: "losses", header: "Rejected · rework · short" }, { key: "wages", header: "Wages", numeric: true }, { key: "per", header: "Per good piece", numeric: true },
+              { key: "losses", header: "Rejected · rework · short" }, { key: "fabric", header: "Fabric", numeric: true }, { key: "wages", header: "Wages", numeric: true }, { key: "other", header: "Other", numeric: true }, { key: "total", header: "Total", numeric: true }, { key: "per", header: "Per good piece", numeric: true },
             ]}
-            rows={costing.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, planned: r.plannedPieces, good: r.goodPieces, losses: `${r.rejectedPieces} · ${r.reworkPieces} · ${r.shortPieces}`, wages: rupees(r.wagesMinor), per: r.perGoodPieceMinor === null ? "—" : rupees(r.perGoodPieceMinor) }))}
-            csvHeader={["Lot", "Design", "Planned pieces", "Good pieces", "Rejected", "Rework waiting", "Short", "Wages (Rs)", "Other costs (Rs)", "Total so far (Rs)", "Cost per good piece (Rs)"]}
-            csvRows={costing.map((r) => [r.lotNumber, r.design, r.plannedPieces, r.goodPieces, r.rejectedPieces, r.reworkPieces, r.shortPieces, rs(r.wagesMinor), "Not recorded yet", rs(r.totalMinor), r.perGoodPieceMinor === null ? "" : rs(r.perGoodPieceMinor)])}
+            rows={costing.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, planned: r.plannedPieces, good: r.goodPieces, losses: `${r.rejectedPieces} · ${r.reworkPieces} · ${r.shortPieces}`, fabric: r.fabricMinor === null ? "—" : rupees(r.fabricMinor), wages: rupees(r.wagesMinor), other: rupees(r.otherMinor - r.recoveredMinor), total: rupees(r.totalMinor), per: r.perGoodPieceMinor === null ? "—" : rupees(r.perGoodPieceMinor) }))}
+            csvHeader={["Lot", "Design", "Planned pieces", "Good pieces", "Rejected", "Rework waiting", "Short", "Fabric (Rs)", "Wages (Rs)", "Other costs (Rs)", "Recovered from karigars (Rs)", "Total so far (Rs)", "Cost per good piece (Rs)"]}
+            csvRows={costing.map((r) => [r.lotNumber, r.design, r.plannedPieces, r.goodPieces, r.rejectedPieces, r.reworkPieces, r.shortPieces, r.fabricMinor === null ? "" : rs(r.fabricMinor), rs(r.wagesMinor), rs(r.otherMinor), rs(r.recoveredMinor), rs(r.totalMinor), r.perGoodPieceMinor === null ? "" : rs(r.perGoodPieceMinor)])}
           />
         )}
 

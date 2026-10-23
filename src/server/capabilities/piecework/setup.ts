@@ -24,7 +24,7 @@ const SETTING_ENTITY = "verity.piecework.setting";
 
 const uuid = z.string().uuid();
 
-export const REASON_KINDS = ["defect", "short"] as const;
+export const REASON_KINDS = ["defect", "short", "cost"] as const;
 export type ReasonKind = (typeof REASON_KINDS)[number];
 
 /** Offered until the factory saves its own list. Not stored, so nothing is seeded behind anyone's back. */
@@ -40,6 +40,19 @@ export const DEFAULT_REASONS: Record<ReasonKind, Array<{ key: string; labelEn: s
     { key: "lost", labelEn: "Lost", labelHi: "खो गया" },
     { key: "not_returned", labelEn: "Not returned", labelHi: "वापस नहीं आया" },
     { key: "miscount", labelEn: "Miscounted earlier", labelHi: "पहले गलत गिनती" },
+    { key: "other", labelEn: "Other", labelHi: "अन्य" },
+  ],
+  // What a lot costs beyond fabric and wages. Each factory renames, adds or switches these off in Production settings.
+  cost: [
+    { key: "thread", labelEn: "Thread", labelHi: "धागा" },
+    { key: "buttons", labelEn: "Buttons", labelHi: "बटन" },
+    { key: "trims", labelEn: "Labels and trims", labelHi: "लेबल और ट्रिम" },
+    { key: "interlining", labelEn: "Interlining", labelHi: "इंटरलाइनिंग" },
+    { key: "washing", labelEn: "Washing", labelHi: "धुलाई" },
+    { key: "printing", labelEn: "Printing or embroidery", labelHi: "प्रिंट या कढ़ाई" },
+    { key: "packing", labelEn: "Packing", labelHi: "पैकिंग" },
+    { key: "transport", labelEn: "Transport", labelHi: "ढुलाई" },
+    { key: "power", labelEn: "Power and overheads", labelHi: "बिजली और खर्च" },
     { key: "other", labelEn: "Other", labelHi: "अन्य" },
   ],
 };
@@ -264,7 +277,7 @@ export async function reasonsOf(tx: Tx): Promise<Record<ReasonKind, ReasonRow[]>
       ? mine.map((r) => ({ key: r.reasonKey, labelEn: r.labelEn, labelHi: r.labelHi, active: r.active, sortOrder: r.sortOrder }))
       : DEFAULT_REASONS[kind].map((r, i) => ({ ...r, active: true, sortOrder: i }));
   };
-  return { defect: pick("defect"), short: pick("short"), custom: rows.length > 0 };
+  return { defect: pick("defect"), short: pick("short"), cost: pick("cost"), custom: rows.length > 0 };
 }
 
 /** Replaces one list of reasons as a whole: the screen edits the list, and what it saves is the list. Entries keep the words they were made with. */

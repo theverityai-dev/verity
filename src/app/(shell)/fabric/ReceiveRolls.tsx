@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { DateField } from "@/components/ui/DateTimePicker";
-import { Button, ErrorState, Field, Input, Select } from "@/components/ui/primitives";
-import { Modal } from "@/components/ui/Modal";
+import { Button, Field, Input, Select } from "@/components/ui/primitives";
+import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { toPaise } from "../lots/format";
@@ -34,8 +34,7 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
   const rolls = linesOk ? parsed.reduce((s, l) => s + l.count, 0) : 0;
   const total = linesOk ? parsed.reduce((s, l) => s + l.count * l.centi, 0) : 0;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = () => {
     setFailure(null);
     start(async () => {
       const result = await runCommand<{ rollIds: string[] }>(RECEIVE, {
@@ -51,9 +50,12 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
   return (
     <>
       <CommandButton commands={RECEIVE} variant="primary" onClick={() => setOpen(true)}>Receive rolls</CommandButton>
-      <Modal open={open} onClose={() => setOpen(false)} title="Receive rolls" description="One invoice, one fabric. Each roll gets a number and a label with a QR to stick on it.">
-        <form className="flex flex-col gap-5" onSubmit={submit}>
-          {failure && <ErrorState title="The rolls were not received" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      <FormModal
+        open={open} onClose={() => setOpen(false)} width="lg"
+        title="Receive rolls" description="One invoice, one fabric. Each roll gets a number and a label with a QR to stick on it."
+        submitLabel="Receive and print labels" pendingLabel="Receiving…" submitDisabled={!linesOk || type.trim() === ""}
+        pending={pending} failure={failure} failureTitle="The rolls were not received" onSubmit={submit}
+      >
           <div className="grid gap-3 sm:grid-cols-[1.6fr_1fr]">
             <Field label="Fabric" htmlFor="rr-type" required>
               <Input id="rr-type" list="rr-types" value={type} onChange={(e) => setType(e.target.value)} maxLength={80} placeholder="Poplin, 60 count, white" required autoFocus />
@@ -89,12 +91,7 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
           <p role="status" className="m-0 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[15px] font-medium text-text">
             {linesOk ? `${rolls} roll${rolls === 1 ? "" : "s"}, ${(total / 100).toLocaleString("en-IN")} ${unit}` : "Say how many rolls and how long each is."}
           </p>
-          <div className="flex gap-2">
-            <CommandButton commands={RECEIVE} type="submit" variant="primary" disabled={pending || !linesOk || type.trim() === ""}>{pending ? "Receiving…" : "Receive and open the labels"}</CommandButton>
-            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-          </div>
-        </form>
-      </Modal>
+      </FormModal>
     </>
   );
 }

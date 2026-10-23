@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Checkbox, ErrorState, Input } from "@/components/ui/primitives";
+import { Checkbox, ErrorState, Field, Input } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { RateCardRow } from "@/server/capabilities/piecework";
@@ -45,43 +45,32 @@ export function RateCard({ lotId, rows, factoryCharge, canEdit }: { lotId: strin
   return (
     <form className="flex flex-col gap-4" onSubmit={submit}>
       {failure && <ErrorState title="The rate card was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] border-collapse text-left text-[14px]">
-          <caption className="sr-only">Rate card for this lot, one row per stage</caption>
-          <thead>
-            <tr className="text-[12px] text-text-secondary">
-              <th scope="col" className="px-3 pb-2 font-normal">Stage</th>
-              <th scope="col" className="px-3 pb-2 font-normal">Used</th>
-              <th scope="col" className="px-3 pb-2 font-normal">Rate per piece (₹)</th>
-              <th scope="col" className="px-3 pb-2 font-normal">Lost piece (₹)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => {
-              const d = draft.find((x) => x.stageId === r.stageId)!;
-              return (
-                <tr key={r.stageId} className="border-t border-[var(--color-line)] align-middle">
-                  <th scope="row" className="px-3 py-2.5 text-[15px] font-medium text-text">
-                    {r.label}
-                    {r.hasWork && <span className="ml-2 text-[12px] font-normal text-text-tertiary">has work</span>}
-                  </th>
-                  <td className="px-3 py-2.5">
-                    <Checkbox label={d.use ? "Yes" : "Skipped"} checked={d.use} disabled={!canEdit || (r.hasWork && d.use)} onChange={(e) => set(r.stageId, { use: e.target.checked })} />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Input aria-label={`${r.label} rate per piece in rupees`} type="number" inputMode="decimal" min={0} step="0.5" className="max-w-[9rem]" value={d.rate} disabled={!canEdit || !d.use}
-                      placeholder={r.stageDefaultMinor === null ? "none" : `${rupees(r.stageDefaultMinor)} default`} onChange={(e) => set(r.stageId, { rate: e.target.value })} />
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Input aria-label={`${r.label} charge per lost piece in rupees`} type="number" inputMode="decimal" min={0} step="1" className="max-w-[9rem]" value={d.charge} disabled={!canEdit || !d.use}
-                      placeholder={factoryCharge === null ? "none" : `${rupees(factoryCharge)} factory`} onChange={(e) => set(r.stageId, { charge: e.target.value })} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* One row per stage: a list, not a grid of cells, so it stacks into one card per stage on a phone. */}
+      <ul className="m-0 flex list-none flex-col divide-y divide-[var(--color-line)] p-0" aria-label="Rate card for this lot, one row per stage">
+        <li aria-hidden="true" className="hidden grid-cols-[1.3fr_0.9fr_1fr_1fr] gap-3 px-1 pb-2 text-[12px] text-text-secondary md:grid">
+          <span>Stage</span><span>Used on this lot</span><span>Rate per piece (₹)</span><span>Lost piece (₹)</span>
+        </li>
+        {rows.map((r) => {
+          const d = draft.find((x) => x.stageId === r.stageId)!;
+          return (
+            <li key={r.stageId} className={`grid grid-cols-2 items-center gap-3 px-1 py-3 md:grid-cols-[1.3fr_0.9fr_1fr_1fr] ${d.use ? "" : "opacity-70"}`}>
+              <span className="text-[15px] font-medium text-text">
+                {r.label}
+                {r.hasWork && <span className="ml-2 text-[12px] font-normal text-text-tertiary">has work</span>}
+              </span>
+              <Checkbox label={d.use ? "Used" : "Skipped"} checked={d.use} disabled={!canEdit || (r.hasWork && d.use)} onChange={(e) => set(r.stageId, { use: e.target.checked })} />
+              <Field label="Rate per piece (₹)" htmlFor={`rc-rate-${r.stageId}`}>
+                <Input id={`rc-rate-${r.stageId}`} type="number" inputMode="decimal" min={0} step="0.5" value={d.rate} disabled={!canEdit || !d.use}
+                  placeholder={r.stageDefaultMinor === null ? "none" : `${rupees(r.stageDefaultMinor)} default`} onChange={(e) => set(r.stageId, { rate: e.target.value })} />
+              </Field>
+              <Field label="Lost piece (₹)" htmlFor={`rc-lost-${r.stageId}`}>
+                <Input id={`rc-lost-${r.stageId}`} type="number" inputMode="decimal" min={0} step="1" value={d.charge} disabled={!canEdit || !d.use}
+                  placeholder={factoryCharge === null ? "none" : `${rupees(factoryCharge)} factory`} onChange={(e) => set(r.stageId, { charge: e.target.value })} />
+              </Field>
+            </li>
+          );
+        })}
+      </ul>
       <p className="m-0 text-[13px] leading-[19px] text-text-secondary">
         A rate here beats the karigar&apos;s own rate, which beats the stage default. Leave a box empty to use the grey figure. Changes apply to work from now on.
       </p>
