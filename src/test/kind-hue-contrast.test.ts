@@ -113,7 +113,7 @@ describe("state ink as plain text", () => {
     const failures = ["draft", "pending", "active", "blocked", "completed", "cancelled"].flatMap((c) => {
       const ink = token(`color-state-${c}-ink`);
       return [
-        ...(contrastRatio(ink.light, "#e9edf6") < 4.5 ? [`${c} on light canvas`] : []),
+        ...(contrastRatio(ink.light, "#eef2f8") < 4.5 ? [`${c} on light canvas`] : []),
         ...(contrastRatio(ink.light, "#ffffff") < 4.5 ? [`${c} on white`] : []),
         ...(contrastRatio(ink.dark, "#1c1c1e") < 4.5 ? [`${c} on dark surface`] : []),
       ];

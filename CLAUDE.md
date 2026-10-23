@@ -139,7 +139,7 @@ restyling any screen read the `screen-deserves`, `screen-imagery` and `impeccabl
 - **Type = Inter Light display + Plex Mono micro-labels.** Page title weight 200, tracked `-0.045em`; section title 300; card
   title 500; hero figures use `.figure` (weight 200, tabular, `-0.06em`); labels use `.micro` (Plex Mono 11.5px uppercase).
   Body 14px on desktop, 16px on phones, inputs 16px minimum on phones. No bold large numerals, no loose-tracked headings.
-- **Light theme keeps its glass**: the light canvas is a cool blue-grey (`#e9edf6`) so a cell differs from it; never white-on-white. Lite effects
+- **Light theme keeps its glass**: the light canvas is a cool blue-grey (`#eef2f8`) so a cell differs from it; never white-on-white. Lite effects
   (set automatically on weak devices) keeps the lit edge, hairline and shadows and drops only blur, rim and blooms.
 - **Signals are solid, never pastel**: status pills (`StateBadge`) and kind tiles (`IconTile`) are saturated fills with a white (amber: near-black) word,
   from the `-fill`/`-on`/`-ink` tokens. `-ink` is plain text on glass, never on a `-fill`. Stat strips are `StatTile`s (`StatRow` renders them).

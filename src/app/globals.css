@@ -24,18 +24,18 @@
    *   surface  secondarySystemGroupedBackground (the cell)
    *   sunken   tertiarySystemGroupedBackground (a cell inside a cell)
    * ------------------------------------------------------------------- */
-  --color-canvas: light-dark(#e9edf6, #000000);
+  --color-canvas: light-dark(#eef2f8, #000000);
   --color-surface: light-dark(#ffffff, #141416);
   --color-surface-elevated: light-dark(#ffffff, #1c1c1e);
   /* Top of a lite-effects cell: a hair lighter than the surface so the cell still has a lit edge without blur. */
   --color-lite-hi: light-dark(#ffffff, #1a1a1d);
   /* A cell inside a glass cell: a faint wash, never an opaque grey slab, so inner panels sit in the glass. */
-  --color-surface-sunken: light-dark(rgb(60 60 67 / 0.06), rgb(255 255 255 / 0.05));
+  --color-surface-sunken: light-dark(rgb(20 40 90 / 0.045), rgb(255 255 255 / 0.05));
   /* Fill family (ADR-053): text fields, gray buttons, segmented controls. */
-  --color-control: light-dark(rgb(60 60 67 / 0.08), rgb(255 255 255 / 0.08));
-  --color-control-strong: light-dark(rgb(60 60 67 / 0.14), rgb(255 255 255 / 0.14));
+  --color-control: light-dark(rgb(20 40 90 / 0.065), rgb(255 255 255 / 0.08));
+  --color-control-strong: light-dark(rgb(20 40 90 / 0.12), rgb(255 255 255 / 0.14));
   /* Bar material base (navigation bar, tab bar, sidebar): glass over the light field. */
-  --color-chrome: light-dark(rgb(255 255 255 / 0.58), rgb(8 10 14 / 0.55));
+  --color-chrome: light-dark(rgb(255 255 255 / 0.70), rgb(8 10 14 / 0.55));
 
   /* ---------------------------------------------------------------------
    * GLASS (ADR-053) — the frosted material and the light field it floats on.
@@ -50,27 +50,27 @@
      cell shows only by differing from what is behind it. The canvas is now a cool blue-grey, the blooms carry
      real colour, the fill is more translucent so they show through, and the cell has a dark hairline, a contact
      shadow and a soft ambient shadow besides the long one. Dark is unchanged. */
-  --glass-1: light-dark(rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.075));
-  --glass-2: light-dark(rgb(255 255 255 / 0.42), rgb(255 255 255 / 0.022));
-  --glass-3: light-dark(rgb(255 255 255 / 0.50), rgb(255 255 255 / 0.05));
+  --glass-1: light-dark(rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.075));
+  --glass-2: light-dark(rgb(255 255 255 / 0.66), rgb(255 255 255 / 0.022));
+  --glass-3: light-dark(rgb(255 255 255 / 0.72), rgb(255 255 255 / 0.05));
   --glass-rim-1: light-dark(rgb(255 255 255 / 1), rgb(255 255 255 / 0.24));
-  --glass-rim-2: light-dark(rgb(10 100 200 / 0.34), rgb(113 184 255 / 0.18));
+  --glass-rim-2: light-dark(rgb(10 100 200 / 0.18), rgb(113 184 255 / 0.18));
   --glass-hi: light-dark(rgb(255 255 255 / 1), rgb(255 255 255 / 0.20));
-  --glass-shadow: light-dark(rgb(40 60 120 / 0.34), rgb(0 0 0 / 0.85));
-  --glass-contact: light-dark(rgb(30 45 100 / 0.12), rgb(0 0 0 / 0));
-  --glass-ambient: light-dark(rgb(40 70 160 / 0.22), rgb(0 0 0 / 0));
-  --bloom-1: light-dark(rgb(10 132 255 / 0.36), rgb(10 132 255 / 0.26));
-  --bloom-2: light-dark(rgb(64 156 255 / 0.30), rgb(64 156 255 / 0.15));
-  --bloom-3: light-dark(rgb(0 64 221 / 0.20), rgb(0 64 221 / 0.24));
-  --bloom-4: light-dark(rgb(113 184 255 / 0.40), rgb(113 184 255 / 0.10));
+  --glass-shadow: light-dark(rgb(20 35 80 / 0.20), rgb(0 0 0 / 0.85));
+  --glass-contact: light-dark(rgb(20 35 80 / 0.07), rgb(0 0 0 / 0));
+  --glass-ambient: light-dark(rgb(20 40 100 / 0.10), rgb(0 0 0 / 0));
+  --bloom-1: light-dark(rgb(10 132 255 / 0.15), rgb(10 132 255 / 0.26));
+  --bloom-2: light-dark(rgb(64 156 255 / 0.07), rgb(64 156 255 / 0.15));
+  --bloom-3: light-dark(rgb(0 64 221 / 0.10), rgb(0 64 221 / 0.24));
+  --bloom-4: light-dark(rgb(113 184 255 / 0.14), rgb(113 184 255 / 0.10));
 
   /* ---------------------------------------------------------------------
    * LABELS — label / secondaryLabel / tertiaryLabel, increased-contrast
    * variants for secondary and tertiary so small text clears 4.5:1.
    * ------------------------------------------------------------------- */
-  --color-text: light-dark(#000000, #ffffff);
-  --color-text-secondary: light-dark(#48484e, #c5c5ce);
-  --color-text-tertiary: light-dark(#636366, #9b9ba3);
+  --color-text: light-dark(#0b1220, #ffffff);
+  --color-text-secondary: light-dark(#3d4557, #c5c5ce);
+  --color-text-tertiary: light-dark(#586177, #9b9ba3);
 
   /* Kept as tokens because components reference them; on iOS every one of
      these is a material over the canvas, approximated by the matching fill. */
@@ -82,8 +82,8 @@
   /* ---------------------------------------------------------------------
    * SEPARATORS — iOS separator / opaqueSeparator.
    * ------------------------------------------------------------------- */
-  --color-line: light-dark(rgb(60 60 67 / 0.12), rgb(255 255 255 / 0.08));
-  --color-line-strong: light-dark(rgb(60 60 67 / 0.26), rgb(255 255 255 / 0.20));
+  --color-line: light-dark(rgb(20 35 80 / 0.10), rgb(255 255 255 / 0.08));
+  --color-line-strong: light-dark(rgb(20 35 80 / 0.22), rgb(255 255 255 / 0.20));
   --color-separator: light-dark(rgb(60 60 67 / 0.26), rgb(255 255 255 / 0.20));
   --color-track: light-dark(rgb(120 120 128 / 0.18), rgb(255 255 255 / 0.10));
 
