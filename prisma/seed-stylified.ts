@@ -124,12 +124,14 @@ async function main() {
     const VERBS = ["Read", "Create", "Edit", "ActionExecute"] as const;
     type Verb = (typeof VERBS)[number];
     type Grant = [string, readonly Verb[]];
-    const NEW = [piecework.ENTITY_PIECEWORK_APPROVAL, piecework.ENTITY_PIECEWORK_DAY_CLOSE, piecework.ENTITY_PIECEWORK_SETTING, piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT];
+    const NEW = [piecework.ENTITY_PIECEWORK_APPROVAL, piecework.ENTITY_PIECEWORK_DAY_CLOSE, piecework.ENTITY_PIECEWORK_SETTING, piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, piecework.ENTITY_PIECEWORK_REASON];
+    // Fabric and the rate card are the office's: the owner, manager and munshi work them; a supervisor sees neither fabric nor money.
+    const OFFICE = [piecework.ENTITY_PIECEWORK_LOT_RATE, piecework.ENTITY_PIECEWORK_ROLL, piecework.ENTITY_PIECEWORK_ROLL_MOVE];
     const full = (list: string[]): Grant[] => list.map((e) => [e, VERBS]);
     const grants: Record<string, Grant[]> = {
-      Owner: full([...ENTITIES, ...NEW, ENTITY_EVIDENCE]),
+      Owner: full([...ENTITIES, ...NEW, ...OFFICE, ENTITY_EVIDENCE]),
       Manager: [
-        ...full(ENTITIES),
+        ...full([...ENTITIES, ...OFFICE]),
         [piecework.ENTITY_PIECEWORK_APPROVAL, VERBS], [piecework.ENTITY_PIECEWORK_SETTING, ["Read"]], [piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ["Read"]],
         [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
       ],
@@ -139,7 +141,7 @@ async function main() {
         [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
       ],
       Munshi: [
-        ...full(ENTITIES),
+        ...full([...ENTITIES, ...OFFICE]),
         [piecework.ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]], [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
       ],
     };
@@ -174,16 +176,45 @@ async function main() {
   const writer = ids.munshi ?? ids.owner!;
   const actor: ActorContext = { tenantId, userId: writer.userId, membershipId: writer.membershipId, organizationId: ids.orgId, roleId: writer.roleId };
   invalidateCapabilityCache();
+  const as = (who: { userId: string; membershipId: string; roleId: string } | null | undefined): ActorContext | null =>
+    who ? { tenantId, userId: who.userId, membershipId: who.membershipId, organizationId: ids.orgId, roleId: who.roleId } : null;
+  const ownerActor = as(ids.owner);
+  const managerActor = as(ids.manager);
+  const supA = as(ids.supA);
+  const supB = as(ids.supB);
 
-  // The process chain after cutting, from the requirement sheet's process master. Cutting happens before a bundle exists
-  // (its charge is a lot cost, a later stage); thread is a cost category, not a stage.
+  // The five stages Stylified runs today, in order. Each carries a default rate per piece (what it pays when a lot and a karigar set
+  // nothing): that is how a karigar with no rate of their own can still be given work.
   const stage: Record<string, string> = {};
+  const defaults: Record<string, number> = { pasting: 2, collar: 5, stitching: 12, kaj: 3, finishing: 4 };
   for (const [key, label] of [["pasting", "Pasting"], ["collar", "Collar & Cuff"], ["stitching", "Stitching"], ["kaj", "Button / Kaj"], ["finishing", "Finishing / Press"]] as const) {
     stage[key] = (await executeCommand(actor, piecework.defineStage, { stageKey: key, label })).id;
+    await executeCommand(actor, piecework.updateStage, { stageId: stage[key]!, defaultRateMinor: defaults[key]! * 100 });
   }
 
-  // Rates in paise per piece, each with the basis it is paid on. Pasting is paid on issued pieces, collar and cuff on
-  // everything returned, the rest on accepted good pieces: the sheet says the factory uses more than one basis.
+  // The factory's own settings, as the owner would enter them: what a lost piece costs, the words on the floor screens in two
+  // languages, and the heading of a challan.
+  if (ownerActor) {
+    await executeCommand(ownerActor, piecework.setProductionSettings, { lostPieceChargeMinor: 2500, challanTitle: "Stylified Garments", challanAddress: "Focal Point Phase 5, Ludhiana 141010 · 98140 11000" });
+    await executeCommand(ownerActor, piecework.saveReasons, {
+      kind: "short",
+      items: [
+        { labelEn: "Lost on the floor", labelHi: "फ्लोर पर खो गया" }, { labelEn: "Not returned by the karigar", labelHi: "कारीगर ने वापस नहीं किया" },
+        { labelEn: "Miscounted earlier", labelHi: "पहले गलत गिनती हुई" }, { labelEn: "Other", labelHi: "अन्य" },
+      ],
+    });
+    await executeCommand(ownerActor, piecework.saveReasons, {
+      kind: "defect",
+      items: [
+        { labelEn: "Stitch defect", labelHi: "सिलाई की खराबी" }, { labelEn: "Measurement", labelHi: "नाप की गलती" }, { labelEn: "Stain", labelHi: "दाग" },
+        { labelEn: "Hole or cut", labelHi: "छेद या कट" }, { labelEn: "Button or kaj fault", labelHi: "बटन या काज की गलती" }, { labelEn: "Other", labelHi: "अन्य" },
+      ],
+    });
+  }
+
+  // Rates in paise per piece, each with the basis it is paid on. Pasting is paid on issued pieces, collar and cuff on everything
+  // returned, the rest on accepted good pieces: the sheet says the factory uses more than one basis. Karigars G and H have no rate of
+  // their own, so the lot's rate card or the stage default pays them.
   const since = day(-60);
   const rate = (stageKey: string, rupees: number, wageBasis: "issued" | "good" | "returned") => ({ stageId: stage[stageKey]!, rateMinor: Math.round(rupees * 100), wageBasis, effectiveFrom: since });
   const worker: Record<string, string> = {};
@@ -193,6 +224,7 @@ async function main() {
   worker.F = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar F", mobile: "98765 43216", rates: [rate("stitching", 11, "good")] })).id;
   worker.D = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar D (button and kaj)", mobile: "98765 43213", rates: [rate("kaj", 3, "good")] })).id;
   worker.E = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar E (finishing)", mobile: "98765 43214", rates: [rate("finishing", 4, "good")] })).id;
+  worker.G = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar G (helper)", mobile: "98765 43217" })).id;
 
   /** A lot or bundle made `ago` days ago: its creation date is moved back so entries can carry real, earlier dates. */
   const backdate = async (table: "piecework_lot" | "piecework_bundle", id: string, ago: number) => {
@@ -203,62 +235,70 @@ async function main() {
     await backdate("piecework_lot", created.id, ago);
     return created.id;
   };
-  const bundle = async (lotId: string, pieces: number, ago: number, mix?: string) => {
-    const made = await executeCommand(actor, piecework.createBundle, { lotId, netPieces: pieces, sizeNote: mix });
-    await backdate("piecework_bundle", made.id, ago);
-    return made.id;
+
+  // Fabric: four invoices of rolls, each roll numbered. Lots below are cut from them, so every roll page shows where its metres went.
+  const roll = async (fabricType: string, lengths: number[], supplier: string, invoice: string, rupeesPerMetre: number, ago: number) =>
+    (await executeCommand(actor, piecework.receiveRolls, { fabricType, unit: "m", quantitiesCenti: lengths.map((m) => m * 100), supplier, invoiceNumber: invoice, rateMinor: rupeesPerMetre * 100, receivedOn: day(-ago) })).rollIds;
+  const oxford = await roll("Oxford, white", [120, 120, 120, 118, 122], "Mehta Textiles, Ludhiana", "MT/2210", 180, 22);
+  const poplin = await roll("Poplin, sky blue", [90, 90, 88], "Mehta Textiles, Ludhiana", "MT/2214", 150, 20);
+  const flannel = await roll("Flannel check, grey", [80, 80], "Gupta Fabrics, Panipat", "GF/771", 210, 9);
+  const check = await roll("Cotton check, navy", [100, 100], "Gupta Fabrics, Panipat", "GF/775", 195, 7);
+  const mandarin = await roll("Linen blend, ecru", [80, 80], "Jain Mills, Amritsar", "JM/5509", 260, 5);
+
+  /** Cut a lot: the fabric it took and the bundles it gave, one step. The cut also starts a draft lot. Bundles are dated to the cut. */
+  const cut = async (lotId: string, groups: Array<{ copies: number; netPieces: number; sizeNote?: string }>, fabric: Array<[string, number]>, ago: number) => {
+    const made = await executeCommand(actor, piecework.cutLot, { lotId, groups, fabric: fabric.map(([rollId, metres]) => ({ rollId, quantityCenti: metres * 100 })) });
+    for (const id of made.bundleIds) await backdate("piecework_bundle", id, ago);
+    return made.bundleIds;
   };
   const out = (bundleId: string, stageKey: string, who: string, pieces: number, ago: number, extra: Record<string, unknown> = {}) =>
-    executeCommand(actor, piecework.recordIssue, { bundleId, stageId: stage[stageKey]!, workerId: worker[who]!, pieces, entryDate: day(-ago), ...extra });
-  const back = (issueId: string, split: { good?: number; rejected?: number; rework?: number; short?: number }, ago: number) =>
-    executeCommand(actor, piecework.recordReturn, { issueId, good: 0, rejected: 0, rework: 0, short: 0, ...split, entryDate: day(-ago) });
+    executeCommand(actor, piecework.recordIssue, { bundleId, stageId: stage[stageKey]!, workerId: worker[who]!, pieces, entryDate: day(-ago), ackMethod: "signature", ...extra });
+  const back = (issueId: string, split: { good?: number; rejected?: number; rework?: number; short?: number }, ago: number, note?: string) =>
+    executeCommand(actor, piecework.recordReturn, { issueId, good: 0, rejected: 0, rework: 0, short: 0, ...split, entryDate: day(-ago), note });
 
-  // LOT-0001, Spring formals, 500 planned, four bundles cut, running.
+  // LOT-0001, Spring formals, 500 planned, four bundles cut from two rolls, running. Its rate card pays stitching a little more and
+  // sets what a lost piece costs there; the other stages follow the stage defaults.
   const lot1 = await lot("Oxford formal, full sleeve", "Spring formals", 500, 14, 20);
-  await executeCommand(actor, piecework.setLotStatus, { lotId: lot1, to: "active" });
-  const b1 = await bundle(lot1, 100, 13, "M and L mix");
-  const b2 = await bundle(lot1, 100, 13, "L and XL mix");
-  const b3 = await bundle(lot1, 100, 13);
-  await bundle(lot1, 100, 13);
+  const [b1, b2, b3] = await cut(lot1, [{ copies: 4, netPieces: 100, sizeNote: "M, L and XL mix" }], [[oxford[0]!, 118], [oxford[1]!, 119]], 13);
+  await executeCommand(actor, piecework.setLotRates, { lotId: lot1, rows: [{ stageId: stage.stitching!, rateMinor: 1300, lostPieceChargeMinor: 4000 }] });
 
   // B-0001: the requirement sheet's reconciliation, 100 = 94 good + 2 rejected + 1 rework + 2 short + 1 open,
-  // then its rework redone and the rest taken through to ready.
-  const p1 = await out(b1, "pasting", "C", 100, 12);
-  const p1ret = await back(p1.id, { good: 94, rejected: 2, rework: 1, short: 2 }, 10);
-  const rw = await out(b1, "pasting", "C", 1, 9, { isRework: true });
+  // then its rework redone and the rest taken through to ready. The two short pieces ask for a charge on Karigar C.
+  const p1 = await out(b1!, "pasting", "C", 100, 12);
+  const p1ret = await back(p1.id, { good: 94, rejected: 2, rework: 1, short: 2 }, 10, "Stitch defect: loose thread, Lost on the floor");
+  const rw = await out(b1!, "pasting", "C", 1, 9, { isRework: true });
   await back(rw.id, { good: 1 }, 8);
-  const c1 = await out(b1, "collar", "B", 95, 8);
-  const c1ret = await back(c1.id, { good: 90, rejected: 3, rework: 2 }, 6);
-  const s1 = await out(b1, "stitching", "A", 90, 6);
-  await back(s1.id, { good: 88, rejected: 1, short: 1 }, 3);
-  const k1 = await out(b1, "kaj", "D", 88, 3);
+  const c1 = await out(b1!, "collar", "B", 95, 8);
+  const c1ret = await back(c1.id, { good: 90, rejected: 3, rework: 2 }, 6, "Stitch defect: collar points uneven");
+  const s1 = await out(b1!, "stitching", "A", 90, 6);
+  await back(s1.id, { good: 88, rejected: 1, short: 1 }, 3, "Not returned by the karigar");
+  const k1 = await out(b1!, "kaj", "D", 88, 3);
   await back(k1.id, { good: 88 }, 2);
-  const f1 = await out(b1, "finishing", "E", 88, 2);
-  await back(f1.id, { good: 86, rejected: 2 }, 1);
+  const f1 = await out(b1!, "finishing", "E", 88, 2);
+  await back(f1.id, { good: 86, rejected: 2 }, 1, "Stain");
 
   // B-0002: with Karigar A at stitching, 37 pieces still out, due in two days.
-  const p2 = await out(b2, "pasting", "C", 100, 12);
+  const p2 = await out(b2!, "pasting", "C", 100, 12);
   await back(p2.id, { good: 100 }, 10);
-  const c2 = await out(b2, "collar", "B", 100, 10);
-  await back(c2.id, { good: 97, rejected: 3 }, 7);
-  const s2 = await out(b2, "stitching", "A", 97, 7, { dueDate: day(2) });
+  const c2 = await out(b2!, "collar", "B", 100, 10);
+  await back(c2.id, { good: 97, rejected: 3 }, 7, "Measurement");
+  const s2 = await out(b2!, "stitching", "A", 97, 7, { dueDate: day(2) });
   await back(s2.id, { good: 60 }, 3);
 
-  // B-0003: with the outside collar unit, past its expected return date.
-  const p3 = await out(b3, "pasting", "C", 100, 9);
-  await back(p3.id, { good: 98, short: 2 }, 7);
-  await out(b3, "collar", "B", 98, 7, { dueDate: day(-1) });
+  // B-0003: with the outside collar unit, past its expected return date. Handed over 98, the unit counted 96: a handover case.
+  const p3 = await out(b3!, "pasting", "G", 100, 9);
+  await back(p3.id, { good: 98, short: 2 }, 7, "Miscounted earlier");
+  await out(b3!, "collar", "B", 96, 7, { dueDate: day(-1), sentPieces: 98 });
 
-  // LOT-0002, Winter shirts: planned, still a draft.
+  // LOT-0002, Winter shirts: planned, still a draft, nothing cut.
   const lot2 = await lot("Flannel check", "Winter shirts", 300, 1, 40, "Flannel");
 
   // LOT-0003, an older lot, finished, completed and closed: its ledger is locked.
   const lot3 = await lot("Poplin half sleeve", "Summer half sleeves", 50, 40, -18, "Poplin");
-  await executeCommand(actor, piecework.setLotStatus, { lotId: lot3, to: "active" });
-  const b5 = await bundle(lot3, 50, 39);
+  const [b5] = await cut(lot3, [{ copies: 1, netPieces: 50, sizeNote: "L" }], [[poplin[0]!, 62]], 39);
   let ago = 38;
   for (const [key, who] of [["pasting", "C"], ["collar", "B"], ["stitching", "A"], ["kaj", "D"], ["finishing", "E"]] as const) {
-    const i = await out(b5, key, who, 50, ago);
+    const i = await out(b5!, key, who, 50, ago);
     await back(i.id, { good: 50 }, ago - 1);
     ago -= 2;
   }
@@ -267,10 +307,22 @@ async function main() {
 
   // LOT-0004, on hold: part of one bundle is out.
   const lot4 = await lot("Export check shirt", "Export sample", 200, 6, 15, "Cotton check");
-  await executeCommand(actor, piecework.setLotStatus, { lotId: lot4, to: "active" });
-  const b6 = await bundle(lot4, 40, 5);
-  await out(b6, "pasting", "C", 20, 4);
+  const [b6] = await cut(lot4, [{ copies: 1, netPieces: 40, sizeNote: "M" }], [[check[0]!, 52]], 5);
+  await out(b6!, "pasting", "C", 20, 4);
   await executeCommand(actor, piecework.setLotStatus, { lotId: lot4, to: "hold" });
+
+  // LOT-0005, Mandarin-collar shirt: it has no collar stand, so its rate card skips Collar & Cuff and the pieces go from pasting
+  // straight to stitching. Karigar G, who has no rate of his own, is paid the stage default for pasting.
+  const lot5 = await lot("Mandarin collar, linen blend", "Mandarin collar shirts", 120, 4, 18, "Linen blend");
+  const [b7, b8] = await cut(lot5, [{ copies: 2, netPieces: 60, sizeNote: "M and L" }], [[mandarin[0]!, 74], [mandarin[1]!, 70]], 4);
+  await executeCommand(actor, piecework.setLotRates, { lotId: lot5, rows: [{ stageId: stage.collar!, skipped: true }, { stageId: stage.stitching!, rateMinor: 1500, lostPieceChargeMinor: 6000 }] });
+  const p7 = await out(b7!, "pasting", "G", 60, 3);
+  await back(p7.id, { good: 60 }, 2);
+  await out(b7!, "stitching", "F", 60, 2, { dueDate: day(3) });
+  await out(b8!, "pasting", "G", 60, 1);
+
+  // Fabric that is neither cut nor wasted stays on the shelf: one roll of flannel waits for LOT-0002, which is still a draft.
+  void flannel;
 
   // The karigar ledger: an advance, part of it recovered out of wages, an approved deduction, and payments.
   const pay = (who: string, kind: "advance" | "recovery" | "deduction" | "payment", rupees: number, daysAgo: number, extra: Record<string, unknown> = {}) =>
@@ -285,19 +337,14 @@ async function main() {
 
   // The floor: who looks after which stage, what is waiting for a decision, and one closed day. Supervisor A looks after
   // the collar and stitching (where an outside unit is late and Karigar A holds 37 pieces), Supervisor B the rest.
-  const as = (who: { userId: string; membershipId: string; roleId: string } | null | undefined): ActorContext | null =>
-    who ? { tenantId, userId: who.userId, membershipId: who.membershipId, organizationId: ids.orgId, roleId: who.roleId } : null;
-  const ownerActor = as(ids.owner);
-  const supA = as(ids.supA);
-  const supB = as(ids.supB);
   if (ownerActor) {
     await executeCommand(ownerActor, piecework.setLimits, { deductionLimitMinor: 100_000, writeoffLimitPieces: 5 });
     if (ids.supA) await executeCommand(ownerActor, piecework.assignStages, { userId: ids.supA.userId, stageIds: [stage.collar!, stage.stitching!] });
     if (ids.supB) await executeCommand(ownerActor, piecework.assignStages, { userId: ids.supB.userId, stageIds: [stage.pasting!, stage.kaj!, stage.finishing!] });
   }
   if (supA) {
-    // Three requests the manager will see: a deduction inside the limit with its photographable defect, a write-off of two
-    // short pieces, and a larger deduction only the owner may approve.
+    // Two requests the manager will see: a deduction inside the limit with its photographable defect, and a larger deduction only
+    // the owner may approve.
     await executeCommand(supA, piecework.requestApproval, { kind: "deduction", workerId: worker.B!, entryId: c1ret.id, amountMinor: 15_000, reason: "3 collars rejected for stitch defect" });
     await executeCommand(supA, piecework.requestApproval, { kind: "deduction", workerId: worker.A!, amountMinor: 250_000, reason: "Whole stitching batch re-done at the factory's cost" });
   }
@@ -305,10 +352,16 @@ async function main() {
     await executeCommand(supB, piecework.requestApproval, { kind: "writeoff", entryId: p1ret.id, pieces: 2, reason: "2 pieces lost at the pasting table, searched twice" });
     // Today's work at Supervisor B's stages, so the closed day below carries real figures: 60 good pieces of B-0002 reached
     // button and kaj, 40 went to Karigar D this morning and came back counted.
-    const todayKaj = await executeCommand(supB, piecework.recordIssue, { bundleId: b2, stageId: stage.kaj!, workerId: worker.D!, pieces: 40, dueDate: day(1) });
+    const todayKaj = await executeCommand(supB, piecework.recordIssue, { bundleId: b2!, stageId: stage.kaj!, workerId: worker.D!, pieces: 40, sentPieces: 40, ackMethod: "attested", dueDate: day(1) });
     await executeCommand(supB, piecework.recordReturn, { issueId: todayKaj.id, good: 36, rejected: 2, rework: 0, short: 0, note: "Stain: 2 pieces" });
     await executeCommand(supB, piecework.closeDay, { note: "आज पेस्टिंग और फिनिशिंग पूरी हुई। फिनिशिंग में 2 पीस पर जले का निशान, फोटो के साथ मैनेजर को भेजा।", lang: "hi" });
   }
+  // The charge asked for Karigar C's two lost pieces is decided: approved by the owner, so the case shows as settled.
+  if (ownerActor) {
+    const asked = await withTenant(tenantId, (tx) => tx.pieceworkApproval.findFirst({ where: { entryId: p1ret.id, kind: "deduction", status: "pending" } }));
+    if (asked) await executeCommand(ownerActor, piecework.decideApproval, { approvalId: asked.id, decision: "approved" });
+  }
+  void managerActor;
 
   // Lot pictures for the screens: the demo tenant's own images, served from public/demo/stylified. Customer pictures belong to
   // the customer; these are generated stills and belong to this demo only.
@@ -321,7 +374,7 @@ async function main() {
   console.log(`Tenant:  ${tenantId}`);
   for (const email of Object.keys(passwords)) console.log(`Login:   ${email}  password ${passwords[email]}  (shown once)`);
   if (!Object.keys(passwords).length) console.log(`Munshi:  ${MUNSHI_SUB ? `IdP sub ${MUNSHI_SUB}` : "(none)"}\nOwner:   ${OWNER_SUB ? `IdP sub ${OWNER_SUB}` : "(none)"}`);
-  console.log("Roles: Owner, Manager, Supervisor (two people), Munshi. Pending approvals: 3. Lots: 4 (LOT-0001 running, LOT-0002 draft, LOT-0003 closed, LOT-0004 on hold), bundles: 6, karigars: 6, stages: 5. Everything is fictional.");
+  console.log("Roles: Owner, Manager, Supervisor (two people), Munshi. Lots: 5 (LOT-0001 running, LOT-0002 draft, LOT-0003 closed, LOT-0004 on hold, LOT-0005 skips collar), 14 rolls of fabric, 7 karigars, 5 stages, open cases and charge requests. Everything is fictional.");
 }
 
 main()
