@@ -120,6 +120,34 @@ Still not built: joining or linking whole lots, and re-allocating cost when lots
 a stored case record with its own status field (the status is derived from the approvals); a separate role for an intermediary supervisor
 beyond the person who records the handover; Hindi on the office screens (decided); the Supabase restore rehearsal (FR-023).
 
+## Team management: what is there and what is missing (2026-10-25, from the owner's question "why no team management")
+
+**Already in the platform, but not reachable from Stylified's menu.** `/people` (create a login with a password, pick a role, change a
+role), `/roles` (create a role, tick what it may do) and `/shopfloor/team` (stage per person, manager limits). Only the plywood and trading
+capabilities link to People and Roles; piece-rate links only "Team and limits". So the owner of a Stylified workspace has no way to find
+the screen that adds a supervisor. The four roles (Owner, Manager, Supervisor, Munshi) exist only because the demo seed creates them;
+a fresh workspace starts with none.
+
+**What an owner needs, in the order they do it**
+
+| # | Need | Today |
+|---|---|---|
+| 1 | One **Team** screen in the piece-rate menu: people as cards (role, stages, phone, last seen), a filter by role | People page is a plain list with a role dropdown |
+| 2 | **Add a person in one sheet**: name, phone, role (from a short list with a plain line on what each can do), the stages they look after, language, a temporary password | Login sheet asks email + password + "works at" (one organisation, meaningless here); stages are set on another page afterwards |
+| 3 | **Role presets** for a garment maker: Owner, Manager, Supervisor, Munshi, plus Store and Cutting master, made once from permissions and editable | Only in the seed; `/roles` is a raw permission matrix |
+| 4 | **Sign-in that fits the floor**: phone number or username, not only email; reset a forgotten password; force a new one at first sign-in | Email only; reset action exists (`resetTeamPassword`) with no button; none under the Keycloak demo provider |
+| 5 | **Switch someone off, switch back on** (a supervisor leaves; the history stays) | Commands exist (`disable_membership`, `restore_membership`), no button on the People page |
+| 6 | **Who looks after which karigars**: each karigar has a supervisor; a supervisor's give-out list shows only theirs | No link between a karigar and a supervisor at all |
+| 7 | **Karigar profile**: photo, mobile, address, join date, skills (stages they can do), wage basis, ID note, emergency contact, in-house or outside | name, mobile, kind, address, active only; the stage default rate is the only trace of skill |
+| 8 | **Supervisor profile and workload**: stages, karigars, bundles open now, late, day closes, charge requests raised | Day-close list on Team and limits; nothing per person |
+| 9 | **Leave and cover**: mark a supervisor away; another takes their stages for the days | Not built |
+| 10 | Who did what | Change history already shows the actor |
+
+Decisions taken (to build): fold 1, 2, 3, 5 and 8 into one Team screen under Production; add `supervisorId` (a user) to the karigar and the
+karigar profile fields in 7 as a migration of nullable columns; seed the six presets as a pack-style role set a workspace can install once;
+sign-in by phone or username follows the identity provider that production uses and needs the owner to say which (Supabase email today),
+so it stays a question until then. Not building: payroll, attendance by clock-in, shift rosters (not asked, and a Ludhiana floor pays by the piece).
+
 Production: migrations `20261024100000_piecework_flow`, `20261024200000_piecework_lot_costs` and `20261024300000_piecework_low_fabric` are
 written and applied locally; applying them to production (`npx prisma migrate deploy`) is the owner's step. All three only add tables and
 nullable columns.
