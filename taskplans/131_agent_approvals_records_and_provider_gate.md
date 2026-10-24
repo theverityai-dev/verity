@@ -46,6 +46,10 @@ The thresholds in ADR-055 cl. 5 and ADR-056 cl. 5 are the author's initial choic
 
 ## Evidence
 
+- **Where the code is:** commit `b66642c0` (message: "ui: sticker slips no longer clip; page-header actions are an even grid on
+  phones"). Another session committed while this work was staged in the shared index, so the commit holds both. The agent files,
+  migration, ADR-054/055/056, this plan and the tests are in it; the research is `a72df7fd`. Not rewritten, because the branch is
+  shared and unpushed. To review only the agent work: `git show b66642c0 -- <path>` for the paths above.
 - Local test database: `postgres` container `verity-baseline-db-1`, database `verity` is a stale baseline (missing months of
   migrations, `prisma migrate deploy` refuses with P3005). Recipe that works: `CREATE DATABASE verity_agent_test TEMPLATE
   verity_clean`, then `prisma migrate deploy` with `DATABASE_URL`/`DIRECT_URL` pointing at it (all 156 migrations apply, mine
