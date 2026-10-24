@@ -360,6 +360,10 @@ describe("conformance: over-genericity (Phase G)", () => {
       "segments",
       // Piece-rate floor: a supervisor's closed day, a frozen document of what was handed over (append-only).
       "summary",
+      // Agent (ADR-055): the exact inputs of a stored pending action, which must replay unchanged and so cannot be columns (their
+      // shape is each command's own schema); its outcome, counts and error codes only; and a turn's tool calls, a bounded audit
+      // record. All three are tenant rows under RLS, purged on a schedule, and never read to decide authorization.
+      "inputs", "outcome", "toolCalls",
     ]);
     const unexpected = jsonFields.filter((name) => !permitted.has(name));
     expect(unexpected).toEqual([]);
@@ -458,7 +462,10 @@ describe("conformance: over-genericity (Phase G)", () => {
     // property no capability owns, and every capability's health depends on it.
     // 58: views.ts (ADR-051) — record object descriptors and saved views. Platform because every capability's
     // lists share one table, board and saved-view layer; it reads no capability's tables and adds no write path.
-    expect(platformModules.length).toBeLessThanOrEqual(58);
+    // 59: agent-approval.ts (ADR-055) — the approval class of a command when the agent asks for it, pending actions and
+    // agent-turn records. Platform because the agent channel is platform (ADR-017), the rule must be one rule for every
+    // capability's commands, and the store is a tenant table with a platform retention schedule. It reads no capability's tables.
+    expect(platformModules.length).toBeLessThanOrEqual(59);
   });
 });
 

@@ -44,7 +44,7 @@ export function ChallansDay({ lang, day, sheets, business }: { lang: Lang; day: 
                   <Checkbox label={`${c.number} · ${c.workerName}`} checked={picked.has(c.number)} onChange={(e) => toggle(c.number, e.target.checked)} />
                   <p className="m-0 pl-8 text-[13px] text-text-secondary">
                     {c.lines} {c.lines === 1 ? "line" : "lines"}
-                    {c.given > 0 && ` · ${c.given} ${t.given}`}{c.takenBack > 0 && ` · ${c.takenBack} ${t.takenBackShort}`}{c.by ? ` · ${c.by}` : ""}
+                    {c.given > 0 && ` · ${c.given} ${t.given.toLowerCase()}`}{c.takenBack > 0 && ` · ${c.takenBack} ${t.takenBackShort}`}{c.by ? ` · ${c.by}` : ""}
                   </p>
                 </Surface>
               </li>

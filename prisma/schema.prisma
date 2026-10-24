@@ -195,6 +195,8 @@ model Tenant {
   pieceworkRolls               PieceworkRoll[]
   pieceworkRollMoves           PieceworkRollMove[]
   pieceworkLotCosts            PieceworkLotCost[]
+  agentPendingActions          AgentPendingAction[]
+  agentTurns                   AgentTurn[]
   inventoryAttributes          InventoryAttribute[]
   inventoryAttributeValues     InventoryAttributeValue[]
   inventoryItemTemplates       InventoryItemTemplate[]
@@ -8136,4 +8138,53 @@ model PieceworkLotCost {
 
   @@index([tenantId, lotId])
   @@map("piecework_lot_cost")
+}
+
+/// ADR-055: a confirm-class agent action waiting for its proposer's Confirm. Holds the exact inputs the person was shown, so
+/// the client never posts them back. Decided once, by compare-and-set on status. Purged 30 days after the decision or expiry.
+model AgentPendingAction {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @map("tenant_id") @db.Uuid
+  actorId    String    @map("actor_id") @db.Uuid
+  commandKey String    @map("command_key")
+  summary    String
+  inputs     Json
+  /// pending | approved | rejected | expired
+  status     String    @default("pending")
+  expiresAt  DateTime  @map("expires_at")
+  decidedAt  DateTime? @map("decided_at")
+  /// Counts and per-item error codes only, never full results.
+  outcome    Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  turns  AgentTurn[]
+
+  @@index([tenantId, actorId, status])
+  @@index([createdAt])
+  @@map("agent_pending_action")
+}
+
+/// ADR-055: one row per agent turn, so a turn can be reconstructed after the fact. Bounded text, no system prompt, no full tool
+/// results. Written best-effort after the reply; purged after 90 days.
+model AgentTurn {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  actorId         String   @map("actor_id") @db.Uuid
+  channel         String   @default("agent")
+  userMessage     String   @map("user_message")
+  reply           String
+  /// [{ key, kind, ok, input, output }] with output cut to 2,000 characters.
+  toolCalls       Json     @default("[]") @map("tool_calls")
+  pendingActionId String?  @map("pending_action_id") @db.Uuid
+  model           String?
+  durationMs      Int      @map("duration_ms")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  pendingAction AgentPendingAction? @relation(fields: [pendingActionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, actorId, createdAt])
+  @@index([createdAt])
+  @@map("agent_turn")
 }

@@ -45,6 +45,7 @@ export default defineConfig({
       "src/test/deploy-bundled-storage.test.ts",
       "src/server/platform/pack-manifest.test.ts",
       "src/test/agent-chat-route.test.ts",
+      "src/test/agent-approval.test.ts",
       "src/test/decision-node.test.ts",
       "src/test/external-tools.test.ts",
     ],

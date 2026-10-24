@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-23** (Task 130 steps 1 to 4 built, locally; demo walk run on two tenants; Stylified MVP DEMO-READY locally)
+**Last updated: 2026-10-24** (Task 131 added: the assistant's durable approvals and turn records built locally; Task 130 steps 1 to 4 built, locally; demo walk run on two tenants; Stylified MVP DEMO-READY locally)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -414,6 +414,19 @@ Stylified's own Vercel and Supabase accounts is an option quoted later and not p
 - **Status:** STAGES 0-2 BUILT 2026-10-20 (`cd73c249`, `052ea283`, `cb87ec0d`, `b285fa3c`), local database only. 20 DB tests pass; browser-walked on the DSEW demo at 1440 and 390 px, light and dark: inline edit, filter, drag to Lost with reason, timeline note. Demo data: `prisma/seed-dsew-crm.ts` (run with local `DATABASE_URL`/`DIRECT_URL`, never `.env`). **Next:** owner accepts ADR-050/051; stage 3 custom fields (DSEW tender fields); "won -> open a job" in `project`; stage 5 needs its own ADR. No Twenty code may be copied (AGPL).
 - **Local database note (2026-10-20):** the old local test database `verity` on 127.0.0.1:55432 was wiped by a mistaken `prisma migrate diff` shadow run and is broken; `verity_crm` in the same container is fully migrated and seeded. Point `.env.test` at `verity_crm`, or reset `verity` (`npx prisma migrate reset --force --skip-seed` with the local URLs) and reseed.
 
+### P2-9c. The assistant: provider, scenario suite, analyst (Task 131, ADR-055, ADR-056)
+
+- **What:** Phases A to C are built (stored single-use pending actions, approval classes, turn records, retention). Left: D a paid provider,
+  E the model-scored scenario suite (Promptfoo as a pinned dev tool), F the read-only Business Analyst, G document extraction, H streaming and
+  the AI SDK adapter, I a read surface for turn records.
+- **Why:** The first real Indian-SMB assistant answer depends on a tool-calling-reliable model; free-tier Groq (8k tokens a minute, unreliable
+  forced tool calls) cannot carry it. The gate keeps the choice measured, not guessed.
+- **How:** `taskplans/131_agent_approvals_records_and_provider_gate.md`. Browser-check the dock's pending card (desktop and 390px, both themes) before
+  calling phase B DEMO-READY. Only the analyst persona is authorized; the other five need their own go-ahead.
+- **Done when:** a candidate model passes the ADR-056 bars and the analyst runs read-only with its numbers recorded in `docs/ai/provider-evals/`.
+- **Source:** Task 131; `reports/Verity agent framework choice.md`.
+- **Status:** PARTIALLY BUILT (A to C); D to I NOT STARTED
+
 ### P2-10. Wastage reasons are a restaurant's list (generic wording debt)
 
 - **What:** `WASTAGE_REASONS` (`src/server/capabilities/inventory/index.ts`) is a closed list that includes "Burnt" and "Preparation waste". A factory tenant sees them in the Waste form. `src/test/generic-wording.test.ts` names "Burnt" as known debt.
@@ -543,6 +556,9 @@ Stylified's own Vercel and Supabase accounts is an option quoted later and not p
 ## Blocked on a person
 
 Each line names who must act and what they must do. Move the item back to its priority once done.
+
+- **Apply `20261025000000_agent_pending_action_and_turn` to production before the next push** (Task 131, same rule as P0-2), and **supply a paid
+  model account and key** (`OPENAI_BASE_URL`, `OPENAI_MODEL`, `OPENAI_API_KEY`) for phase D. Product owner.
 
 - **Choose how deploys wait for migrations** (P0-2): (a) CI status check, (b) migrate in the build, or
   (c) pre-push hook. Product owner.

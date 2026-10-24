@@ -85,10 +85,10 @@ export function AgentChatDock() {
     }
   }
 
-  /** Task 81 rule 8 step 3 — runs the EXACT inputs the preview showed, never
-   *  asking the model to re-derive them. `preview` itself is never re-sent
-   *  to the model; this call bypasses the provider entirely. */
-  async function confirmPreview() {
+  /** Task 81 rule 8 step 3 / ADR-055 — answers a stored pending action by its id. The server runs the inputs it stored
+   *  when the action was proposed (as this person, through the ordinary command pipeline); nothing but the id and the
+   *  decision is sent, and the provider is not called. A refusal (already answered, expired) is shown as the reply. */
+  async function decide(decision: "approve" | "reject") {
     if (!preview || pending) return;
     setPending(true);
     setError(null);
@@ -96,14 +96,15 @@ export function AgentChatDock() {
       const res = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ confirmPreview: { commandKey: preview.commandKey, inputs: preview.inputs } }),
+        body: JSON.stringify({ decidePending: { id: preview.id, decision } }),
       });
       const json = await res.json();
-      if (!res.ok || !json.ok) {
-        setError(json.message ?? "Could not complete that action.");
+      const reply: string | undefined = res.ok && json.ok ? json.data.reply : json.message;
+      if (!reply) {
+        setError("Could not complete that action.");
         return;
       }
-      setMessages((prev) => [...prev, { role: "assistant", content: json.data.reply } satisfies ChatMessage]);
+      setMessages((prev) => [...prev, { role: "assistant", content: reply } satisfies ChatMessage]);
     } catch {
       setError("Could not reach the assistant. Check your connection and try again.");
     } finally {
@@ -111,11 +112,6 @@ export function AgentChatDock() {
       setPending(false);
       queueMicrotask(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
     }
-  }
-
-  function cancelPreview() {
-    setPreview(null);
-    setMessages((prev) => [...prev, { role: "assistant", content: "Cancelled — nothing was changed." } satisfies ChatMessage]);
   }
 
   return (
@@ -171,11 +167,18 @@ export function AgentChatDock() {
             ))}
             {preview && (
               <div className="bg-control max-w-[92%] rounded-[12px] px-3.5 py-3 text-[13px] text-text">
-                <p className="mb-2.5">{preview.description}</p>
+                <p className="mb-1.5">{preview.description}</p>
+                {preview.details.length > 0 && (
+                  <ul className="mb-2.5 space-y-1 text-[12px] text-text-secondary">
+                    {preview.details.map((line, i) => (
+                      <li key={i} className="break-words">{line}</li>
+                    ))}
+                  </ul>
+                )}
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => void confirmPreview()}
+                    onClick={() => void decide("approve")}
                     disabled={pending}
                     className="bg-accent text-accent-on rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-45"
                   >
@@ -183,7 +186,7 @@ export function AgentChatDock() {
                   </button>
                   <button
                     type="button"
-                    onClick={cancelPreview}
+                    onClick={() => void decide("reject")}
                     disabled={pending}
                     className="verity-solid rounded-[10px] px-3 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-45"
                   >

@@ -56,6 +56,12 @@ anything and update it in the same commit as the code.
   resynced. See `taskplans/115_apple_design_system_governing_docs_
   overhaul.md`'s own Status section for the full account.
 
+## Since 2026-10-24 (the assistant, added 2026-10-24)
+
+- **Task 131 phases A to C BUILT, local only.** ADR-054, ADR-055, ADR-056 ACCEPTED. The assistant's confirm-class actions are stored,
+  single-use, proposer-only rows (`agent_pending_action`); every turn leaves a bounded `agent_turn` record; no agent framework (ADR-056).
+  Migration `20261025000000_agent_pending_action_and_turn` is **not on production**: apply it before the push. See FINISHER P2-9c.
+
 ## Since 2026-10-09 (URY comparison, added 2026-10-09)
 
 - **Task 126 — URY gap closure: BUILT 2026-10-10 (Waves 0 to 5), on production** (code pushed, migrations

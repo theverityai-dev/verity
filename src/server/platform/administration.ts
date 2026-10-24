@@ -13,6 +13,7 @@ import { entityLabel } from "./label";
 import { mintApiKey } from "./external-tools";
 import { registerDataExport } from "./data-export";
 import { registerNotificationOutbox } from "./notification-outbox";
+import { registerAgentRetention } from "./agent-approval";
 
 /**
  * Platform administration — the write and read contracts HQ operates through.
@@ -1314,6 +1315,7 @@ export function installAdministration(): void {
   registerCommand(createOrganization);
   registerDataExport();
   registerNotificationOutbox();
+  registerAgentRetention();
   registerCommand(updateOrganization);
   registerCommand(invitePerson);
   registerCommand(assignRole);

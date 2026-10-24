@@ -162,7 +162,12 @@ export function PageHeader({
             </p>
           )}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {/* On a phone the actions are an even two-column grid (an odd one out spans the row) instead of one button per line at mixed widths. */}
+        {actions && (
+          <div className="flex flex-wrap items-center gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>*]:w-full max-sm:[&>*]:justify-center max-sm:[&>*]:text-center max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
+            {actions}
+          </div>
+        )}
       </div>
     </header>
   );

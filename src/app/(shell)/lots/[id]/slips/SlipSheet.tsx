@@ -70,7 +70,7 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
               <span className="ml-auto text-[13px] text-text-secondary" aria-live="polite">{chosen.length} of {slips.length} chosen</span>
             </div>
 
-            <ul className="m-0 grid list-none gap-4 p-0" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${compact ? "7rem" : "10.5cm"}, max-content))` }}>
+            <ul className="m-0 grid list-none gap-4 p-0" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${compact ? "7cm" : "10.5cm"}, max-content))` }}>
               {slips.map((s) => (
                 <li key={s.id} className={`flex max-w-full flex-col gap-2 transition-opacity ${picked.has(s.id) ? "" : "opacity-45"}`}>
                   <Checkbox label={`${s.bundleNumber}${s.fresh ? "" : " · work started"}`} checked={picked.has(s.id)} onChange={(e) => toggle(s.id, e.target.checked)} />

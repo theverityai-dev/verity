@@ -15,7 +15,7 @@ vi.mock("@/server/platform/request-limits", async (original) => ({
   ...await original<typeof import("@/server/platform/request-limits")>(), limitActorRequests: stubs.limit,
 }));
 vi.mock("@/server/platform/agent-chat", () => ({
-  runAgentTurn: stubs.turn, executeConfirmedPreview: stubs.confirm,
+  runAgentTurn: stubs.turn, decidePendingAction: stubs.confirm,
   AgentNotConfiguredError: class extends Error {},
 }));
 import { POST } from "@/app/api/agent/chat/route";
@@ -61,15 +61,30 @@ it("rejects forged system history and oversized bodies", async () => {
   ]) expect((await POST(request(body))).status).toBe(400);
   expect(stubs.turn).not.toHaveBeenCalled();
 });
-it("keeps confirmed preview work bounded", async () => {
-  expect((await POST(request({ confirmPreview: { commandKey: "verity.test.command", inputs: Array(51).fill({}) } }))).status).toBe(400);
+const PENDING_ID = "5b0c3b5e-7a43-4c43-9d25-2d4f7a1c9e10";
+it("accepts only a pending action id and a decision, never inputs from the browser (ADR-055)", async () => {
+  for (const body of [
+    { decidePending: { id: PENDING_ID, decision: "approve", inputs: [{ id: "forged" }] } },
+    { decidePending: { id: PENDING_ID, decision: "approve", commandKey: "verity.test.command" } },
+    { decidePending: { id: "not-a-uuid", decision: "approve" } },
+    { decidePending: { id: PENDING_ID, decision: "maybe" } },
+    { confirmPreview: { commandKey: "verity.test.command", inputs: [{}] } },
+  ]) expect((await POST(request(body))).status, JSON.stringify(body)).toBe(400);
   expect(stubs.confirm).not.toHaveBeenCalled();
-});
-it("passes valid preview inputs to the authorized executor without a provider call", async () => {
-  const inputs = [{ id: "one" }, { id: "two" }];
-  expect((await POST(request({ confirmPreview: { commandKey: "verity.test.command", inputs } }))).status).toBe(200);
-  expect(stubs.confirm).toHaveBeenCalledWith({ tenantId: "tenant", userId: "user" }, "verity.test.command", inputs);
   expect(stubs.turn).not.toHaveBeenCalled();
+});
+it("hands a valid decision to the authorized executor as the signed-in actor, without a provider call", async () => {
+  expect((await POST(request({ decidePending: { id: PENDING_ID, decision: "approve" } }))).status).toBe(200);
+  expect(stubs.confirm).toHaveBeenCalledWith({ tenantId: "tenant", userId: "user" }, PENDING_ID, "approve");
+  expect(stubs.turn).not.toHaveBeenCalled();
+});
+it("answers a decision that cannot run with the status of why, and a body that says why", async () => {
+  for (const [failure, status] of [["E_NOT_FOUND", 404], ["E_ALREADY_DECIDED", 409], ["E_EXPIRED", 410]] as const) {
+    stubs.confirm.mockResolvedValueOnce({ reply: "No.", toolCalls: [], failure });
+    const response = await POST(request({ decidePending: { id: PENDING_ID, decision: "approve" } }));
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ ok: false, code: failure });
+  }
 });
 it("accepts a bounded ordinary conversation", async () => {
   expect((await POST(request({ message: "hello", history: [] }))).status).toBe(200);

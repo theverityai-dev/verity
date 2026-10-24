@@ -3,10 +3,18 @@ import { withTenant } from "./tenancy";
 import { buildToolManifest, type ToolDescriptor } from "./tool-manifest";
 import { getCommand, type ActorContext } from "./command";
 import { getQuery, executeQuery } from "./query";
-import { GroundingCache, checkProseClaims } from "./grounding";
+import { GroundingCache, GroundingError, assertGrounded, checkProseClaims } from "./grounding";
 import { readAgentProviderConfig } from "./config";
 import { runCommandBatch } from "./batch";
 import { toActionFailure } from "./action-error";
+import {
+  agentApprovalClass,
+  claimPendingAction,
+  proposePendingAction,
+  recordAgentTurn,
+  recordPendingOutcome,
+  type PendingActionFailure,
+} from "./agent-approval";
 
 /**
  * Agent chat orchestrator — Task 84 area 6.
@@ -49,35 +57,27 @@ export type ToolCallRecord = {
 };
 
 /**
- * Task 81 rule 8 step 3 ("preview" a routine action before executing when
- * the resolved outcome isn't obvious) — the worked example is "mark all
- * three overdue invoices as written off": routine per rule 4, but the
- * SPECIFIC three invoices it resolved to are worth showing before acting.
+ * A stored pending action, as the person sees it (ADR-055). Two things stop the model from running a command on its own word:
+ * Task 81 rule 8 step 3 (2+ calls to the SAME routine command in one message — "mark these three invoices written off" — show
+ * the specific records first), and the `confirm` approval class (money, ledger, cancel, void, approve, send ... — see
+ * `agent-approval.ts`), which previews even a single call.
  *
- * Scope, deliberately bounded: this fires only when one assistant message
- * contains 2+ tool calls to the SAME routine (non-destructive) command key
- * — the concrete shape of the worked example. A single routine call still
- * executes immediately, unchanged (correct per rule 4: "routine, clearly-
- * authorized user actions execute without re-asking"). This is not a
- * general "preview anything ambiguous" engine — building that without a
- * second real instance would be exactly the over-built primitive Task 81's
- * own audit declined to rush.
- *
- * On confirm, the client calls `executeConfirmedPreview` with these EXACT
- * inputs — the model is never asked to re-derive them, so there is no
- * chance of drift between what was shown and what runs.
+ * The inputs are in the database row, not here and never in the browser: the client confirms by id, so what runs is exactly
+ * what was stored, and the model is never asked to re-derive it.
  */
 export type PendingPreview = {
+  id: string;
   commandKey: string;
   description: string;
-  inputs: unknown[];
+  /** What the person is agreeing to, one line per record, cut short. */
+  details: string[];
+  expiresAt: string;
 };
 
 export type AgentTurnResult = {
   reply: string;
   toolCalls: ToolCallRecord[];
-  /** Present when this turn stopped short of executing a multi-item
-   *  routine action to show it first — see `PendingPreview`. `toolCalls`
+  /** Present when this turn stopped short of executing an action to show it first — see `PendingPreview`. `toolCalls`
    *  for the previewed command(s) is empty in this case: nothing ran. */
   preview?: PendingPreview;
   /** Task 81 rules 1/2's "still open" gap — prose numbers in `reply` that
@@ -246,82 +246,113 @@ async function runTool(
   return { key, kind: "command", input, ok: false, output: `E_UNKNOWN_TOOL: ${key} is not a registered command or query` };
 }
 
+type Proposal = { commandKey: string; inputs: unknown[] };
+
 /**
- * Detects Task 81 rule 8's worked example inside one assistant message: 2+
- * tool calls naming the SAME routine (non-destructive) command. Returns the
- * pending preview if so, else `null`. A single call to a routine command,
- * or any number of calls to DIFFERENT commands, is unaffected — only a
- * repeated call to one mutating command is the "resolved to N specific
- * records" shape this rule is about.
+ * Finds the action in one assistant message that must be shown before it runs (ADR-055 clauses 1 and 2): 2+ calls to the same
+ * routine command (Task 81 rule 8's worked example), or any call to a `confirm`-class command. A `blocked` command is left to
+ * `runTool`, which answers E_NEEDS_APPROVAL. A single call to a routine command is unaffected (rule 4: routine, clearly
+ * authorized actions execute without re-asking).
  */
-function detectBatchPreview(toolCalls: OpenAiToolCall[]): PendingPreview | null {
+function detectProposal(toolCalls: OpenAiToolCall[]): Proposal | null {
   const byKey = new Map<string, unknown[]>();
   for (const call of toolCalls) {
     const key = fromToolName(call.function.name);
     const command = getCommand(key);
-    if (!command || command.impact === "destructive") continue; // destructive already needs_approval
+    if (!command || agentApprovalClass(command) === "blocked") continue;
     let input: unknown;
     try {
       input = call.function.arguments ? JSON.parse(call.function.arguments) : {};
     } catch {
       continue; // malformed args fail normally inside runTool, not previewed
     }
-    const inputs = byKey.get(key) ?? [];
-    inputs.push(input);
-    byKey.set(key, inputs);
+    byKey.set(key, [...(byKey.get(key) ?? []), input]);
   }
 
-  for (const [key, inputs] of byKey) {
-    if (inputs.length < 2) continue;
-    const command = getCommand(key)!;
-    return {
-      commandKey: key,
-      description: `This will run "${command.description ?? key}" on ${inputs.length} records.`,
-      inputs,
-    };
+  for (const [commandKey, inputs] of byKey) {
+    if (inputs.length >= 2 || agentApprovalClass(getCommand(commandKey)!) === "confirm") return { commandKey, inputs };
   }
   return null;
 }
 
 /**
- * Executes an EXACT previously-shown `PendingPreview` — never re-derived
- * from the model, so what runs is provably what was shown. Called by the
- * chat route on the human's structural "Confirm" click, bypassing the
- * provider entirely for this step.
+ * A proposal is checked before it is stored, so a row never holds input the command would reject or an id the model made up:
+ * each input must parse against the command's own schema (E_VALIDATION), and every `*Id` field must have been read by a query
+ * this turn (E_UNGROUNDED, Task 84 area 4). The model gets the refusal as a tool result, exactly as it would for a direct call.
  */
-export async function executeConfirmedPreview(
-  actor: ActorContext,
-  commandKey: string,
-  inputs: unknown[],
-): Promise<{ reply: string; toolCalls: ToolCallRecord[] }> {
-  const command = getCommand(commandKey);
-  if (!command) {
-    return { reply: `That action is no longer available (${commandKey}).`, toolCalls: [] };
+function refuseProposal(proposal: Proposal, grounding: GroundingCache): { code: string; message: string } | null {
+  const command = getCommand(proposal.commandKey)!;
+  for (const input of proposal.inputs) {
+    const parsed = command.input.safeParse(input);
+    if (!parsed.success) return { code: "E_VALIDATION", message: parsed.error.issues.map((i) => i.path.join(".") + ": " + i.message).join("; ") };
+    try {
+      assertGrounded(input, grounding);
+    } catch (err) {
+      if (err instanceof GroundingError) return { code: err.code, message: err.message };
+      throw err;
+    }
   }
-  const batch = await runCommandBatch(actor, command, inputs, { channel: "agent" });
+  return null;
+}
+
+const DETAIL_LINES = 5;
+const DETAIL_FIELDS = 6;
+const DETAIL_VALUE = 40;
+
+/** One short line per record: the plain fields the person can recognise. Ids are left out; they mean nothing on screen. */
+function detailLines(inputs: unknown[]): string[] {
+  const lines = inputs.slice(0, DETAIL_LINES).map((input) => {
+    if (!input || typeof input !== "object") return String(input).slice(0, DETAIL_VALUE * 2);
+    return Object.entries(input as Record<string, unknown>)
+      .filter(([k, v]) => !/id$/i.test(k) && v !== null && v !== undefined && typeof v !== "object")
+      .slice(0, DETAIL_FIELDS)
+      .map(([k, v]) => k + ": " + String(v).slice(0, DETAIL_VALUE))
+      .join(", ");
+  });
+  if (inputs.length > DETAIL_LINES) lines.push("and " + (inputs.length - DETAIL_LINES) + " more");
+  return lines;
+}
+
+const NOT_DONE: Record<PendingActionFailure, string> = {
+  E_NOT_FOUND: "That request is no longer available.",
+  E_ALREADY_DECIDED: "That request was already answered, so nothing ran again.",
+  E_EXPIRED: "That request expired. Ask again and I will show it afresh.",
+};
+
+/**
+ * Decides a stored pending action for its proposer (ADR-055 clause 3). Approve runs the STORED inputs through the ordinary
+ * command pipeline as the proposer, so `enforcePolicy()` and the command's own rules run now, not at proposal time; reject marks
+ * it and runs nothing. The claim is single-use: a replay finds it decided and runs nothing.
+ */
+export async function decidePendingAction(
+  actor: ActorContext,
+  id: string,
+  decision: "approve" | "reject",
+): Promise<{ reply: string; toolCalls: ToolCallRecord[]; failure?: PendingActionFailure }> {
+  const claim = await claimPendingAction(actor, id, decision);
+  if (!claim.ok) return { reply: NOT_DONE[claim.code], toolCalls: [], failure: claim.code };
+  if (decision === "reject") return { reply: "Cancelled — nothing was changed.", toolCalls: [] };
+
+  const command = getCommand(claim.commandKey);
+  if (!command) {
+    await recordPendingOutcome(actor, id, { total: claim.inputs.length, succeeded: 0, failed: claim.inputs.length, errorCodes: ["E_UNKNOWN_TOOL"] });
+    return { reply: "That action is no longer available (" + claim.commandKey + ").", toolCalls: [] };
+  }
+  const batch = await runCommandBatch(actor, command, claim.inputs, { channel: "agent" });
   const toolCalls: ToolCallRecord[] = batch.items.map((item) => {
     const { outcome } = item;
-    if (outcome.status === "succeeded") {
-      return { key: commandKey, kind: "command", input: inputs[item.index], ok: true, output: outcome.result };
-    }
-    if (outcome.status === "needs_approval") {
-      return {
-        key: commandKey,
-        kind: "command",
-        input: inputs[item.index],
-        ok: false,
-        output: { code: "E_NEEDS_APPROVAL", message: outcome.reason },
-      };
-    }
-    return {
-      key: commandKey,
-      kind: "command",
-      input: inputs[item.index],
-      ok: false,
-      output: { code: outcome.code, message: outcome.reason },
-    };
+    const input = claim.inputs[item.index];
+    if (outcome.status === "succeeded") return { key: claim.commandKey, kind: "command", input, ok: true, output: outcome.result };
+    if (outcome.status === "needs_approval") return { key: claim.commandKey, kind: "command", input, ok: false, output: { code: "E_NEEDS_APPROVAL", message: outcome.reason } };
+    return { key: claim.commandKey, kind: "command", input, ok: false, output: { code: outcome.code, message: outcome.reason } };
   });
-  const reply = `Done — ${batch.succeeded} of ${batch.total} succeeded${batch.failed > 0 ? `, ${batch.failed} failed` : ""}.`;
+  await recordPendingOutcome(actor, id, {
+    total: batch.total,
+    succeeded: batch.succeeded,
+    failed: batch.failed + batch.needsApproval,
+    errorCodes: [...new Set(toolCalls.flatMap((c) => (c.ok ? [] : [String((c.output as { code?: string }).code ?? "E_UNKNOWN")])))],
+  });
+  const reply = "Done — " + batch.succeeded + " of " + batch.total + " succeeded" + (batch.failed > 0 ? ", " + batch.failed + " failed" : "") + ".";
   return { reply, toolCalls };
 }
 
@@ -330,7 +361,7 @@ export async function executeConfirmedPreview(
  * round trips (capped), and the final assistant reply. Everything the model
  * touches is scoped to `actor` — the manifest, every command, every query.
  */
-export async function runAgentTurn(
+async function runTurnLoop(
   actor: ActorContext,
   history: ChatMessage[],
   userMessage: string,
@@ -376,9 +407,38 @@ export async function runAgentTurn(
       return { reply, toolCalls, groundingWarnings: groundingWarnings.length > 0 ? groundingWarnings : undefined };
     }
 
-    const preview = detectBatchPreview(message.tool_calls);
-    if (preview) {
-      return { reply: preview.description + " Confirm to proceed.", toolCalls, preview };
+    const proposal = detectProposal(message.tool_calls);
+    if (proposal) {
+      const refusal = refuseProposal(proposal, grounding);
+      if (!refusal) {
+        const command = getCommand(proposal.commandKey)!;
+        const label = command.description ?? proposal.commandKey;
+        const description = `This will run "${label}" on ${proposal.inputs.length} ${proposal.inputs.length === 1 ? "record" : "records"}.`;
+        const stored = await proposePendingAction(actor, { commandKey: proposal.commandKey, summary: description, inputs: proposal.inputs });
+        const preview: PendingPreview = {
+          id: stored.id,
+          commandKey: stored.commandKey,
+          description,
+          details: detailLines(proposal.inputs),
+          expiresAt: stored.expiresAt,
+        };
+        return { reply: description + " Confirm to proceed.", toolCalls, preview };
+      }
+      // Refused before storing: the proposal's own calls get the refusal as their result, the rest run as usual, and the
+      // model may correct itself (query for the real id, fix the input) within the turn's iteration cap.
+      for (const call of message.tool_calls) {
+        const isProposal = fromToolName(call.function.name) === proposal.commandKey;
+        const record = isProposal
+          ? ({ key: proposal.commandKey, kind: "command", input: call.function.arguments, ok: false, output: refusal } satisfies ToolCallRecord)
+          : await runTool(actor, grounding, call.function.name, call.function.arguments);
+        toolCalls.push(record);
+        messages.push({
+          role: "tool",
+          tool_call_id: call.id,
+          content: JSON.stringify({ untrusted_data: record.ok ? record.output : { error: record.output } }),
+        });
+      }
+      continue;
     }
 
     for (const call of message.tool_calls) {
@@ -396,4 +456,31 @@ export async function runAgentTurn(
     reply: "I reached the tool-call limit for this turn without a final answer. Please rephrase or narrow the request.",
     toolCalls,
   };
+}
+
+/**
+ * One agent turn, plus its record (ADR-055 clause 4). Every caller goes through here, so no turn goes unrecorded. The record is
+ * written after the reply is computed and never blocks, delays the failure of, or changes that reply.
+ */
+export async function runAgentTurn(
+  actor: ActorContext,
+  history: ChatMessage[],
+  userMessage: string,
+  options: { toolKeys?: readonly string[] } = {},
+): Promise<AgentTurnResult> {
+  const started = Date.now();
+  const result = await runTurnLoop(actor, history, userMessage, options);
+  try {
+    await recordAgentTurn(actor, {
+      userMessage,
+      reply: result.reply,
+      toolCalls: result.toolCalls,
+      pendingActionId: result.preview?.id,
+      model: readAgentProviderConfig()?.model,
+      durationMs: Date.now() - started,
+    });
+  } catch (err) {
+    console.error("agent turn record failed", err instanceof Error ? err.message : err);
+  }
+  return result;
 }
