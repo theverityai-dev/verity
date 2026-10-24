@@ -51,6 +51,12 @@ export function AgentChatDock() {
     return () => window.removeEventListener("verity:toggle-assistant", toggle);
   }, []);
 
+  // After every render that changes what the list shows, bring the newest thing into view. Scrolling inside the request's
+  // `finally` ran before React had drawn the confirmation card, so on a long conversation Confirm and Cancel sat below the fold.
+  useEffect(() => {
+    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [messages, preview, pending, error, groundingWarnings]);
+
   async function send() {
     const text = input.trim();
     if (!text || pending) return;
@@ -81,7 +87,6 @@ export function AgentChatDock() {
       setError("Could not reach the assistant. Check your connection and try again.");
     } finally {
       setPending(false);
-      queueMicrotask(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
     }
   }
 
@@ -110,7 +115,6 @@ export function AgentChatDock() {
     } finally {
       setPreview(null);
       setPending(false);
-      queueMicrotask(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight }));
     }
   }
 
@@ -180,7 +184,7 @@ export function AgentChatDock() {
                     type="button"
                     onClick={() => void decide("approve")}
                     disabled={pending}
-                    className="bg-accent text-accent-on rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-45"
+                    className="bg-accent text-accent-on rounded-lg px-4 py-1.5 max-lg:min-h-11 text-[13px] font-medium transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Confirm
                   </button>
@@ -188,7 +192,7 @@ export function AgentChatDock() {
                     type="button"
                     onClick={() => void decide("reject")}
                     disabled={pending}
-                    className="verity-solid rounded-[10px] px-3 py-1.5 text-[13px] font-medium text-text-secondary transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-45"
+                    className="verity-solid rounded-[10px] px-4 py-1.5 max-lg:min-h-11 text-[13px] font-medium text-text-secondary transition-colors hover:text-text disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     Cancel
                   </button>
