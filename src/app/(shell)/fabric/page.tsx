@@ -27,7 +27,8 @@ async function FabricPage() {
     canReceive: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_ROLL),
   }));
   if (!canRead) return <PermissionDenied what="fabric" />;
-  const { rolls, inStock } = await executeQuery(actor, listRolls, {});
+  const { rolls, inStock, low, lowLevelCenti } = await executeQuery(actor, listRolls, {});
+  const lowKeys = new Set(low.map((l) => `${l.fabricType}|${l.unit}`));
   const live = rolls.filter((r) => !r.cancelled);
   const shelf = live.filter((r) => r.balanceCenti > 0);
   const empty = live.filter((r) => r.balanceCenti <= 0);
@@ -35,12 +36,26 @@ async function FabricPage() {
 
   return (
     <>
-      <PageHeader title="Fabric" description={shelf.length === 0 ? "No roll has fabric left." : `${shelf.length} roll${shelf.length === 1 ? "" : "s"} on the shelf`} actions={canReceive ? <ReceiveRolls fabricTypes={[...new Set(live.map((r) => r.fabricType))]} today={today} /> : null} />
+      <PageHeader title="Fabric" description={shelf.length === 0 ? "No roll has fabric left." : `${shelf.length} roll${shelf.length === 1 ? "" : "s"} on the shelf`} actions={canReceive ? <ReceiveRolls fabricTypes={[...new Set(live.map((r) => r.fabricType))]} today={today} seen={live.filter((r) => r.invoiceNumber).map((r) => ({ supplier: r.supplier, invoice: r.invoiceNumber!, number: r.number }))} /> : null} />
 
       {live.length === 0 ? (
         <EmptyState title="No rolls yet" description="Receive the rolls of an invoice. Each gets a number and a label with a QR, so a lot can say exactly which roll it was cut from." />
       ) : (
         <>
+          {low.length > 0 && (
+            <section aria-labelledby="low-h" className="mb-6">
+              <h2 id="low-h" className="micro m-0 mb-3 px-1">Running low</h2>
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {low.map((l) => (
+                  <li key={`${l.fabricType}|${l.unit}`} className="list-none rounded-full px-4 py-2 text-[14px] font-medium text-text" style={{ background: "color-mix(in srgb, var(--color-state-pending) 18%, transparent)" }}>
+                    {l.fabricType}: {l.balanceCenti <= 0 ? "none left" : qty(l.balanceCenti, l.unit)}
+                    <span className="ml-2 font-normal text-text-secondary">below {qty(lowLevelCenti!, l.unit)}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {inStock.length > 0 && (
             <section aria-labelledby="stock-h" className="mb-8">
               <h2 id="stock-h" className="micro m-0 mb-3 px-1">In stock by fabric</h2>
@@ -48,7 +63,7 @@ async function FabricPage() {
                 {inStock.map((s) => (
                   <li key={`${s.fabricType}|${s.unit}`} className="list-none">
                     <Surface className="flex h-full flex-col gap-1 p-5">
-                      <p className="m-0 truncate text-[15px] font-medium text-text" title={s.fabricType}>{s.fabricType}</p>
+                      <p className="m-0 flex items-center justify-between gap-2 text-[15px] font-medium text-text"><span className="truncate" title={s.fabricType}>{s.fabricType}</span>{lowKeys.has(`${s.fabricType}|${s.unit}`) && <span className="shrink-0 rounded-full px-2.5 py-0.5 text-[12px] font-medium" style={{ background: "color-mix(in srgb, var(--color-state-pending) 24%, transparent)" }}>Low</span>}</p>
                       <p className="figure m-0 text-[34px] text-text">{(s.balanceCenti / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}<span className="ml-1 text-[16px] text-text-secondary">{s.unit}</span></p>
                       <p className="m-0 text-[13px] text-text-secondary">on {s.rolls} roll{s.rolls === 1 ? "" : "s"}</p>
                     </Surface>

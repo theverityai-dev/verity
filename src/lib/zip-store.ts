@@ -1,11 +1,11 @@
 /**
  * A minimal ZIP writer: stored (uncompressed) entries, UTF-8 names, no ZIP64.
  * Enough for a data export that every spreadsheet and OS can open, without a
- * dependency. CRC-32 comes from Node's own zlib.
+ * dependency. CRC-32 is plain JavaScript (`./crc32`), so this also runs in the browser.
  *
  * Authority: ADR-037 (the client's full-data export is one ZIP of CSV files).
  */
-import { crc32 } from "node:zlib";
+import { crc32 } from "./crc32";
 
 export type ZipEntry = { name: string; data: Uint8Array };
 

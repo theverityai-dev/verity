@@ -242,7 +242,7 @@ export async function rateCardOf(tx: Tx, lotId: string): Promise<RateCardRow[]> 
 /* ============================ factory-wide settings ============================ */
 
 export const setProductionSettings: CommandDefinition<
-  { lostPieceChargeMinor?: number | null; challanTitle?: string | null; challanAddress?: string | null },
+  { lostPieceChargeMinor?: number | null; challanTitle?: string | null; challanAddress?: string | null; lowFabricCenti?: number | null },
   { saved: true }
 > = {
   key: "verity.piecework.set_production_settings",
@@ -252,12 +252,14 @@ export const setProductionSettings: CommandDefinition<
     lostPieceChargeMinor: z.number().int().min(0).max(100_000_000).nullable().optional(),
     challanTitle: z.string().trim().max(120).nullable().optional(),
     challanAddress: z.string().trim().max(300).nullable().optional(),
+    lowFabricCenti: z.number().int().min(0).max(100_000_000).nullable().optional(),
   }),
   handler: async (ctx, input) => {
     const data = {
       ...(input.lostPieceChargeMinor !== undefined ? { defaultLostPieceChargeMinor: input.lostPieceChargeMinor } : {}),
       ...(input.challanTitle !== undefined ? { challanTitle: input.challanTitle || null } : {}),
       ...(input.challanAddress !== undefined ? { challanAddress: input.challanAddress || null } : {}),
+      ...(input.lowFabricCenti !== undefined ? { lowFabricCenti: input.lowFabricCenti } : {}),
       updatedById: ctx.actor.userId,
     };
     await ctx.tx.pieceworkSetting.upsert({ where: { tenantId: ctx.actor.tenantId }, create: { tenantId: ctx.actor.tenantId, ...data }, update: data });
@@ -304,7 +306,7 @@ export const saveReasons: CommandDefinition<{ kind: ReasonKind; items: Array<{ l
 
 export type ProductionSettings = {
   stages: Array<{ id: string; label: string; sequence: number; defaultRateMinor: number | null; active: boolean; hasWork: boolean }>;
-  lostPieceChargeMinor: number | null; challanTitle: string | null; challanAddress: string | null;
+  lostPieceChargeMinor: number | null; challanTitle: string | null; challanAddress: string | null; lowFabricCenti: number | null;
   reasons: Awaited<ReturnType<typeof reasonsOf>>;
   limits: { deductionLimitMinor: number; writeoffLimitPieces: number };
 };
@@ -323,7 +325,7 @@ export const productionSettings: QueryDefinition<Record<string, never>, Producti
     const usedIds = new Set(used.map((u) => u.stageId));
     return {
       stages: stages.map((s) => ({ id: s.id, label: s.label, sequence: s.sequence, defaultRateMinor: s.defaultRateMinor, active: s.active, hasWork: usedIds.has(s.id) })),
-      lostPieceChargeMinor: setting?.defaultLostPieceChargeMinor ?? null, challanTitle: setting?.challanTitle ?? null, challanAddress: setting?.challanAddress ?? null,
+      lostPieceChargeMinor: setting?.defaultLostPieceChargeMinor ?? null, challanTitle: setting?.challanTitle ?? null, challanAddress: setting?.challanAddress ?? null, lowFabricCenti: setting?.lowFabricCenti ?? null,
       reasons,
       limits: { deductionLimitMinor: setting?.managerDeductionLimitMinor ?? 100_000, writeoffLimitPieces: setting?.managerWriteoffLimitPieces ?? 5 },
     };

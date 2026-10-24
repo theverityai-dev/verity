@@ -382,4 +382,34 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     expect(await executeQuery(supervisor, lookupCode, { code: "B-999999" })).toMatchObject({ kind: "none" });
     expect(await executeQuery(supervisor, lookupCode, { code: `/lots/bundles/${randomUUID()}` })).toMatchObject({ kind: "none" });
   });
+
+  it("refuses the same supplier's invoice twice unless confirmed, and warns when a fabric runs low", async () => {
+    await executeCommand(owner, receiveRolls, { fabricType: "Dup cloth", quantitiesCenti: [5_000], supplier: "Mehta Textiles", invoiceNumber: "MT/900" });
+    await reject(executeCommand(owner, receiveRolls, { fabricType: "Dup cloth", quantitiesCenti: [5_000], supplier: "mehta textiles", invoiceNumber: "mt/900" }), /already received \(R-\d+\)/);
+    // Another supplier's invoice with the same number is not a duplicate; a confirmed second delivery goes through.
+    await executeCommand(owner, receiveRolls, { fabricType: "Dup cloth", quantitiesCenti: [1_000], supplier: "Gupta Fabrics", invoiceNumber: "MT/900" });
+    await executeCommand(owner, receiveRolls, { fabricType: "Dup cloth", quantitiesCenti: [1_000], supplier: "Mehta Textiles", invoiceNumber: "MT/900", confirmDuplicate: true });
+
+    // No level, no warning. With a level of 100 m, a fabric under it is flagged, and one with nothing left is too.
+    expect((await executeQuery(owner, listRolls, {})).low).toEqual([]);
+    await executeCommand(owner, setProductionSettings, { lowFabricCenti: 10_000 });
+    const lowOnes = (await executeQuery(owner, listRolls, {})).low;
+    // 50 + 10 + 10 = 70 m across the three deliveries, under the 100 m level.
+    expect(lowOnes.find((l) => l.fabricType === "Dup cloth")).toMatchObject({ balanceCenti: 7_000 });
+    const small = await executeCommand(owner, receiveRolls, { fabricType: "Tiny cloth", quantitiesCenti: [2_000] });
+    const sheet = (await executeCommand(owner, createLot, { design: "Uses tiny", plannedPieces: 5 })).id;
+    await executeCommand(owner, moveFabric, { rollId: small.rollIds[0]!, kind: "issue", quantityCenti: 2_000, lotId: sheet });
+    const after = await executeQuery(owner, listRolls, {});
+    expect(after.lowLevelCenti).toBe(10_000);
+    expect(after.low.find((l) => l.fabricType === "Tiny cloth")).toMatchObject({ balanceCenti: 0 });
+    await executeCommand(owner, setProductionSettings, { lowFabricCenti: null });
+    expect((await executeQuery(owner, listRolls, {})).low).toEqual([]);
+  });
+
+  it("will not count a cost twice: fabric, wages and every stage are already counted from the records", async () => {
+    const { lotId } = await lotWith(10, "Double count");
+    await reject(executeCommand(owner, addLotCost, { lotIds: [lotId], category: "fabric", amountMinor: 1000 }), /count it twice/);
+    await reject(executeCommand(owner, addLotCost, { lotIds: [lotId], category: " Stitching ", amountMinor: 1000 }), /already counted from the wages/);
+    await executeCommand(owner, addLotCost, { lotIds: [lotId], category: "Stitching thread", amountMinor: 1000 });
+  });
 });

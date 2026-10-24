@@ -57,6 +57,11 @@ export const addLotCost: CommandDefinition<
   }),
   preconditions: async (ctx, input) => {
     if (new Set(input.lotIds).size !== input.lotIds.length) throw new ValidationError("E_VALIDATION: name each lot once");
+    // Fabric comes from the rolls and every stage's wages from the entries, so a cost typed under those names would be counted twice.
+    const counted = new Set(["fabric", "wages", "wage", ...(await ctx.tx.pieceworkStage.findMany({ select: { label: true } })).map((s) => s.label.trim().toLowerCase())]);
+    if (counted.has(input.category.trim().toLowerCase())) {
+      throw new ValidationError(`E_VALIDATION: ${input.category} is already counted from the ${input.category.trim().toLowerCase() === "fabric" ? "fabric taken from rolls" : "wages recorded for it"}; adding it here would count it twice. Use another category for anything else`);
+    }
     const lots = await ctx.tx.pieceworkLot.findMany({ where: { id: { in: input.lotIds } } });
     if (lots.length !== input.lotIds.length || lots.some((l) => l.cancelledAt)) throw new ValidationError("E_VALIDATION: lot not found in this tenant");
     const closed = lots.find((l) => l.status === "closed");

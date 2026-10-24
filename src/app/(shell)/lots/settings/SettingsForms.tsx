@@ -116,6 +116,25 @@ export function ChargeForm({ lostPieceChargeMinor, canEdit }: { lostPieceChargeM
   );
 }
 
+export function FabricForm({ lowFabricCenti, canEdit }: { lowFabricCenti: number | null; canEdit: boolean }) {
+  const { pending, failure, saved, run, forget } = useSave();
+  const [level, setLevel] = useState(lowFabricCenti === null ? "" : String(lowFabricCenti / 100));
+  return (
+    <form className="flex flex-col gap-4" onSubmit={(e) => { e.preventDefault(); run(SET_SETTINGS, { lowFabricCenti: level.trim() === "" ? null : Math.round(Number(level) * 100) }); }}>
+      {failure && <ErrorState title="That was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
+      <Field label="Warn when a fabric has less than (metres or kg)" htmlFor="low-fab" hint="Leave empty for no warning. The Fabric page flags every fabric below this.">
+        <Input id="low-fab" type="number" inputMode="decimal" min={0} step="1" placeholder="no warning" value={level} disabled={!canEdit} onChange={(e) => { forget(); setLevel(e.target.value); }} />
+      </Field>
+      {canEdit && (
+        <div className="flex items-center gap-3">
+          <CommandButton commands={SET_SETTINGS} type="submit" variant="primary" disabled={pending}>{pending ? "Saving…" : "Save level"}</CommandButton>
+          {saved && <span role="status" className="text-[13px] text-text-secondary">Saved</span>}
+        </div>
+      )}
+    </form>
+  );
+}
+
 export function ChallanForm({ title, address, canEdit }: { title: string | null; address: string | null; canEdit: boolean }) {
   const { pending, failure, saved, run, forget } = useSave();
   const [t, setT] = useState(title ?? "");

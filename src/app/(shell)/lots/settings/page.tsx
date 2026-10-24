@@ -8,7 +8,7 @@ import { ENTITY_PIECEWORK_SETTING, PIECEWORK_CAPABILITY, productionSettings } fr
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
 import { LimitsForm } from "../../shopfloor/team/TeamForms";
-import { ChallanForm, ChargeForm, ReasonList, StagesForm } from "./SettingsForms";
+import { ChallanForm, ChargeForm, FabricForm, ReasonList, StagesForm } from "./SettingsForms";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,10 @@ async function SettingsPage() {
           <Surface className="p-6">
             <h2 className="m-0 mb-4 text-[17px] font-medium tracking-[-0.02em]">Lost pieces</h2>
             <ChargeForm lostPieceChargeMinor={s.lostPieceChargeMinor} canEdit={canEdit} />
+          </Surface>
+          <Surface className="p-6">
+            <h2 className="m-0 mb-4 text-[17px] font-medium tracking-[-0.02em]">Fabric stock</h2>
+            <FabricForm lowFabricCenti={s.lowFabricCenti} canEdit={canEdit} />
           </Surface>
           <Surface className="p-6">
             <h2 className="m-0 mb-1 text-[17px] font-medium tracking-[-0.02em]">What a manager may approve</h2>

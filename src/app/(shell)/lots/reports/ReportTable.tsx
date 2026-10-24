@@ -2,6 +2,7 @@
 
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Button, Panel } from "@/components/ui/primitives";
+import { XLSX_MIME, toXlsx } from "@/lib/xlsx";
 
 /** Neutralises a cell a spreadsheet would run as a formula, then quotes it. */
 function csvCell(value: string | number | null): string {
@@ -11,8 +12,9 @@ function csvCell(value: string | number | null): string {
 }
 
 /**
- * One report: the table on screen and a CSV of exactly the same rows, built in the browser so the file and the
- * screen cannot differ. CSV opens in Excel; a native .xlsx file is a later build.
+ * One report: the table on screen, and the same rows as a native Excel file (.xlsx), as a CSV, or printed (Print opens the browser's
+ * own "Save as PDF"). The files are built in the browser from the rows the screen was built from, so a file and the screen cannot
+ * differ.
  */
 export function ReportTable({
   title,
@@ -31,25 +33,31 @@ export function ReportTable({
   csvHeader: string[];
   csvRows: Array<Array<string | number | null>>;
 }) {
-  const download = () => {
-    const body = [csvHeader, ...csvRows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
-    const blob = new Blob(["﻿" + body], { type: "text/csv;charset=utf-8" });
+  const save = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename;
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
   };
+  const downloadCsv = () => {
+    const body = [csvHeader, ...csvRows].map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+    // The byte-order mark makes Excel read the file as UTF-8, so Hindi and the rupee sign survive.
+    save(new Blob(["\uFEFF" + body], { type: "text/csv;charset=utf-8" }), filename);
+  };
+  const downloadXlsx = () => save(new Blob([toXlsx(csvHeader, csvRows, title) as BlobPart], { type: XLSX_MIME }), filename.replace(/\.csv$/i, "") + ".xlsx");
 
   return (
     <Panel
       title={title}
       flush
       action={
-        <Button variant="secondary" size="sm" onClick={download} disabled={rows.length === 0}>
-          Download for Excel
-        </Button>
+        <div className="flex flex-wrap gap-1.5 print:hidden">
+          <Button variant="secondary" size="sm" onClick={downloadXlsx} disabled={rows.length === 0}>Excel</Button>
+          <Button variant="ghost" size="sm" onClick={downloadCsv} disabled={rows.length === 0}>CSV</Button>
+          <Button variant="ghost" size="sm" onClick={() => window.print()} disabled={rows.length === 0}>Print / PDF</Button>
+        </div>
       }
     >
       <DataTable caption={title} rows={rows} columns={columns} emptyTitle="Nothing to report yet" emptyDescription="Rows appear as work is recorded." />

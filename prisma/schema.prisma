@@ -7987,6 +7987,8 @@ model PieceworkSetting {
   defaultLostPieceChargeMinor Int? @map("default_lost_piece_charge_minor")
   challanTitle   String? @map("challan_title")
   challanAddress String? @map("challan_address")
+  /// Warn when a fabric has less than this left, in the unit its rolls are measured in (hundredths). Null: no warning.
+  lowFabricCenti Int? @map("low_fabric_centi")
   updatedById                String?  @map("updated_by_id") @db.Uuid
   updatedAt                  DateTime @default(now()) @updatedAt @map("updated_at")
 

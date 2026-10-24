@@ -41,7 +41,7 @@ async function balanceOf(tx: Tx, rollId: string, receivedCenti: number): Promise
 /* ================================== receive ================================== */
 
 export const receiveRolls: CommandDefinition<
-  { fabricType: string; unit?: (typeof ROLL_UNITS)[number]; quantitiesCenti: number[]; supplier?: string; invoiceNumber?: string; rateMinor?: number; receivedOn?: string; note?: string },
+  { fabricType: string; unit?: (typeof ROLL_UNITS)[number]; quantitiesCenti: number[]; supplier?: string; invoiceNumber?: string; rateMinor?: number; receivedOn?: string; note?: string; confirmDuplicate?: boolean },
   { rollIds: string[]; numbers: string[] }
 > = {
   key: "verity.piecework.receive_rolls",
@@ -57,8 +57,17 @@ export const receiveRolls: CommandDefinition<
     rateMinor: z.number().int().min(0).max(100_000_000).optional(),
     receivedOn: isoDate.optional(),
     note: z.string().trim().max(300).optional(),
+    /** Says the same supplier's invoice number is meant to be received again (a second delivery on one invoice). */
+    confirmDuplicate: z.boolean().optional(),
   }),
   preconditions: async (ctx, input) => {
+    if (input.invoiceNumber && !input.confirmDuplicate) {
+      const again = await ctx.tx.pieceworkRoll.findFirst({
+        where: { cancelledAt: null, invoiceNumber: { equals: input.invoiceNumber, mode: "insensitive" }, supplier: input.supplier ? { equals: input.supplier, mode: "insensitive" } : null },
+        select: { number: true },
+      });
+      if (again) throw new ValidationError(`E_VALIDATION: invoice ${input.invoiceNumber}${input.supplier ? ` from ${input.supplier}` : ""} was already received (${again.number}); confirm to receive it again`);
+    }
     if ((input.receivedOn ?? "") > (await todayFor(ctx.tx))) throw new ValidationError("E_VALIDATION: fabric cannot be received on a future date");
   },
   handler: async (ctx, input) => {
@@ -189,7 +198,11 @@ async function rollRows(tx: Tx, where: { id?: string } = {}): Promise<RollRow[]>
   });
 }
 
-export type FabricOverview = { rolls: RollRow[]; inStock: Array<{ fabricType: string; unit: string; rolls: number; balanceCenti: number }> };
+export type FabricOverview = {
+  rolls: RollRow[]; inStock: Array<{ fabricType: string; unit: string; rolls: number; balanceCenti: number }>;
+  /** The warning level the factory set (null: none) and the fabrics below it, including ones with nothing left. */
+  lowLevelCenti: number | null; low: Array<{ fabricType: string; unit: string; balanceCenti: number }>;
+};
 
 export const listRolls: QueryDefinition<Record<string, never>, FabricOverview> = {
   key: "verity.piecework.list_rolls",
@@ -205,7 +218,16 @@ export const listRolls: QueryDefinition<Record<string, never>, FabricOverview> =
       cur.balanceCenti += r.balanceCenti;
       stock.set(key, cur);
     }
-    return { rolls, inStock: [...stock.values()].sort((a, b) => b.balanceCenti - a.balanceCenti) };
+    const level = (await ctx.tx.pieceworkSetting.findFirst({ select: { lowFabricCenti: true } }))?.lowFabricCenti ?? null;
+    const totals = new Map<string, { fabricType: string; unit: string; balanceCenti: number }>();
+    for (const r of rolls.filter((x) => !x.cancelled)) {
+      const key = `${r.fabricType}|${r.unit}`;
+      const cur = totals.get(key) ?? { fabricType: r.fabricType, unit: r.unit, balanceCenti: 0 };
+      cur.balanceCenti += r.balanceCenti;
+      totals.set(key, cur);
+    }
+    const low = level === null ? [] : [...totals.values()].filter((t) => t.balanceCenti < level).sort((a, b) => a.balanceCenti - b.balanceCenti);
+    return { rolls, inStock: [...stock.values()].sort((a, b) => b.balanceCenti - a.balanceCenti), lowLevelCenti: level, low };
   },
 };
 

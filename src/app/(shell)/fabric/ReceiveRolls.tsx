@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { DateField } from "@/components/ui/DateTimePicker";
-import { Button, Field, Input, Select } from "@/components/ui/primitives";
+import { Button, Checkbox, Field, Input, Select } from "@/components/ui/primitives";
 import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
@@ -16,7 +16,7 @@ const RECEIVE = "verity.piecework.receive_rolls";
  * Receive the rolls of one invoice. Rolls are entered as "how many, how long": ten rolls of 48 m is one line, and each still gets its own
  * number and its own label. Fabric types already received are offered, and a new one is just typed; there is no master list to maintain.
  */
-export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; today: string }) {
+export function ReceiveRolls({ fabricTypes, today, seen }: { fabricTypes: string[]; today: string; seen: Array<{ supplier: string | null; invoice: string; number: string }> }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
@@ -28,6 +28,9 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
   const [rate, setRate] = useState("");
   const [day, setDay] = useState(today);
   const [lines, setLines] = useState([{ count: "1", qty: "" }]);
+  const [again, setAgain] = useState(false);
+  // The same supplier's invoice number received before: warn here, and the server refuses it unless this is confirmed.
+  const twice = invoice.trim() === "" ? undefined : seen.find((r) => r.invoice.toLowerCase() === invoice.trim().toLowerCase() && (r.supplier ?? "").toLowerCase() === supplier.trim().toLowerCase());
 
   const parsed = lines.map((l) => ({ count: Number(l.count), centi: Math.round(Number(l.qty) * 100) }));
   const linesOk = parsed.every((l) => Number.isInteger(l.count) && l.count >= 1 && l.count <= 100 && l.centi >= 1);
@@ -41,7 +44,7 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
         fabricType: type.trim(), unit,
         quantitiesCenti: parsed.flatMap((l) => Array.from({ length: l.count }, () => l.centi)),
         supplier: supplier.trim() || undefined, invoiceNumber: invoice.trim() || undefined,
-        rateMinor: rate.trim() ? toPaise(rate) ?? undefined : undefined, receivedOn: day || undefined,
+        rateMinor: rate.trim() ? toPaise(rate) ?? undefined : undefined, receivedOn: day || undefined, confirmDuplicate: twice ? again : undefined,
       }, "/fabric");
       if (result.ok) { setOpen(false); router.push(`/fabric/labels?ids=${result.data!.rollIds.join(",")}`); } else setFailure(result);
     });
@@ -53,7 +56,7 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
       <FormModal
         open={open} onClose={() => setOpen(false)} width="lg"
         title="Receive rolls" description="One invoice, one fabric. Each roll gets a number and a label with a QR to stick on it."
-        submitLabel="Receive and print labels" pendingLabel="Receiving…" submitDisabled={!linesOk || type.trim() === ""}
+        submitLabel="Receive and print labels" pendingLabel="Receiving…" submitDisabled={!linesOk || type.trim() === "" || (twice !== undefined && !again)}
         pending={pending} failure={failure} failureTitle="The rolls were not received" onSubmit={submit}
       >
           <div className="grid gap-3 sm:grid-cols-[1.6fr_1fr]">
@@ -88,6 +91,12 @@ export function ReceiveRolls({ fabricTypes, today }: { fabricTypes: string[]; to
             <Field label="Received on" htmlFor="rr-day"><DateField id="rr-day" value={day} onChange={setDay} /></Field>
           </div>
 
+          {twice && (
+            <div role="alert" className="flex flex-col gap-2 rounded-[12px] px-4 py-3 text-[14px] text-text" style={{ background: "color-mix(in srgb, var(--color-state-pending) 16%, transparent)" }}>
+              <p className="m-0">Invoice {invoice.trim()}{supplier.trim() ? ` from ${supplier.trim()}` : ""} was already received as {twice.number}.</p>
+              <Checkbox label="This is a second delivery on that invoice; receive it anyway" checked={again} onChange={(e) => setAgain(e.target.checked)} />
+            </div>
+          )}
           <p role="status" className="m-0 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[15px] font-medium text-text">
             {linesOk ? `${rolls} roll${rolls === 1 ? "" : "s"}, ${(total / 100).toLocaleString("en-IN")} ${unit}` : "Say how many rolls and how long each is."}
           </p>
