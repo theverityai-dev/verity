@@ -239,12 +239,12 @@ export function TeamPeople({ directory }: { directory: TeamDirectory }) {
   const stageLabel = useMemo(() => new Map(directory.stages.map((s) => [s.id, s.label])), [directory.stages]);
 
   const groups = useMemo(() => {
-    const order = new Map<string, number>();
-    for (const p of directory.people) if (!order.has(p.roleName ?? "")) order.set(p.roleName ?? "", order.size);
+    // Roles come from the directory already in the factory's order (Owner first); a role not in it sorts last.
+    const order = new Map(directory.roles.map((r, i) => [r.name, i] as const));
     const by = new Map<string, TeamPerson[]>();
     for (const p of directory.people) { const k = p.disabled ? "\u0000off" : p.roleName ?? ""; by.set(k, [...(by.get(k) ?? []), p]); }
-    // People with no role first (they can do nothing and need attention), then roles in order of first appearance, switched-off last.
-    return [...by.entries()].sort(([a], [b]) => (a === "" ? -1 : b === "" ? 1 : a === "\u0000off" ? 1 : b === "\u0000off" ? -1 : (order.get(a) ?? 0) - (order.get(b) ?? 0)));
+    // People with no role first (they can do nothing and need attention), then roles in the factory's order, switched-off last.
+    return [...by.entries()].sort(([a], [b]) => (a === "" ? -1 : b === "" ? 1 : a === "\u0000off" ? 1 : b === "\u0000off" ? -1 : (order.get(a) ?? 99) - (order.get(b) ?? 99)));
   }, [directory.people]);
 
   if (directory.people.length === 0) {
@@ -256,7 +256,7 @@ export function TeamPeople({ directory }: { directory: TeamDirectory }) {
       {groups.map(([key, people]) => (
         <section key={key} aria-label={key === "" ? "No role" : key === "\u0000off" ? "Switched off" : key}>
           <h2 className="micro m-0 mb-3 px-1">{key === "" ? "No role yet" : key === "\u0000off" ? "Switched off" : key} · {people.length}</h2>
-          <ul className="m-0 grid list-none gap-3 p-0" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))" }}>
+          <ul className="m-0 grid list-none gap-3 p-0" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 320px), 1fr))" }}>
             {people.map((p) => (
               <li key={p.membershipId} className="list-none">
                 <button type="button" onClick={() => setOpenId(p.membershipId)}

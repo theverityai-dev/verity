@@ -164,10 +164,13 @@ export const teamDirectory: QueryDefinition<Record<string, never>, TeamDirectory
     }
 
     const have = new Set(roles.map((r) => r.name));
+    // The factory's own order for its presets (Owner first), then any role the workspace made, by name.
+    const rank = (name: string) => { const i = ROLE_PRESETS.findIndex((p) => p.name === name); return i === -1 ? ROLE_PRESETS.length : i; };
+    const ordered = [...roles].sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name));
     return {
       organizationId: org?.id ?? null,
       people: people.sort((a, b) => Number(a.disabled) - Number(b.disabled) || a.name.localeCompare(b.name)),
-      roles: await Promise.all(roles.map(async (r) => ({ id: r.id, name: r.name, summary: presetNamed(r.name)?.summary ?? null, allStages: await hasTenantPermission(ctx.tx, r.id, "ActionExecute", STAGE_ENTITY) }))),
+      roles: await Promise.all(ordered.map(async (r) => ({ id: r.id, name: r.name, summary: presetNamed(r.name)?.summary ?? null, allStages: await hasTenantPermission(ctx.tx, r.id, "ActionExecute", STAGE_ENTITY) }))),
       missingPresets: ROLE_PRESETS.filter((p) => !have.has(p.name)).map((p) => ({ name: p.name, summary: p.summary })),
       stages: stages.map((s) => ({ id: s.id, label: s.label })),
       can: { addPerson, changeRole, switchAccess, installRoles, assignStages },

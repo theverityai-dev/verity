@@ -189,6 +189,19 @@ async function main() {
   worker.D = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar D (button and kaj)", mobile: "98765 43213", rates: [rate("kaj", 3, "good")] })).id;
   worker.E = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar E (finishing)", mobile: "98765 43214", rates: [rate("finishing", 4, "good")] })).id;
   worker.G = (await executeCommand(actor, piecework.defineWorker, { name: "Karigar G (helper)", mobile: "98765 43217" })).id;
+  // Who looks after whom: each supervisor has the karigars at their own stages (Supervisor A collar, cuff and stitching; B the rest);
+  // the helper stays open to any supervisor. A few profile notes so the profile panel shows what it is for.
+  const profiles: Array<[string, typeof supA, string, string, string]> = [
+    ["B", supA, "2025-04-10", "GST 03AAAAA0000A1Z5", "Sharma ji, 98140 11002"],
+    ["A", supA, "2024-08-01", "Aadhaar ending 4321", "Wife, 98765 00011"],
+    ["F", supA, "2025-01-15", "Aadhaar ending 7788", "Brother, 98765 00012"],
+    ["C", supB, "2025-06-02", "Aadhaar ending 1209", "Mother, 98140 22003"],
+    ["D", supB, "2024-11-20", "Aadhaar ending 5640", "Wife, 98765 00013"],
+    ["E", supB, "2025-02-08", "Aadhaar ending 9021", "Father, 98765 00014"],
+  ];
+  for (const [key, sup, joinedOn, idNote, emergencyContact] of profiles) {
+    await executeCommand(actor, piecework.updateWorker, { workerId: worker[key]!, joinedOn, idNote, emergencyContact, ...(sup ? { supervisorUserId: sup.userId } : {}) });
+  }
 
   /** A lot or bundle made `ago` days ago: its creation date is moved back so entries can carry real, earlier dates. */
   const backdate = async (table: "piecework_lot" | "piecework_bundle", id: string, ago: number) => {
