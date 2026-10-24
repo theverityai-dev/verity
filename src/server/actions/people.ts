@@ -13,6 +13,7 @@ import {
   invitePerson,
 } from "@/server/platform/administration";
 import { withTenant } from "@/server/platform/tenancy";
+import { loginAddress } from "@/lib/login-address";
 import {
   toActionFailure,
   type ActionResult,
@@ -60,6 +61,11 @@ export async function createTeamLogin(input: {
         retryable: false,
       };
     }
+    // An email as typed, or a username on the reserved domain (people with no email). Anything else is refused before any account exists.
+    const address = loginAddress(input.email);
+    if (!address) {
+      return { ok: false, code: "E_VALIDATION", message: "Enter an email, or a username of 3 to 32 letters, digits, dots or dashes.", retryable: false };
+    }
     const actor = await requireActor();
     await limitActorRequests(actor.tenantId, actor.userId, "command");
 
@@ -89,7 +95,7 @@ export async function createTeamLogin(input: {
     });
 
     const created = await admin.auth.admin.createUser({
-      email: input.email,
+      email: address,
       password: input.password,
       // The owner is standing next to them. Requiring an email round-trip to
       // confirm an address the proprietor just typed would stop the person
@@ -112,7 +118,7 @@ export async function createTeamLogin(input: {
     try {
       const identity = await executeCommand(actor, invitePerson, {
         displayName: input.displayName,
-        email: input.email,
+        email: address,
         organizationId: input.organizationId,
         roleId: input.roleId ?? null,
         ...(input.phone ? { phone: input.phone } : {}),

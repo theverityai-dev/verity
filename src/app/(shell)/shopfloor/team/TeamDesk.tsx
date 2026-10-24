@@ -10,6 +10,7 @@ import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Badge, Button, Checkbox, Field, Input, Select, Surface } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import { createTeamLogin, resetMemberPassword, suggestPassword } from "@/server/actions/people";
+import { loginLabel } from "@/lib/login-address";
 import type { ActionFailure } from "@/server/platform/action-error";
 import type { TeamDirectory, TeamPerson } from "@/server/capabilities/piecework";
 import { StageAssignment } from "./TeamForms";
@@ -101,7 +102,7 @@ export function AddPerson({ directory }: { directory: TeamDirectory }) {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Name" htmlFor="team-name" required><Input id="team-name" name="name" required maxLength={120} autoFocus /></Field>
           <Field label="Mobile number" htmlFor="team-phone"><Input id="team-phone" name="phone" type="tel" inputMode="tel" maxLength={20} /></Field>
-          <Field label="Email" htmlFor="team-email" required hint="This is how they sign in"><Input id="team-email" name="email" type="email" required /></Field>
+          <Field label="Email or username" htmlFor="team-email" required hint="How they sign in. No email? Make a username, like ravi.stylified; it must be new across Verity."><Input id="team-email" name="email" type="text" inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} required /></Field>
           <Field label="Password" htmlFor="team-password" required hint="At least 8 characters. Give it to them directly.">
             <div className="flex gap-2">
               <div className="min-w-0 flex-1"><Input id="team-password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" /></div>
@@ -149,7 +150,7 @@ function PersonSheet({ person, directory, onClose }: { person: TeamPerson; direc
   const { can } = directory;
 
   return (
-    <Modal open onClose={onClose} width="lg" title={person.name} description={[person.email, person.phone].filter(Boolean).join(" · ") || "No contact on file"} footer={<ModalCancel onClose={onClose}>Close</ModalCancel>}>
+    <Modal open onClose={onClose} width="lg" title={person.name} description={[loginLabel(person.email), person.phone].filter(Boolean).join(" · ") || "No contact on file"} footer={<ModalCancel onClose={onClose}>Close</ModalCancel>}>
       <div className="flex flex-col gap-6">
         <CommandFailure failure={failure} title="That was refused" />
 
@@ -265,7 +266,7 @@ export function TeamPeople({ directory }: { directory: TeamDirectory }) {
                       <Avatar name={p.name} size={44} />
                       <div className="min-w-0 flex-1">
                         <p className="m-0 truncate text-[17px] font-medium leading-[22px] tracking-[-0.02em] text-text">{p.name}{p.isYou ? " (you)" : ""}</p>
-                        <p className="m-0 truncate text-[13px] leading-[18px] text-text-secondary">{p.email ?? "No email"}{p.phone ? ` · ${p.phone}` : ""}</p>
+                        <p className="m-0 truncate text-[13px] leading-[18px] text-text-secondary">{loginLabel(p.email) ?? "No sign-in"}{p.phone ? ` · ${p.phone}` : ""}</p>
                       </div>
                       {p.roleName ? <Badge tone="accent">{p.roleName}</Badge> : <Badge>No role</Badge>}
                     </div>

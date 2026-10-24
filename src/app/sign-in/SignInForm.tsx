@@ -55,7 +55,7 @@ export function SignInForm({ returnTo = "/" }: { returnTo?: string }) {
       )}
 
       <input type="hidden" name="returnTo" value={returnTo} />
-      <Field label="Email" htmlFor="email" required>
+      <Field label="Email or username" htmlFor="email" required>
         <div className="relative">
           <Icon
             name="mail"
@@ -65,11 +65,15 @@ export function SignInForm({ returnTo = "/" }: { returnTo?: string }) {
           <Input
             id="email"
             name="email"
-            type="email"
-            autoComplete="email"
+            type="text"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="username"
             required
             autoFocus
-            placeholder="you@company.com"
+            placeholder="you@company.com or your username"
             className="pl-11"
           />
         </div>

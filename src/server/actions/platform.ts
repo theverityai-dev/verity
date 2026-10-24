@@ -22,6 +22,7 @@ import { sharedRateLimit } from "@/server/platform/shared-rate-limit";
 import { signInKey } from "@/server/platform/rate-limit";
 import { withTenant } from "@/server/platform/tenancy";
 import { installCapabilities } from "@/server/capabilities/registry";
+import { loginAddress } from "@/lib/login-address";
 import {
   toActionFailure,
   type ActionFailure,
@@ -149,7 +150,9 @@ export async function signInWithPassword(formData: FormData): Promise<ActionFail
       retryable: false,
     };
   }
-  const email = String(formData.get("email") ?? "");
+  // A username (no @) signs in as an address on the reserved domain; a real email is used as typed (see `login-address.ts`).
+  const typed = String(formData.get("email") ?? "");
+  const email = loginAddress(typed) ?? typed;
   const password = String(formData.get("password") ?? "");
 
   // Audit finding F-01. Counted BEFORE the credential is checked, so a refused
