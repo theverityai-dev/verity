@@ -164,7 +164,7 @@ export function PageHeader({
         </div>
         {/* On a phone the actions are an even two-column grid (an odd one out spans the row) instead of one button per line at mixed widths. */}
         {actions && (
-          <div className="flex flex-wrap items-center gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:[&>*]:h-auto max-sm:[&>*]:min-h-11 max-sm:[&>*]:w-full max-sm:[&>*]:min-w-0 max-sm:[&>*]:justify-center max-sm:[&>*]:whitespace-normal max-sm:[&>*]:py-2 max-sm:[&>*]:text-center max-sm:[&>*]:leading-tight max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
+          <div className="flex flex-wrap items-center gap-2 max-sm:grid max-sm:w-full max-sm:grid-cols-2 max-sm:items-stretch max-sm:[&>*]:h-auto max-sm:[&>*]:min-h-11 max-sm:[&>*]:w-full max-sm:[&>*]:min-w-0 max-sm:[&>*]:justify-center max-sm:[&>*]:whitespace-normal max-sm:[&>*]:py-2 max-sm:[&>*]:text-center max-sm:[&>*]:leading-tight max-sm:[&>*:last-child:nth-child(odd)]:col-span-2">
             {actions}
           </div>
         )}
