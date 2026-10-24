@@ -81,6 +81,10 @@ export type CaseRow = {
   chargeStatus: "pending" | "approved" | "declined" | null;
   /** A shortage written off by an approver (pieces), so the case no longer holds the lot open. */
   writtenOff: number;
+  /** The supervisor who recorded the handover or return: the person in the middle, who checked the count. */
+  recordedBy: string;
+  /** How it was settled, by whom and with what words. Null while it is open. */
+  decision: { by: string; on: string; outcome: "charged" | "declined" | "written off"; note: string | null } | null;
 };
 
 /**
@@ -109,6 +113,8 @@ export const floorCases: QueryDefinition<Record<string, never>, { today: string;
       activeStages(ctx.tx),
       ctx.tx.pieceworkApproval.findMany({ where: { entryId: { in: live.map((r) => r.id) } } }),
     ]);
+    const userIds = [...new Set([...live.map((r) => r.enteredById), ...approvals.flatMap((a) => (a.decidedById ? [a.decidedById] : []))])];
+    const who = await userNames(ctx.tx, userIds);
     const bNo = new Map(bundles.map((b) => [b.id, b.number]));
     const wName = new Map(workers.map((w) => [w.id, w.name]));
     const sLabel = new Map(stages.map((s) => [s.id, s.label]));
@@ -125,6 +131,13 @@ export const floorCases: QueryDefinition<Record<string, never>, { today: string;
         sent: isShort ? null : r.sentPieces, counted: isShort ? null : r.pieces,
         answer: r.note, chargeStatus: (charge?.status as CaseRow["chargeStatus"]) ?? null,
         writtenOff: mine.filter((a) => a.kind === "writeoff" && a.status === "approved").reduce((t, a) => t + (a.pieces ?? 0), 0),
+        recordedBy: who.get(r.enteredById) ?? "A supervisor",
+        decision: (() => {
+          const done = mine.filter((a) => a.status !== "pending" && a.decidedAt).sort((a, b) => b.decidedAt!.getTime() - a.decidedAt!.getTime())[0];
+          if (!done) return null;
+          const outcome = done.status === "declined" ? "declined" : done.kind === "writeoff" ? "written off" : "charged";
+          return { by: who.get(done.decidedById ?? "") ?? "A manager", on: isoOf(done.decidedAt!), outcome, note: done.decisionNote } as const;
+        })(),
       };
     });
     const settledOf = (c: CaseRow) => c.kind === "short" && (c.writtenOff >= c.pieces || c.chargeStatus === "approved" || c.chargeStatus === "declined");

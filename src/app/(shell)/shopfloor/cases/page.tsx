@@ -73,6 +73,13 @@ function CaseCard({ x, t }: { x: CaseRow; t: Labels }) {
         <span className="micro block">{t.karigarSaid}</span>
         {x.answer ?? <span className="text-text-secondary">{t.noAnswer}</span>}
       </p>
+      <p className="m-0 text-[13px] text-text-secondary">{t.recordedBy} {x.recordedBy}</p>
+      {x.decision && (
+        <p className="m-0 text-[13px] text-text-secondary">
+          <span className="font-medium text-text">{x.decision.outcome === "charged" ? t.chargeApproved : x.decision.outcome === "declined" ? t.chargeDeclined : t.writtenOff}</span> · {x.decision.by} · {shortDate(x.decision.on)}
+          {x.decision.note ? ` · ${x.decision.note}` : ""}
+        </p>
+      )}
       <div className="relative z-10 mt-auto flex flex-wrap items-center gap-3 text-[13px]">
         {charge && <span className="rounded-full bg-[var(--color-control)] px-3 py-1 font-medium text-text">{charge}</span>}
         {x.challan && <Link href={`/shopfloor/challan/${x.challan}`} className="font-medium text-accent-ink no-underline hover:underline">{x.challan}</Link>}

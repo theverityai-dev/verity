@@ -170,6 +170,7 @@ const EN = {
   scanCancelled: "This bundle was cancelled or re-bundled. Scan its new slip.",
   scanAgain: "Scan another",
   change: "Change",
+  recordedBy: "Recorded by",
 } as const;
 
 export type Labels = { [K in keyof typeof EN]: string };
@@ -337,6 +338,7 @@ const HI: Labels = {
   scanCancelled: "यह बंडल रद्द हुआ या दोबारा बंडल बना। नई स्लिप स्कैन करें।",
   scanAgain: "दूसरा स्कैन करें",
   change: "बदलें",
+  recordedBy: "दर्ज करने वाला",
 };
 
 export const LABELS: Record<Lang, Labels> = { en: EN, hi: HI };

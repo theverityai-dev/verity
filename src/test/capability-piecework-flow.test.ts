@@ -43,6 +43,7 @@ import {
   lotRateCard,
   listRolls,
   moveFabric,
+  pieceworkHistory,
   productionSettings,
   readyGarments,
   receiveRolls,
@@ -411,5 +412,26 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     await reject(executeCommand(owner, addLotCost, { lotIds: [lotId], category: "fabric", amountMinor: 1000 }), /count it twice/);
     await reject(executeCommand(owner, addLotCost, { lotIds: [lotId], category: " Stitching ", amountMinor: 1000 }), /already counted from the wages/);
     await executeCommand(owner, addLotCost, { lotIds: [lotId], category: "Stitching thread", amountMinor: 1000 });
+  });
+
+  it("records who settled a case and when, and keeps a change history only the owner and manager can read", async () => {
+    const { bundleId } = await lotWith(20, "History");
+    const issue = await executeCommand(supervisor, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.X!, pieces: 20 });
+    const back = await executeCommand(supervisor, recordReturn, { issueId: issue.id, good: 18, rejected: 0, rework: 0, short: 2, note: "Lost on the floor" });
+    const asked = await withTenant(tenantId, (tx) => tx.pieceworkApproval.findFirstOrThrow({ where: { entryId: back.id, kind: "deduction" } }));
+    await executeCommand(manager, decideApproval, { approvalId: asked.id, decision: "declined", note: "Karigar showed the pieces were counted wrong" });
+
+    const cases = await executeQuery(supervisor, floorCases, {});
+    const settled = cases.settled.find((c) => c.entryId === back.id);
+    expect(settled).toMatchObject({ recordedBy: "Supervisor A", chargeStatus: "declined" });
+    expect(settled?.decision).toMatchObject({ by: "Manager Singh", outcome: "declined", note: "Karigar showed the pieces were counted wrong" });
+
+    const history = await executeQuery(owner, pieceworkHistory, {});
+    const line = history.rows.find((r) => r.what === "Took pieces back" && r.subject?.includes("Karigar X") && r.subject.includes("20 pieces"));
+    expect(line).toMatchObject({ by: "Supervisor A", group: "work" });
+    expect(history.rows.some((r) => r.what === "Decided a request" && r.by === "Manager Singh")).toBe(true);
+    expect((await executeQuery(owner, pieceworkHistory, { group: "money" })).rows.every((r) => r.group === "money")).toBe(true);
+    // Reading who did what is not for the floor.
+    await reject(executeQuery(supervisor, pieceworkHistory, {}), /holds no Read grant/);
   });
 });

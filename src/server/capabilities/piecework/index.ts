@@ -30,6 +30,7 @@ import { applyMove, registerFabric, ENTITY_PIECEWORK_ROLL } from "./fabric";
 import { registerViews } from "./views";
 import { registerCosts } from "./costs";
 import { registerRebundle } from "./rebundle";
+import { registerHistory } from "./history";
 
 export * from "./ledger";
 export * from "./reports";
@@ -39,6 +40,7 @@ export * from "./fabric";
 export * from "./views";
 export * from "./costs";
 export * from "./rebundle";
+export * from "./history";
 
 /**
  * CAPABILITY: Piece-rate lots (`verity.capability.piecework`), built for the Stylified shirt factory from its requirement
@@ -1056,6 +1058,7 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
       { href: "/lots/ready", label: "Ready garments", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/audit", label: "Change history", group: "Production", order: 27, icon: "clock", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/settings", label: "Production settings", group: "Production", order: 26, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/dashboard", label: "Factory dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots", label: "Lots", group: "Production", order: 21, icon: "batch", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
@@ -1083,6 +1086,7 @@ export function registerPieceworkCapability(): void {
   registerViews();
   registerCosts();
   registerRebundle();
+  registerHistory();
   registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);
