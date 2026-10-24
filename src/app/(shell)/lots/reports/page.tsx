@@ -150,7 +150,7 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
                 <div className="mb-1.5 flex items-baseline justify-between gap-3">
                   <span className="text-[16px] font-medium text-text">{p.stage}</span>
                   <span className="text-[13px] text-text-secondary">
-                    {p.pending > 0 ? <span className="font-medium text-text">{p.pending} out</span> : "nothing out"}{p.avgCycleDays !== null ? ` · ${p.avgCycleDays} days a bundle` : ""}
+                    {p.pending > 0 ? <span className="font-medium text-text">{p.pending} out</span> : "nothing out"}{p.avgCycleDays !== null ? ` · ${p.avgCycleDays} ${p.avgCycleDays === 1 ? "day" : "days"} a bundle` : ""}
                   </span>
                 </div>
                 <ProgressBar label={`${p.stage}: accepted of sent`} value={p.accepted} total={Math.max(p.sent, 1)} tone={p.pending > 0 ? "active" : "completed"} figures={`${p.accepted.toLocaleString("en-IN")} accepted of ${p.sent.toLocaleString("en-IN")} sent`} />
@@ -174,7 +174,7 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
                     <div className="flex items-center gap-3.5">
                       <Cover src={l.cover} label={l.number} size={56} rounded={14} />
                       <div className="min-w-0 flex-1">
-                        <Link href={`/lots/${l.id}`} className="block truncate text-[17px] font-semibold text-text no-underline after:absolute after:inset-0 after:content-['']">{l.number} · {l.name ?? l.design}</Link>
+                        <Link href={`/lots/${l.id}`} className="line-clamp-2 text-[17px] font-semibold leading-[22px] text-text no-underline after:absolute after:inset-0 after:content-['']">{l.number} · {l.name ?? l.design}</Link>
                         <p className="m-0 truncate text-[13px] text-text-secondary">{l.stageLabel ? `${l.stageLabel} · ${l.location}` : l.location}</p>
                       </div>
                       <StateBadge category={STATUS_CATEGORY[l.status]!} label={STATUS_LABEL[l.status]} />
