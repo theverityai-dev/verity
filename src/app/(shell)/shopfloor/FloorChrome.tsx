@@ -21,7 +21,8 @@ export function FloorTabs({ active, t }: { active: FloorTab; t: Labels }) {
     ["day-close", "/shopfloor/day-close", t.dayClose],
   ];
   return (
-    <nav aria-label="Floor" className="mb-6 flex flex-wrap gap-1.5">
+    // On a phone the strip is one row that slides sideways (the bottom tab bar already holds the main places); on wider screens it wraps.
+    <nav aria-label="Floor" className="mb-6 flex gap-1.5 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[scrollbar-width:none] sm:flex-wrap">
       {tabs.map(([key, href, label]) => (
         <Link
           key={key}
