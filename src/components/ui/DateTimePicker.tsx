@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { showInTopLayer } from "./top-layer";
 import { AnimatePresence, motion } from "framer-motion";
 import dayjs, { type Dayjs } from "dayjs";
 import { Icon } from "./icons";
@@ -282,7 +283,8 @@ export function DateField({
           <AnimatePresence>
             {open && (
               <motion.div
-                ref={panelRef}
+                ref={(el: HTMLDivElement | null) => { (panelRef as { current: HTMLDivElement | null }).current = el; showInTopLayer(el); }}
+                popover="manual"
                 id={panelId}
                 role="dialog"
                 aria-label="Choose a date"
@@ -292,12 +294,13 @@ export function DateField({
                 transition={prefersReducedMotion() ? reducedMotionFade : springDefault}
                 style={{
                   position: "fixed",
+                  inset: "auto",
                   left: anchor.left,
                   width: 280,
                   transformOrigin: anchor.above ? "bottom" : "top",
                   ...(anchor.above ? { bottom: window.innerHeight - anchor.top } : { top: anchor.top }),
                 }}
-                className="glass-overlay z-[100] overflow-hidden rounded-lg"
+                className="glass-overlay z-[100] m-0 overflow-hidden rounded-lg border-0 p-0 text-text"
               >
                 <MonthGrid
                   viewMonth={viewMonth}
@@ -414,7 +417,8 @@ export function DateTimeField({
           <AnimatePresence>
             {open && (
               <motion.div
-                ref={panelRef}
+                ref={(el: HTMLDivElement | null) => { (panelRef as { current: HTMLDivElement | null }).current = el; showInTopLayer(el); }}
+                popover="manual"
                 id={panelId}
                 role="dialog"
                 aria-label="Choose a date and time"
@@ -424,12 +428,13 @@ export function DateTimeField({
                 transition={prefersReducedMotion() ? reducedMotionFade : springDefault}
                 style={{
                   position: "fixed",
+                  inset: "auto",
                   left: anchor.left,
                   width: 280,
                   transformOrigin: anchor.above ? "bottom" : "top",
                   ...(anchor.above ? { bottom: window.innerHeight - anchor.top } : { top: anchor.top }),
                 }}
-                className="glass-overlay z-[100] overflow-hidden rounded-lg"
+                className="glass-overlay z-[100] m-0 overflow-hidden rounded-lg border-0 p-0 text-text"
               >
                 <MonthGrid
                   viewMonth={viewMonth}

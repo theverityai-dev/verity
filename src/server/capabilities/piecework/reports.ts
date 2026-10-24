@@ -209,7 +209,7 @@ export const reportBundleLocation: QueryDefinition<Record<string, never>, Bundle
   },
 };
 
-export type WorkInHandRow = { karigar: string; lotNumber: string; bundleNumber: string; stage: string; issued: number; returned: number; open: number; dueDate: string | null; overdue: boolean; isRework: boolean };
+export type WorkInHandRow = { workerId: string; karigar: string; lotNumber: string; bundleNumber: string; stage: string; issued: number; returned: number; open: number; dueDate: string | null; overdue: boolean; isRework: boolean };
 
 /** RP-05 Karigar work in hand: issued, returned (accounted for) and still out, by worker, lot, bundle and stage. */
 export const reportWorkInHand: QueryDefinition<Record<string, never>, WorkInHandRow[]> = {
@@ -221,7 +221,7 @@ export const reportWorkInHand: QueryDefinition<Record<string, never>, WorkInHand
     return d.bundles.filter((b) => !b.cancelledAt).flatMap((b) =>
       b.position.stages.flatMap((s) =>
         s.issues.filter((i) => i.open > 0).map((i) => ({
-          karigar: d.names.get(i.workerId) ?? "A worker", lotNumber: d.lotNo.get(b.lotId) ?? "", bundleNumber: b.number, stage: s.label,
+          workerId: i.workerId, karigar: d.names.get(i.workerId) ?? "A worker", lotNumber: d.lotNo.get(b.lotId) ?? "", bundleNumber: b.number, stage: s.label,
           issued: i.issued, returned: i.issued - i.open, open: i.open, dueDate: i.dueDate, overdue: i.dueDate !== null && i.dueDate < d.today, isRework: i.isRework,
         })),
       ),
@@ -230,7 +230,7 @@ export const reportWorkInHand: QueryDefinition<Record<string, never>, WorkInHand
 };
 
 export type WagePaymentRow = {
-  karigar: string; mobile: string | null; workTypes: string; wagesMinor: number; advanceGivenMinor: number; recoveredMinor: number; deductionMinor: number; paidMinor: number; balanceMinor: number; advanceOutstandingMinor: number;
+  workerId: string; karigar: string; mobile: string | null; workTypes: string; wagesMinor: number; advanceGivenMinor: number; recoveredMinor: number; deductionMinor: number; paidMinor: number; balanceMinor: number; advanceOutstandingMinor: number;
 };
 
 /** RP-06 Karigar wage ledger: gross wages, advances, recoveries, deductions, payments and balance, for a period. */
@@ -245,14 +245,14 @@ export const reportWagePayment: QueryDefinition<{ from?: string; to?: string }, 
       const mine = d.ledger.filter((e) => e.workerId === w.id && within(e.entryDate));
       const pays = d.payments.filter((p) => p.workerId === w.id && within(isoOf(p.paidOn))).map(toPayment);
       const stageIds = new Set(mine.filter((e) => e.kind === "receive").map((e) => e.stageId));
-      return { karigar: w.name, mobile: w.mobile, workTypes: d.stages.filter((s) => stageIds.has(s.id)).map((s) => s.label).join(", "), ...workerMoney(mine, pays) };
+      return { workerId: w.id, karigar: w.name, mobile: w.mobile, workTypes: d.stages.filter((s) => stageIds.has(s.id)).map((s) => s.label).join(", "), ...workerMoney(mine, pays) };
     });
     const touched = (r: WagePaymentRow) => r.wagesMinor !== 0 || r.advanceGivenMinor !== 0 || r.recoveredMinor !== 0 || r.deductionMinor !== 0 || r.paidMinor !== 0;
     return { rows: rows.filter(touched), period: { from: input.from ?? null, to: input.to ?? null } };
   },
 };
 
-export type QualityRow = { date: string; lotNumber: string; bundleNumber: string; karigar: string; stage: string; rejected: number; rework: number; short: number; note: string | null };
+export type QualityRow = { workerId: string; date: string; lotNumber: string; bundleNumber: string; karigar: string; stage: string; rejected: number; rework: number; short: number; note: string | null };
 
 /** RP-07 Short, reject and rework: separate totals, by line, with the rework still waiting. */
 export const reportQuality: QueryDefinition<{ from?: string; to?: string }, { rows: QualityRow[]; totals: { rejected: number; rework: number; short: number; reworkOpen: number } }> = {
@@ -268,7 +268,7 @@ export const reportQuality: QueryDefinition<{ from?: string; to?: string }, { ro
     const rows = raw
       .filter((r) => r.reversesId === null && ((r.rejectedPieces ?? 0) + (r.reworkPieces ?? 0) + (r.shortPieces ?? 0)) > 0 && within(isoOf(r.entryDate)))
       .map((r): QualityRow => ({
-        date: isoOf(r.entryDate), lotNumber: d.lotNo.get(r.lotId) ?? "", bundleNumber: bundleById.get(r.bundleId)?.number ?? "", karigar: d.names.get(r.workerId) ?? "A worker",
+        workerId: r.workerId, date: isoOf(r.entryDate), lotNumber: d.lotNo.get(r.lotId) ?? "", bundleNumber: bundleById.get(r.bundleId)?.number ?? "", karigar: d.names.get(r.workerId) ?? "A worker",
         stage: stageLabel.get(r.stageId) ?? "", rejected: r.rejectedPieces ?? 0, rework: r.reworkPieces ?? 0, short: r.shortPieces ?? 0, note: r.note,
       }));
     const live = d.bundles.filter((b) => !b.cancelledAt);

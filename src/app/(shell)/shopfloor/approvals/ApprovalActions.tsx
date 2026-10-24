@@ -1,53 +1,41 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Button, ErrorState, Field, Input } from "@/components/ui/primitives";
-import { runCommand } from "@/server/actions/platform";
-import type { ActionFailure } from "@/server/platform/action-error";
+import { CommandFailure, FormModal, useCommand } from "@/components/ui/CommandForm";
+import { Button, Field, Input } from "@/components/ui/primitives";
 
 const DECIDE = "verity.piecework.decide_approval";
 
 /**
- * Approve or decline. A decline needs a reason. Above the manager's limit the Approve button is shown disabled with the
- * reason, so the rule is visible; the server refuses it as well, for anyone who is not the owner.
+ * Approve or decline. A decline asks for its reason in a sheet, like every other form. Above the manager's limit the Approve button is
+ * shown disabled with the reason, so the rule is visible; the server refuses it as well, for anyone who is not the owner.
  */
 export function ApprovalActions({ id, aboveLimit }: { id: string; aboveLimit: boolean }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
+  const approve = useCommand("/shopfloor/approvals");
+  const decline = useCommand("/shopfloor/approvals");
   const [declining, setDeclining] = useState(false);
-  const [note, setNote] = useState("");
-  const [failure, setFailure] = useState<ActionFailure | null>(null);
-
-  const decide = (decision: "approved" | "declined") => {
-    setFailure(null);
-    start(async () => {
-      const result = await runCommand(DECIDE, { approvalId: id, decision, note: decision === "declined" ? note.trim() : undefined }, "/shopfloor/approvals");
-      if (result.ok) router.refresh(); else setFailure(result);
-    });
-  };
 
   return (
     <div className="flex flex-col gap-3">
-      {failure && <ErrorState title="That was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
-      {declining ? (
-        <>
-          <Field label="Why are you declining?" htmlFor={`dn-${id}`} required>
-            <Input id={`dn-${id}`} value={note} onChange={(e) => setNote(e.target.value)} minLength={3} maxLength={300} autoFocus />
-          </Field>
-          <div className="grid grid-cols-2 gap-2.5">
-            <Button type="button" variant="ghost" onClick={() => setDeclining(false)}>Back</Button>
-            <CommandButton commands={DECIDE} type="button" variant="danger" disabled={pending || note.trim().length < 3} onClick={() => decide("declined")}>{pending ? "Saving…" : "Decline"}</CommandButton>
-          </div>
-        </>
-      ) : (
-        <div className="grid grid-cols-2 gap-2.5">
-          <Button type="button" variant="secondary" className="min-h-12" disabled={pending} onClick={() => setDeclining(true)}>Decline</Button>
-          <CommandButton commands={DECIDE} type="button" variant="primary" className="min-h-12" disabled={pending || aboveLimit} onClick={() => decide("approved")}>{pending ? "Saving…" : "Approve"}</CommandButton>
-        </div>
-      )}
-      {aboveLimit && !declining && <p className="m-0 text-[12px] text-text-tertiary">Above the limit set for managers. Only the owner can approve this.</p>}
+      <CommandFailure failure={approve.failure} title="That was not saved" />
+      <div className="grid grid-cols-2 gap-2.5">
+        <Button type="button" variant="secondary" className="min-h-12" disabled={approve.pending} onClick={() => { decline.clear(); setDeclining(true); }}>Decline</Button>
+        <CommandButton commands={DECIDE} type="button" variant="primary" className="min-h-12" disabled={approve.pending || aboveLimit} onClick={() => approve.run(DECIDE, { approvalId: id, decision: "approved" })}>{approve.pending ? "Saving…" : "Approve"}</CommandButton>
+      </div>
+      {aboveLimit && <p className="m-0 text-[12px] text-text-tertiary">Above the limit set for managers. Only the owner can approve this.</p>}
+
+      <FormModal
+        open={declining} onClose={() => setDeclining(false)} destructive
+        title="Decline this request" description="Say why, so the person who asked can see it."
+        submitLabel="Decline" pendingLabel="Saving…"
+        pending={decline.pending} failure={decline.failure} failureTitle="That was not saved"
+        onSubmit={(fd) => decline.run(DECIDE, { approvalId: id, decision: "declined", note: String(fd.get("note") ?? "").trim() }, () => setDeclining(false))}
+      >
+        <Field label="Why are you declining?" htmlFor={`dn-${id}`} required>
+          <Input id={`dn-${id}`} name="note" minLength={3} maxLength={300} required autoFocus />
+        </Field>
+      </FormModal>
     </div>
   );
 }

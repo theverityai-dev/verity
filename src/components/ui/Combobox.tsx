@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { showInTopLayer } from "./top-layer";
 import { AnimatePresence, motion } from "framer-motion";
 import { prefersReducedMotion, reducedMotionFade, springDefault } from "@/lib/motion";
 
@@ -340,7 +341,8 @@ export function Combobox({
           <AnimatePresence>
             {open && (
               <motion.ul
-                ref={listRef}
+                ref={(el: HTMLUListElement | null) => { (listRef as { current: HTMLUListElement | null }).current = el; showInTopLayer(el); }}
+                popover="manual"
                 id={listId}
                 role="listbox"
                 initial={{ opacity: 0, scaleY: 0.95 }}
@@ -349,6 +351,7 @@ export function Combobox({
                 transition={prefersReducedMotion() ? reducedMotionFade : springDefault}
                 style={{
                   position: "fixed",
+                  inset: "auto",
                   left: anchor.left,
                   width: anchor.width,
                   maxHeight: anchor.maxHeight,
@@ -362,7 +365,7 @@ export function Combobox({
                     : { top: anchor.top }),
                 }}
                 className={
-                  "glass-overlay z-[100] m-0 list-none overflow-y-auto overscroll-contain rounded-lg p-1"
+                  "glass-overlay z-[100] m-0 list-none overflow-y-auto overscroll-contain rounded-lg border-0 p-1 text-text"
                 }
               >
             {matches.length === 0 && (

@@ -11,7 +11,6 @@ import {
 } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
-import { DataTable } from "@/components/ui/DataTable";
 import { FloorBoard, PieceBar } from "@/components/ui/PieceFlow";
 import { ButtonLink, DefinitionList, EmptyState, PageHeader, Panel, PermissionDenied, StateBadge, Surface } from "@/components/ui/primitives";
 import { ProgressBar } from "@/components/ui/viz";
@@ -197,23 +196,26 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
       )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr]">
-        <Panel title="Stage by stage" flush>
-          <DataTable
-            caption="What each stage has taken and returned"
-            rows={lot.stages.map((s) => ({
-              id: s.stageId, stage: s.label, issued: s.issued, good: s.good, pending: s.pending,
-              losses: s.rejected + s.rework + s.short === 0 ? "—" : `${s.rejected} · ${s.rework} · ${s.short}`,
-            }))}
-            columns={[
-              { key: "stage", header: "Stage" },
-              { key: "issued", header: "Issued", numeric: true },
-              { key: "good", header: "Good", numeric: true },
-              { key: "pending", header: "Pending", numeric: true },
-              { key: "losses", header: "Rej · rework · short" },
-            ]}
-            emptyTitle="No stages"
-            emptyDescription="Add the stages first."
-          />
+        <Panel title="Stage by stage">
+          {lot.stages.length === 0 ? (
+            <p className="m-0 text-[15px] text-text-secondary">No stages are set up.</p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-5 p-0">
+              {lot.stages.map((s) => {
+                const lost = s.rejected + s.rework + s.short;
+                return (
+                  <li key={s.stageId} className="list-none">
+                    <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                      <span className="text-[16px] font-medium text-text">{s.label}</span>
+                      <span className="text-[13px] text-text-secondary">{s.pending > 0 ? <span className="font-medium text-text">{s.pending} out</span> : s.issued === 0 ? "not started" : "done here"}</span>
+                    </div>
+                    <ProgressBar label={`${s.label}: good of issued`} value={s.good} total={Math.max(s.issued, 1)} tone={s.pending > 0 ? "active" : "completed"} figures={`${s.good} good of ${s.issued} given`} />
+                    {lost > 0 && <p className="m-0 mt-1.5 text-[13px] text-text-secondary">{s.rejected} rejected · {s.rework} rework · {s.short} short</p>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </Panel>
         <Panel title="Every entry" flush>
           <EntryLedger lines={lot.entries} />
