@@ -169,6 +169,7 @@ const EN = {
   scanNotFound: "No bundle, roll, lot or challan has that code.",
   scanCancelled: "This bundle was cancelled or re-bundled. Scan its new slip.",
   scanAgain: "Scan another",
+  change: "Change",
 } as const;
 
 export type Labels = { [K in keyof typeof EN]: string };
@@ -335,6 +336,7 @@ const HI: Labels = {
   scanNotFound: "इस कोड का कोई बंडल, रोल, लॉट या चालान नहीं है।",
   scanCancelled: "यह बंडल रद्द हुआ या दोबारा बंडल बना। नई स्लिप स्कैन करें।",
   scanAgain: "दूसरा स्कैन करें",
+  change: "बदलें",
 };
 
 export const LABELS: Record<Lang, Labels> = { en: EN, hi: HI };

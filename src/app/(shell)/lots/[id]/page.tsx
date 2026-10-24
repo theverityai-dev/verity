@@ -7,7 +7,7 @@ import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
 import {
   ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_LOT, ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_SETTING, PIECEWORK_CAPABILITY,
-  listRolls, lotDetail, lotFabric, lotRateCard, productionSettings,
+  ENTITY_PIECEWORK_LOT_COST, floorReasons, listLots, listRolls, lotCosting, lotDetail, lotFabric, lotRateCard, productionSettings,
 } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
@@ -19,6 +19,7 @@ import Link from "next/link";
 import { CancelLot, EntryLedger, StatusActions } from "./LotActions";
 import { CutLot } from "./CutLot";
 import { RateCard } from "./RateCard";
+import { LotCost } from "./LotCost";
 import { LotRequests } from "./LotRequests";
 import { LotCover } from "./LotCover";
 import { Cover } from "@/components/ui/Cover";
@@ -32,7 +33,9 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireActor();
 
-  const { allowed, canChange, canRequest, canPhoto, canRates, canEditRates, canFabric, canSettings } = await withTenant(actor.tenantId, async (tx) => ({
+  const { allowed, canChange, canRequest, canPhoto, canRates, canEditRates, canFabric, canSettings, canCost, canAddCost } = await withTenant(actor.tenantId, async (tx) => ({
+    canCost: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT_COST),
+    canAddCost: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_LOT_COST),
     canRates: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT_RATE),
     canEditRates: await hasTenantPermission(tx, actor.roleId, "Edit", ENTITY_PIECEWORK_LOT_RATE),
     canFabric: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_ROLL),
@@ -49,11 +52,14 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   const cancelled = lot.status === "cancelled";
   // Money and fabric live on their own entities: a supervisor can open the lot and sees neither the rate card nor the metres.
-  const [card, fabric, stock, settings] = await Promise.all([
+  const [card, fabric, stock, settings, costing, reasons, lots] = await Promise.all([
     canRates ? executeQuery(actor, lotRateCard, { lotId: id }) : null,
     canFabric ? executeQuery(actor, lotFabric, { lotId: id }) : null,
     canFabric && (lot.status === "draft" || lot.status === "active") ? executeQuery(actor, listRolls, {}) : null,
     canSettings ? executeQuery(actor, productionSettings, {}) : null,
+    canCost ? executeQuery(actor, lotCosting, { lotId: id }) : null,
+    canCost ? executeQuery(actor, floorReasons, {}) : null,
+    canAddCost ? executeQuery(actor, listLots, {}) : null,
   ]);
   const rollChoices = stock ? stock.rolls.filter((r) => !r.cancelled && r.balanceCenti > 0).map((r) => ({ id: r.id, number: r.number, fabricType: r.fabricType, unit: r.unit, balanceCenti: r.balanceCenti })) : null;
   const lanes = floorLanes(lot.stages.map((s) => ({ id: s.stageId, label: s.label })), lot.placements, false);
@@ -147,13 +153,14 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
         </div>
       )}
 
-      {(card || fabric) && !cancelled && (
+      {(card || fabric || costing) && !cancelled && (
         <div className="mb-6 grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
           {card && (
             <Panel title="Rate card">
               <RateCard lotId={lot.id} rows={card} factoryCharge={settings?.lostPieceChargeMinor ?? null} canEdit={canEditRates && lot.status !== "closed"} />
             </Panel>
           )}
+          <div className="flex min-w-0 flex-col gap-6">
           {fabric && (
             <Panel title="Fabric used">
               {fabric.rows.length === 0 ? (
@@ -175,6 +182,17 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
               )}
             </Panel>
           )}
+          {costing && (
+            <Panel title="What this lot cost">
+              <LotCost
+                lotId={lot.id} lotNumber={lot.number} pieces={lot.bundledPieces} costing={costing} today={new Date().toISOString().slice(0, 10)}
+                categories={(reasons?.cost ?? []).filter((c) => c.active).map((c) => c.labelEn)}
+                otherLots={(lots ?? []).filter((l) => l.id !== lot.id && l.bundledPieces > 0 && ["active", "hold", "completed"].includes(l.status)).map((l) => ({ id: l.id, label: `${l.number} · ${l.name ?? l.design}`, pieces: l.bundledPieces }))}
+                canAdd={canAddCost && lot.status !== "closed"}
+              />
+            </Panel>
+          )}
+          </div>
         </div>
       )}
 

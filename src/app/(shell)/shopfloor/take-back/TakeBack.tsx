@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon } from "@/components/ui/icons";
+
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -116,7 +118,7 @@ export function TakeBack({ lang, issues, initialIssueId, today, reasons }: { lan
               <p className="m-0 truncate text-[17px] font-semibold text-text">{issue.bundleNumber} · {issue.stageLabel}</p>
               <p className="m-0 text-[13px] text-text-secondary">{issue.workerName} · {issue.open} {t.of} {issue.issued} {t.stillOut}</p>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => { setIssueId(""); reset(); }}>↺</Button>
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => { setIssueId(""); reset(); }}><Icon name="collapse" size={16} />{t.change}</Button>
           </Surface>
 
           <Surface className="flex flex-col gap-1 p-2 sm:p-3">

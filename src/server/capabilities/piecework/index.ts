@@ -804,6 +804,8 @@ export type BundleRow = {
   cutOn: string;
   /** An issue of this bundle is past its expected return date and still has pieces out. */
   overdue: boolean;
+  /** Cancelled, or split or joined into new bundles: its number stays, its pieces are elsewhere. */
+  cancelled: boolean;
 };
 
 /**
@@ -863,6 +865,7 @@ export function bundleRow(b: LoadedBundle, lotNumber: string, stages: Array<{ id
     pendingPieces: b.position.stages.reduce((s, x) => s + x.pending, 0), daysHere: current ? daysInStage(current, today) : null, lastMovement: b.position.lastMovementDate,
     cutOn: isoOf(b.createdAt),
     overdue: b.position.stages.some((s) => s.issues.some((i) => i.open > 0 && i.dueDate !== null && i.dueDate < today)),
+    cancelled: b.cancelledAt !== null,
   };
 }
 

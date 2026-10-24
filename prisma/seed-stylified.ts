@@ -126,7 +126,7 @@ async function main() {
     type Grant = [string, readonly Verb[]];
     const NEW = [piecework.ENTITY_PIECEWORK_APPROVAL, piecework.ENTITY_PIECEWORK_DAY_CLOSE, piecework.ENTITY_PIECEWORK_SETTING, piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, piecework.ENTITY_PIECEWORK_REASON];
     // Fabric and the rate card are the office's: the owner, manager and munshi work them; a supervisor sees neither fabric nor money.
-    const OFFICE = [piecework.ENTITY_PIECEWORK_LOT_RATE, piecework.ENTITY_PIECEWORK_ROLL, piecework.ENTITY_PIECEWORK_ROLL_MOVE];
+    const OFFICE = [piecework.ENTITY_PIECEWORK_LOT_RATE, piecework.ENTITY_PIECEWORK_ROLL, piecework.ENTITY_PIECEWORK_ROLL_MOVE, piecework.ENTITY_PIECEWORK_LOT_COST];
     const full = (list: string[]): Grant[] => list.map((e) => [e, VERBS]);
     const grants: Record<string, Grant[]> = {
       Owner: full([...ENTITIES, ...NEW, ...OFFICE, ENTITY_EVIDENCE]),
@@ -302,6 +302,7 @@ async function main() {
     await back(i.id, { good: 50 }, ago - 1);
     ago -= 2;
   }
+  await executeCommand(actor, piecework.addLotCost, { lotIds: [lot3], category: "Packing", amountMinor: 38_000, incurredOn: day(-30), note: "Polybags and cartons" });
   await executeCommand(actor, piecework.setLotStatus, { lotId: lot3, to: "completed" });
   await executeCommand(actor, piecework.setLotStatus, { lotId: lot3, to: "closed" });
 
@@ -323,6 +324,15 @@ async function main() {
 
   // Fabric that is neither cut nor wasted stays on the shelf: one roll of flannel waits for LOT-0002, which is still a draft.
   void flannel;
+
+  // What the lots cost beyond fabric and wages: one thread bill shared by three lots (split by pieces cut), buttons, trims, and
+  // interlining. A closed lot's cost is final, so LOT-0003 carries only what it had when it closed.
+  const cost = (lotIds: string[], category: string, rupees: number, ago: number, note?: string) =>
+    executeCommand(actor, piecework.addLotCost, { lotIds, category, amountMinor: rupees * 100, incurredOn: day(-ago), note });
+  await cost([lot1, lot4, lot5], "Thread", 2_260, 4, "Bill 4471, Vardhman thread");
+  await cost([lot1], "Buttons", 960, 11, "4 hole, 14 line, white");
+  await cost([lot1], "Labels and trims", 420, 11);
+  await cost([lot5], "Interlining", 310, 3);
 
   // The karigar ledger: an advance, part of it recovered out of wages, an approved deduction, and payments.
   const pay = (who: string, kind: "advance" | "recovery" | "deduction" | "payment", rupees: number, daysAgo: number, extra: Record<string, unknown> = {}) =>

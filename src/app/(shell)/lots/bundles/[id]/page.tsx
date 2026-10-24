@@ -5,12 +5,15 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_BUNDLE, PIECEWORK_CAPABILITY, bundleDetail } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_BUNDLE, ENTITY_PIECEWORK_ENTRY, PIECEWORK_CAPABILITY, bundleDetail, floorOverview, lotDetail } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { Icon } from "@/components/ui/icons";
 import { PieceBar, countsOf } from "@/components/ui/PieceFlow";
 import { ButtonLink, DefinitionList, PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
 import { shortDate } from "../../format";
+import { getLang } from "../../../shopfloor/lang";
+import { BundleNext } from "../../../shopfloor/BundleNext";
+import { ReBundle } from "./ReBundle";
 
 export const dynamic = "force-dynamic";
 
@@ -23,11 +26,24 @@ async function BundlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireActor();
 
-  const allowed = await withTenant(actor.tenantId, (tx) => hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_BUNDLE));
+  const { allowed, canWork, canCut } = await withTenant(actor.tenantId, async (tx) => ({
+    allowed: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_BUNDLE),
+    canWork: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_ENTRY),
+    canCut: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_BUNDLE),
+  }));
   if (!allowed) return <PermissionDenied what="viewing this bundle" />;
 
   const b = await executeQuery(actor, bundleDetail, { bundleId: id });
   if (!b) notFound();
+  const live = !b.cancelled && (b.lotStatus === "active" || b.lotStatus === "draft");
+  // Untouched: nothing of it has been given out, so it can still be split or joined at the cutting table.
+  const untouched = live && b.lastMovement === null;
+  const [floor, lot, { t }] = await Promise.all([
+    canWork && live ? executeQuery(actor, floorOverview, {}) : null,
+    canCut && untouched ? executeQuery(actor, lotDetail, { lotId: b.lotId }) : null,
+    getLang(),
+  ]);
+  const siblings = (lot?.bundleRows ?? []).filter((x) => x.id !== b.id && !x.cancelled && x.lastMovement === null).map((x) => ({ id: x.id, number: x.number, netPieces: x.netPieces }));
 
   const stateOf = (s: (typeof b.stages)[number]): StageState => (s.intake === 0 ? "waiting" : s.pending > 0 || s.reworkPool > 0 || s.toIssue > 0 ? "active" : "done");
   const facts = [
@@ -44,8 +60,26 @@ async function BundlePage({ params }: { params: Promise<{ id: string }> }) {
         back={{ href: `/lots/${b.lotId}`, label: b.lotNumber }}
         title={`${b.number} · ${b.netPieces} pieces`}
         description={b.overdue ? "An issue of this bundle is past its return date." : undefined}
-        actions={<ButtonLink href={`/lots/bundles/${b.id}/slip`} variant="primary">Print the slip</ButtonLink>}
+        actions={
+          <>
+            {canCut && untouched && <ReBundle bundleId={b.id} number={b.number} lotId={b.lotId} netPieces={b.netPieces} sizeNote={b.sizeNote} siblings={siblings} />}
+            {!b.cancelled && <ButtonLink href={`/lots/bundles/${b.id}/slip`} variant="primary">Print the slip</ButtonLink>}
+          </>
+        }
       />
+
+      {b.cancelled && (
+        <p role="status" className="mb-6 mt-0 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[14px] text-text-secondary">
+          This bundle was cancelled, split or joined into new bundles. Its number is kept; its pieces are on the new slips of {b.lotNumber}.
+        </p>
+      )}
+
+      {floor && (
+        <section aria-labelledby="next-h" className="mb-6">
+          <h2 id="next-h" className="m-0 mb-3 px-1 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">What you can do now</h2>
+          <BundleNext bundleId={b.id} floor={floor} t={t} />
+        </section>
+      )}
 
       <Surface className="mb-6 p-5">
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] lg:gap-10">

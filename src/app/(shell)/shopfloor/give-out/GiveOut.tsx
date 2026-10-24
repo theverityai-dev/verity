@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon } from "@/components/ui/icons";
+
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -111,7 +113,7 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
               <p className="m-0 truncate text-[17px] font-semibold text-text">{card.bundleNumber} · {card.stageLabel}</p>
               <p className="m-0 text-[13px] text-text-secondary">{card.lotName}</p>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={() => setKey("")}>↺</Button>
+            <Button type="button" variant="ghost" size="sm" className="gap-1.5" onClick={() => setKey("")}><Icon name="collapse" size={16} />{t.change}</Button>
           </Surface>
 
           <Surface className="flex flex-col gap-4 p-4 sm:p-5">

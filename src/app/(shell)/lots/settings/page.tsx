@@ -58,13 +58,14 @@ async function SettingsPage() {
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1.5fr_1fr]">
         <Surface className="flex flex-col gap-7 p-6">
           <div>
-            <h2 className="m-0 mb-1 text-[17px] font-medium tracking-[-0.02em]">Reasons the floor picks from</h2>
+            <h2 className="m-0 mb-1 text-[17px] font-medium tracking-[-0.02em]">Reasons and cost categories</h2>
             <p className="m-0 text-[13px] leading-[19px] text-text-secondary">
               Each person sees these in their own language. {s.reasons.custom ? "This is your own list." : "These are the starting words; saving a list makes it yours."}
             </p>
           </div>
           <ReasonList kind="defect" title="Rejected or sent for rework" hint="Asked when pieces come back with a defect." initial={s.reasons.defect} canEdit={canEdit} />
           <ReasonList kind="short" title="Short (pieces not returned)" hint="Asked when pieces are missing at take-back." initial={s.reasons.short} canEdit={canEdit} />
+          <ReasonList kind="cost" title="Cost categories" hint="Offered when a cost is added to a lot (thread, buttons, packing ...). Fabric and wages are counted on their own." initial={s.reasons.cost} canEdit={canEdit} />
         </Surface>
 
         <Surface className="p-6">

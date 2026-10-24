@@ -1,5 +1,7 @@
 "use client";
 
+import { Icon } from "@/components/ui/icons";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
@@ -74,8 +76,8 @@ export function StagesForm({ stages, canEdit }: { stages: StageRow[]; canEdit: b
                 <div className="flex items-center gap-1.5">
                   {!locked && (
                     <>
-                      <Button type="button" variant="ghost" size="sm" aria-label={`Move ${r.label} earlier`} disabled={pending || i === 0} onClick={() => move(i, -1)}>↑</Button>
-                      <Button type="button" variant="ghost" size="sm" aria-label={`Move ${r.label} later`} disabled={pending || i === rows.length - 1} onClick={() => move(i, 1)}>↓</Button>
+                      <Button type="button" variant="ghost" size="sm" aria-label={`Move ${r.label} earlier`} disabled={pending || i === 0} onClick={() => move(i, -1)}><Icon name="collapse" size={16} className="rotate-90" /></Button>
+                      <Button type="button" variant="ghost" size="sm" aria-label={`Move ${r.label} later`} disabled={pending || i === rows.length - 1} onClick={() => move(i, 1)}><Icon name="expand" size={16} className="rotate-90" /></Button>
                     </>
                   )}
                   <CommandButton commands={UPDATE_STAGE} type="button" variant="secondary" size="sm" disabled={pending || !dirty || r.label.trim() === ""} onClick={() => save(r)}>Save</CommandButton>
@@ -136,7 +138,7 @@ export function ChallanForm({ title, address, canEdit }: { title: string | null;
 type Reason = { labelEn: string; labelHi: string; active: boolean };
 
 /** One list of reasons. What is saved is the whole list; the floor screens offer exactly these, in this order, in each person's language. */
-export function ReasonList({ kind, title, hint, initial, canEdit }: { kind: "defect" | "short"; title: string; hint: string; initial: Reason[]; canEdit: boolean }) {
+export function ReasonList({ kind, title, hint, initial, canEdit }: { kind: "defect" | "short" | "cost"; title: string; hint: string; initial: Reason[]; canEdit: boolean }) {
   const { pending, failure, saved, run, forget } = useSave();
   const [items, setItems] = useState<Reason[]>(initial);
   const edit = (i: number, patch: Partial<Reason>) => { forget(); setItems(items.map((x, j) => (j === i ? { ...x, ...patch } : x))); };

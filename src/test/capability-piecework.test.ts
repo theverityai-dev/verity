@@ -358,7 +358,10 @@ describeDb("capability: piece-rate lots, bundles and the karigar ledger", () => 
     expect(pasting.sent).toBeGreaterThanOrEqual(100 + 1 + 20);
     expect(pasting.accepted + 0).toBeGreaterThan(0);
     const cost = (await executeQuery(munshi, reportCosting, {})).find((c) => c.lotNumber === lot1Number)!;
-    expect(cost.otherMinor).toBeNull();
+    // No other costs, no fabric from a priced roll and nothing recovered on this lot: the cost is its wages.
+    expect(cost.otherMinor).toBe(0);
+    expect(cost.fabricMinor).toBeNull();
+    expect(cost.recoveredMinor).toBe(0);
     expect(cost.totalMinor).toBe(cost.wagesMinor);
     expect(cost.perGoodPieceMinor).toBe(cost.goodPieces > 0 ? Math.round(cost.wagesMinor / cost.goodPieces) : null);
     expect((await executeQuery(munshi, reportReadyInventory, {})).find((r) => r.lotNumber === lot1Number)).toMatchObject({ readyPieces: 20, readyBundles: 1 });
