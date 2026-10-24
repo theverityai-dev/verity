@@ -91,5 +91,21 @@ Decided, not built: the office screens (lots, fabric, costs, settings) stay in E
 supervisors work, and the floor screens and the daily entry have it; the owner, manager and munshi screens are read in English today.
 A language toggle on them is a contained follow-up if Stylified asks.
 
-Production: migrations `20261024100000_piecework_flow` and `20261024200000_piecework_lot_costs` are written and applied locally; applying
-them to production (`npx prisma migrate deploy`) is the owner's step.
+MVP completion pass (same day):
+
+| Gap in the client's v2 sheet | Now |
+|---|---|
+| FR-021 Excel and PDF export | Every report has Excel (a real .xlsx, written without a library, text never evaluated as a formula), CSV, and Print / PDF (the browser's own Save as PDF) |
+| FR-004 duplicate invoice | The same supplier's invoice number is refused unless the person confirms a second delivery (screen warns first; server enforces) |
+| FR-024 low fabric stock | One level in Settings; Fabric flags every fabric under it, including ones with nothing left |
+| FR-017 double counting | A cost named like fabric, wages or any stage is refused, because those are already counted from the records |
+| FR-022 audit | **Change history** (owner and manager): who did what, when, newest first, filtered by kind, each line opens its record |
+| FR-026 and FR-027 cases | A case shows who recorded it (the supervisor in the middle) and, once settled, who decided, when and what they wrote |
+
+Still not built: joining or linking whole lots, and re-allocating cost when lots are split or joined (FR-009 and FR-018, priority Should);
+a stored case record with its own status field (the status is derived from the approvals); a separate role for an intermediary supervisor
+beyond the person who records the handover; Hindi on the office screens (decided); the Supabase restore rehearsal (FR-023).
+
+Production: migrations `20261024100000_piecework_flow`, `20261024200000_piecework_lot_costs` and `20261024300000_piecework_low_fabric` are
+written and applied locally; applying them to production (`npx prisma migrate deploy`) is the owner's step. All three only add tables and
+nullable columns.
