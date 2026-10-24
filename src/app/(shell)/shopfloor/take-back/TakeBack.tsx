@@ -36,7 +36,8 @@ export function TakeBack({ lang, issues, initialIssueId, today, reasons }: { lan
   const [pending, start] = useTransition();
   const [failure, setFailure] = useState<ActionFailure | null>(null);
   const [issueId, setIssueId] = useState(issues.find((i) => i.issueId === initialIssueId)?.issueId ?? "");
-  const [good, setGood] = useState(0);
+  // Most returns are all good, so the count starts at everything still out and the supervisor moves pieces to the other rows.
+  const [good, setGood] = useState(issues.find((i) => i.issueId === initialIssueId)?.open ?? 0);
   const [rejected, setRejected] = useState(0);
   const [rework, setRework] = useState(0);
   const [short, setShort] = useState(0);
@@ -96,7 +97,7 @@ export function TakeBack({ lang, issues, initialIssueId, today, reasons }: { lan
               <ul className="m-0 grid list-none gap-3 p-0" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))" }}>
                 {rows.map((i) => (
                   <li key={i.issueId} className="list-none">
-                    <button type="button" onClick={() => setIssueId(i.issueId)} className="glass-card flex min-h-[84px] w-full cursor-pointer items-center gap-3.5 p-4 text-left transition-[transform] duration-150 active:scale-[0.99]">
+                    <button type="button" onClick={() => { setIssueId(i.issueId); setGood(i.open); }} className="glass-card flex min-h-[84px] w-full cursor-pointer items-center gap-3.5 p-4 text-left transition-[transform] duration-150 active:scale-[0.99]">
                       <Cover src={i.cover} label={i.lotNumber} size={52} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-semibold text-text">{i.bundleNumber} · {i.stageLabel}{i.isRework ? ` · ${t.rework}` : ""}</span>
@@ -133,7 +134,14 @@ export function TakeBack({ lang, issues, initialIssueId, today, reasons }: { lan
                   <span aria-hidden="true" className="size-2.5 rounded-full" style={{ backgroundColor: tone }} />
                   {label}
                 </span>
-                <QuantityStepper label={label} value={value} onChange={set} min={0} max={open} />
+                <QuantityStepper
+                  label={label} value={value} min={0} max={open}
+                  onChange={(n: number) => {
+                    // Raising rejected, rework or short takes the pieces from good, so the four rows keep adding up to what is out.
+                    if (set !== setGood) setGood((g) => Math.max(0, Math.min(g, open - (total - good) - (n - value))));
+                    set(n);
+                  }}
+                />
               </div>
             ))}
           </Surface>

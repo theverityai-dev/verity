@@ -38,9 +38,12 @@ export function GiveOut({ lang, waiting, workers, today, initial }: {
   const [key, setKey] = useState(initial ? `${initial.bundleId}:${initial.stageId}` : "");
   const [rework, setRework] = useState(initial?.rework ?? false);
   const [workerId, setWorkerId] = useState("");
-  const [pieces, setPieces] = useState(1);
+  // Arriving from Scan with the bundle chosen, the count starts at everything waiting there, as it does when a card is picked.
+  const first = initial ? waiting.find((w) => w.bundleId === initial.bundleId && w.stageId === initial.stageId) : undefined;
+  const firstRoom = first ? Math.max(1, initial?.rework ? first.reworkPool : first.toIssue || first.reworkPool) : 1;
+  const [pieces, setPieces] = useState(firstRoom);
   const [due, setDue] = useState("");
-  const [counted, setCounted] = useState(1);
+  const [counted, setCounted] = useState(firstRoom);
   const [ack, setAck] = useState<(typeof ACKS)[number]>("signature");
   const [last, setLast] = useState<{ number: string; workerId: string } | null>(null);
 
