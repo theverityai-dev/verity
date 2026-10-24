@@ -78,7 +78,18 @@ The system ends at ready garments. Dispatch is not in it.
 | Challan to print | `/shopfloor/challan/[number]` | built, walked locally |
 | Cases | `/shopfloor/cases` | built, walked locally |
 | Ready garments | `/lots/ready` | built |
+| Scan: camera (browser detector on Android, a small decoder on iPhone), a hand scanner, or a typed number opens a bundle, roll, lot or challan; a bundle shows only the moves open to this person now | `/shopfloor/scan` (first floor tab) | built |
+| What you can do now, on the bundle page a phone's camera opens from a slip | `/lots/bundles/[id]` | built |
+| Lot cost: fabric at roll rates + wages + other costs by the factory's own categories - charges recovered; cost per good piece; a shared bill split by pieces cut, shown before saving; reversal, never edit | lot page, `/lots/reports` | built, tested |
+| Cost categories in two languages, edited with the other lists | `/lots/settings` | built |
+| Split and join bundles at the cutting table (refused once any of it is given out, because its pieces already move in parts) | bundle page | built, tested |
 
-Not built, still open: the Scan screen (camera or scanner opens a roll or bundle), costing by category and bundle split or merge (second
-part), Hindi on the office screens (the floor screens have it). Production still needs migration `20261024100000_piecework_flow`, which
-waits for the owner's go-ahead.
+Every popup in the piece-rate screens now uses one sheet (`FormModal`): Cancel then the primary action in the footer, the refusal at the
+foot of the form, a pending label on the submit. Text glyphs used as icons were replaced by the drawn icon set.
+
+Decided, not built: the office screens (lots, fabric, costs, settings) stay in English. The chat asks for Hindi where karigars and
+supervisors work, and the floor screens and the daily entry have it; the owner, manager and munshi screens are read in English today.
+A language toggle on them is a contained follow-up if Stylified asks.
+
+Production: migrations `20261024100000_piecework_flow` and `20261024200000_piecework_lot_costs` are written and applied locally; applying
+them to production (`npx prisma migrate deploy`) is the owner's step.

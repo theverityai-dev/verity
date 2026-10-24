@@ -292,6 +292,13 @@ platform file store, a small label catalogue. Photographs need a new file field,
 both themes (DEMO-READY gate), the migration is applied to production (P0b-3), and Stylified's workspace has a rehearsed
 restore.
 **Source.** `clients/stylified/proposal/`, `clients/stylified/requirement-sheet-review.md`, `taskplans/handoffs/DESIGN_AUDIT.md`.
+**Update 2026-10-24.** Demo rebuilt around the client's scan-in, scan-out flow (`clients/stylified/flow.md`): rolls and fabric, lot rate
+card with skippable stages, one-step cut, the receiver's count with printed challans, cases and charge requests, lot costing with shared
+costs, bundle split and join, the Scan screen, ready garments, production settings as data; every piece-rate popup on the shared sheet.
+Tests: 9 flow tests plus the existing piece-rate, floor, conformance and reachability suites pass. **Open:** apply migrations
+`20261024100000_piecework_flow` and `20261024200000_piecework_lot_costs` to production (blocked for the agent; owner runs
+`npx prisma migrate deploy`), then push; walk give-out, take-back and scan as a supervisor at 390px.
+
 **Status.** DEMO-READY locally 2026-10-23 (acceptance record: `clients/stylified/acceptance-record.md`; criteria 1 to 9 met on the demonstration workspace, 10 met locally). Built: roles, stage scope, approvals with limits, day close, supervisor screens S1 to S6 at `/shopfloor`, Approvals, Team and limits, Hindi and English, lot covers with upload, defect photographs, a year-of-history speed fix (owner dashboard 49 s and failing, now 0.5 s), money withheld from supervisors at the query. Still open: (1) one run of the supervisor, manager and photograph flows on Stylified's hosted workspace with its storage bucket set; (2) the Supabase restore rehearsal into a scratch project (`docs/deployment/stylified-backup-restore.md`); (3) confirm migration `20261023110000_piecework_floor_roles` is on production (the owner said on 2026-10-23 they deployed; not verified here); (4) **owner decision**: verify the session token locally (`getClaims`) on every page to remove one authentication round trip per page, at the cost of a revoked session living up to an hour (details in the acceptance record). Owner confirmed 2026-10-22: ₹15,000 per month, GST included. Hosting: PlotArmour-hosted first; a move to
 Stylified's own Vercel and Supabase accounts is an option quoted later and not promised (ADR-054 keeps Mode D parked; see P2-0).
 
