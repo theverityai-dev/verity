@@ -102,6 +102,20 @@ MVP completion pass (same day):
 | FR-022 audit | **Change history** (owner and manager): who did what, when, newest first, filtered by kind, each line opens its record |
 | FR-026 and FR-027 cases | A case shows who recorded it (the supervisor in the middle) and, once settled, who decided, when and what they wrote |
 
+Usability pass (2026-10-25, from the owner's review):
+
+| Complaint | Now |
+|---|---|
+| "Showing 1 to 5 of 5 records" cut off, spacing off in cards | A table inside an edge-to-edge card keeps its filter box, footer and phone rows inside the card's gutter (fixed once in `DataTable`/`Panel`, so all 135 uses) |
+| Calendar did not show in New lot | Date, date-time and searchable pickers open in the browser's top layer, above a sheet |
+| Search ignored the client's records | Ctrl K finds a bundle, lot, roll, karigar or challan by number (`b4`, `B-0004`), name, phone, supplier or invoice; empty search offers Scan, Lots, Karigars, Fabric, Cases, Reports |
+| Bulk printing | Slips: choose which, only those not yet given out, full or sticker size (remembered); the day's challans printed together; all shelf roll labels in one go |
+| Reports and stage tables | Graphics first (tiles, stage bars, lot cards, loss bars, money bars), every table folded below with Excel, CSV and Print / PDF |
+
+Ideas not built yet, in the order I would do them: a "print queue" that remembers which slips were printed and flags a bundle with no slip
+printed; a pick list per supervisor for the day; WhatsApp or SMS of a karigar's challan and wage slip; a stock-take mode for rolls by scanning;
+barcode printer (Zebra / TSC) language instead of A4; a daily owner summary by message.
+
 Still not built: joining or linking whole lots, and re-allocating cost when lots are split or joined (FR-009 and FR-018, priority Should);
 a stored case record with its own status field (the status is derived from the approvals); a separate role for an intermediary supervisor
 beyond the person who records the handover; Hindi on the office screens (decided); the Supabase restore rehearsal (FR-023).
