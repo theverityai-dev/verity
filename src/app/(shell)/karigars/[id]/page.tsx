@@ -146,7 +146,7 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
             <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-1">
               {([
                 ["Looked after by", ledger.worker.supervisorName ?? "Any supervisor"],
-                ["Joined", ledger.worker.joinedOn ? shortDate(ledger.worker.joinedOn) : "Not recorded"],
+                ["Joined", ledger.worker.joinedOn ? new Date(`${ledger.worker.joinedOn}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "Not recorded"],
                 ["ID note", ledger.worker.idNote ?? "Not recorded"],
                 ["Emergency contact", ledger.worker.emergencyContact ?? "Not recorded"],
               ] as const).map(([k, v]) => (

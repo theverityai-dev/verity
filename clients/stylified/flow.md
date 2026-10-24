@@ -143,6 +143,10 @@ a fresh workspace starts with none.
 | 9 | **Leave and cover**: mark a supervisor away; another takes their stages for the days | Not built |
 | 10 | Who did what | Change history already shows the actor |
 
+**Built 2026-10-25 (local, tested, walked at desktop and 390 px):** needs 1, 2, 3, 5 and part of 7 and 8: the Team screen (`/shopfloor/team`), add a person in one sheet, six installable role presets, 
+switch off and on, owner-set passwords, a karigar profile (joined, ID note, emergency contact) and a supervisor per karigar that the give-out list and the issue command follow, 
+username sign-in for people with no email (Q1), opening balances (fabric tick, karigar balance owed) and a pasted karigar list. Still open: 6 custody view, 8 workload beyond pieces held, 9 leave and cover.
+
 Decisions taken (to build): fold 1, 2, 3, 5 and 8 into one Team screen under Production; add `supervisorId` (a user) to the karigar and the
 karigar profile fields in 7 as a migration of nullable columns; seed the six presets as a pack-style role set a workspace can install once;
 sign-in by phone or username follows the identity provider that production uses and needs the owner to say which (Supabase email today),

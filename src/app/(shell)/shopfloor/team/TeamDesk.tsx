@@ -299,7 +299,7 @@ export function RoleGuide({ roles, people }: { roles: Role[]; people: TeamPerson
         <li key={r.id} className="py-3 first:pt-0 last:pb-0">
           <div className="flex items-baseline justify-between gap-3">
             <span className="text-[15px] font-semibold text-text">{r.name}</span>
-            <span className="text-[13px] text-text-secondary">{people.filter((p) => p.roleId === r.id && !p.disabled).length} people</span>
+            <span className="text-[13px] text-text-secondary">{people.filter((p) => p.roleId === r.id && !p.disabled).length === 1 ? "1 person" : `${people.filter((p) => p.roleId === r.id && !p.disabled).length} people`}</span>
           </div>
           <p className="m-0 mt-0.5 text-[13px] leading-[19px] text-text-secondary">{roleLine(roles, r.id) ?? "A role made by this workspace. See Roles for what it allows."}</p>
         </li>

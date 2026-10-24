@@ -300,7 +300,7 @@ Tests: 9 flow tests plus the existing piece-rate, floor, conformance and reachab
 for the agent; owner runs `npx prisma migrate deploy`), then push; MVP gap pass done (Excel/PDF, duplicate invoice, low fabric, no
 double-counted costs, change history, case record). Not built: lot join/link and cost re-allocation (FR-009, FR-018), restore rehearsal; walk give-out, take-back and scan as a supervisor at 390px.
 **Plan 2026-10-25:** `clients/stylified/plan-to-mvp-and-complete.md` (phases 0 to 3, sizes, blockers, seven questions); work this list from it.
-**Open 2026-10-25, team management:** People, Roles and Team-and-limits exist but Stylified's menu does not link People or Roles, a fresh workspace has no roles
+**Built 2026-10-25 (local only; migration `20261025100000_piecework_karigar_profile` joins the three awaiting production):** Team screen, role presets, karigar profile and supervisor link, username sign-in, opening balances, karigar list import. Remaining from the plan: onboarding wizard, custody view, stored case record, role dashboards, routing rules, UAT pack. People, Roles and Team-and-limits exist but Stylified's menu does not link People or Roles, a fresh workspace has no roles
 (only the seed makes them), a karigar has no supervisor and a thin profile, and there is no switch-off button, password reset button or phone sign-in. Ten needs and the
 decisions are in `clients/stylified/flow.md` ("Team management"). Build one Team screen, a supervisor link on the karigar, the profile fields, and installable role presets.
 
