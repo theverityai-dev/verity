@@ -32,7 +32,7 @@ async function MyFloorPage() {
 
   return (
     <>
-      <PageHeader title={t.myFloor} description={shortDate(f.today)} actions={<LangToggle lang={lang} />} />
+      <PageHeader title={t.myFloor} description={shortDate(f.today)} actions={<><ButtonLink href="/shopfloor/challans" variant="secondary">{t.printChallans}</ButtonLink><LangToggle lang={lang} /></>} />
       <FloorTabs active="floor" t={t} />
 
       {f.stages.length === 0 ? (

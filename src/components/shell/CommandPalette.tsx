@@ -7,14 +7,21 @@ import { Icon } from "@/components/ui/icons";
 import { runQuery } from "@/server/actions/platform";
 import { prefersReducedMotion, reducedMotionFade, springDefault } from "@/lib/motion";
 
-type Result = { id: string; type: "lead" | "domain" | "team" | "company" | "person" | "opportunity"; label: string; sublabel: string; href: string };
+type Result = { id: string; type: "lead" | "domain" | "team" | "company" | "person" | "opportunity" | "bundle" | "lot" | "roll" | "karigar" | "challan"; label: string; sublabel: string; href: string };
 
 const TYPE_LABEL: Record<Result["type"], string> = {
   lead: "Lead", domain: "Domain", team: "Team", company: "Company", person: "Person", opportunity: "Deal",
+  bundle: "Bundle", lot: "Lot", roll: "Roll", karigar: "Karigar", challan: "Challan",
 };
 
 type CrmHit = { kind: "company" | "person" | "opportunity"; id: string; label: string; sub: string | null; href: string };
+type PieceHit = { kind: "bundle" | "lot" | "roll" | "karigar" | "challan"; id: string; label: string; sub: string | null; href: string };
 const START_ACTION = { label: "Create prospect", detail: "Start a researched prospect", href: "/outreach/prospects?create=1" };
+/** Where a garment maker's people go from an empty search. */
+const PIECE_SHORTCUTS = [
+  { label: "Scan a bundle or roll", href: "/shopfloor/scan" }, { label: "Lots", href: "/lots" }, { label: "Karigars", href: "/karigars" },
+  { label: "Fabric", href: "/fabric" }, { label: "Cases", href: "/shopfloor/cases" }, { label: "Reports", href: "/lots/reports" },
+];
 
 /**
  * Global Cmd/Ctrl+K search (Task 109 Phase G §2). Mounted unconditionally in
@@ -35,6 +42,8 @@ export function CommandPalette() {
   const [results, setResults] = useState<Result[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [pending, startTransition] = useTransition();
+  // Which sources this workspace has, learned the first time the palette opens (an inactive capability's query simply fails).
+  const [sources, setSources] = useState<{ outreach: boolean; piecework: boolean } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   // APPLE-P1-03: whatever had focus before the palette opened (the search
@@ -73,6 +82,14 @@ export function CommandPalette() {
     window.addEventListener("verity:open-command-palette", onOpenRequest);
     return () => window.removeEventListener("verity:open-command-palette", onOpenRequest);
   }, []);
+
+  useEffect(() => {
+    if (!open || sources) return;
+    void Promise.all([
+      runQuery("verity.outreach.command_palette_search", { q: "zz" }),
+      runQuery("verity.piecework.search", { term: "zz" }),
+    ]).then(([o, w]) => setSources({ outreach: o.ok, piecework: w.ok }));
+  }, [open, sources]);
 
   useEffect(() => {
     if (open) {
@@ -114,11 +131,13 @@ export function CommandPalette() {
     const handle = setTimeout(() => {
       startTransition(async () => {
         // Each source answers only for a tenant that has it: an inactive capability's query fails and adds nothing.
-        const [outreach, crm] = await Promise.all([
+        const [outreach, crm, piece] = await Promise.all([
           runQuery<Result[]>("verity.outreach.command_palette_search", { q: q.trim() }),
           runQuery<CrmHit[]>("verity.relationship.search", { term: q.trim() }),
+          runQuery<PieceHit[]>("verity.piecework.search", { term: q.trim() }),
         ]);
         setResults([
+          ...(piece.ok ? piece.data.map((h) => ({ id: h.id, type: h.kind, label: h.label, sublabel: h.sub ?? "", href: h.href })) : []),
           ...(crm.ok ? crm.data.map((h) => ({ id: h.id, type: h.kind, label: h.label, sublabel: h.sub ?? "", href: h.href })) : []),
           ...(outreach.ok ? outreach.data : []),
         ]);
@@ -134,6 +153,7 @@ export function CommandPalette() {
   };
 
   const transition = prefersReducedMotion() ? reducedMotionFade : springDefault;
+  const searchWords = sources?.piecework && !sources.outreach ? "Search a bundle, lot, karigar, roll or challan" : sources?.piecework ? "Search bundles, lots, karigars, companies, deals" : sources?.outreach ? "Search companies, people, deals, leads" : "Search";
 
   return (
     <AnimatePresence>
@@ -156,7 +176,7 @@ export function CommandPalette() {
             transition={transition}
             role="dialog"
             aria-modal="true"
-            aria-label="Search companies, people, deals and leads"
+            aria-label={searchWords}
             className="glass-overlay relative flex w-full max-w-[560px] flex-col overflow-hidden rounded-[14px]"
             onKeyDown={(e) => {
           onTrapKeyDown(e);
@@ -167,7 +187,7 @@ export function CommandPalette() {
             e.preventDefault();
             setActiveIndex((i) => Math.max(i - 1, 0));
           } else if (e.key === "Enter") {
-            if (q.trim().length < 2) go(START_ACTION.href);
+            if (q.trim().length < 2) { if (sources?.outreach) go(START_ACTION.href); }
             else if (results[activeIndex]) go(results[activeIndex]!.href);
           }
         }}
@@ -178,20 +198,37 @@ export function CommandPalette() {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search companies, people, deals, leads…"
+            placeholder={`${searchWords}…`}
             className="h-8 w-full border-0 bg-transparent text-[14px] text-text placeholder:text-text-tertiary focus:outline-none"
           />
           <kbd className="hidden shrink-0 rounded px-1.5 py-0.5 text-[12px] text-text-tertiary sm:inline bg-control">Esc</kbd>
         </div>
         <div className="max-h-[360px] overflow-y-auto p-2">
           {q.trim().length < 2 ? (
-            <button
-              onClick={() => go(START_ACTION.href)}
-              className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-[13px] text-text hover:bg-accent-subtle"
-            >
-              <span>{START_ACTION.label}<span className="ml-2 text-text-tertiary">{START_ACTION.detail}</span></span>
-              <span className="text-text-tertiary">↵</span>
-            </button>
+            <div className="flex flex-col gap-1">
+              {sources?.outreach && (
+                <button
+                  onClick={() => go(START_ACTION.href)}
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left text-[13px] text-text hover:bg-accent-subtle"
+                >
+                  <span>{START_ACTION.label}<span className="ml-2 text-text-tertiary">{START_ACTION.detail}</span></span>
+                  <span className="text-text-tertiary">↵</span>
+                </button>
+              )}
+              {sources?.piecework && (
+                <>
+                  <p className="m-0 px-3 pb-1 pt-2 text-[12px] text-text-tertiary">Type a number from the paper (B-0004, R-0003, LOT-0002, CH-0021), a name or a phone number. Or go to:</p>
+                  <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0 px-2 pb-2">
+                    {PIECE_SHORTCUTS.map((x) => (
+                      <li key={x.href} className="list-none">
+                        <button onClick={() => go(x.href)} className="min-h-10 rounded-[10px] bg-control px-3 text-[13px] text-text hover:bg-accent-subtle">{x.label}</button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {sources && !sources.outreach && !sources.piecework && <p className="px-3 py-4 text-center text-[13px] text-text-tertiary">Type a name or a number to search.</p>}
+            </div>
           ) : pending ? (
             <p className="px-3 py-6 text-center text-[13px] text-text-tertiary">Searching…</p>
           ) : results.length === 0 ? (

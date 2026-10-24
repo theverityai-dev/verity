@@ -310,7 +310,7 @@ export function DataTable({
   return (
     <div>
       {showToolbar && (
-        <div className="mb-5 flex flex-wrap items-center gap-3">
+        <div data-dt="toolbar" className="mb-5 flex flex-wrap items-center gap-3">
           {showFilter && (
             <div className="relative flex min-w-0 flex-1 items-center sm:max-w-[24rem]">
               <Icon
@@ -478,7 +478,7 @@ export function DataTable({
           {/* Mobile: one record per block. The first column becomes the block's
               heading rather than another label/value pair — repeating "Location:
               Demo Depot Site" wastes the one line that matters most. */}
-          <ul className="m-0 list-none divide-y divide-line p-0 md:hidden">
+          <ul data-dt="list" className="m-0 list-none divide-y divide-line p-0 md:hidden">
             {shown.map((row) => {
               const [lead, ...rest] = columns;
               return (
@@ -513,7 +513,7 @@ export function DataTable({
             })}
           </ul>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <div data-dt="footer" className="mt-5 flex flex-wrap items-center justify-between gap-4">
             {selected.size > 0 && bulkActions ? (
               <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent/30 bg-accent-subtle px-3 py-2">
                 <p className="m-0 text-[13px] font-medium text-accent-ink" aria-live="polite">

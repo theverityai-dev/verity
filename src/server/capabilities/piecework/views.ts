@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { hasTenantPermission } from "@/server/platform/authorization";
 import { activeStages, isoOf, loadBundles, lotCovers, todayFor, type Tx } from "./shared";
 
 /**
@@ -65,6 +66,35 @@ export const challanSheet: QueryDefinition<{ number: string }, Challan | null> =
       totalSent: issues.reduce((t, x) => t + (x.sent ?? 0), 0), totalCounted: lines.reduce((t, x) => t + x.counted, 0),
       differences: issues.filter((x) => x.sent !== null && x.sent !== x.counted).length + lines.filter((x) => x.short > 0).length,
     };
+  },
+};
+
+export type ChallanDay = { date: string; challans: Array<{ number: string; workerName: string; lines: number; given: number; takenBack: number; by: string }> };
+
+/** Every challan made out on one day, so the day's papers can be printed together instead of one at a time. */
+export const challansOnDay: QueryDefinition<{ date?: string }, ChallanDay> = {
+  key: "verity.piecework.challans_on_day",
+  entity: ENTRY_ENTITY,
+  input: z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+  handler: async (ctx, input) => {
+    const date = input.date ?? (await todayFor(ctx.tx));
+    const rows = await ctx.tx.pieceworkEntry.findMany({ where: { challanNumber: { not: null }, reversesId: null, entryDate: new Date(`${date}T00:00:00.000Z`) }, orderBy: { createdAt: "asc" } });
+    const reversed = new Set((await ctx.tx.pieceworkEntry.findMany({ where: { reversesId: { in: rows.map((r) => r.id) } }, select: { reversesId: true } })).map((r) => r.reversesId!));
+    const live = rows.filter((r) => !reversed.has(r.id));
+    const [workers, users] = await Promise.all([
+      ctx.tx.pieceworkWorker.findMany({ where: { id: { in: live.map((r) => r.workerId) } }, select: { id: true, name: true } }),
+      userNames(ctx.tx, [...new Set(live.map((r) => r.enteredById))]),
+    ]);
+    const wName = new Map(workers.map((w) => [w.id, w.name]));
+    const by = new Map<string, ChallanDay["challans"][number]>();
+    for (const r of live) {
+      const n = r.challanNumber!;
+      const cur = by.get(n) ?? { number: n, workerName: wName.get(r.workerId) ?? "A karigar", lines: 0, given: 0, takenBack: 0, by: users.get(r.enteredById) ?? "" };
+      cur.lines += 1;
+      if (r.kind === "issue") cur.given += r.pieces; else cur.takenBack += r.pieces;
+      by.set(n, cur);
+    }
+    return { date, challans: [...by.values()] };
   },
 };
 
@@ -232,9 +262,71 @@ export const lookupCode: QueryDefinition<{ code: string }, ScanResult> = {
   },
 };
 
+/* ================================== search ================================== */
+
+export type PieceworkHit = { kind: "bundle" | "lot" | "roll" | "karigar" | "challan"; id: string; label: string; sub: string | null; href: string };
+
+/**
+ * The Ctrl K search for a garment maker: a bundle, lot, roll, karigar or challan by the number on the paper, the name people use, a
+ * phone number, a supplier or an invoice. "B-4", "b4", "0004" and "B-0004" all find B-0004. Each kind is searched only if this person
+ * may read it (a supervisor finds bundles, lots and karigars by name but not fabric), and a karigar opens the page this person can see.
+ */
+export const searchPiecework: QueryDefinition<{ term: string }, PieceworkHit[]> = {
+  key: "verity.piecework.search",
+  entity: ENTRY_ENTITY,
+  description: "Search bundles, lots, rolls, karigars and challans by number, name, phone, supplier or invoice.",
+  input: z.object({ term: z.string().trim().min(1).max(100) }),
+  handler: async (ctx, input) => {
+    const term = input.term;
+    const contains = { contains: term, mode: "insensitive" as const };
+    // "b4", "B-4", "b 0004": a letter prefix and a number find the numbered record exactly.
+    const coded = /^(b|r|lot|ch)[\s-]*0*(\d{1,9})$/i.exec(term);
+    const exact = (prefix: string) => (coded && coded[1]!.toLowerCase() === prefix.toLowerCase() ? `${prefix.toUpperCase()}-${coded[2]!.padStart(4, "0")}` : null);
+    const [canRolls, canKarigars] = await Promise.all([
+      hasTenantPermission(ctx.tx, ctx.actor.roleId, "Read", "verity.piecework.roll"),
+      hasTenantPermission(ctx.tx, ctx.actor.roleId, "Read", "verity.piecework.worker"),
+    ]);
+
+    const [bundles, lots, rolls, workers, challan] = await Promise.all([
+      ctx.tx.pieceworkBundle.findMany({
+        where: { OR: [{ number: contains }, ...(exact("B") ? [{ number: exact("B")! }] : []), { sizeNote: contains }] },
+        include: { lot: { select: { number: true, name: true, design: true } } }, orderBy: { sequenceNo: "desc" }, take: 6,
+      }),
+      ctx.tx.pieceworkLot.findMany({
+        where: { cancelledAt: null, OR: [{ number: contains }, ...(exact("LOT") ? [{ number: exact("LOT")! }] : []), { name: contains }, { design: contains }, { fabricType: contains }] },
+        orderBy: { sequenceNo: "desc" }, take: 6,
+      }),
+      canRolls
+        ? ctx.tx.pieceworkRoll.findMany({
+            where: { cancelledAt: null, OR: [{ number: contains }, ...(exact("R") ? [{ number: exact("R")! }] : []), { fabricType: contains }, { supplier: contains }, { invoiceNumber: contains }] },
+            orderBy: { sequenceNo: "desc" }, take: 6,
+          })
+        : Promise.resolve([]),
+      ctx.tx.pieceworkWorker.findMany({ where: { OR: [{ name: contains }, { mobile: { contains: term.replace(/\s+/g, "") } }, { mobile: contains }] }, orderBy: { name: "asc" }, take: 6 }),
+      exact("CH") || /^ch/i.test(term)
+        ? ctx.tx.pieceworkEntry.findMany({ where: { challanNumber: exact("CH") ?? { contains: term.toUpperCase() } }, distinct: ["challanNumber"], select: { challanNumber: true, workerId: true, entryDate: true }, take: 4 })
+        : Promise.resolve([]),
+    ]);
+    const workerNames = new Map((await ctx.tx.pieceworkWorker.findMany({ where: { id: { in: challan.map((c) => c.workerId) } }, select: { id: true, name: true } })).map((w) => [w.id, w.name]));
+
+    const hits: PieceworkHit[] = [
+      ...bundles.map((b): PieceworkHit => ({ kind: "bundle", id: b.id, label: `${b.number}${b.cancelledAt ? " (cancelled)" : ""}`, sub: [`${b.lot.number} ${b.lot.name ?? b.lot.design}`, `${b.netPieces} pieces`].join(" · "), href: `/lots/bundles/${b.id}` })),
+      ...lots.map((l): PieceworkHit => ({ kind: "lot", id: l.id, label: `${l.number} ${l.name ?? l.design}`, sub: [l.design !== l.name ? l.design : null, l.fabricType, l.status].filter(Boolean).join(" · "), href: `/lots/${l.id}` })),
+      ...rolls.map((r): PieceworkHit => ({ kind: "roll", id: r.id, label: `${r.number} ${r.fabricType}`, sub: [r.supplier, r.invoiceNumber].filter(Boolean).join(" · ") || null, href: `/fabric/${r.id}` })),
+      ...workers.map((w): PieceworkHit => ({ kind: "karigar", id: w.id, label: w.name, sub: [w.kind === "outside" ? "Outside unit" : "In the factory", w.mobile].filter(Boolean).join(" · "), href: canKarigars ? `/karigars/${w.id}` : `/shopfloor/karigar/${w.id}` })),
+      ...challan.filter((c) => c.challanNumber).map((c): PieceworkHit => ({ kind: "challan", id: c.challanNumber!, label: c.challanNumber!, sub: `${workerNames.get(c.workerId) ?? "Karigar"} · ${isoOf(c.entryDate)}`, href: `/shopfloor/challan/${c.challanNumber}` })),
+    ];
+    // A number typed exactly goes first, then the rest as found.
+    const first = coded ? hits.filter((h) => h.label.toUpperCase().startsWith(exact(coded[1]!.toUpperCase()) ?? "\u0000")) : [];
+    return [...first, ...hits.filter((h) => !first.includes(h))];
+  },
+};
+
 export function registerViews(): void {
   registerQuery(challanSheet);
   registerQuery(floorCases);
   registerQuery(readyGarments);
   registerQuery(lookupCode);
+  registerQuery(searchPiecework);
+  registerQuery(challansOnDay);
 }

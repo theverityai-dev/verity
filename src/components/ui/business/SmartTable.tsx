@@ -276,7 +276,7 @@ export function SmartTable({
             })}
           </ul>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
+          <div data-dt="footer" className="mt-5 flex flex-wrap items-center justify-between gap-4">
             <p
               className="m-0 text-[13px] text-text-tertiary"
               aria-live="polite"

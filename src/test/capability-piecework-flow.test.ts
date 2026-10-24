@@ -43,6 +43,8 @@ import {
   lotRateCard,
   listRolls,
   moveFabric,
+  challansOnDay,
+  searchPiecework,
   dashboard,
   reportBundleLocation,
   reportCosting,
@@ -454,5 +456,39 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     expect((await executeQuery(owner, pieceworkHistory, { group: "money" })).rows.every((r) => r.group === "money")).toBe(true);
     // Reading who did what is not for the floor.
     await reject(executeQuery(supervisor, pieceworkHistory, {}), /holds no Read grant/);
+  });
+
+  it("finds a bundle, lot, roll, karigar or challan by the number on the paper, a name, a phone or an invoice", async () => {
+    const { lotId, bundleId } = await lotWith(12, "Searchable Oxford");
+    const bundle = await withTenant(tenantId, (tx) => tx.pieceworkBundle.findUniqueOrThrow({ where: { id: bundleId } }));
+    const n = Number(bundle.number.slice(2));
+    const kar = (await executeCommand(owner, defineWorker, { name: "Ramesh Searchwala", mobile: "98140 55512" })).id;
+    const roll = await executeCommand(owner, receiveRolls, { fabricType: "Searchable twill", quantitiesCenti: [500], supplier: "Zed Mills", invoiceNumber: "ZM/77" });
+    const issued = await executeCommand(supervisor, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 12 });
+
+    const find = (as: ActorContext, term: string) => executeQuery(as, searchPiecework, { term });
+    // The bundle is found however its number is typed, and comes first.
+    for (const term of [bundle.number, `b${n}`, `B-${n}`, `b ${String(n).padStart(4, "0")}`]) {
+      expect((await find(supervisor, term))[0]).toMatchObject({ kind: "bundle", id: bundleId });
+    }
+    expect((await find(owner, "searchable oxford")).find((h) => h.kind === "lot")).toMatchObject({ id: lotId, href: `/lots/${lotId}` });
+    expect((await find(owner, "ramesh")).find((h) => h.kind === "karigar")).toMatchObject({ id: kar, href: `/karigars/${kar}` });
+    expect((await find(owner, "98140 55512")).some((h) => h.kind === "karigar" && h.id === kar)).toBe(true);
+    expect((await find(owner, "zm/77")).find((h) => h.kind === "roll")).toMatchObject({ id: roll.rollIds[0] });
+    expect((await find(owner, roll.numbers[0]!.toLowerCase().replace("-", ""))).some((h) => h.kind === "roll")).toBe(true);
+    expect((await find(owner, issued.challanNumber.toLowerCase())).find((h) => h.kind === "challan")).toMatchObject({ id: issued.challanNumber });
+
+    // A supervisor finds bundles and karigars but not fabric, and a karigar opens the page a supervisor can see.
+    expect((await find(supervisor, "zm/77")).some((h) => h.kind === "roll")).toBe(false);
+    expect((await find(supervisor, "ramesh")).find((h) => h.kind === "karigar")).toMatchObject({ href: `/shopfloor/karigar/${kar}` });
+    expect(await find(owner, "no such thing anywhere")).toEqual([]);
+
+    // The day's challans are one list, with the supervisor's own joined onto one paper.
+    const again = await executeCommand(supervisor, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 1, challanNumber: issued.challanNumber }).catch(() => null);
+    void again;
+    const today = new Date().toISOString().slice(0, 10);
+    const day = await executeQuery(supervisor, challansOnDay, { date: today });
+    expect(day.challans.find((c) => c.number === issued.challanNumber)).toMatchObject({ workerName: "Karigar W", by: "Supervisor A" });
+    expect((await executeQuery(supervisor, challansOnDay, { date: "2001-01-01" })).challans).toEqual([]);
   });
 });

@@ -102,7 +102,16 @@ export function Panel({
           {action}
         </div>
       )}
-      <div className={flush ? "" : cx("px-5 pb-5", title ? "pt-3" : "pt-5")}>{children}</div>
+      <div
+        className={
+          flush
+            // A table that sits edge to edge still keeps its filter box, footer line and phone rows inside the card's gutter.
+            ? "[&_[data-dt=toolbar]]:px-5 [&_[data-dt=toolbar]]:pt-1 [&_[data-dt=footer]]:px-5 [&_[data-dt=footer]]:pb-4 [&_[data-dt=list]>li]:px-5"
+            : cx("px-5 pb-5", title ? "pt-3" : "pt-5")
+        }
+      >
+        {children}
+      </div>
     </Surface>
   );
 }

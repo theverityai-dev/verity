@@ -24,7 +24,10 @@ async function SlipsPage({ params }: { params: Promise<{ id: string }> }) {
   const lot = await executeQuery(actor, lotDetail, { lotId: id });
   if (!lot) notFound();
   const tenant = await withTenant(actor.tenantId, (tx) => tx.tenant.findFirst({ select: { name: true, customFields: true } }));
-  const slips = await Promise.all(lot.bundleRows.map(async (b) => ({
+  // Cancelled, split and joined bundles have no slip to print: their pieces are on the new bundles.
+  const slips = await Promise.all(lot.bundleRows.filter((b) => !b.cancelled).map(async (b) => ({
+    id: b.id,
+    fresh: b.lastMovement === null,
     business: tenant?.name ?? "",
     demo: Boolean((tenant?.customFields as { demo?: boolean } | null)?.demo),
     bundleNumber: b.number,

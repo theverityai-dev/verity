@@ -20,29 +20,31 @@ export type SlipData = {
  * with Hindi beside each English label, and a QR that opens the bundle. No size is printed. On screen it is a preview
  * with a Print button; only the slip itself prints.
  */
-export function SlipCard({ slip }: { slip: SlipData }) {
+export function SlipCard({ slip, compact = false }: { slip: SlipData; compact?: boolean }) {
+  // Full: 10 cm, two across an A4 sheet. Sticker: 6.4 cm, three across, for a label that goes on the bundle's tie.
+  const c = compact;
   return (
-    <article className="w-[10cm] border-2 border-black p-4 text-black" style={{ background: "#fff" }}>
-      <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.08em]">{slip.business}{slip.demo ? " · demo" : ""}</p>
-      <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-3">
-        <div>
-          <p className="m-0 text-[12px]">बंडल नं. / Bundle No.</p>
-          <p className="m-0 text-[34px] font-extrabold leading-[1.05] tracking-[-0.01em]">{slip.bundleNumber}</p>
+    <article className={`${c ? "w-[6.4cm] border p-2" : "w-[10cm] border-2 p-4"} border-black text-black`} style={{ background: "#fff" }}>
+      <p className={`m-0 truncate font-semibold uppercase tracking-[0.08em] ${c ? "text-[8px]" : "text-[11px]"}`}>{slip.business}{slip.demo ? " · demo" : ""}</p>
+      <div className={`grid grid-cols-[1fr_auto] items-center ${c ? "mt-1 gap-2" : "mt-2 gap-3"}`}>
+        <div className="min-w-0">
+          <p className={`m-0 ${c ? "text-[8px]" : "text-[12px]"}`}>बंडल नं. / Bundle No.</p>
+          <p className={`m-0 font-extrabold leading-[1.05] tracking-[-0.01em] ${c ? "text-[22px]" : "text-[34px]"}`}>{slip.bundleNumber}</p>
         </div>
-        <img src={slip.qr} alt={`QR code that opens bundle ${slip.bundleNumber}`} width={92} height={92} className="size-[92px]" />
+        <img src={slip.qr} alt={`QR code that opens bundle ${slip.bundleNumber}`} width={c ? 62 : 92} height={c ? 62 : 92} className={c ? "size-[62px]" : "size-[92px]"} />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 border-t border-black pt-3">
+      <div className={`grid grid-cols-2 border-t border-black ${c ? "mt-1.5 gap-2 pt-1.5" : "mt-3 gap-3 pt-3"}`}>
         <div>
-          <p className="m-0 text-[12px]">नेट पीस / Net Pieces</p>
-          <p className="m-0 text-[30px] font-extrabold leading-[1.05]">{slip.netPieces}</p>
+          <p className={`m-0 ${c ? "text-[8px]" : "text-[12px]"}`}>नेट पीस / Net Pieces</p>
+          <p className={`m-0 font-extrabold leading-[1.05] ${c ? "text-[20px]" : "text-[30px]"}`}>{slip.netPieces}</p>
         </div>
-        <div>
-          <p className="m-0 text-[12px]">लॉट / Lot</p>
-          <p className="m-0 text-[20px] font-extrabold leading-[1.1]">{slip.lotNumber}</p>
-          <p className="m-0 text-[13px] leading-[1.2]">{slip.lotName}</p>
+        <div className="min-w-0">
+          <p className={`m-0 ${c ? "text-[8px]" : "text-[12px]"}`}>लॉट / Lot</p>
+          <p className={`m-0 font-extrabold leading-[1.1] ${c ? "text-[13px]" : "text-[20px]"}`}>{slip.lotNumber}</p>
+          <p className={`m-0 leading-[1.2] ${c ? "truncate text-[9px]" : "text-[13px]"}`}>{slip.lotName}</p>
         </div>
       </div>
-      <p className="m-0 mt-3 border-t border-black pt-2 text-[11px]">{slip.design} · कटिंग / Cut {slip.cutOn}</p>
+      <p className={`m-0 border-t border-black ${c ? "mt-1.5 truncate pt-1 text-[8px]" : "mt-3 pt-2 text-[11px]"}`}>{slip.design} · कटिंग / Cut {slip.cutOn}</p>
     </article>
   );
 }

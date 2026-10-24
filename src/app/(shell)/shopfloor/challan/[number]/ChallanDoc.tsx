@@ -7,7 +7,7 @@ import type { Challan } from "@/server/capabilities/piecework";
 
 const when = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
-function Sheet({ c, business }: { c: Challan; business: string }) {
+export function Sheet({ c, business }: { c: Challan; business: string }) {
   const gave = c.lines.filter((l) => l.kind === "issue");
   const took = c.lines.filter((l) => l.kind === "receive");
   return (

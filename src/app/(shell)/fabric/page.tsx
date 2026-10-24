@@ -6,7 +6,7 @@ import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_ROLL, PIECEWORK_CAPABILITY, listRolls, type RollRow } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
-import { EmptyState, PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
+import { ButtonLink, EmptyState, PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
 import { ProgressBar } from "@/components/ui/viz";
 import { shortDate } from "../lots/format";
 import { qty } from "./format";
@@ -36,7 +36,10 @@ async function FabricPage() {
 
   return (
     <>
-      <PageHeader title="Fabric" description={shelf.length === 0 ? "No roll has fabric left." : `${shelf.length} roll${shelf.length === 1 ? "" : "s"} on the shelf`} actions={canReceive ? <ReceiveRolls fabricTypes={[...new Set(live.map((r) => r.fabricType))]} today={today} seen={live.filter((r) => r.invoiceNumber).map((r) => ({ supplier: r.supplier, invoice: r.invoiceNumber!, number: r.number }))} /> : null} />
+      <PageHeader title="Fabric" description={shelf.length === 0 ? "No roll has fabric left." : `${shelf.length} roll${shelf.length === 1 ? "" : "s"} on the shelf`} actions={<>
+        {shelf.length > 0 && <ButtonLink href={`/fabric/labels?ids=${shelf.slice(0, 100).map((r) => r.id).join(",")}`} variant="secondary">Print labels{shelf.length > 100 ? " (first 100)" : ""}</ButtonLink>}
+        {canReceive && <ReceiveRolls fabricTypes={[...new Set(live.map((r) => r.fabricType))]} today={today} seen={live.filter((r) => r.invoiceNumber).map((r) => ({ supplier: r.supplier, invoice: r.invoiceNumber!, number: r.number }))} />}
+      </>} />
 
       {live.length === 0 ? (
         <EmptyState title="No rolls yet" description="Receive the rolls of an invoice. Each gets a number and a label with a QR, so a lot can say exactly which roll it was cut from." />

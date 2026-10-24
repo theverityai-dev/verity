@@ -171,6 +171,14 @@ const EN = {
   scanAgain: "Scan another",
   change: "Change",
   recordedBy: "Recorded by",
+  printChallans: "Print the day's challans",
+  challansIntro: "Every paper made out on one day, to print together and hand out.",
+  noChallans: "No challan was made out on this day.",
+  printChosen: "Print chosen",
+  selectAll: "Select all",
+  selectNone: "None",
+  chosenOf: "chosen of",
+  takenBackShort: "back",
 } as const;
 
 export type Labels = { [K in keyof typeof EN]: string };
@@ -339,6 +347,14 @@ const HI: Labels = {
   scanAgain: "दूसरा स्कैन करें",
   change: "बदलें",
   recordedBy: "दर्ज करने वाला",
+  printChallans: "आज के चालान छापें",
+  challansIntro: "एक दिन में बने सभी चालान, एक साथ छापकर बाँटने के लिए।",
+  noChallans: "इस दिन कोई चालान नहीं बना।",
+  printChosen: "चुने हुए छापें",
+  selectAll: "सब चुनें",
+  selectNone: "कोई नहीं",
+  chosenOf: "चुने गए, कुल",
+  takenBackShort: "वापस",
 };
 
 export const LABELS: Record<Lang, Labels> = { en: EN, hi: HI };
