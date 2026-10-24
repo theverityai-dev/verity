@@ -1,13 +1,15 @@
+import Link from "next/link";
 import { requireActor } from "@/server/platform/auth";
 import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_SETTING, PIECEWORK_CAPABILITY, teamSetup } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_SETTING, PIECEWORK_CAPABILITY, teamDirectory, teamSetup } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
 import { shortDate } from "../../lots/format";
-import { LimitsForm, StageAssignment } from "./TeamForms";
+import { LimitsForm } from "./TeamForms";
+import { AddPerson, InstallRoles, RoleGuide, TeamPeople } from "./TeamDesk";
 
 export const dynamic = "force-dynamic";
 
@@ -17,11 +19,15 @@ async function TeamPage() {
   const actor = await requireActor();
   const allowed = await withTenant(actor.tenantId, (tx) => hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_SETTING));
   if (!allowed) return <PermissionDenied what="team and limits" />;
-  const team = await executeQuery(actor, teamSetup, {});
+  const [team, directory] = await Promise.all([executeQuery(actor, teamSetup, {}), executeQuery(actor, teamDirectory, {})]);
 
   return (
     <>
-      <PageHeader title="Team and limits" description={team.canEdit ? "Who looks after which stage, and what a manager may approve alone." : "Read only. The owner sets these."} />
+      <PageHeader title="Team" description={team.canEdit ? "Who works here, in which role, at which stages, and what a manager may approve alone." : "Read only. The owner sets these."} actions={<AddPerson directory={directory} />} />
+
+      <InstallRoles missing={directory.missingPresets} canInstall={directory.can.installRoles} />
+
+      <TeamPeople directory={directory} />
 
       <div className="mb-6 grid items-start gap-6 lg:grid-cols-[1fr_1.4fr]">
         <Surface className="p-6">
@@ -31,19 +37,9 @@ async function TeamPage() {
         </Surface>
 
         <Surface className="p-6">
-          <h2 className="m-0 mb-1 text-[17px] font-medium tracking-[-0.02em]">Stages by person</h2>
-          <p className="m-0 mb-4 text-[13px] leading-[19px] text-text-secondary">People with a role that works at every stage need no assignment. Everyone else can issue and receive only at the stages ticked here.</p>
-          <ul className="m-0 flex list-none flex-col divide-y divide-[var(--color-line)] p-0">
-            {team.members.map((m) => (
-              <li key={m.userId} className="py-3.5 first:pt-0 last:pb-0">
-                <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <span className="text-[15px] font-semibold text-text">{m.name}</span>
-                  <span className="text-[13px] text-text-secondary">{m.role}</span>
-                </div>
-                {m.allStages ? <p className="m-0 text-[13px] text-text-secondary">Works at every stage.</p> : <StageAssignment userId={m.userId} stages={team.stages} assigned={m.stageIds} canEdit={team.canEdit} />}
-              </li>
-            ))}
-          </ul>
+          <h2 className="m-0 mb-1 text-[17px] font-medium tracking-[-0.02em]">What each role is for</h2>
+          <p className="m-0 mb-4 text-[13px] leading-[19px] text-text-secondary">Open a person above to change their role or the stages they look after. The exact permissions of a role are under <Link href="/roles" className="text-accent-ink no-underline hover:underline">Roles</Link>.</p>
+          <RoleGuide roles={directory.roles} people={directory.people} />
         </Surface>
       </div>
 

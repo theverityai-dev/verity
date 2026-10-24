@@ -209,6 +209,28 @@ export async function resetTeamPassword(input: {
   }
 }
 
+/**
+ * The Team screen's reset: it names a membership, never an auth id, so no identifier of the identity provider reaches the browser.
+ * The membership is looked up inside the caller's own tenant, then the ordinary reset runs (same permission, same refusals).
+ */
+export async function resetMemberPassword(input: { membershipId: string; password: string }): Promise<ActionResult<null>> {
+  try {
+    if (input.password.length < 8) {
+      return { ok: false, code: "E_VALIDATION", message: "A password needs at least 8 characters", retryable: false };
+    }
+    const actor = await requireActor();
+    const member = await withTenant(actor.tenantId, (tx) =>
+      tx.tenantMembership.findFirst({ where: { id: input.membershipId }, select: { user: { select: { authUserId: true } } } }),
+    );
+    if (!member) {
+      return { ok: false, code: "E_VALIDATION", message: "That person is not a member of this business", retryable: false };
+    }
+    return await resetTeamPassword({ authUserId: member.user.authUserId, password: input.password });
+  } catch (error) {
+    return toActionFailure(error);
+  }
+}
+
 /** A password that is not guessable and not the person's name. */
 export async function suggestPassword(): Promise<string> {
   // Ambiguous characters left out: someone is going to read this aloud or write

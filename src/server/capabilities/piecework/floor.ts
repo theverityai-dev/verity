@@ -52,6 +52,15 @@ export async function stageScopeOf(tx: Tx, actor: ActorContext): Promise<StageSc
 
 export const inScope = (scope: StageScope, stageId: string) => scope.all || scope.stageIds.has(stageId);
 
+/** Refuses a supervisor who gives work to a karigar the owner set under another supervisor. Anyone who works at every stage is exempt. */
+export async function assertWorkerAccess(ctx: CommandContext, workerId: string): Promise<void> {
+  if ((await stageScopeOf(ctx.tx, ctx.actor)).all) return;
+  const worker = await ctx.tx.pieceworkWorker.findUnique({ where: { id: workerId }, select: { name: true, supervisorUserId: true } });
+  if (worker?.supervisorUserId && worker.supervisorUserId !== ctx.actor.userId) {
+    throw new ForbiddenError(`E_FORBIDDEN: ${worker.name} is looked after by another supervisor; ask the owner to change it if you are to give them work`);
+  }
+}
+
 /** Refuses a supervisor at a stage the owner has not given them. */
 export async function assertStageAccess(ctx: CommandContext, stageId: string): Promise<void> {
   const scope = await stageScopeOf(ctx.tx, ctx.actor);
@@ -386,7 +395,10 @@ export const floorWorkers: QueryDefinition<Record<string, never>, FloorWorker[]>
     ]);
     const held = new Map<string, number>();
     for (const i of st.issues) held.set(i.workerId, (held.get(i.workerId) ?? 0) + i.open);
-    return workers.map((w) => ({
+    // A person who works at every stage (owner, manager, munshi) sees every karigar. A supervisor sees the karigars set as theirs
+    // and those with no supervisor yet; a karigar given to another supervisor is that supervisor's to give out to.
+    const mine = (w: { supervisorUserId: string | null }) => st.scope.all || w.supervisorUserId === null || w.supervisorUserId === ctx.actor.userId;
+    return workers.filter(mine).map((w) => ({
       id: w.id, name: w.name, kind: w.kind,
       stageIds: [...new Set([...rates.filter((r) => r.workerId === w.id).map((r) => r.stageId), ...defaulted.map((s) => s.id)])],
       piecesHeld: held.get(w.id) ?? 0,

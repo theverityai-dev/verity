@@ -8,11 +8,51 @@ import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { BASIS_LABEL, PAYMENT_LABEL, rupees, shortDate, toPaise } from "../../lots/format";
+import { ProfileFields, type ProfileValues, type SupervisorChoice } from "../KarigarForms";
 
 const PAY = "verity.piecework.record_payment";
 const RATE = "verity.piecework.set_worker_rate";
 const REVERSE = "verity.piecework.reverse_payment";
 const ACTIVE = "verity.piecework.set_worker_active";
+const UPDATE = "verity.piecework.update_worker";
+
+/** Everything about the person that is not money: contact, who looks after them, when they joined, an ID note. Blank clears a field. */
+export function EditProfile({ worker, supervisors }: {
+  worker: ProfileValues & { id: string; name: string; mobile: string | null; kind: string; address: string | null };
+  supervisors: SupervisorChoice[];
+}) {
+  const [open, setOpen] = useState(false);
+  const { failure, pending, run, clear } = useAction(`/karigars/${worker.id}`, () => setOpen(false));
+  return (
+    <>
+      <CommandButton commands={UPDATE} onClick={() => setOpen(true)}>Edit profile</CommandButton>
+      <FormModal
+        open={open} onClose={() => { clear(); setOpen(false); }} title={`Profile of ${worker.name}`} description="Contact, who looks after them, and the notes the factory keeps. Rates and money are changed elsewhere on this page." width="lg"
+        submitLabel="Save profile" pendingLabel="Saving…" pending={pending} failure={failure} failureTitle="The profile was not saved"
+        onSubmit={(formData) => {
+          const text = (n: string) => String(formData.get(n) ?? "").trim();
+          run(UPDATE, {
+            workerId: worker.id, name: text("name"), mobile: text("mobile") || null, kind: text("kind") || "in_house", address: text("address") || null,
+            joinedOn: text("joinedOn") || null, idNote: text("idNote") || null, emergencyContact: text("emergencyContact") || null, supervisorUserId: text("supervisor") || null,
+          });
+        }}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Name" htmlFor="prof-name" required><Input id="prof-name" name="name" required maxLength={120} defaultValue={worker.name} /></Field>
+          <Field label="Mobile number" htmlFor="prof-mobile"><Input id="prof-mobile" name="mobile" type="tel" inputMode="tel" maxLength={20} defaultValue={worker.mobile ?? ""} /></Field>
+          <Field label="Works" htmlFor="prof-kind">
+            <Select id="prof-kind" name="kind" defaultValue={worker.kind}>
+              <option value="in_house">In the factory</option>
+              <option value="outside">Outside unit</option>
+            </Select>
+          </Field>
+          <Field label="Address" htmlFor="prof-address"><Input id="prof-address" name="address" maxLength={300} defaultValue={worker.address ?? ""} /></Field>
+        </div>
+        <ProfileFields supervisors={supervisors} initial={worker} idPrefix="prof" />
+      </FormModal>
+    </>
+  );
+}
 
 function useAction(path: string, onDone: () => void) {
   const router = useRouter();

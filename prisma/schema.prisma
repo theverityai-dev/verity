@@ -7801,6 +7801,11 @@ model PieceworkWorker {
   kind      String   @default("in_house")
   address   String?
   active    Boolean  @default(true)
+  /// The supervisor (a user of this tenant) who looks after this karigar; empty means any supervisor may. Checked by the commands, not a foreign key.
+  supervisorUserId String? @map("supervisor_user_id") @db.Uuid
+  joinedOn         DateTime? @map("joined_on") @db.Date
+  idNote           String?   @map("id_note")
+  emergencyContact String?   @map("emergency_contact")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   version   Int      @default(1)
@@ -7812,6 +7817,7 @@ model PieceworkWorker {
   pieceworkApprovals PieceworkApproval[]
 
   @@unique([tenantId, name])
+  @@index([tenantId, supervisorUserId], map: "piecework_worker_supervisor_idx")
   @@map("piecework_worker")
 }
 

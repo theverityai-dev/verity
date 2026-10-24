@@ -24,13 +24,14 @@ import {
 import { LEDGER_SELECT, activeStages, asDate, isoOf, isoOrNull, loadBundles, lotCovers, todayFor, toLedger, type LoadedBundle, type Tx } from "./shared";
 import { dashboard, recentEntries, reportBundleLocation, reportCosting, reportLotStatus, reportProductionByProcess, reportQuality, reportReadyInventory, reportWagePayment, reportWorkInHand } from "./reports";
 
-import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, assertStageAccess, registerFloor } from "./floor";
+import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_SETTING, assertMayReverse, assertStageAccess, assertWorkerAccess, registerFloor } from "./floor";
 import { effectiveRate, lostPieceCharge, registerSetup } from "./setup";
 import { applyMove, registerFabric, ENTITY_PIECEWORK_ROLL } from "./fabric";
 import { registerViews } from "./views";
 import { registerCosts } from "./costs";
 import { registerRebundle } from "./rebundle";
 import { registerHistory } from "./history";
+import { assertActiveMember, registerTeam } from "./team";
 
 export * from "./ledger";
 export * from "./reports";
@@ -41,6 +42,8 @@ export * from "./views";
 export * from "./costs";
 export * from "./rebundle";
 export * from "./history";
+export * from "./team";
+export * from "./role-presets";
 
 /**
  * CAPABILITY: Piece-rate lots (`verity.capability.piecework`), built for the Stylified shirt factory from its requirement
@@ -372,7 +375,10 @@ async function insertRate(tx: Tx, tenantId: string, userId: string, workerId: st
 }
 
 export const defineWorker: CommandDefinition<
-  { name: string; mobile?: string; kind?: (typeof WORKER_KINDS)[number]; address?: string; rates?: RateInput[] },
+  {
+    name: string; mobile?: string; kind?: (typeof WORKER_KINDS)[number]; address?: string; rates?: RateInput[];
+    joinedOn?: string; idNote?: string; emergencyContact?: string; supervisorUserId?: string;
+  },
   { id: string }
 > = {
   key: "verity.piecework.define_worker",
@@ -384,15 +390,23 @@ export const defineWorker: CommandDefinition<
     kind: z.enum(WORKER_KINDS).optional(),
     address: z.string().trim().max(300).optional(),
     rates: z.array(rateSchema).max(30).optional(),
+    joinedOn: isoDate.optional(),
+    idNote: z.string().trim().max(300).optional(),
+    emergencyContact: z.string().trim().max(300).optional(),
+    supervisorUserId: uuid.optional(),
   }),
   preconditions: async (ctx, input) => {
     if (await ctx.tx.pieceworkWorker.findFirst({ where: { name: input.name } })) throw new ValidationError("E_VALIDATION: a worker with that name already exists");
     const ids = (input.rates ?? []).map((r) => r.stageId);
     if (new Set(ids).size !== ids.length) throw new ValidationError("E_VALIDATION: one rate per stage when adding a worker");
+    if (input.supervisorUserId) await assertActiveMember(ctx.tx, input.supervisorUserId);
   },
   handler: async (ctx, input) => {
     const worker = await ctx.tx.pieceworkWorker.create({
-      data: { tenantId: ctx.actor.tenantId, name: input.name, mobile: input.mobile ?? null, kind: input.kind ?? "in_house", address: input.address ?? null },
+      data: {
+        tenantId: ctx.actor.tenantId, name: input.name, mobile: input.mobile ?? null, kind: input.kind ?? "in_house", address: input.address ?? null,
+        joinedOn: input.joinedOn ? asDate(input.joinedOn) : null, idNote: input.idNote ?? null, emergencyContact: input.emergencyContact ?? null, supervisorUserId: input.supervisorUserId ?? null,
+      },
     });
     const today = await todayFor(ctx.tx);
     for (const rate of input.rates ?? []) await insertRate(ctx.tx, ctx.actor.tenantId, ctx.actor.userId, worker.id, rate, today);
@@ -480,6 +494,7 @@ export const recordIssue: CommandDefinition<
     const stage = await ctx.tx.pieceworkStage.findUnique({ where: { id: input.stageId } });
     if (!stage || !stage.active) throw new ValidationError("E_VALIDATION: stage not found in this tenant");
     await assertStageAccess(ctx, stage.id);
+    await assertWorkerAccess(ctx, input.workerId);
     if (input.dueDate && input.dueDate < day) throw new ValidationError("E_VALIDATION: the expected return date is before the issue date");
     const skipped = await ctx.tx.pieceworkLotRate.findFirst({ where: { lotId: bundle.lotId, stageId: stage.id, skipped: true }, select: { id: true } });
     if (skipped) throw new ValidationError(`E_VALIDATION: ${bundle.lot.number} does not use ${stage.label}`);
@@ -948,7 +963,20 @@ export const bundleDetail: QueryDefinition<{ bundleId: string }, BundleDetail | 
   },
 };
 
-export type WorkerRow = {
+/** The karigar's profile fields beyond name and contact; shared by the list and the ledger. */
+export type WorkerProfile = { joinedOn: string | null; idNote: string | null; emergencyContact: string | null; supervisorUserId: string | null; supervisorName: string | null };
+
+async function supervisorNames(tx: Tx): Promise<Map<string, string>> {
+  const rows = await tx.tenantMembership.findMany({ select: { userId: true, user: { select: { party: { select: { displayName: true } } } } } });
+  return new Map(rows.map((m) => [m.userId, m.user.party.displayName]));
+}
+
+const profileOf = (w: { joinedOn: Date | null; idNote: string | null; emergencyContact: string | null; supervisorUserId: string | null }, names: Map<string, string>): WorkerProfile => ({
+  joinedOn: isoOrNull(w.joinedOn), idNote: w.idNote, emergencyContact: w.emergencyContact,
+  supervisorUserId: w.supervisorUserId, supervisorName: w.supervisorUserId ? names.get(w.supervisorUserId) ?? "Someone who has left" : null,
+});
+
+export type WorkerRow = WorkerProfile & {
   id: string; name: string; mobile: string | null; kind: string; address: string | null; active: boolean;
   workTypes: Array<{ stageId: string; label: string; rateMinor: number; wageBasis: WageBasis }>;
   piecesHeld: number; wagesMinor: number; advanceGivenMinor: number; recoveredMinor: number; deductionMinor: number; paidMinor: number; balanceMinor: number; advanceOutstandingMinor: number;
@@ -959,9 +987,9 @@ export const listWorkers: QueryDefinition<{ includeInactive?: boolean }, WorkerR
   entity: ENTITY_PIECEWORK_WORKER,
   input: z.object({ includeInactive: z.boolean().optional() }),
   handler: async (ctx, input) => {
-    const [workers, stages, rates, entries, payments, today] = await Promise.all([
+    const [workers, stages, rates, entries, payments, today, names] = await Promise.all([
       ctx.tx.pieceworkWorker.findMany({ where: input.includeInactive ? {} : { active: true }, orderBy: { name: "asc" } }),
-      activeStages(ctx.tx), ctx.tx.pieceworkWorkerRate.findMany(), ctx.tx.pieceworkEntry.findMany({ select: LEDGER_SELECT }), ctx.tx.pieceworkPayment.findMany({ select: { workerId: true, kind: true, amountMinor: true, reversesId: true } }), todayFor(ctx.tx),
+      activeStages(ctx.tx), ctx.tx.pieceworkWorkerRate.findMany(), ctx.tx.pieceworkEntry.findMany({ select: LEDGER_SELECT }), ctx.tx.pieceworkPayment.findMany({ select: { workerId: true, kind: true, amountMinor: true, reversesId: true } }), todayFor(ctx.tx), supervisorNames(ctx.tx),
     ]);
     return workers.map((w) => {
       const mine = entries.filter((e) => e.workerId === w.id).map((e) => toLedger(e));
@@ -971,13 +999,13 @@ export const listWorkers: QueryDefinition<{ includeInactive?: boolean }, WorkerR
         const r = rateOn(rates.filter((x) => x.workerId === w.id && x.stageId === s.id).map((x) => ({ effectiveFrom: isoOf(x.effectiveFrom), rateMinor: x.rateMinor, wageBasis: x.wageBasis as WageBasis })), today);
         return r ? [{ stageId: s.id, label: s.label, rateMinor: r.rateMinor, wageBasis: r.wageBasis }] : [];
       });
-      return { id: w.id, name: w.name, mobile: w.mobile, kind: w.kind, address: w.address, active: w.active, workTypes, piecesHeld: held, ...money };
+      return { id: w.id, name: w.name, mobile: w.mobile, kind: w.kind, address: w.address, active: w.active, ...profileOf(w, names), workTypes, piecesHeld: held, ...money };
     });
   },
 };
 
 export type WorkerLedger = {
-  worker: { id: string; name: string; mobile: string | null; kind: string; address: string | null; active: boolean };
+  worker: { id: string; name: string; mobile: string | null; kind: string; address: string | null; active: boolean } & WorkerProfile;
   rates: Array<{ stageId: string; stageLabel: string; rateMinor: number; wageBasis: WageBasis; effectiveFrom: string }>;
   money: ReturnType<typeof workerMoney>;
   /** Open issues: what this worker still holds, by bundle and stage. */
@@ -1020,7 +1048,7 @@ export const workerLedger: QueryDefinition<{ workerId: string }, WorkerLedger | 
     );
 
     return {
-      worker: { id: worker.id, name: worker.name, mobile: worker.mobile, kind: worker.kind, address: worker.address, active: worker.active },
+      worker: { id: worker.id, name: worker.name, mobile: worker.mobile, kind: worker.kind, address: worker.address, active: worker.active, ...profileOf(worker, await supervisorNames(ctx.tx)) },
       rates: rates.map((r) => ({ stageId: r.stageId, stageLabel: stageLabel.get(r.stageId) ?? "", rateMinor: r.rateMinor, wageBasis: r.wageBasis as WageBasis, effectiveFrom: isoOf(r.effectiveFrom) })),
       money: workerMoney(ledger, payments.map(toPayment)),
       workInHand: inHand,
@@ -1054,7 +1082,7 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor/scan", label: "Scan", group: "Production", order: 17.5, icon: "search", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
-      { href: "/shopfloor/team", label: "Team and limits", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
+      { href: "/shopfloor/team", label: "Team", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
       { href: "/lots/ready", label: "Ready garments", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
@@ -1087,6 +1115,7 @@ export function registerPieceworkCapability(): void {
   registerCosts();
   registerRebundle();
   registerHistory();
+  registerTeam();
   registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);

@@ -4,7 +4,7 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY, listStages, workerLedger } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY, listStages, supervisorChoices, workerLedger } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/Avatar";
@@ -12,7 +12,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { MoneyBar } from "@/components/ui/PieceFlow";
 import { PageHeader, Panel, PermissionDenied, Surface } from "@/components/ui/primitives";
 import { ProgressBar } from "@/components/ui/viz";
-import { ActiveToggle, ChangeRate, PaymentLedger, RecordMoney } from "./KarigarActions";
+import { ActiveToggle, ChangeRate, EditProfile, PaymentLedger, RecordMoney } from "./KarigarActions";
 import { BASIS_LABEL, rupees, shortDate } from "../../lots/format";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
   }));
   if (!allowed) return <PermissionDenied what="viewing this karigar" />;
 
-  const [ledger, stages] = await Promise.all([executeQuery(actor, workerLedger, { workerId: id }), executeQuery(actor, listStages, {})]);
+  const [ledger, stages, supervisors] = await Promise.all([executeQuery(actor, workerLedger, { workerId: id }), executeQuery(actor, listStages, {}), executeQuery(actor, supervisorChoices, {})]);
   if (!ledger) notFound();
 
   // The rate in force today per stage: the newest effective date on or before today.
@@ -46,6 +46,7 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
         description={[ledger.worker.kind === "outside" ? "Outside unit" : "In the factory", ledger.worker.mobile ? `Mobile ${ledger.worker.mobile}` : null, ledger.worker.address].filter(Boolean).join(" · ")}
         actions={
           <>
+            <EditProfile worker={ledger.worker} supervisors={supervisors} />
             <ChangeRate workerId={ledger.worker.id} name={ledger.worker.name} stages={stages.map((s) => ({ id: s.id, label: s.label }))} />
             {canMoney && <RecordMoney workerId={ledger.worker.id} name={ledger.worker.name} balanceMinor={money.balanceMinor} advanceOutstandingMinor={money.advanceOutstandingMinor} />}
             <ActiveToggle workerId={ledger.worker.id} active={ledger.worker.active} />
@@ -141,6 +142,18 @@ async function KarigarPage({ params }: { params: Promise<{ id: string }> }) {
         </div>
 
         <div className="flex flex-col gap-6">
+          <Panel title="Profile">
+            <dl className="m-0 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-1">
+              {([
+                ["Looked after by", ledger.worker.supervisorName ?? "Any supervisor"],
+                ["Joined", ledger.worker.joinedOn ? shortDate(ledger.worker.joinedOn) : "Not recorded"],
+                ["ID note", ledger.worker.idNote ?? "Not recorded"],
+                ["Emergency contact", ledger.worker.emergencyContact ?? "Not recorded"],
+              ] as const).map(([k, v]) => (
+                <div key={k}><dt className="text-[12px] leading-[16px] text-text-tertiary">{k}</dt><dd className="m-0 text-[15px] leading-[20px] text-text">{v}</dd></div>
+              ))}
+            </dl>
+          </Panel>
           <Panel title="Rate per piece">
             {stages.length === 0 ? (
               <p className="m-0 text-[14px] text-text-secondary">No stages are set up.</p>

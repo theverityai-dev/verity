@@ -27,7 +27,7 @@ import { provisionIdentity } from "../src/server/platform/identity";
 import { activateCapability, invalidateCapabilityCache } from "../src/server/platform/capability";
 import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import * as piecework from "../src/server/capabilities/piecework";
-import { ENTITY_EVIDENCE, EVIDENCE_CAPABILITY } from "../src/server/capabilities/evidence";
+import { EVIDENCE_CAPABILITY } from "../src/server/capabilities/evidence";
 import { LOCATION_CAPABILITY } from "../src/server/capabilities/location";
 
 const TENANT_NAME = "Stylified";
@@ -92,15 +92,6 @@ async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise
   });
 }
 
-const ENTITIES = [
-  piecework.ENTITY_PIECEWORK_STAGE,
-  piecework.ENTITY_PIECEWORK_LOT,
-  piecework.ENTITY_PIECEWORK_BUNDLE,
-  piecework.ENTITY_PIECEWORK_WORKER,
-  piecework.ENTITY_PIECEWORK_ENTRY,
-  piecework.ENTITY_PIECEWORK_PAYMENT,
-];
-
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
 async function main() {
@@ -118,41 +109,14 @@ async function main() {
     await tx.tenant.create({ data: { id: tenantId, name: TENANT_NAME, timeZone: "Asia/Kolkata", customFields: { demo: true, demoFor: "stylified" } } });
     const org = await tx.organization.create({ data: { tenantId, name: TENANT_NAME, parentId: null } });
 
-    // Four roles, built from permissions only (no role name is known to the code). The stage scope is the grant
-    // ActionExecute on the stage entity: whoever holds it works at every stage; a supervisor does not, and is limited to the
-    // stages the owner assigns. A supervisor holds no grant on workers or payments, so no rate, wage or balance reaches them.
-    const VERBS = ["Read", "Create", "Edit", "ActionExecute"] as const;
-    type Verb = (typeof VERBS)[number];
-    type Grant = [string, readonly Verb[]];
-    const NEW = [piecework.ENTITY_PIECEWORK_APPROVAL, piecework.ENTITY_PIECEWORK_DAY_CLOSE, piecework.ENTITY_PIECEWORK_SETTING, piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, piecework.ENTITY_PIECEWORK_REASON];
-    // Fabric and the rate card are the office's: the owner, manager and munshi work them; a supervisor sees neither fabric nor money.
-    const OFFICE = [piecework.ENTITY_PIECEWORK_LOT_RATE, piecework.ENTITY_PIECEWORK_ROLL, piecework.ENTITY_PIECEWORK_ROLL_MOVE, piecework.ENTITY_PIECEWORK_LOT_COST];
-    const full = (list: string[]): Grant[] => list.map((e) => [e, VERBS]);
-    const grants: Record<string, Grant[]> = {
-      Owner: full([...ENTITIES, ...NEW, ...OFFICE, ENTITY_EVIDENCE]),
-      Manager: [
-        ...full([...ENTITIES, ...OFFICE]),
-        [piecework.ENTITY_PIECEWORK_APPROVAL, VERBS], [piecework.ENTITY_PIECEWORK_SETTING, ["Read"]], [piecework.ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ["Read"]],
-        [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
-      ],
-      Supervisor: [
-        [piecework.ENTITY_PIECEWORK_STAGE, ["Read"]], [piecework.ENTITY_PIECEWORK_LOT, ["Read"]], [piecework.ENTITY_PIECEWORK_BUNDLE, ["Read"]],
-        [piecework.ENTITY_PIECEWORK_ENTRY, ["Read", "Create", "ActionExecute"]], [piecework.ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]],
-        [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
-      ],
-      Munshi: [
-        ...full([...ENTITIES, ...OFFICE]),
-        [piecework.ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]], [piecework.ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
-      ],
-    };
+    // The factory's role presets (Owner, Manager, Supervisor, Munshi, Store, Cutting master), the same data a new workspace installs
+    // from the Team screen. No role name is known to the code: a role is only its grants.
     const roleId: Record<string, string> = {};
-    for (const [name, list] of Object.entries(grants)) {
-      const role = await tx.role.create({ data: { tenantId, name } });
-      roleId[name] = role.id;
-      await tx.permission.createMany({ data: list.flatMap(([entity, verbs]) => verbs.map((verb) => ({ tenantId, roleId: role.id, verb, entity, scope: "Tenant" as const }))) });
-      await tx.permission.create({ data: { tenantId, roleId: role.id, verb: "Read", entity: "verity.platform.overview", scope: "Tenant" } });
+    for (const preset of piecework.ROLE_PRESETS) {
+      const role = await tx.role.create({ data: { tenantId, name: preset.name } });
+      roleId[preset.name] = role.id;
+      await tx.permission.createMany({ data: piecework.presetPermissions(preset).map((g) => ({ tenantId, roleId: role.id, verb: g.verb, entity: g.entity, scope: g.scope })) });
     }
-
     const login = async (sub: string | undefined, name: string, email: string, role: string) => {
       if (!sub) return null;
       const identity = await provisionIdentity(tx, { organizationId: org.id, authUserId: sub, displayName: name, email });

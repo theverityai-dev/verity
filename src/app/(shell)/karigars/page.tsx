@@ -4,7 +4,7 @@ import { withTenant } from "@/server/platform/tenancy";
 import { hasTenantPermission } from "@/server/platform/authorization";
 import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
-import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY, listStages, listWorkers } from "@/server/capabilities/piecework";
+import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY, listStages, listWorkers, supervisorChoices } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState, FilterChipRow, PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
@@ -30,7 +30,7 @@ async function KarigarsPage({ searchParams }: { searchParams: Promise<{ show?: s
   }));
   if (!allowed) return <PermissionDenied what="reading karigars" />;
 
-  const [workers, stages] = await Promise.all([executeQuery(actor, listWorkers, { includeInactive: true }), executeQuery(actor, listStages, {})]);
+  const [workers, stages, supervisors] = await Promise.all([executeQuery(actor, listWorkers, { includeInactive: true }), executeQuery(actor, listStages, {}), executeQuery(actor, supervisorChoices, {})]);
   const active = FILTERS.find((f) => f.key === show) ?? FILTERS[0];
   const countOf = (key: string) => workers.filter((w) => (key === "all" ? true : key === "active" ? w.active : !w.active)).length;
   const shown = workers.filter((w) => (active.key === "all" ? true : active.key === "active" ? w.active : !w.active));
@@ -43,7 +43,7 @@ async function KarigarsPage({ searchParams }: { searchParams: Promise<{ show?: s
       <PageHeader
         title="Karigars and outside units"
         description={`${live.length} working, ${out} pieces in their hands${canMoney ? `, ${rupees(owed)} owed` : ""}. Each has a rate per piece and the basis it is paid on.`}
-        actions={<NewKarigarForm stages={stages.map((s) => ({ id: s.id, label: s.label }))} />}
+        actions={<NewKarigarForm stages={stages.map((s) => ({ id: s.id, label: s.label }))} supervisors={supervisors} />}
       />
 
       <div className="mb-5">
@@ -63,7 +63,7 @@ async function KarigarsPage({ searchParams }: { searchParams: Promise<{ show?: s
                     <div className="min-w-0 flex-1">
                       <h2 className="m-0 truncate text-[17px] font-semibold leading-[22px] tracking-[-0.02em] text-text">{w.name}</h2>
                       <p className="m-0 truncate text-[13px] leading-[18px] text-text-secondary">
-                        {w.kind === "outside" ? "Outside unit" : "In the factory"}{w.mobile ? ` · ${w.mobile}` : ""}{w.active ? "" : " · Retired"}
+                        {w.kind === "outside" ? "Outside unit" : "In the factory"}{w.mobile ? ` · ${w.mobile}` : ""}{w.supervisorName ? ` · ${w.supervisorName}` : ""}{w.active ? "" : " · Retired"}
                       </p>
                     </div>
                     {canMoney && (

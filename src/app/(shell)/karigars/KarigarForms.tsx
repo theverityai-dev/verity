@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { Field, Input, Select } from "@/components/ui/primitives";
+import { DateField } from "@/components/ui/DateTimePicker";
 import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
@@ -11,7 +12,34 @@ import { BASIS_LABEL, toPaise } from "../lots/format";
 
 const DEFINE = "verity.piecework.define_worker";
 
-export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: string }> }) {
+export type SupervisorChoice = { userId: string; name: string; roleName: string | null };
+export type ProfileValues = { joinedOn: string | null; idNote: string | null; emergencyContact: string | null; supervisorUserId: string | null };
+
+/**
+ * The profile fields shared by the new-karigar sheet and the edit sheet: who looks after them, when they joined, an ID note
+ * and an emergency contact. Read from the form by name; the date rides in a hidden input because the calendar is a controlled field.
+ */
+export function ProfileFields({ supervisors, initial, idPrefix }: { supervisors: SupervisorChoice[]; initial?: Partial<ProfileValues>; idPrefix: string }) {
+  const [joined, setJoined] = useState(initial?.joinedOn ?? "");
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Field label="Looked after by" htmlFor={`${idPrefix}-supervisor`} hint="Their give-out list shows this karigar. Leave open for any supervisor.">
+        <Select id={`${idPrefix}-supervisor`} name="supervisor" defaultValue={initial?.supervisorUserId ?? ""}>
+          <option value="">Any supervisor</option>
+          {supervisors.map((s) => <option key={s.userId} value={s.userId}>{s.name}{s.roleName ? ` (${s.roleName})` : ""}</option>)}
+        </Select>
+      </Field>
+      <Field label="Joined on" htmlFor={`${idPrefix}-joined`}>
+        <DateField id={`${idPrefix}-joined`} value={joined} onChange={setJoined} placeholder="Pick a date" />
+        <input type="hidden" name="joinedOn" value={joined} />
+      </Field>
+      <Field label="ID note" htmlFor={`${idPrefix}-idnote`} hint="Aadhaar last four, PAN, or whatever the factory keeps"><Input id={`${idPrefix}-idnote`} name="idNote" maxLength={300} defaultValue={initial?.idNote ?? ""} /></Field>
+      <Field label="Emergency contact" htmlFor={`${idPrefix}-emergency`} hint="Name and number"><Input id={`${idPrefix}-emergency`} name="emergencyContact" maxLength={300} defaultValue={initial?.emergencyContact ?? ""} /></Field>
+    </div>
+  );
+}
+
+export function NewKarigarForm({ stages, supervisors }: { stages: Array<{ id: string; label: string }>; supervisors: SupervisorChoice[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [failure, setFailure] = useState<ActionFailure | null>(null);
@@ -32,7 +60,7 @@ export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: 
               return paise === null ? [] : [{ stageId: s.id, rateMinor: paise, wageBasis: text(`basis:${s.id}`) || "good" }];
             });
             startTransition(async () => {
-              const result = await runCommand<{ id: string }>(DEFINE, { name: text("name"), mobile: text("mobile") || undefined, kind: text("kind") || "in_house", address: text("address") || undefined, rates }, "/karigars");
+              const result = await runCommand<{ id: string }>(DEFINE, { name: text("name"), mobile: text("mobile") || undefined, kind: text("kind") || "in_house", address: text("address") || undefined, rates, joinedOn: text("joinedOn") || undefined, idNote: text("idNote") || undefined, emergencyContact: text("emergencyContact") || undefined, supervisorUserId: text("supervisor") || undefined }, "/karigars");
               if (result.ok) {
                 setOpen(false);
                 router.push(`/karigars/${result.data!.id}`);
@@ -51,6 +79,7 @@ export function NewKarigarForm({ stages }: { stages: Array<{ id: string; label: 
             </Field>
             <Field label="Address" htmlFor="karigar-address"><Input id="karigar-address" name="address" maxLength={300} /></Field>
           </div>
+          <ProfileFields supervisors={supervisors} idPrefix="karigar" />
           <fieldset className="m-0 flex flex-col gap-3 border-0 p-0">
             <legend className="mb-1 text-[13px] font-medium text-text">Rate per piece, in rupees, for the work this karigar does (leave blank for work they do not do)</legend>
             {stages.map((s) => (
