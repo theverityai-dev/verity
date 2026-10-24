@@ -8,7 +8,7 @@ import { ENTITY_PIECEWORK_PAYMENT, ENTITY_PIECEWORK_WORKER, PIECEWORK_CAPABILITY
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState, FilterChipRow, PageHeader, PermissionDenied, Surface } from "@/components/ui/primitives";
-import { NewKarigarForm } from "./KarigarForms";
+import { ImportKarigars, NewKarigarForm } from "./KarigarForms";
 import { BASIS_LABEL, rupees } from "../lots/format";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +43,7 @@ async function KarigarsPage({ searchParams }: { searchParams: Promise<{ show?: s
       <PageHeader
         title="Karigars and outside units"
         description={`${live.length} working, ${out} pieces in their hands${canMoney ? `, ${rupees(owed)} owed` : ""}. Each has a rate per piece and the basis it is paid on.`}
-        actions={<NewKarigarForm stages={stages.map((s) => ({ id: s.id, label: s.label }))} supervisors={supervisors} />}
+        actions={<><ImportKarigars /><NewKarigarForm stages={stages.map((s) => ({ id: s.id, label: s.label }))} supervisors={supervisors} /></>}
       />
 
       <div className="mb-5">

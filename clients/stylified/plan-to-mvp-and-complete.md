@@ -52,6 +52,13 @@ I will not say "MVP ready for client testing" before A is true on the hosted sit
 
 ### Phase 1: the gaps that stop a real owner using it
 
+**Progress 2026-10-25 (local, tested, not on the hosted site):** 1.1 Team screen, 1.2 karigar profile and supervisor link, 1.3 role presets are built
+(commit `14cd4c5e`; migration `20261025100000_piecework_karigar_profile`, nullable columns only; tests `capability-piecework-team.test.ts`).
+The Team screen groups people by role as cards; a card opens a sheet to change role and stages, set a new password, switch off and on.
+A karigar has a profile and a supervisor; a supervisor's give-out list and the issue command follow it.
+**Q1 decided (2026-10-25):** one sign-in method, Supabase email and password; a person with no email signs in with a username, which is shorthand for `username@login.verity.local` (`src/lib/login-address.ts`). Unique across Verity, so the Team screen suggests `ravi.stylified`; the owner resets forgotten passwords (nothing is ever emailed to that address). "Last seen" dropped.
+**1.5 opening balances, partly built:** opening fabric stock (a tick on Receive rolls, tagged "Opening stock"), karigar opening balance owed (a payment kind `opening`, counted as wages, reversible), an advance already given (the ordinary Advance), and a pasted-from-Excel karigar list (Import a list). Not yet: opening ready garments (needs a decision: a closed "opening" lot), onboarding wizard (1.4).
+
 Each step ships with database tests and a browser run, in its own commit.
 
 | # | Step | Covers | Size |

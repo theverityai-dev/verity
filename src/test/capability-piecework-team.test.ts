@@ -19,10 +19,12 @@ import {
   defineStage,
   defineWorker,
   floorWorkers,
+  importWorkers,
   installRolePresets,
   presetNamed,
   presetPermissions,
   recordIssue,
+  recordPayment,
   registerPieceworkCapability,
   setLotStatus,
   supervisorChoices,
@@ -182,6 +184,31 @@ describeDb("capability: team management (role presets, supervisor link, director
     await expect(executeCommand(supA, updateWorker, { workerId: worker.A!, idNote: "x" })).rejects.toThrow(/holds no Edit grant/);
   });
 
+  it("imports a pasted karigar list once, skipping names already here", async () => {
+    const first = await executeCommand(owner, importWorkers, { rows: [{ name: "Import One", mobile: "98765 43210" }, { name: "karigar a" }, { name: "Import Two", kind: "outside", address: "Focal Point" }] });
+    expect(first).toEqual({ created: 2, skipped: ["karigar a"] });
+    const again = await executeCommand(owner, importWorkers, { rows: [{ name: "import one" }, { name: "Import Two" }] });
+    expect(again).toEqual({ created: 0, skipped: ["import one", "Import Two"] });
+    await expect(executeCommand(owner, importWorkers, { rows: [{ name: "Bad Mobile", mobile: "12" }] })).rejects.toThrow();
+    const ledger = (await executeQuery(owner, workerLedger, { workerId: (await withTenant(tenantId, (tx) => tx.pieceworkWorker.findFirstOrThrow({ where: { name: "Import Two" }, select: { id: true } }))).id }))!;
+    expect(ledger.worker).toMatchObject({ kind: "outside", address: "Focal Point" });
+  });
+
+  it("starts a karigar's account from an opening balance owed, which is wages and can be paid and reversed", async () => {
+    const opened = await executeCommand(owner, recordPayment, { workerId: worker.A!, kind: "opening", amountMinor: 500_000, note: "Owed from the old register" });
+    expect(opened.balanceMinor).toBe(500_000);
+    let ledger = (await executeQuery(owner, workerLedger, { workerId: worker.A! }))!;
+    expect(ledger.money).toMatchObject({ wagesMinor: 500_000, balanceMinor: 500_000, paidMinor: 0 });
+    const paid = await executeCommand(owner, recordPayment, { workerId: worker.A!, kind: "payment", amountMinor: 200_000, mode: "cash" });
+    expect(paid.balanceMinor).toBe(300_000);
+    // An opening balance cannot be paid out beyond what is owed, like any wages.
+    await expect(executeCommand(owner, recordPayment, { workerId: worker.A!, kind: "payment", amountMinor: 300_001 })).rejects.toThrow(/is owed only/);
+    const { reversePayment } = await import("@/server/capabilities/piecework");
+    await executeCommand(owner, reversePayment, { paymentId: opened.id, note: "Entered twice" });
+    ledger = (await executeQuery(owner, workerLedger, { workerId: worker.A! }))!;
+    expect(ledger.money.wagesMinor).toBe(0);
+    expect(ledger.money.balanceMinor).toBe(-200_000);
+  });
   it("refuses a supervisor who can no longer sign in, and lists only active members as choices", async () => {
     await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: supBMembershipId }, data: { disabledAt: new Date() } }));
     invalidateCapabilityCache();

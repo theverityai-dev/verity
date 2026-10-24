@@ -105,6 +105,39 @@ export const updateWorker: CommandDefinition<WorkerProfileInput, { id: string }>
   },
 };
 
+/* ============================== import a karigar list ============================ */
+
+const importRow = z.object({
+  name: z.string().trim().min(1).max(120),
+  mobile: z.string().trim().regex(/^[0-9 +()-]{6,20}$/, "enter a phone number").optional(),
+  kind: z.enum(WORKER_KINDS).optional(),
+  address: z.string().trim().max(300).optional(),
+});
+export type ImportWorkerRow = z.infer<typeof importRow>;
+
+/**
+ * Adds many karigars at once, from a list pasted out of Excel on launch day. Names are the identity: one that already exists (in any
+ * letter case) is skipped and reported, not duplicated or overwritten. Rates are set afterwards, per karigar.
+ */
+export const importWorkers: CommandDefinition<{ rows: ImportWorkerRow[] }, { created: number; skipped: string[] }> = {
+  key: "verity.piecework.import_workers",
+  entity: ENTITY_WORKER,
+  verb: "Create",
+  input: z.object({ rows: z.array(importRow).min(1).max(300) }),
+  handler: async (ctx, input) => {
+    const have = new Set((await ctx.tx.pieceworkWorker.findMany({ select: { name: true } })).map((w) => w.name.toLowerCase()));
+    const ids: string[] = [];
+    const skipped: string[] = [];
+    for (const row of input.rows) {
+      const key = row.name.toLowerCase();
+      if (have.has(key)) { skipped.push(row.name); continue; }
+      have.add(key);
+      const worker = await ctx.tx.pieceworkWorker.create({ data: { tenantId: ctx.actor.tenantId, name: row.name, mobile: row.mobile ?? null, kind: row.kind ?? "in_house", address: row.address ?? null } });
+      ids.push(worker.id);
+    }
+    return { result: { created: ids.length, skipped }, events: ids.map((id) => ({ name: "verity.piecework.worker_defined", entityId: id })) };
+  },
+};
 /* ================================= directory ================================ */
 
 export type TeamPerson = {
@@ -192,6 +225,7 @@ export const supervisorChoices: QueryDefinition<Record<string, never>, Array<{ u
 export function registerTeam(): void {
   registerCommand(installRolePresets);
   registerCommand(updateWorker);
+  registerCommand(importWorkers);
   registerQuery(teamDirectory);
   registerQuery(supervisorChoices);
 }

@@ -258,7 +258,8 @@ export function wageOf(e: Pick<LedgerEntry, "kind" | "pieces" | "good" | "reject
   return 0;
 }
 
-export const PAYMENT_KINDS = ["advance", "recovery", "deduction", "payment"] as const;
+/** `opening` is wages already owed to the karigar when the factory starts using Verity; it counts with wages earned. */
+export const PAYMENT_KINDS = ["advance", "recovery", "deduction", "payment", "opening"] as const;
 export type PaymentKind = (typeof PAYMENT_KINDS)[number];
 export type PaymentRow = { kind: PaymentKind; amountMinor: number; reversesId: string | null };
 
@@ -275,8 +276,8 @@ export type WorkerMoney = {
 };
 
 export function workerMoney(entries: Parameters<typeof wageOf>[0][], payments: PaymentRow[]): WorkerMoney {
-  const wagesMinor = entries.reduce((sum, e) => sum + wageOf(e), 0);
   const total = (kind: PaymentKind) => payments.filter((p) => p.kind === kind).reduce((s, p) => s + (p.reversesId ? -p.amountMinor : p.amountMinor), 0);
+  const wagesMinor = entries.reduce((sum, e) => sum + wageOf(e), 0) + total("opening");
   const advanceGivenMinor = total("advance");
   const recoveredMinor = total("recovery");
   const deductionMinor = total("deduction");

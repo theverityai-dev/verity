@@ -3,14 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Field, Input, Select } from "@/components/ui/primitives";
+import { Field, Input, Select, Textarea } from "@/components/ui/primitives";
 import { DateField } from "@/components/ui/DateTimePicker";
 import { FormModal } from "@/components/ui/CommandForm";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { BASIS_LABEL, toPaise } from "../lots/format";
+import { parseKarigarList } from "./import-list";
 
 const DEFINE = "verity.piecework.define_worker";
+const IMPORT = "verity.piecework.import_workers";
 
 export type SupervisorChoice = { userId: string; name: string; roleName: string | null };
 export type ProfileValues = { joinedOn: string | null; idNote: string | null; emergencyContact: string | null; supervisorUserId: string | null };
@@ -94,6 +96,62 @@ export function NewKarigarForm({ stages, supervisors }: { stages: Array<{ id: st
               </div>
             ))}
           </fieldset>
+      </FormModal>
+    </>
+  );
+}
+
+/**
+ * Launch day: paste the whole karigar list from Excel (name, mobile, in the factory or outside, address) and add them in one go.
+ * Names already in the system are skipped and listed. Rates are set afterwards on each karigar's page.
+ */
+export function ImportKarigars() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [failure, setFailure] = useState<ActionFailure | null>(null);
+  const [done, setDone] = useState<{ created: number; skipped: string[] } | null>(null);
+  const [pending, startTransition] = useTransition();
+  const parsed = parseKarigarList(text);
+  const close = () => { setOpen(false); setText(""); setFailure(null); setDone(null); };
+
+  return (
+    <>
+      <CommandButton commands={IMPORT} onClick={() => setOpen(true)}>Import a list</CommandButton>
+      <FormModal
+        open={open} onClose={close} width="lg" title="Import karigars from a list"
+        description="Paste rows from Excel: name, mobile, in the factory or outside, address. Only the name is needed. Rates are set afterwards on each karigar's page."
+        submitLabel={done ? "Done" : `Add ${parsed.rows.length} karigar${parsed.rows.length === 1 ? "" : "s"}`} pendingLabel="Adding…"
+        submitDisabled={done === null && parsed.rows.length === 0}
+        pending={pending} failure={failure} failureTitle="The list was not added"
+        onSubmit={() => {
+          if (done) { close(); return; }
+          setFailure(null);
+          startTransition(async () => {
+            const result = await runCommand<{ created: number; skipped: string[] }>(IMPORT, { rows: parsed.rows }, "/karigars");
+            if (result.ok) { setDone(result.data!); router.refresh(); } else setFailure(result);
+          });
+        }}
+      >
+        {done ? (
+          <div role="status" className="flex flex-col gap-2 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[15px] text-text">
+            <p className="m-0 font-medium">{done.created} added{done.skipped.length > 0 ? `, ${done.skipped.length} already here` : ""}.</p>
+            {done.skipped.length > 0 && <p className="m-0 text-[13px] text-text-secondary">Skipped: {done.skipped.join(", ")}</p>}
+          </div>
+        ) : (
+          <>
+            <Field label="The list" htmlFor="import-list" hint="One person per line. Tabs or commas between the columns.">
+              <Textarea id="import-list" value={text} onChange={(e) => setText(e.target.value)} rows={8} placeholder={"Ravi Kumar\t98765 43210\tIn\tModel Town\nSharma Works\t98140 11002\tOutside\tFocal Point"} spellCheck={false} />
+            </Field>
+            {text.trim() !== "" && (
+              <div role="status" className="flex flex-col gap-1.5 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[14px] text-text">
+                <p className="m-0 font-medium">{parsed.rows.length} ready to add{parsed.problems.length > 0 ? `, ${parsed.problems.length} to fix` : ""}</p>
+                {parsed.problems.slice(0, 6).map((p) => <p key={p} className="m-0 text-[13px]" style={{ color: "var(--color-state-blocked)" }}>{p}</p>)}
+                {parsed.problems.length > 6 && <p className="m-0 text-[13px] text-text-secondary">and {parsed.problems.length - 6} more</p>}
+              </div>
+            )}
+          </>
+        )}
       </FormModal>
     </>
   );

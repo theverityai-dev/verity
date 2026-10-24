@@ -486,7 +486,8 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     // The day's challans are one list, with the supervisor's own joined onto one paper.
     const again = await executeCommand(supervisor, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 1, challanNumber: issued.challanNumber }).catch(() => null);
     void again;
-    const today = new Date().toISOString().slice(0, 10);
+    // The tenant's own date (Asia/Kolkata), not UTC: between midnight and 05:30 IST the two differ.
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     const day = await executeQuery(supervisor, challansOnDay, { date: today });
     expect(day.challans.find((c) => c.number === issued.challanNumber)).toMatchObject({ workerName: "Karigar W", by: "Supervisor A" });
     expect((await executeQuery(supervisor, challansOnDay, { date: "2001-01-01" })).challans).toEqual([]);

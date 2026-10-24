@@ -29,8 +29,10 @@ export function ReceiveRolls({ fabricTypes, today, seen }: { fabricTypes: string
   const [day, setDay] = useState(today);
   const [lines, setLines] = useState([{ count: "1", qty: "" }]);
   const [again, setAgain] = useState(false);
+  // Rolls already on the shelf when the factory starts using Verity: received with no invoice, tagged so the ledger says where they came from.
+  const [opening, setOpening] = useState(false);
   // The same supplier's invoice number received before: warn here, and the server refuses it unless this is confirmed.
-  const twice = invoice.trim() === "" ? undefined : seen.find((r) => r.invoice.toLowerCase() === invoice.trim().toLowerCase() && (r.supplier ?? "").toLowerCase() === supplier.trim().toLowerCase());
+  const twice = opening || invoice.trim() === "" ? undefined : seen.find((r) => r.invoice.toLowerCase() === invoice.trim().toLowerCase() && (r.supplier ?? "").toLowerCase() === supplier.trim().toLowerCase());
 
   const parsed = lines.map((l) => ({ count: Number(l.count), centi: Math.round(Number(l.qty) * 100) }));
   const linesOk = parsed.every((l) => Number.isInteger(l.count) && l.count >= 1 && l.count <= 100 && l.centi >= 1);
@@ -43,7 +45,7 @@ export function ReceiveRolls({ fabricTypes, today, seen }: { fabricTypes: string
       const result = await runCommand<{ rollIds: string[] }>(RECEIVE, {
         fabricType: type.trim(), unit,
         quantitiesCenti: parsed.flatMap((l) => Array.from({ length: l.count }, () => l.centi)),
-        supplier: supplier.trim() || undefined, invoiceNumber: invoice.trim() || undefined,
+        supplier: supplier.trim() || undefined, invoiceNumber: opening ? undefined : invoice.trim() || undefined, note: opening ? "Opening stock" : undefined,
         rateMinor: rate.trim() ? toPaise(rate) ?? undefined : undefined, receivedOn: day || undefined, confirmDuplicate: twice ? again : undefined,
       }, "/fabric");
       if (result.ok) { setOpen(false); router.push(`/fabric/labels?ids=${result.data!.rollIds.join(",")}`); } else setFailure(result);
@@ -55,7 +57,7 @@ export function ReceiveRolls({ fabricTypes, today, seen }: { fabricTypes: string
       <CommandButton commands={RECEIVE} variant="primary" onClick={() => setOpen(true)}>Receive rolls</CommandButton>
       <FormModal
         open={open} onClose={() => setOpen(false)} width="lg"
-        title="Receive rolls" description="One invoice, one fabric. Each roll gets a number and a label with a QR to stick on it."
+        title={opening ? "Enter opening stock" : "Receive rolls"} description={opening ? "Rolls already on the shelf. Count them, give each a number and a label, and the ledger starts from here." : "One invoice, one fabric. Each roll gets a number and a label with a QR to stick on it."}
         submitLabel="Receive and print labels" pendingLabel="Receiving…" submitDisabled={!linesOk || type.trim() === "" || (twice !== undefined && !again)}
         pending={pending} failure={failure} failureTitle="The rolls were not received" onSubmit={submit}
       >
@@ -86,11 +88,12 @@ export function ReceiveRolls({ fabricTypes, today, seen }: { fabricTypes: string
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Supplier" htmlFor="rr-sup"><Input id="rr-sup" value={supplier} onChange={(e) => setSupplier(e.target.value)} maxLength={120} /></Field>
-            <Field label="Invoice number" htmlFor="rr-inv"><Input id="rr-inv" value={invoice} onChange={(e) => setInvoice(e.target.value)} maxLength={60} /></Field>
+            {!opening && <Field label="Invoice number" htmlFor="rr-inv"><Input id="rr-inv" value={invoice} onChange={(e) => setInvoice(e.target.value)} maxLength={60} /></Field>}
             <Field label={`Rate per ${unit} (₹)`} htmlFor="rr-rate" hint="Optional. Lets a lot show what its fabric cost."><Input id="rr-rate" type="number" inputMode="decimal" min={0} step="0.5" value={rate} onChange={(e) => setRate(e.target.value)} /></Field>
             <Field label="Received on" htmlFor="rr-day"><DateField id="rr-day" value={day} onChange={setDay} /></Field>
           </div>
 
+          <Checkbox label="Opening stock: already on the shelf from before Verity" checked={opening} onChange={(e) => setOpening(e.target.checked)} />
           {twice && (
             <div role="alert" className="flex flex-col gap-2 rounded-[12px] px-4 py-3 text-[14px] text-text" style={{ background: "color-mix(in srgb, var(--color-state-pending) 16%, transparent)" }}>
               <p className="m-0">Invoice {invoice.trim()}{supplier.trim() ? ` from ${supplier.trim()}` : ""} was already received as {twice.number}.</p>

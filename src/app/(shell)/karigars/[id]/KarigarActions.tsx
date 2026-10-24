@@ -96,6 +96,7 @@ export function RecordMoney({ workerId, name, balanceMinor, advanceOutstandingMi
                 <option value="advance">Advance (given before wages are earned)</option>
                 <option value="recovery">Advance recovered (taken out of wages)</option>
                 <option value="deduction">Other approved deduction</option>
+                <option value="opening">Opening balance (wages owed from before Verity)</option>
               </Select>
             </Field>
             <Field label="Amount in rupees" htmlFor="money-amount" required><Input id="money-amount" name="amount" type="number" inputMode="decimal" min={0.01} step="0.01" required autoFocus /></Field>
