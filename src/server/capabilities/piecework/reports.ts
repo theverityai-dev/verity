@@ -295,7 +295,8 @@ export const reportProductionByProcess: QueryDefinition<Record<string, never>, P
     const d = await loadAll(ctx.tx);
     const live = d.bundles.filter((b) => !b.cancelledAt);
     return d.stages.map((s) => {
-      const ps = live.map((b) => b.position.stages.find((p) => p.stageId === s.id)!);
+      // A lot whose rate card skips this stage has no such stage in its route, so its bundles simply do not appear in this row.
+      const ps = live.flatMap((b) => b.position.stages.filter((p) => p.stageId === s.id));
       const closed = ps.filter((p) => p.pending === 0 && p.issuedNormal + p.issuedRework > 0).map((p) => daysInStage(p, d.today)).filter((x): x is number => x !== null);
       return {
         stage: s.label,

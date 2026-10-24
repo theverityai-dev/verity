@@ -58,7 +58,7 @@ async function AuditPage({ searchParams }: { searchParams: Promise<{ group?: str
                     <Row key={r.id}>
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <span className="text-[15px] font-medium text-text">{r.what}</span>
-                        {r.subject && (r.href ? <Link href={r.href} className="truncate text-[14px] text-accent-ink no-underline hover:underline">{r.subject}</Link> : <span className="truncate text-[14px] text-text-secondary">{r.subject}</span>)}
+                        {r.subject && (r.href ? <Link href={r.href} className="line-clamp-2 text-[14px] text-accent-ink no-underline hover:underline">{r.subject}</Link> : <span className="line-clamp-2 text-[14px] text-text-secondary">{r.subject}</span>)}
                       </div>
                       <span className="shrink-0 text-right text-[13px] leading-[18px] text-text-secondary">{r.by}<br />{time(r.at)}</span>
                     </Row>

@@ -43,6 +43,15 @@ import {
   lotRateCard,
   listRolls,
   moveFabric,
+  dashboard,
+  reportBundleLocation,
+  reportCosting,
+  reportLotStatus,
+  reportProductionByProcess,
+  reportQuality,
+  reportReadyInventory,
+  reportWagePayment,
+  reportWorkInHand,
   pieceworkHistory,
   productionSettings,
   readyGarments,
@@ -202,6 +211,18 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     const card = await executeQuery(owner, lotRateCard, { lotId });
     expect(card.find((r) => r.stageId === stage.stitching)).toMatchObject({ skipped: true });
     expect(card.find((r) => r.stageId === stage.pasting)).toMatchObject({ hasWork: true, effectiveMinor: 200 });
+
+    // Every report still reads with a lot on a shorter route, and the skipped stage's row leaves that lot out.
+    await executeQuery(owner, dashboard, {});
+    await Promise.all([
+      executeQuery(owner, reportBundleLocation, {}), executeQuery(owner, reportCosting, {}), executeQuery(owner, reportLotStatus, {}), executeQuery(owner, reportQuality, {}),
+      executeQuery(owner, reportReadyInventory, {}), executeQuery(owner, reportWagePayment, {}), executeQuery(owner, reportWorkInHand, {}),
+    ]);
+    const byProcess = await executeQuery(owner, reportProductionByProcess, {});
+    const stitching = byProcess.find((r) => r.stage === "Stitching")!;
+    const pasting = byProcess.find((r) => r.stage === "Pasting")!;
+    expect(pasting.sent).toBeGreaterThanOrEqual(50);
+    expect(stitching.sent).toBeLessThan(pasting.sent);
   });
 
   it("takes the receiver's count as the truth, numbers every challan, and shows the difference as a case", async () => {
