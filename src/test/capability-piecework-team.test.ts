@@ -19,6 +19,7 @@ import {
   custodyBoard,
   defineStage,
   defineWorker,
+  endCover,
   floorWorkers,
   importWorkers,
   installRolePresets,
@@ -27,6 +28,7 @@ import {
   recordIssue,
   recordPayment,
   registerPieceworkCapability,
+  setCover,
   setLotStatus,
   setupProgress,
   supervisorChoices,
@@ -231,6 +233,23 @@ describeDb("capability: team management (role presets, supervisor link, director
     // A supervisor cannot read it (no grant on the setting entity).
     await expect(executeQuery(supA, setupProgress, {})).rejects.toThrow();
   });
+  it("lets a covering supervisor give out to the absent supervisor's karigars, for the dates only", async () => {
+    await executeCommand(owner, updateWorker, { workerId: worker.C!, supervisorUserId: supB.userId });
+    const names = async () => (await executeQuery(supA, floorWorkers, {})).map((w) => w.name);
+    expect(await names()).not.toContain("Karigar C");
+    await expect(executeCommand(supA, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.C!, pieces: 1 })).rejects.toThrow(/looked after by another supervisor/);
+    const today = (await executeQuery(owner, teamDirectory, {})).people.length ? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) : "";
+    const cover = await executeCommand(owner, setCover, { absentUserId: supB.userId, coverUserId: supA.userId, fromDate: today, toDate: today });
+    expect(await names()).toContain("Karigar C");
+    expect((await executeCommand(supA, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.C!, pieces: 1 })).id).toBeTruthy();
+    const dir = await executeQuery(owner, teamDirectory, {});
+    expect(dir.people.find((p) => p.name === "Supervisor B")!.away[0]).toMatchObject({ coverName: "Supervisor A", current: true });
+    expect(dir.people.find((p) => p.name === "Supervisor A")!.covering[0]).toMatchObject({ name: "Supervisor B", current: true });
+    await executeCommand(owner, endCover, { coverId: cover.id });
+    expect(await names()).not.toContain("Karigar C");
+    await executeCommand(owner, updateWorker, { workerId: worker.C!, supervisorUserId: null });
+  });
+
   it("refuses a supervisor who can no longer sign in, and lists only active members as choices", async () => {
     await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: supBMembershipId }, data: { disabledAt: new Date() } }));
     invalidateCapabilityCache();

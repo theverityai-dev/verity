@@ -44,9 +44,20 @@ export const DEFAULT_LIMITS = { deductionLimitMinor: 100_000, writeoffLimitPiece
 
 export type StageScope = { all: true } | { all: false; stageIds: ReadonlySet<string> };
 
+/**
+ * The supervisors this person is covering today: a cover that has started, has not passed its last day and has not been ended. While it
+ * holds, they work at that supervisor's stages and give out to their karigars as well as their own.
+ */
+export async function coveredBy(tx: Tx, userId: string, today?: string): Promise<string[]> {
+  const day = asDate(today ?? (await todayFor(tx)));
+  const rows = await tx.pieceworkCover.findMany({ where: { coverUserId: userId, endedAt: null, fromDate: { lte: day }, toDate: { gte: day } }, select: { absentUserId: true } });
+  return rows.map((r) => r.absentUserId);
+}
+
 export async function stageScopeOf(tx: Tx, actor: ActorContext): Promise<StageScope> {
   if (await hasTenantPermission(tx, actor.roleId, "ActionExecute", STAGE_ENTITY)) return { all: true };
-  const rows = await tx.pieceworkStageAssignment.findMany({ where: { userId: actor.userId }, select: { stageId: true } });
+  const covered = await coveredBy(tx, actor.userId);
+  const rows = await tx.pieceworkStageAssignment.findMany({ where: { userId: { in: [actor.userId, ...covered] } }, select: { stageId: true } });
   return { all: false, stageIds: new Set(rows.map((r) => r.stageId)) };
 }
 
@@ -56,7 +67,7 @@ export const inScope = (scope: StageScope, stageId: string) => scope.all || scop
 export async function assertWorkerAccess(ctx: CommandContext, workerId: string): Promise<void> {
   if ((await stageScopeOf(ctx.tx, ctx.actor)).all) return;
   const worker = await ctx.tx.pieceworkWorker.findUnique({ where: { id: workerId }, select: { name: true, supervisorUserId: true } });
-  if (worker?.supervisorUserId && worker.supervisorUserId !== ctx.actor.userId) {
+  if (worker?.supervisorUserId && worker.supervisorUserId !== ctx.actor.userId && !(await coveredBy(ctx.tx, ctx.actor.userId)).includes(worker.supervisorUserId)) {
     throw new ForbiddenError(`E_FORBIDDEN: ${worker.name} is looked after by another supervisor; ask the owner to change it if you are to give them work`);
   }
 }
@@ -397,7 +408,8 @@ export const floorWorkers: QueryDefinition<Record<string, never>, FloorWorker[]>
     for (const i of st.issues) held.set(i.workerId, (held.get(i.workerId) ?? 0) + i.open);
     // A person who works at every stage (owner, manager, munshi) sees every karigar. A supervisor sees the karigars set as theirs
     // and those with no supervisor yet; a karigar given to another supervisor is that supervisor's to give out to.
-    const mine = (w: { supervisorUserId: string | null }) => st.scope.all || w.supervisorUserId === null || w.supervisorUserId === ctx.actor.userId;
+    const covered = new Set(await coveredBy(ctx.tx, ctx.actor.userId, st.today));
+    const mine = (w: { supervisorUserId: string | null }) => st.scope.all || w.supervisorUserId === null || w.supervisorUserId === ctx.actor.userId || covered.has(w.supervisorUserId);
     return workers.filter(mine).map((w) => ({
       id: w.id, name: w.name, kind: w.kind,
       stageIds: [...new Set([...rates.filter((r) => r.workerId === w.id).map((r) => r.stageId), ...defaulted.map((s) => s.id)])],

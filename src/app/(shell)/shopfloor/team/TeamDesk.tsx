@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/Avatar";
 import { CommandButton } from "@/components/ui/CommandAccess";
 import { CommandFailure, FormModal, formOptional, formText, useCommand } from "@/components/ui/CommandForm";
+import { DateField } from "@/components/ui/DateTimePicker";
 import { Modal, ModalCancel } from "@/components/ui/Modal";
 import { Badge, Button, Checkbox, Field, Input, Select, Surface } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
@@ -20,6 +21,8 @@ const ASSIGN_ROLE = "verity.platform.assign_role";
 const DISABLE = "verity.platform.disable_membership";
 const RESTORE = "verity.platform.restore_membership";
 const ASSIGN_STAGES = "verity.piecework.assign_stages";
+const SET_COVER = "verity.piecework.set_cover";
+const END_COVER = "verity.piecework.end_cover";
 
 type Role = TeamDirectory["roles"][number];
 
@@ -146,6 +149,10 @@ function PersonSheet({ person, directory, onClose }: { person: TeamPerson; direc
   const [note, setNote] = useState<string | null>(null);
   const [pwFailure, setPwFailure] = useState<ActionFailure | null>(null);
   const [pwPending, startPw] = useTransition();
+  const day = new Date().toLocaleDateString("en-CA");
+  const [coverBy, setCoverBy] = useState("");
+  const [from, setFrom] = useState(day);
+  const [to, setTo] = useState(day);
   const role = directory.roles.find((r) => r.id === person.roleId);
   const { can } = directory;
 
@@ -189,6 +196,37 @@ function PersonSheet({ person, directory, onClose }: { person: TeamPerson; direc
             </ul>
           )}
         </section>
+
+        {can.assignStages && !person.disabled && (
+          <section className="flex flex-col gap-2">
+            <h3 className="micro m-0">Away and cover</h3>
+            {person.covering.map((c) => (
+              <p key={c.coverId} className="m-0 text-[13px] leading-[19px] text-text-secondary">{c.current ? "Covering" : "Will cover"} {c.name}, {c.from === c.to ? c.from : `${c.from} to ${c.to}`}.</p>
+            ))}
+            {person.away.map((a) => (
+              <div key={a.coverId} className="flex flex-wrap items-center justify-between gap-2 rounded-[12px] bg-[var(--color-control)] px-3.5 py-2.5">
+                <span className="text-[13px] leading-[19px] text-text">{a.current ? "Away now" : "Away"}: {a.from === a.to ? a.from : `${a.from} to ${a.to}`}, covered by {a.coverName}</span>
+                <Button type="button" variant="ghost" size="sm" disabled={pending} onClick={() => run(END_COVER, { coverId: a.coverId })}>End cover</Button>
+              </div>
+            ))}
+            {person.away.length === 0 && (
+              <>
+                <p className="m-0 text-[13px] leading-[19px] text-text-secondary">When {person.name} is away, someone else works at their stages and gives out to their karigars for those dates. Nothing is moved.</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+                  <Select aria-label="Covered by" value={coverBy} onChange={(e) => setCoverBy(e.target.value)}>
+                    <option value="">Covered by…</option>
+                    {directory.people.filter((p) => !p.disabled && p.userId !== person.userId).map((p) => <option key={p.userId} value={p.userId}>{p.name}{p.roleName ? ` (${p.roleName})` : ""}</option>)}
+                  </Select>
+                  <DateField id="cover-from" value={from} onChange={(v) => { setFrom(v); if (to < v) setTo(v); }} />
+                  <DateField id="cover-to" value={to} min={from} onChange={setTo} />
+                </div>
+                <div>
+                  <Button type="button" variant="secondary" disabled={pending || coverBy === ""} onClick={() => run(SET_COVER, { absentUserId: person.userId, coverUserId: coverBy, fromDate: from, toDate: to })}>{pending ? "Saving…" : "Mark away"}</Button>
+                </div>
+              </>
+            )}
+          </section>
+        )}
 
         {can.changeRole && (
           <section className="flex flex-col gap-2">
@@ -270,6 +308,7 @@ export function TeamPeople({ directory }: { directory: TeamDirectory }) {
                       </div>
                       {p.roleName ? <Badge tone="accent">{p.roleName}</Badge> : <Badge>No role</Badge>}
                     </div>
+                    {p.away.some((a) => a.current) && <p className="m-0 text-[13px] font-medium leading-[19px]" style={{ color: "var(--color-state-pending-ink)" }}>Away, covered by {p.away.find((a) => a.current)!.coverName}</p>}
                     <p className="m-0 text-[13px] leading-[19px] text-text-secondary">
                       {p.allStages ? "Works at every stage" : p.stageIds.length === 0 ? "No stage assigned yet" : p.stageIds.map((id) => stageLabel.get(id) ?? "A stage").join(", ")}
                     </p>

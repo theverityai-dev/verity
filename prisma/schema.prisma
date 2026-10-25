@@ -196,6 +196,7 @@ model Tenant {
   pieceworkRollMoves           PieceworkRollMove[]
   pieceworkLotCosts            PieceworkLotCost[]
   pieceworkReadyMoves          PieceworkReadyMove[]
+  pieceworkCovers              PieceworkCover[]
   agentPendingActions          AgentPendingAction[]
   agentTurns                   AgentTurn[]
   inventoryAttributes          InventoryAttribute[]
@@ -8229,4 +8230,25 @@ model PieceworkReadyMove {
 
   @@index([tenantId, lotId])
   @@map("piecework_ready_move")
+}
+
+/// A supervisor is away for some dates and another person covers. While current, the covering person works at the absent supervisor's stages and gives
+/// out to their karigars as well as their own. Ended or past covers keep their row.
+model PieceworkCover {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  absentUserId String    @map("absent_user_id") @db.Uuid
+  coverUserId  String    @map("cover_user_id") @db.Uuid
+  fromDate     DateTime  @map("from_date") @db.Date
+  toDate       DateTime  @map("to_date") @db.Date
+  reason       String?
+  endedAt      DateTime? @map("ended_at")
+  createdById  String    @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, coverUserId])
+  @@index([tenantId, absentUserId])
+  @@map("piecework_cover")
 }

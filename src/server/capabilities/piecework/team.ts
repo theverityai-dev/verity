@@ -4,8 +4,8 @@ import { registerQuery, type QueryDefinition } from "@/server/platform/query";
 import { assertGrantCeiling, hasTenantPermission } from "@/server/platform/authorization";
 import { recordSecurityEvent } from "@/server/platform/audit";
 import { ENTITY_MEMBERSHIP, ENTITY_MEMBERSHIP_ACCESS, ENTITY_ROLE } from "@/server/platform/administration";
-import { ENTITY_PIECEWORK_SETTING } from "./floor";
-import { LEDGER_SELECT, activeStages, asDate, toLedger, type Tx } from "./shared";
+import { ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_STAGE_ASSIGNMENT } from "./floor";
+import { LEDGER_SELECT, activeStages, asDate, isoOf, todayFor, toLedger, type Tx } from "./shared";
 import { ROLE_PRESETS, presetNamed, presetPermissions } from "./role-presets";
 import { WORKER_KINDS } from "./ledger";
 
@@ -105,6 +105,53 @@ export const updateWorker: CommandDefinition<WorkerProfileInput, { id: string }>
   },
 };
 
+/* ================================= leave and cover ================================ */
+
+/**
+ * A supervisor is away for some dates and someone else covers. While the cover is current the covering person works at the absent
+ * supervisor's stages and gives out to their karigars as well as their own (`coveredBy`, in floor.ts, is read by the commands that check
+ * both). It is the owner's to set, like stage assignment, and it is not a transfer: the stages and karigars stay the absent person's.
+ */
+export const setCover: CommandDefinition<{ absentUserId: string; coverUserId: string; fromDate: string; toDate: string; reason?: string }, { id: string }> = {
+  key: "verity.piecework.set_cover",
+  entity: ENTITY_PIECEWORK_STAGE_ASSIGNMENT,
+  verb: "Edit",
+  input: z.object({ absentUserId: uuid, coverUserId: uuid, fromDate: isoDate, toDate: isoDate, reason: z.string().trim().max(200).optional() }),
+  preconditions: async (ctx, input) => {
+    if (input.absentUserId === input.coverUserId) throw new ValidationError("E_VALIDATION: a person cannot cover for themselves");
+    if (input.toDate < input.fromDate) throw new ValidationError("E_VALIDATION: the cover ends before it starts");
+    if (input.toDate < (await todayFor(ctx.tx))) throw new ValidationError("E_VALIDATION: that cover is already over; choose dates from today on");
+    await assertActiveMember(ctx.tx, input.coverUserId);
+    const overlap = await ctx.tx.pieceworkCover.findFirst({
+      where: { absentUserId: input.absentUserId, endedAt: null, fromDate: { lte: asDate(input.toDate) }, toDate: { gte: asDate(input.fromDate) } },
+      select: { id: true },
+    });
+    if (overlap) throw new ValidationError("E_VALIDATION: this person already has a cover on those dates; end it first");
+  },
+  handler: async (ctx, input) => {
+    const row = await ctx.tx.pieceworkCover.create({
+      data: { tenantId: ctx.actor.tenantId, absentUserId: input.absentUserId, coverUserId: input.coverUserId, fromDate: asDate(input.fromDate), toDate: asDate(input.toDate), reason: input.reason ?? null, createdById: ctx.actor.userId },
+    });
+    return { result: { id: row.id }, events: [{ name: "verity.piecework.cover_set", entityId: row.id }] };
+  },
+};
+
+export const endCover: CommandDefinition<{ coverId: string }, { id: string }> = {
+  key: "verity.piecework.end_cover",
+  entity: ENTITY_PIECEWORK_STAGE_ASSIGNMENT,
+  verb: "Edit",
+  input: z.object({ coverId: uuid }),
+  preconditions: async (ctx, input) => {
+    const row = await ctx.tx.pieceworkCover.findUnique({ where: { id: input.coverId } });
+    if (!row) throw new ValidationError("E_VALIDATION: cover not found in this tenant");
+    if (row.endedAt) throw new ValidationError("E_VALIDATION: that cover has already ended");
+  },
+  handler: async (ctx, input) => {
+    await ctx.tx.pieceworkCover.update({ where: { id: input.coverId }, data: { endedAt: new Date() } });
+    return { result: { id: input.coverId }, events: [{ name: "verity.piecework.cover_ended", entityId: input.coverId }] };
+  },
+};
+
 /* ============================== import a karigar list ============================ */
 
 const importRow = z.object({
@@ -147,6 +194,9 @@ export type TeamPerson = {
   allStages: boolean; stageIds: string[];
   /** Karigars this person is set as supervisor of, and the pieces those karigars hold right now. */
   karigars: Array<{ id: string; name: string }>; piecesHeld: number;
+  /** Covers that have not ended and whose last day is not past: who covers this person while away, and whom this person covers. */
+  away: Array<{ coverId: string; coverName: string; from: string; to: string; current: boolean }>;
+  covering: Array<{ coverId: string; name: string; from: string; to: string; current: boolean }>;
 };
 
 export type TeamDirectory = {
@@ -165,7 +215,7 @@ export const teamDirectory: QueryDefinition<Record<string, never>, TeamDirectory
   entity: ENTITY_PIECEWORK_SETTING,
   input: z.object({}),
   handler: async (ctx) => {
-    const [memberships, roles, stages, assigns, workers, entries, org, addPerson, changeRole, switchAccess, installRoles, assignStages] = await Promise.all([
+    const [memberships, roles, stages, assigns, workers, entries, org, addPerson, changeRole, switchAccess, installRoles, assignStages, today, covers] = await Promise.all([
       ctx.tx.tenantMembership.findMany({ include: { role: { select: { id: true, name: true } }, user: { select: { id: true, party: { select: { displayName: true, email: true, phone: true } } } } }, orderBy: { createdAt: "asc" } }),
       ctx.tx.role.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
       activeStages(ctx.tx),
@@ -178,7 +228,13 @@ export const teamDirectory: QueryDefinition<Record<string, never>, TeamDirectory
       hasTenantPermission(ctx.tx, ctx.actor.roleId, "ActionExecute", ENTITY_MEMBERSHIP_ACCESS),
       hasTenantPermission(ctx.tx, ctx.actor.roleId, "Create", ENTITY_ROLE),
       hasTenantPermission(ctx.tx, ctx.actor.roleId, "Edit", ENTITY_PIECEWORK_SETTING),
+      todayFor(ctx.tx),
+      ctx.tx.pieceworkCover.findMany({ where: { endedAt: null }, orderBy: { fromDate: "asc" } }),
     ]);
+    // A cover is listed until it ends or its last day has passed; it is "current" from its first day.
+    const live = covers.filter((c) => isoOf(c.toDate) >= today);
+    const nameOf = new Map(memberships.map((m) => [m.userId, m.user.party.displayName]));
+    const coverRow = (c: (typeof live)[number], who: string) => ({ coverId: c.id, from: isoOf(c.fromDate), to: isoOf(c.toDate), current: isoOf(c.fromDate) <= today, who });
 
     const heldBy = new Map<string, number>();
     for (const e of entries.map((r) => toLedger(r))) heldBy.set(e.workerId, (heldBy.get(e.workerId) ?? 0) + (e.reversesId ? -1 : 1) * (e.kind === "issue" ? e.pieces : -e.pieces));
@@ -193,6 +249,8 @@ export const teamDirectory: QueryDefinition<Record<string, never>, TeamDirectory
         stageIds: assigns.filter((a) => a.userId === m.userId).map((a) => a.stageId),
         karigars: mine.map((w) => ({ id: w.id, name: w.name })),
         piecesHeld: mine.reduce((s, w) => s + Math.max(0, heldBy.get(w.id) ?? 0), 0),
+        away: live.filter((c) => c.absentUserId === m.userId).map((c) => { const r = coverRow(c, nameOf.get(c.coverUserId) ?? "Someone who has left"); return { coverId: r.coverId, coverName: r.who, from: r.from, to: r.to, current: r.current }; }),
+        covering: live.filter((c) => c.coverUserId === m.userId).map((c) => { const r = coverRow(c, nameOf.get(c.absentUserId) ?? "Someone who has left"); return { coverId: r.coverId, name: r.who, from: r.from, to: r.to, current: r.current }; }),
       });
     }
 
@@ -269,6 +327,8 @@ export const setupProgress: QueryDefinition<Record<string, never>, { steps: Setu
 export function registerTeam(): void {
   registerCommand(installRolePresets);
   registerCommand(updateWorker);
+  registerCommand(setCover);
+  registerCommand(endCover);
   registerCommand(importWorkers);
   registerQuery(teamDirectory);
   registerQuery(supervisorChoices);

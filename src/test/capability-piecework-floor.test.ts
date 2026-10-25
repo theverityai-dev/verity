@@ -30,6 +30,7 @@ import {
   dashboard,
   dayPreview,
   decideApproval,
+  endCover,
   defineStage,
   defineWorker,
   floorOverview,
@@ -41,6 +42,7 @@ import {
   reportCosting,
   requestApproval,
   reverseEntry,
+  setCover,
   setLimits,
   setLotStatus,
   teamSetup,
@@ -261,5 +263,21 @@ describeDb("capability: the floor (stage scope, approvals, limits, day close)", 
     expect(asSupervisor.activeLots.length).toBeGreaterThan(0);
     await reject(executeQuery(supA, reportCosting, {}), /holds no Read grant/);
     expect((await executeQuery(owner, reportCosting, {})).some((r) => r.wagesMinor > 0)).toBe(true);
+  });
+  it("lets a supervisor cover another who is away: their stages for the dates, then back to their own", async () => {
+    const stagesOf = async (as: ActorContext) => (await executeQuery(as, floorOverview, {})).stages.map((s) => s.label);
+    const today = (await executeQuery(supA, floorOverview, {})).today;
+    expect(await stagesOf(supA)).toEqual(["Pasting"]);
+    await reject(executeCommand(supA, setCover, { absentUserId: supB.userId, coverUserId: supA.userId, fromDate: today, toDate: today }), /holds no Edit grant/);
+    await reject(executeCommand(owner, setCover, { absentUserId: supB.userId, coverUserId: supB.userId, fromDate: today, toDate: today }), /cover for themselves/);
+    await reject(executeCommand(owner, setCover, { absentUserId: supB.userId, coverUserId: supA.userId, fromDate: today, toDate: "2020-01-01" }), /ends before it starts/);
+    const cover = await executeCommand(owner, setCover, { absentUserId: supB.userId, coverUserId: supA.userId, fromDate: today, toDate: today, reason: "Wedding in the family" });
+    expect(await stagesOf(supA)).toEqual(["Pasting", "Stitching"]);
+    await reject(executeCommand(owner, setCover, { absentUserId: supB.userId, coverUserId: manager.userId, fromDate: today, toDate: today }), /already has a cover/);
+    const dir = await executeQuery(owner, teamSetup, {});
+    expect(dir.members.length).toBeGreaterThan(0);
+    await executeCommand(owner, endCover, { coverId: cover.id });
+    expect(await stagesOf(supA)).toEqual(["Pasting"]);
+    await reject(executeCommand(owner, endCover, { coverId: cover.id }), /already ended/);
   });
 });
