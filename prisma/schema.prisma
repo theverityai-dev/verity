@@ -195,6 +195,7 @@ model Tenant {
   pieceworkRolls               PieceworkRoll[]
   pieceworkRollMoves           PieceworkRollMove[]
   pieceworkLotCosts            PieceworkLotCost[]
+  pieceworkReadyMoves          PieceworkReadyMove[]
   agentPendingActions          AgentPendingAction[]
   agentTurns                   AgentTurn[]
   inventoryAttributes          InventoryAttribute[]
@@ -7753,6 +7754,7 @@ model PieceworkLot {
   lotRates PieceworkLotRate[]
   rollMoves PieceworkRollMove[]
   costs    PieceworkLotCost[]
+  readyMoves PieceworkReadyMove[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -8193,4 +8195,34 @@ model AgentTurn {
   @@index([tenantId, actorId, createdAt])
   @@index([createdAt])
   @@map("agent_turn")
+}
+
+/// Ready garments in and out of stock. APPEND-ONLY (reversal, never edit). What production makes ready is derived from the bundles; this ledger holds
+/// everything else: stock that existed before Verity (`opening`, no lot, named by `label`), stock taken out (`out`: sold, dispatched, sample ...)
+/// and count corrections (`adjust_in`, `adjust_out`). A reversal copies the original and points at it.
+model PieceworkReadyMove {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  /// Null for stock that existed before Verity; then `label` names it.
+  lotId       String?  @map("lot_id") @db.Uuid
+  label       String?
+  /// opening | out | adjust_in | adjust_out
+  kind        String
+  pieces      Int
+  reason      String?
+  party       String?
+  reference   String?
+  note        String?
+  movedOn     DateTime @map("moved_on") @db.Date
+  reversesId  String?  @unique @map("reverses_id") @db.Uuid
+  enteredById String   @map("entered_by_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot      PieceworkLot?       @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  reverses PieceworkReadyMove? @relation("PieceworkReadyMoveReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkReadyMove? @relation("PieceworkReadyMoveReversal")
+
+  @@index([tenantId, lotId])
+  @@map("piecework_ready_move")
 }

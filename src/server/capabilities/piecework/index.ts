@@ -32,6 +32,7 @@ import { registerCosts } from "./costs";
 import { registerRebundle } from "./rebundle";
 import { registerHistory } from "./history";
 import { assertActiveMember, registerTeam } from "./team";
+import { registerReady } from "./ready";
 
 export * from "./ledger";
 export * from "./reports";
@@ -43,6 +44,7 @@ export * from "./costs";
 export * from "./rebundle";
 export * from "./history";
 export * from "./team";
+export * from "./ready";
 export * from "./role-presets";
 
 /**
@@ -1087,7 +1089,7 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor/custody", label: "Who holds what", group: "Production", order: 18.5, icon: "user", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
-      { href: "/lots/ready", label: "Ready garments", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/ready", label: "Ready stock", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots/audit", label: "Change history", group: "Production", order: 27, icon: "clock", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/settings", label: "Production settings", group: "Production", order: 26, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/dashboard", label: "Factory dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
@@ -1118,6 +1120,7 @@ export function registerPieceworkCapability(): void {
   registerRebundle();
   registerHistory();
   registerTeam();
+  registerReady();
   registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);
