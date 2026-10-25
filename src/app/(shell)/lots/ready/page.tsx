@@ -54,7 +54,7 @@ async function ReadyPage() {
                     <p className="m-0 text-[13px] text-text-secondary">{l.lotId ? (l.readySince ? `Ready since ${shortDate(l.readySince)}` : "Ready") : "Opening stock"}{l.lastMovedOn ? ` · last moved ${shortDate(l.lastMovedOn)}` : ""}</p>
                   </div>
                 </div>
-                <p className="figure m-0 text-[40px] text-text">{l.balance.toLocaleString("en-IN")}<span className="ml-2 text-[14px] font-normal text-text-secondary">in stock</span></p>
+                <p className="figure m-0 text-[40px] text-text">{l.balance.toLocaleString("en-IN")}<span className="ml-2 text-[14px] font-normal tracking-normal text-text-secondary">in stock</span></p>
                 <ProgressBar label={`${l.name} in stock`} value={Math.max(0, l.balance)} total={Math.max(l.made + l.opening + Math.max(l.adjusted, 0), 1)} tone="completed" showFigures={false} />
                 <dl className="m-0 grid grid-cols-3 gap-3 border-t border-[var(--color-line)] pt-3.5">
                   <div><dt className="text-[12px] leading-[16px] text-text-tertiary">{l.lotId ? "Made" : "Opening"}</dt><dd className="tabular m-0 text-[15px] font-semibold leading-[20px] text-text">{(l.lotId ? l.made : l.opening).toLocaleString("en-IN")}</dd></div>
