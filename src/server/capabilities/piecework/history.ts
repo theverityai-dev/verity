@@ -14,7 +14,7 @@ export type HistoryGroup = (typeof HISTORY_GROUPS)[number];
 const EVENT_GROUP: Record<string, HistoryGroup> = {
   pieces_issued: "work", pieces_returned: "work", entry_reversed: "work", bundle_created: "work", bundle_split: "work", bundles_merged: "work", day_closed: "work",
   roll_received: "fabric", roll_cancelled: "fabric", fabric_moved: "fabric",
-  payment_recorded: "money", payment_reversed: "money", approval_requested: "money", approval_decided: "money", lot_cost_added: "money", lot_cost_reversed: "money",
+  payment_recorded: "money", payment_reversed: "money", approval_requested: "money", approval_decided: "money", lot_cost_added: "money", lot_cost_reversed: "money", lot_cost_shared: "money", lot_share_reversed: "money",
   lot_created: "lots", lot_status_changed: "lots", lot_cancelled: "lots", lot_rates_set: "lots",
 };
 const group = (name: string): HistoryGroup => EVENT_GROUP[name] ?? "settings";
@@ -23,7 +23,7 @@ const LABEL: Record<string, string> = {
   pieces_issued: "Gave out pieces", pieces_returned: "Took pieces back", entry_reversed: "Reversed an entry", bundle_created: "Cut a bundle", bundle_split: "Split a bundle",
   bundles_merged: "Joined bundles", day_closed: "Closed the day", roll_received: "Received a roll", roll_cancelled: "Cancelled a roll", fabric_moved: "Moved fabric",
   payment_recorded: "Recorded a payment", payment_reversed: "Reversed a payment", approval_requested: "Asked for approval", approval_decided: "Decided a request",
-  lot_cost_added: "Added a cost", lot_cost_reversed: "Reversed a cost", lot_created: "Created a lot", lot_status_changed: "Changed a lot's status", lot_cancelled: "Cancelled a lot",
+  lot_cost_added: "Added a cost", lot_cost_reversed: "Reversed a cost", lot_cost_shared: "Moved cost to another lot", lot_share_reversed: "Reversed a cost move", lot_created: "Created a lot", lot_status_changed: "Changed a lot's status", lot_cancelled: "Cancelled a lot",
   lot_rates_set: "Changed a rate card", stage_defined: "Added a stage", stage_updated: "Changed a stage", stages_reordered: "Re-ordered the stages", worker_defined: "Added a karigar",
   stages_assigned: "Assigned stages", limits_set: "Changed manager limits",
 };
@@ -51,6 +51,7 @@ async function subjects(tx: Tx, events: Array<{ name: string; entityId: string |
   const bundleIds = ids(["bundle_created", "bundle_split", "bundles_merged"]);
   const lotIds = ids(["lot_created", "lot_status_changed", "lot_cancelled", "lot_rates_set"]);
   const costIds = ids(["lot_cost_added", "lot_cost_reversed"]);
+  const shareIds = ids(["lot_cost_shared", "lot_share_reversed"]);
   const rollIds = ids(["roll_received", "roll_cancelled"]);
   const moveIds = ids(["fabric_moved"]);
   const payIds = ids(["payment_recorded", "payment_reversed"]);
@@ -59,12 +60,13 @@ async function subjects(tx: Tx, events: Array<{ name: string; entityId: string |
 
   const entries = await tx.pieceworkEntry.findMany({ where: { id: { in: entryIds } }, select: { id: true, bundleId: true, stageId: true, workerId: true, pieces: true, challanNumber: true } });
   const costs = await tx.pieceworkLotCost.findMany({ where: { id: { in: costIds } }, select: { id: true, lotId: true, category: true, amountMinor: true } });
+  const shares = await tx.pieceworkLotShare.findMany({ where: { id: { in: shareIds } }, select: { id: true, sourceLotId: true, targetLotId: true, basisPoints: true } });
   const moves = await tx.pieceworkRollMove.findMany({ where: { id: { in: moveIds } }, select: { id: true, rollId: true, deltaCenti: true } });
   const pays = await tx.pieceworkPayment.findMany({ where: { id: { in: payIds } }, select: { id: true, workerId: true, kind: true, amountMinor: true } });
   const apps = await tx.pieceworkApproval.findMany({ where: { id: { in: appIds } }, select: { id: true, kind: true, workerId: true, lotId: true } });
 
   const allBundles = [...new Set([...bundleIds, ...entries.map((e) => e.bundleId)])];
-  const allLots = [...new Set([...lotIds, ...costs.map((c) => c.lotId), ...apps.flatMap((a) => (a.lotId ? [a.lotId] : []))])];
+  const allLots = [...new Set([...lotIds, ...costs.map((c) => c.lotId), ...shares.flatMap((s) => [s.sourceLotId, s.targetLotId]),...apps.flatMap((a) => (a.lotId ? [a.lotId] : []))])];
   const allRolls = [...new Set([...rollIds, ...moves.map((m) => m.rollId)])];
   const allWorkers = [...new Set([...workerIds, ...entries.map((e) => e.workerId), ...pays.map((p) => p.workerId), ...apps.flatMap((a) => (a.workerId ? [a.workerId] : []))])];
   const [bundles, lots, rolls, workers, stages] = await Promise.all([
@@ -86,6 +88,7 @@ async function subjects(tx: Tx, events: Array<{ name: string; entityId: string |
   for (const id of workerIds) put(id, wName.get(id) ?? "a karigar", `/karigars/${id}`);
   for (const e of entries) put(e.id, `${bNo.get(e.bundleId) ?? "bundle"} · ${sLabel.get(e.stageId) ?? "stage"} · ${wName.get(e.workerId) ?? "karigar"} · ${e.pieces} pieces${e.challanNumber ? ` · ${e.challanNumber}` : ""}`, `/lots/bundles/${e.bundleId}`);
   for (const c of costs) put(c.id, `${lotText.get(c.lotId) ?? "lot"} · ${c.category} ₹${(c.amountMinor / 100).toLocaleString("en-IN")}`, `/lots/${c.lotId}`);
+  for (const s of shares) put(s.id, `${lotText.get(s.sourceLotId) ?? "lot"} → ${lotText.get(s.targetLotId) ?? "lot"} · ${(s.basisPoints / 100).toLocaleString("en-IN")}%`, `/lots/${s.targetLotId}`);
   for (const m of moves) { const r = rNo.get(m.rollId); put(m.id, `${r?.number ?? "roll"} · ${m.deltaCenti > 0 ? "+" : ""}${(m.deltaCenti / 100).toLocaleString("en-IN")} ${r?.unit ?? ""}`, `/fabric/${m.rollId}`); }
   for (const p of pays) put(p.id, `${wName.get(p.workerId) ?? "karigar"} · ${p.kind} ₹${(p.amountMinor / 100).toLocaleString("en-IN")}`, `/karigars/${p.workerId}`);
   for (const a of apps) put(a.id, `${a.kind}${a.workerId ? ` · ${wName.get(a.workerId) ?? ""}` : ""}${a.lotId ? ` · ${lotText.get(a.lotId) ?? ""}` : ""}`, "/shopfloor/approvals");

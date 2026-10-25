@@ -196,6 +196,7 @@ model Tenant {
   pieceworkRollMoves           PieceworkRollMove[]
   pieceworkLotCosts            PieceworkLotCost[]
   pieceworkReadyMoves          PieceworkReadyMove[]
+  pieceworkLotShares           PieceworkLotShare[]
   pieceworkCovers              PieceworkCover[]
   agentPendingActions          AgentPendingAction[]
   agentTurns                   AgentTurn[]
@@ -7758,6 +7759,8 @@ model PieceworkLot {
   rollMoves PieceworkRollMove[]
   costs    PieceworkLotCost[]
   readyMoves PieceworkReadyMove[]
+  sharesOut  PieceworkLotShare[] @relation("PieceworkLotShareSource")
+  sharesIn   PieceworkLotShare[] @relation("PieceworkLotShareTarget")
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -8230,6 +8233,31 @@ model PieceworkReadyMove {
 
   @@index([tenantId, lotId])
   @@map("piecework_ready_move")
+}
+
+/// A share of one lot's cost carried by another lot (two lots joined, or one lot's cut partly used by another). APPEND-ONLY (reversal, never edit).
+/// `basisPoints` is a part of the SOURCE lot's own cost (10000 = all of it); the source's records are never edited, the cost is only
+/// read as moved. A reversal copies the original and points at it.
+model PieceworkLotShare {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  sourceLotId  String   @map("source_lot_id") @db.Uuid
+  targetLotId  String   @map("target_lot_id") @db.Uuid
+  basisPoints  Int      @map("basis_points")
+  reason       String
+  reversesId   String?  @unique @map("reverses_id") @db.Uuid
+  enteredById  String   @map("entered_by_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  source   PieceworkLot       @relation("PieceworkLotShareSource", fields: [sourceLotId], references: [id], onDelete: Restrict)
+  target   PieceworkLot       @relation("PieceworkLotShareTarget", fields: [targetLotId], references: [id], onDelete: Restrict)
+  reverses PieceworkLotShare? @relation("PieceworkLotShareReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkLotShare? @relation("PieceworkLotShareReversal")
+
+  @@index([tenantId, sourceLotId])
+  @@index([tenantId, targetLotId])
+  @@map("piecework_lot_share")
 }
 
 /// A supervisor is away for some dates and another person covers. While current, the covering person works at the absent supervisor's stages and gives

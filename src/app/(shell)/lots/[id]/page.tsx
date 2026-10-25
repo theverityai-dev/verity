@@ -189,6 +189,7 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
                 lotId={lot.id} lotNumber={lot.number} pieces={lot.bundledPieces} costing={costing} today={new Date().toISOString().slice(0, 10)}
                 categories={(reasons?.cost ?? []).filter((c) => c.active).map((c) => c.labelEn)}
                 otherLots={(lots ?? []).filter((l) => l.id !== lot.id && l.bundledPieces > 0 && ["active", "hold", "completed"].includes(l.status)).map((l) => ({ id: l.id, label: `${l.number} · ${l.name ?? l.design}`, pieces: l.bundledPieces }))}
+                joinLots={(lots ?? []).filter((l) => l.id !== lot.id && !["cancelled", "closed"].includes(l.status)).map((l) => ({ id: l.id, label: `${l.number} · ${l.name ?? l.design}` }))}
                 canAdd={canAddCost && lot.status !== "closed"}
               />
             </Panel>

@@ -25,20 +25,33 @@ function split(total: number, weights: number[]): number[] {
   return parts;
 }
 
+const SHARE = "verity.piecework.share_lot_cost";
+const UNSHARE = "verity.piecework.reverse_lot_share";
+const pct = (bp: number) => `${(bp / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}%`;
+
 type OtherLot = { id: string; label: string; pieces: number };
+type Basis = "all" | "percent" | "pieces";
 
 /**
  * What this lot cost, built from its parts: fabric and wages come from records already kept, other costs are entered by the factory's
  * own categories, and charges recovered from karigars come off. One figure answers the owner's question (cost per good piece);
- * every line under it says where it came from. A cost shared with other lots shows its split before it is saved.
+ * every line under it says where it came from. A cost shared with other lots shows its split before it is saved. Cost can also move
+ * to another lot when two lots are joined or linked: the lot's own lines stay as they are, the move is a line of its own.
  */
-export function LotCost({ lotId, lotNumber, pieces, costing, categories, otherLots, today, canAdd }: {
-  lotId: string; lotNumber: string; pieces: number; costing: LotCosting; categories: string[]; otherLots: OtherLot[]; today: string; canAdd: boolean;
+export function LotCost({ lotId, lotNumber, pieces, costing, categories, otherLots, joinLots, today, canAdd }: {
+  lotId: string; lotNumber: string; pieces: number; costing: LotCosting; categories: string[]; otherLots: OtherLot[]; joinLots: Array<{ id: string; label: string }>; today: string; canAdd: boolean;
 }) {
   const path = `/lots/${lotId}`;
   const add = useCommand(path);
   const reverse = useCommand(path);
+  const share = useCommand(path);
+  const unshare = useCommand(path);
   const [open, setOpen] = useState(false);
+  const [joining, setJoining] = useState(false);
+  const [target, setTarget] = useState("");
+  const [basis, setBasis] = useState<Basis>("all");
+  const [portion, setPortion] = useState("");
+  const [undoShare, setUndoShare] = useState<{ id: string; label: string } | null>(null);
   const [undo, setUndo] = useState<{ id: string; label: string } | null>(null);
   const [category, setCategory] = useState(categories[0] ?? "");
   const [amount, setAmount] = useState("");
@@ -54,7 +67,18 @@ export function LotCost({ lotId, lotNumber, pieces, costing, categories, otherLo
     ["Wages", costing.wagesMinor],
     ...costing.other.map((o): [string, number] => [o.category, o.amountMinor]),
     ...(costing.recoveredMinor > 0 ? [["Charged to karigars for lost pieces", -costing.recoveredMinor] as [string, number]] : []),
+    // Moves in force only; a reversed one and its reversal are in the list below.
+    ...costing.shares.filter((s) => !s.reversed && !s.isReversal).map((s): [string, number] => (
+      s.direction === "out" ? [`Moved to ${s.otherNumber} (${pct(s.basisPoints)})`, -s.amountMinor] : [`From ${s.otherNumber} (${pct(s.basisPoints)})`, s.amountMinor]
+    )),
   ];
+
+  // The part of this lot's own cost that moves, as basis points: all of it, a percentage, or the pieces that went to the other lot.
+  const left = 10_000 - costing.shares.filter((s) => s.direction === "out" && !s.reversed && !s.isReversal).reduce((t, s) => t + s.basisPoints, 0);
+  const moving = basis === "all" ? left : basis === "percent" ? Math.round((Number(portion) || 0) * 100) : pieces > 0 ? Math.round(((Number(portion) || 0) / pieces) * 10_000) : 0;
+  const moveOk = target !== "" && moving >= 1 && moving <= left;
+  const movePreview = Math.round((costing.ownMinor * Math.min(moving, left)) / 10_000);
+  const hasShares = costing.shares.length > 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,7 +88,14 @@ export function LotCost({ lotId, lotNumber, pieces, costing, categories, otherLo
           <p className="figure m-0 text-[40px] text-text">{costing.perGoodPieceMinor === null ? "—" : rupees(costing.perGoodPieceMinor)}</p>
           <p className="m-0 text-[13px] text-text-secondary">{rupees(costing.totalMinor)} over {costing.goodPieces.toLocaleString("en-IN")} good piece{costing.goodPieces === 1 ? "" : "s"} so far</p>
         </div>
-        {canAdd && <CommandButton commands={ADD} variant="secondary" onClick={() => { add.clear(); setOpen(true); }}>Add a cost</CommandButton>}
+        {canAdd && (
+          <div className="flex flex-wrap gap-2">
+            {joinLots.length > 0 && left > 0 && costing.sharedInMinor === 0 && (
+              <CommandButton commands={SHARE} variant="ghost" onClick={() => { share.clear(); setJoining(true); }}>Join or link to a lot</CommandButton>
+            )}
+            <CommandButton commands={ADD} variant="secondary" onClick={() => { add.clear(); setOpen(true); }}>Add a cost</CommandButton>
+          </div>
+        )}
       </div>
 
       <dl className="m-0 flex flex-col divide-y divide-[var(--color-line)]">
@@ -98,6 +129,75 @@ export function LotCost({ lotId, lotNumber, pieces, costing, categories, otherLo
           </RowList>
         </details>
       )}
+
+      {hasShares && (
+        <details>
+          <summary className="cursor-pointer text-[14px] font-medium text-accent-ink">Joined and linked lots ({costing.shares.length})</summary>
+          <RowList>
+            {costing.shares.map((s) => (
+              <Row key={s.id} className={s.reversed || s.isReversal ? "opacity-70" : ""}>
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[14px] font-medium text-text">
+                    {s.isReversal ? "Reversed: " : ""}{s.direction === "out" ? `To ${s.otherNumber}` : `From ${s.otherNumber}`} · {pct(s.basisPoints)} · {rupees(s.amountMinor)}
+                  </span>
+                  <span className="text-[13px] text-text-secondary">{shortDate(s.on)} · {s.otherName} · {s.reason}</span>
+                </div>
+                {canAdd && !s.isReversal && !s.reversed && (
+                  <CommandButton commands={UNSHARE} variant="ghost" size="sm" onClick={() => { unshare.clear(); setUndoShare({ id: s.id, label: `${s.direction === "out" ? "to" : "from"} ${s.otherNumber}` }); }}>Reverse</CommandButton>
+                )}
+              </Row>
+            ))}
+          </RowList>
+        </details>
+      )}
+
+      <FormModal
+        open={joining} onClose={() => setJoining(false)}
+        title={`Join or link ${lotNumber} to another lot`}
+        description="Move a part of this lot's cost to the lot it was joined to or finished with. This lot's own costs stay as they are; the move shows as a line on both lots and can be reversed."
+        submitLabel={moveOk ? `Move ${rupees(movePreview)}` : "Move cost"} submitDisabled={!moveOk}
+        pending={share.pending} failure={share.failure} failureTitle="The cost was not moved"
+        onSubmit={(fd) => share.run(SHARE, { sourceLotId: lotId, targetLotId: target, basisPoints: moving, reason: String(fd.get("reason") ?? "").trim() }, () => { setJoining(false); setTarget(""); setPortion(""); setBasis("all"); })}
+      >
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Move the cost to" htmlFor="ls-target" required>
+            <Select id="ls-target" value={target} onChange={(e) => setTarget(e.target.value)}>
+              <option value="">Choose a lot</option>
+              {joinLots.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="How much" htmlFor="ls-basis">
+            <Select id="ls-basis" value={basis} onChange={(e) => { setBasis(e.target.value as Basis); setPortion(""); }}>
+              <option value="all">{left === 10_000 ? "All of this lot's cost (joined into it)" : `All that is left (${pct(left)})`}</option>
+              <option value="percent">A percentage</option>
+              {pieces > 0 && <option value="pieces">By pieces that went to the other lot</option>}
+            </Select>
+          </Field>
+          {basis !== "all" && (
+            <Field label={basis === "percent" ? "Percentage" : `Pieces of ${pieces.toLocaleString("en-IN")}`} htmlFor="ls-portion" required>
+              <Input id="ls-portion" type="number" inputMode="decimal" min={basis === "percent" ? 0.01 : 1} max={basis === "percent" ? left / 100 : pieces} step={basis === "percent" ? "0.01" : "1"} value={portion} onChange={(e) => setPortion(e.target.value)} autoFocus />
+            </Field>
+          )}
+          <Field label="Why" htmlFor="ls-why" required><Input id="ls-why" name="reason" required minLength={3} maxLength={300} placeholder="cut together, finished as one" /></Field>
+        </div>
+        {moving > left && <p role="alert" className="m-0 text-[14px] text-[var(--color-danger-ink)]">That is more than the {pct(left)} of this lot&apos;s cost still here.</p>}
+        {moveOk && (
+          <ul role="status" className="m-0 flex list-none flex-col gap-1 rounded-[12px] bg-[var(--color-control)] px-4 py-3 text-[14px] text-text">
+            <li className="flex justify-between gap-3"><span>{lotNumber} keeps</span><span className="tabular-nums">{rupees(costing.totalMinor - movePreview)}</span></li>
+            <li className="flex justify-between gap-3"><span>{joinLots.find((l) => l.id === target)?.label.split(" · ")[0]} carries</span><span className="tabular-nums">{rupees(movePreview)} more</span></li>
+          </ul>
+        )}
+      </FormModal>
+
+      <FormModal
+        open={undoShare !== null} onClose={() => setUndoShare(null)} destructive
+        title={`Reverse the move ${undoShare?.label ?? ""}?`} description="The cost goes back where it was. The move and its reversal both stay in the record."
+        submitLabel="Reverse it" pendingLabel="Reversing…"
+        pending={unshare.pending} failure={unshare.failure} failureTitle="It was not reversed"
+        onSubmit={(fd) => { if (undoShare) unshare.run(UNSHARE, { shareId: undoShare.id, reason: String(fd.get("reason") ?? "").trim() }, () => setUndoShare(null)); }}
+      >
+        <Field label="Why?" htmlFor="lu-why" required><Input id="lu-why" name="reason" required minLength={3} maxLength={300} autoFocus /></Field>
+      </FormModal>
 
       <FormModal
         open={open} onClose={() => setOpen(false)}

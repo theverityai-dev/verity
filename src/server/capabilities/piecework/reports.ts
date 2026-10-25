@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { QueryDefinition } from "@/server/platform/query";
 import { hasTenantPermission } from "@/server/platform/authorization";
+import { shareAmount, sharesInForce } from "./costs";
 import { costPerGoodPiece, daysInStage, wageOf, workerMoney, type PaymentRow } from "./ledger";
 import { LEDGER_SELECT, activeStages, isoOf, loadBundles, todayFor, toLedger, type Tx } from "./shared";
 import { bundleRow, placementsOf, summariseLot, type BundleRow, type LotRow, type Placement } from "./index";
@@ -312,7 +313,10 @@ export type CostingRow = {
   lotNumber: string; design: string; plannedPieces: number; goodPieces: number; rejectedPieces: number; reworkPieces: number; shortPieces: number;
   wagesMinor: number;
   /** Fabric at each roll's invoice rate (null when no roll carried a rate), other costs by category, less charges recovered. */
-  fabricMinor: number | null; otherMinor: number; recoveredMinor: number; totalMinor: number; perGoodPieceMinor: number | null;
+  fabricMinor: number | null; otherMinor: number; recoveredMinor: number;
+  /** Cost this lot gave to other lots, and took in from them (joined or linked lots); the total is the parts above - out + in. */
+  sharedOutMinor: number; sharedInMinor: number;
+  totalMinor: number; perGoodPieceMinor: number | null;
 };
 
 /** Lot cost so far: fabric + wages + other costs - charges recovered. Cost per good piece = cost / good finished pieces, losses beside it. */
@@ -324,10 +328,11 @@ export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]>
   handler: async (ctx) => {
     const d = await loadAll(ctx.tx);
     // The other parts of cost, read once for every lot rather than once per lot.
-    const [costs, recovered, moves] = await Promise.all([
+    const [costs, recovered, moves, shareRows] = await Promise.all([
       ctx.tx.pieceworkLotCost.findMany({ select: { lotId: true, amountMinor: true, reversesId: true } }),
       ctx.tx.pieceworkApproval.findMany({ where: { kind: "deduction", status: "approved", entryId: { not: null } }, select: { lotId: true, amountMinor: true } }),
       ctx.tx.pieceworkRollMove.findMany({ where: { kind: { in: ["issue", "return"] } }, select: { lotId: true, deltaCenti: true, roll: { select: { rateMinor: true } } } }),
+      ctx.tx.pieceworkLotShare.findMany({ select: { id: true, sourceLotId: true, targetLotId: true, basisPoints: true, reversesId: true } }),
     ]);
     const sumBy = <T,>(rows: T[], key: (r: T) => string | null, value: (r: T) => number) => {
       const m = new Map<string, number>();
@@ -338,16 +343,27 @@ export const reportCosting: QueryDefinition<Record<string, never>, CostingRow[]>
     const back = sumBy(recovered, (a) => a.lotId, (a) => a.amountMinor ?? 0);
     const priced = moves.filter((m) => m.roll.rateMinor !== null);
     const fabric = sumBy(priced, (m) => m.lotId, (m) => Math.round((-m.deltaCenti * m.roll.rateMinor!) / 100));
-    return d.lots.filter((l) => !l.cancelledAt).map((l): CostingRow => {
+    const lots = d.lots.filter((l) => !l.cancelledAt).map((l) => {
       const mine = d.bundles.filter((b) => b.lotId === l.id && !b.cancelledAt);
       const ids = new Set(mine.map((b) => b.id));
       const wagesMinor = d.ledger.filter((e) => ids.has(e.bundleId)).reduce((s, e) => s + wageOf(e), 0);
+      const own = (fabric.get(l.id) ?? 0) + wagesMinor + (other.get(l.id) ?? 0) - (back.get(l.id) ?? 0);
+      return { l, mine, wagesMinor, own };
+    });
+    // Shares move cost between lots; each is a part of its source's own cost, so every lot's own cost is read before any share is applied.
+    const ownOf = new Map(lots.map((x) => [x.l.id, x.own]));
+    const live = sharesInForce(shareRows);
+    const moved = (s: (typeof live)[number]) => shareAmount(ownOf.get(s.sourceLotId) ?? 0, s.basisPoints);
+    return lots.map(({ l, mine, wagesMinor, own }): CostingRow => {
+      const out = live.filter((s) => s.sourceLotId === l.id).reduce((t, s) => t + moved(s), 0);
+      const into = live.filter((s) => s.targetLotId === l.id).reduce((t, s) => t + moved(s), 0);
+      const total = own - out + into;
       const good = mine.reduce((s, b) => s + b.position.ready, 0);
-      const total = (fabric.get(l.id) ?? 0) + wagesMinor + (other.get(l.id) ?? 0) - (back.get(l.id) ?? 0);
       return {
         lotNumber: l.number, design: l.design, plannedPieces: l.plannedPieces, goodPieces: good,
         rejectedPieces: mine.reduce((s, b) => s + b.position.rejected, 0), reworkPieces: mine.reduce((s, b) => s + b.position.reworkOpen, 0), shortPieces: mine.reduce((s, b) => s + b.position.short, 0),
         wagesMinor, fabricMinor: fabric.get(l.id) ?? null, otherMinor: other.get(l.id) ?? 0, recoveredMinor: back.get(l.id) ?? 0,
+        sharedOutMinor: out, sharedInMinor: into,
         totalMinor: total, perGoodPieceMinor: costPerGoodPiece(total, good),
       };
     });

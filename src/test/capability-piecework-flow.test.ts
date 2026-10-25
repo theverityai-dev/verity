@@ -68,6 +68,9 @@ import {
   saveReasons,
   lookupCode,
   lotCosting,
+  lotDetail,
+  shareLotCost,
+  reverseLotShare,
   mergeBundles,
   reverseLotCost,
   splitBundle,
@@ -389,6 +392,52 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     const empty = (await executeCommand(owner, createLot, { design: "Nothing cut", plannedPieces: 10 })).id;
     await reject(executeCommand(owner, addLotCost, { lotIds: [a.lotId, empty], category: "Thread", amountMinor: 500 }), /no pieces cut yet/);
     await reject(executeQuery(supervisor, lotCosting, { lotId: a.lotId }), /holds no Read grant/);
+  });
+
+  it("moves a part of one lot's cost to another without touching either lot's records, and reverses it", async () => {
+    const a = await lotWith(300, "Join source");
+    const b = await lotWith(100, "Join target");
+    await executeCommand(owner, addLotCost, { lotIds: [a.lotId], category: "Thread", amountMinor: 10_001 });
+    await executeCommand(owner, addLotCost, { lotIds: [b.lotId], category: "Thread", amountMinor: 2500 });
+    const lotNumber = async (id: string) => (await executeQuery(owner, lotDetail, { lotId: id }))!.number;
+    const report = async (id: string) => { const n = await lotNumber(id); return (await executeQuery(owner, reportCosting, {})).find((r) => r.lotNumber === n)!; };
+
+    const share = await executeCommand(owner, shareLotCost, { sourceLotId: a.lotId, targetLotId: b.lotId, basisPoints: 4000, reason: "Cut together, finished as one" });
+    expect(share.amountMinor).toBe(4000); // 40% of 10,001 paise, rounded.
+    let from = await executeQuery(owner, lotCosting, { lotId: a.lotId });
+    let into = await executeQuery(owner, lotCosting, { lotId: b.lotId });
+    expect(from).toMatchObject({ ownMinor: 10_001, sharedOutMinor: 4000, sharedInMinor: 0, totalMinor: 6001 });
+    expect(into).toMatchObject({ ownMinor: 2500, sharedOutMinor: 0, sharedInMinor: 4000, totalMinor: 6500 });
+    // The source's own cost lines are untouched; the move is a separate, visible line on both lots.
+    expect(from.other).toEqual([{ category: "Thread", amountMinor: 10_001 }]);
+    expect(into.shares[0]).toMatchObject({ direction: "in", basisPoints: 4000, amountMinor: 4000, reason: "Cut together, finished as one", reversed: false });
+    expect(from.shares[0]).toMatchObject({ direction: "out", otherLotId: b.lotId });
+    // The cost report agrees with the lot screen, and what one lot gives the other takes: the total across lots does not change.
+    expect(await report(a.lotId)).toMatchObject({ sharedOutMinor: 4000, totalMinor: 6001 });
+    expect(await report(b.lotId)).toMatchObject({ sharedInMinor: 4000, totalMinor: 6500 });
+
+    // One level only, never more than all of a lot's cost, never to itself, never without a reason.
+    await reject(executeCommand(owner, shareLotCost, { sourceLotId: a.lotId, targetLotId: a.lotId, basisPoints: 100, reason: "same lot" }), /with itself/);
+    await reject(executeCommand(owner, shareLotCost, { sourceLotId: a.lotId, targetLotId: b.lotId, basisPoints: 6001, reason: "too much" }), /only 60% is left to give/);
+    await reject(executeCommand(owner, shareLotCost, { sourceLotId: b.lotId, targetLotId: a.lotId, basisPoints: 100, reason: "back again" }), /already carries cost from another lot/);
+    const c = await lotWith(50, "Join third");
+    await reject(executeCommand(owner, shareLotCost, { sourceLotId: c.lotId, targetLotId: a.lotId, basisPoints: 100, reason: "onto a giver" }), /already gives cost to another lot/);
+    await reject(executeCommand(owner, shareLotCost, { sourceLotId: c.lotId, targetLotId: b.lotId, basisPoints: 100, reason: "" }), /input rejected/);
+    await reject(executeCommand(supervisor, shareLotCost, { sourceLotId: c.lotId, targetLotId: b.lotId, basisPoints: 100, reason: "floor cannot" }), /holds no Create grant/);
+
+    // A mistake is a reversal row; both stay in the record and the cost goes back.
+    await executeCommand(owner, reverseLotShare, { shareId: share.id, reason: "Joined the wrong lot" });
+    await reject(executeCommand(owner, reverseLotShare, { shareId: share.id, reason: "again" }), /already reversed/);
+    from = await executeQuery(owner, lotCosting, { lotId: a.lotId });
+    into = await executeQuery(owner, lotCosting, { lotId: b.lotId });
+    expect(from).toMatchObject({ sharedOutMinor: 0, totalMinor: 10_001 });
+    expect(into).toMatchObject({ sharedInMinor: 0, totalMinor: 2500 });
+    expect(from.shares).toHaveLength(2);
+    expect(from.shares.find((s) => s.id === share.id)).toMatchObject({ reversed: true });
+    // With the share gone, a lot can take the other direction.
+    await executeCommand(owner, shareLotCost, { sourceLotId: b.lotId, targetLotId: a.lotId, basisPoints: 10_000, reason: "Joined into the bigger lot" });
+    expect(await executeQuery(owner, lotCosting, { lotId: b.lotId })).toMatchObject({ totalMinor: 0, sharedOutMinor: 2500 });
+    expect(await executeQuery(owner, lotCosting, { lotId: a.lotId })).toMatchObject({ totalMinor: 12_501 });
   });
 
   it("re-bundles at the cutting table only, before any work, and keeps the old numbers", async () => {

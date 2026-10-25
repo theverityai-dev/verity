@@ -577,6 +577,7 @@ describeDb("conformance: database enforcement", () => {
         "piecework_day_close",
         "piecework_entry",
         "piecework_lot_cost",
+        "piecework_lot_share",
         "piecework_payment",
         "piecework_ready_move",
         "piecework_roll_move",

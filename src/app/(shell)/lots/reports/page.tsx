@@ -239,7 +239,10 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
               <Panel title="What each lot cost">
                 <ul className="m-0 flex list-none flex-col gap-6 p-0">
                   {costing.filter((c) => c.totalMinor > 0).map((c) => {
-                    const other = Math.max(0, c.otherMinor - c.recoveredMinor);
+                    // Cost given on to a joined lot leaves in proportion, so the bar adds up to the figure beside it; cost taken in is its own segment.
+                    const own = (c.fabricMinor ?? 0) + c.wagesMinor + c.otherMinor - c.recoveredMinor;
+                    const keep = own > 0 ? (own - c.sharedOutMinor) / own : 1;
+                    const other = Math.max(0, c.otherMinor - c.recoveredMinor) * keep;
                     const id = lotId.get(c.lotNumber);
                     return (
                       <li key={c.lotNumber} className="list-none">
@@ -248,7 +251,8 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
                           <span className="text-[14px] text-text-secondary"><span className="font-medium text-text">{rupees(c.totalMinor)}</span>{c.perGoodPieceMinor !== null ? ` · ${rupees(c.perGoodPieceMinor)} a good piece` : " · nothing finished yet"}</span>
                         </div>
                         <StackedBar label={`${c.lotNumber} cost`} format={rupees} segments={[
-                          ...(c.fabricMinor ? [{ label: "Fabric", value: c.fabricMinor }] : []), { label: "Wages", value: c.wagesMinor }, ...(other > 0 ? [{ label: "Other", value: other }] : []),
+                          ...(c.fabricMinor ? [{ label: "Fabric", value: c.fabricMinor * keep }] : []), { label: "Wages", value: c.wagesMinor * keep }, ...(other > 0 ? [{ label: "Other", value: other }] : []),
+                          ...(c.sharedInMinor > 0 ? [{ label: "From joined lots", value: c.sharedInMinor }] : []),
                         ].filter((s) => s.value > 0)} />
                       </li>
                     );
@@ -349,14 +353,14 @@ async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: st
             <ReportTable
               title="Lot cost so far"
               filename="lot-cost.csv"
-              note="Fabric (at each roll's invoice rate) + wages + other costs, less what was charged to karigars for lost pieces. Cost per good piece = cost so far ÷ good finished pieces; it is blank when there are none."
+              note="Fabric (at each roll's invoice rate) + wages + other costs, less what was charged to karigars for lost pieces, plus or minus cost moved between joined lots. Cost per good piece = cost so far ÷ good finished pieces; it is blank when there are none."
               columns={[
                 { key: "lot", header: "Lot", subKey: "design" }, { key: "planned", header: "Planned", numeric: true }, { key: "good", header: "Good", numeric: true },
-                { key: "losses", header: "Rejected · rework · short" }, { key: "fabric", header: "Fabric", numeric: true }, { key: "wages", header: "Wages", numeric: true }, { key: "other", header: "Other", numeric: true }, { key: "total", header: "Total", numeric: true }, { key: "per", header: "Per good piece", numeric: true },
+                { key: "losses", header: "Rejected · rework · short" }, { key: "fabric", header: "Fabric", numeric: true }, { key: "wages", header: "Wages", numeric: true }, { key: "other", header: "Other", numeric: true }, { key: "moved", header: "Joined lots", numeric: true }, { key: "total", header: "Total", numeric: true }, { key: "per", header: "Per good piece", numeric: true },
               ]}
-              rows={costing.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, planned: r.plannedPieces, good: r.goodPieces, losses: `${r.rejectedPieces} · ${r.reworkPieces} · ${r.shortPieces}`, fabric: r.fabricMinor === null ? "—" : rupees(r.fabricMinor), wages: rupees(r.wagesMinor), other: rupees(r.otherMinor - r.recoveredMinor), total: rupees(r.totalMinor), per: r.perGoodPieceMinor === null ? "—" : rupees(r.perGoodPieceMinor) }))}
-              csvHeader={["Lot", "Design", "Planned pieces", "Good pieces", "Rejected", "Rework waiting", "Short", "Fabric (Rs)", "Wages (Rs)", "Other costs (Rs)", "Recovered from karigars (Rs)", "Total so far (Rs)", "Cost per good piece (Rs)"]}
-              csvRows={costing.map((r) => [r.lotNumber, r.design, r.plannedPieces, r.goodPieces, r.rejectedPieces, r.reworkPieces, r.shortPieces, r.fabricMinor === null ? "" : rs(r.fabricMinor), rs(r.wagesMinor), rs(r.otherMinor), rs(r.recoveredMinor), rs(r.totalMinor), r.perGoodPieceMinor === null ? "" : rs(r.perGoodPieceMinor)])}
+              rows={costing.map((r, i) => ({ id: String(i), lot: r.lotNumber, design: r.design, planned: r.plannedPieces, good: r.goodPieces, losses: `${r.rejectedPieces} · ${r.reworkPieces} · ${r.shortPieces}`, fabric: r.fabricMinor === null ? "—" : rupees(r.fabricMinor), wages: rupees(r.wagesMinor), other: rupees(r.otherMinor - r.recoveredMinor), moved: r.sharedInMinor === 0 && r.sharedOutMinor === 0 ? "—" : rupees(r.sharedInMinor - r.sharedOutMinor), total: rupees(r.totalMinor), per: r.perGoodPieceMinor === null ? "—" : rupees(r.perGoodPieceMinor) }))}
+              csvHeader={["Lot", "Design", "Planned pieces", "Good pieces", "Rejected", "Rework waiting", "Short", "Fabric (Rs)", "Wages (Rs)", "Other costs (Rs)", "Recovered from karigars (Rs)", "Given to joined lots (Rs)", "Taken from joined lots (Rs)", "Total so far (Rs)", "Cost per good piece (Rs)"]}
+              csvRows={costing.map((r) => [r.lotNumber, r.design, r.plannedPieces, r.goodPieces, r.rejectedPieces, r.reworkPieces, r.shortPieces, r.fabricMinor === null ? "" : rs(r.fabricMinor), rs(r.wagesMinor), rs(r.otherMinor), rs(r.recoveredMinor), rs(r.sharedOutMinor), rs(r.sharedInMinor), rs(r.totalMinor), r.perGoodPieceMinor === null ? "" : rs(r.perGoodPieceMinor)])}
             />
           )}
 
