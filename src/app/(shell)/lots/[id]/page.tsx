@@ -140,7 +140,9 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
         <section aria-labelledby="floor-heading" className="mb-6">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3 px-1">
             <h2 id="floor-heading" className="m-0 text-[17px] font-semibold leading-[22px] tracking-[-0.02em]">Where every bundle is</h2>
-            <Link href={`/lots/${lot.id}/slips`} className="text-[14px] font-medium text-accent-ink no-underline hover:underline">Print all slips</Link>
+            <Link href={`/lots/${lot.id}/slips`} className="text-[14px] font-medium text-accent-ink no-underline hover:underline">
+              {(() => { const none = lot.bundleRows.filter((b) => !b.cancelled && !b.slipPrinted).length; return none > 0 ? `Print slips (${none} not printed yet)` : "Print all slips"; })()}
+            </Link>
           </div>
           <FloorBoard lanes={lanes} label={`${lot.number} bundles by stage`} />
         </section>

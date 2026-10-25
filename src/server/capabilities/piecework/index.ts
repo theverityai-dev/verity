@@ -825,6 +825,8 @@ export type BundleRow = {
   overdue: boolean;
   /** Cancelled, or split or joined into new bundles: its number stays, its pieces are elsewhere. */
   cancelled: boolean;
+  /** A slip has been printed with Verity's print button. Set on the lot page's list; undefined elsewhere. */
+  slipPrinted?: boolean;
 };
 
 /**
@@ -904,6 +906,7 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
     const names = await workerNames(ctx.tx, [...new Set(rows.map((r) => r.workerId))]);
     const users = await userNames(ctx.tx, [...new Set(rows.map((r) => r.enteredById))]);
     const bundleNo = new Map(bundleList.map((b) => [b.id, b.number]));
+    const printed = new Set(bundleList.filter((b) => b.slipPrintedAt !== null).map((b) => b.id));
     const stageLabel = new Map(stages.map((s) => [s.id, s.label]));
     const reversedIds = new Set(rows.filter((r) => r.reversesId).map((r) => r.reversesId!));
     const live = bundles.filter((b) => !b.cancelledAt);
@@ -917,7 +920,7 @@ export const lotDetail: QueryDefinition<{ lotId: string }, LotDetail | null> = {
       cover,
       note: lot.note, cancelReason: lot.cancelReason, startDate: isoOrNull(lot.startDate),
       stages: sumStages(live.map((b) => b.position), route),
-      bundleRows: bundles.map((b) => bundleRow(b, lot.number, stages, names, today)),
+      bundleRows: bundles.map((b) => ({ ...bundleRow(b, lot.number, stages, names, today), slipPrinted: printed.has(b.id) })),
       placements: bundles.flatMap((b) => placementsOf(b, lot.number, lot.name ?? lot.design, names, today)),
       entries: rows.map((r) => {
         const e = toLedger(r);

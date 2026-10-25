@@ -80,7 +80,24 @@ export const mergeBundles: CommandDefinition<{ bundleIds: string[]; sizeNote?: s
   },
 };
 
+/**
+ * Notes that slips were printed, so a bundle with no slip on it can be found and flagged (the print queue). Only a bundle that has none
+ * yet is stamped: reprinting does not move the date of the first. Nothing else about the bundle changes.
+ */
+export const markSlipsPrinted: CommandDefinition<{ bundleIds: string[] }, { stamped: number }> = {
+  key: "verity.piecework.mark_slips_printed",
+  entity: ENTITY,
+  // Whoever may cut bundles prints their slips.
+  verb: "Create",
+  input: z.object({ bundleIds: z.array(uuid).min(1).max(300) }),
+  handler: async (ctx, input) => {
+    const done = await ctx.tx.pieceworkBundle.updateMany({ where: { id: { in: input.bundleIds }, slipPrintedAt: null, cancelledAt: null }, data: { slipPrintedAt: new Date() } });
+    return { result: { stamped: done.count }, events: [] };
+  },
+};
+
 export function registerRebundle(): void {
   registerCommand(splitBundle);
   registerCommand(mergeBundles);
+  registerCommand(markSlipsPrinted);
 }

@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { runCommand } from "@/server/actions/platform";
 import { Button, Checkbox, Panel } from "@/components/ui/primitives";
 import { SlipCard, type SlipData } from "../../bundles/[id]/slip/SlipDoc";
 
-export type SlipItem = SlipData & { id: string; /** Nothing of it has been given out: a fresh bundle that still needs its slip on it. */ fresh: boolean };
+export type SlipItem = SlipData & { id: string; /** Nothing of it has been given out: a fresh bundle that still needs its slip on it. */ fresh: boolean; /** Printed before with this button. */ printed: boolean };
 
 const LAYOUTS = [
   { key: "full", label: "Full slip", hint: "10 cm, two across an A4 sheet" },
@@ -35,6 +37,14 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
 
   const chosen = useMemo(() => slips.filter((s) => picked.has(s.id)), [slips, picked]);
   const fresh = slips.filter((s) => s.fresh);
+  const unprinted = slips.filter((s) => !s.printed);
+  const router = useRouter();
+  // The browser prints; Verity then notes which bundles had a slip printed, so one with none can be found and flagged.
+  const print = () => {
+    const ids = chosen.map((s) => s.id);
+    window.print();
+    void runCommand("verity.piecework.mark_slips_printed", { bundleIds: ids }, lotHref).then(() => router.refresh());
+  };
   const toggle = (id: string, on: boolean) => setPicked((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
   const compact = layout === "sticker";
 
@@ -49,7 +59,7 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
         <Panel title={`${slips.length} slip${slips.length === 1 ? "" : "s"} for ${lotNumber}`}>
           <div className="flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="primary" disabled={chosen.length === 0} onClick={() => window.print()}>Print {chosen.length === slips.length ? "all" : chosen.length} slip{chosen.length === 1 ? "" : "s"}</Button>
+              <Button variant="primary" disabled={chosen.length === 0} onClick={print}>Print {chosen.length === slips.length ? "all" : chosen.length} slip{chosen.length === 1 ? "" : "s"}</Button>
               <Link href={lotHref} className="inline-flex min-h-11 items-center rounded-[10px] px-4 text-[15px] font-semibold text-accent-ink no-underline hover:bg-[var(--color-control)]">Back to the lot</Link>
             </div>
 
@@ -65,6 +75,7 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
 
             <div className="flex flex-wrap items-center gap-1.5">
               <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set(slips.map((s) => s.id)))}>Select all</Button>
+              <Button type="button" variant="ghost" size="sm" disabled={unprinted.length === 0 || unprinted.length === slips.length} onClick={() => setPicked(new Set(unprinted.map((s) => s.id)))}>Only not printed yet ({unprinted.length})</Button>
               <Button type="button" variant="ghost" size="sm" disabled={fresh.length === 0 || fresh.length === slips.length} onClick={() => setPicked(new Set(fresh.map((s) => s.id)))}>Only not yet given out ({fresh.length})</Button>
               <Button type="button" variant="ghost" size="sm" onClick={() => setPicked(new Set())}>None</Button>
               <span className="ml-auto text-[13px] text-text-secondary" aria-live="polite">{chosen.length} of {slips.length} chosen</span>
@@ -73,7 +84,7 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
             <ul className="m-0 grid list-none gap-4 p-0" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${compact ? "7cm" : "10.5cm"}, max-content))` }}>
               {slips.map((s) => (
                 <li key={s.id} className={`flex max-w-full flex-col gap-2 transition-opacity ${picked.has(s.id) ? "" : "opacity-45"}`}>
-                  <Checkbox label={`${s.bundleNumber}${s.fresh ? "" : " · work started"}`} checked={picked.has(s.id)} onChange={(e) => toggle(s.id, e.target.checked)} />
+                  <Checkbox label={`${s.bundleNumber}${s.fresh ? "" : " · work started"}${s.printed ? " · printed" : " · not printed yet"}`} checked={picked.has(s.id)} onChange={(e) => toggle(s.id, e.target.checked)} />
                   <div className="max-w-full overflow-x-auto"><SlipCard slip={s} compact={compact} /></div>
                 </li>
               ))}

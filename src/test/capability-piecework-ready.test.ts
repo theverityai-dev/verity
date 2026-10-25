@@ -17,6 +17,8 @@ import {
   createLot,
   defineStage,
   defineWorker,
+  lotDetail,
+  markSlipsPrinted,
   presetPermissions,
   readyStock,
   recordIssue,
@@ -138,6 +140,16 @@ describeDb("capability: ready garment inventory", () => {
     const again = (await executeQuery(owner, readyStock, {})).moves;
     expect(again.filter((m) => m.kind === "out" && m.party === "Mehta Garments")).toHaveLength(2);
     expect(again.find((m) => m.id === dispatched.id)).toMatchObject({ reversed: true, by: "Owner Ji" });
+  });
+
+  it("remembers which slips were printed, and stamps each bundle once", async () => {
+    const rows = () => executeQuery(owner, lotDetail, { lotId }).then((d) => d!.bundleRows);
+    expect((await rows()).every((b) => b.slipPrinted === false)).toBe(true);
+    const ids = (await rows()).map((b) => b.id);
+    expect((await executeCommand(owner, markSlipsPrinted, { bundleIds: ids })).stamped).toBe(ids.length);
+    // Printing again does not move the first date; nothing is stamped twice.
+    expect((await executeCommand(owner, markSlipsPrinted, { bundleIds: ids })).stamped).toBe(0);
+    expect((await rows()).every((b) => b.slipPrinted === true)).toBe(true);
   });
 
   it("refuses a movement dated in the future", async () => {

@@ -28,6 +28,7 @@ async function SlipsPage({ params }: { params: Promise<{ id: string }> }) {
   const slips = await Promise.all(lot.bundleRows.filter((b) => !b.cancelled).map(async (b) => ({
     id: b.id,
     fresh: b.lastMovement === null,
+    printed: b.slipPrinted === true,
     business: tenant?.name ?? "",
     demo: Boolean((tenant?.customFields as { demo?: boolean } | null)?.demo),
     bundleNumber: b.number,

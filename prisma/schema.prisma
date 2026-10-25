@@ -7779,6 +7779,8 @@ model PieceworkBundle {
   sizeNote      String?   @map("size_note")
   parentBundleId String?  @map("parent_bundle_id") @db.Uuid
   cancelledAt   DateTime? @map("cancelled_at")
+  /// When the slip was last printed with Verity's own print button; empty means no slip has been printed for this bundle yet.
+  slipPrintedAt DateTime? @map("slip_printed_at")
   createdById   String    @map("created_by_id") @db.Uuid
   createdAt     DateTime  @default(now()) @map("created_at")
 
