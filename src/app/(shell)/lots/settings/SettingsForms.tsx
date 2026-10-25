@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CommandButton } from "@/components/ui/CommandAccess";
-import { Button, ErrorState, Field, Input, Textarea } from "@/components/ui/primitives";
+import { Button, Checkbox, ErrorState, Field, Input, Textarea } from "@/components/ui/primitives";
 import { runCommand } from "@/server/actions/platform";
 import type { ActionFailure } from "@/server/platform/action-error";
 import { toPaise } from "../format";
@@ -35,7 +35,7 @@ function useSave() {
 
 const rupeeText = (minor: number | null) => (minor === null ? "" : String(minor / 100));
 
-type StageRow = { id: string; label: string; sequence: number; defaultRateMinor: number | null; active: boolean; hasWork: boolean };
+type StageRow = { id: string; label: string; sequence: number; defaultRateMinor: number | null; active: boolean; hasWork: boolean; optional: boolean };
 
 /**
  * The factory's stages, in order. Name and the rate a stage pays when neither the lot nor the karigar sets one are edited here.
@@ -54,7 +54,7 @@ export function StagesForm({ stages, canEdit }: { stages: StageRow[]; canEdit: b
   };
   const save = (r: (typeof rows)[number]) => {
     const paise = r.rate.trim() === "" ? null : toPaise(r.rate);
-    run(UPDATE_STAGE, { stageId: r.id, label: r.label.trim(), defaultRateMinor: paise });
+    run(UPDATE_STAGE, { stageId: r.id, label: r.label.trim(), defaultRateMinor: paise, optional: r.optional });
   };
 
   return (
@@ -62,9 +62,9 @@ export function StagesForm({ stages, canEdit }: { stages: StageRow[]; canEdit: b
       {failure && <ErrorState title="That was not saved" message={failure.message} issues={failure.issues} retryable={failure.retryable} />}
       <ol className="m-0 flex list-none flex-col gap-2.5 p-0">
         {rows.map((r, i) => {
-          const dirty = r.label.trim() !== stages.find((s) => s.id === r.id)!.label || (r.rate.trim() === "" ? null : toPaise(r.rate)) !== stages.find((s) => s.id === r.id)!.defaultRateMinor;
+          const dirty = r.label.trim() !== stages.find((s) => s.id === r.id)!.label || (r.rate.trim() === "" ? null : toPaise(r.rate)) !== stages.find((s) => s.id === r.id)!.defaultRateMinor || r.optional !== stages.find((s) => s.id === r.id)!.optional;
           return (
-            <li key={r.id} className="grid items-end gap-3 rounded-[14px] border border-[var(--color-line)] p-3 sm:grid-cols-[auto_1.4fr_1fr_auto]">
+            <li key={r.id} className="grid items-end gap-3 rounded-[14px] border border-[var(--color-line)] p-3 sm:grid-cols-[auto_1.4fr_1fr_auto_auto]">
               <span className="figure hidden size-9 place-items-center text-[20px] text-text-secondary sm:grid" aria-hidden="true">{i + 1}</span>
               <Field label="Stage name" htmlFor={`st-name-${r.id}`}>
                 <Input id={`st-name-${r.id}`} value={r.label} maxLength={80} disabled={!canEdit} onChange={(e) => setRows(rows.map((x) => (x.id === r.id ? { ...x, label: e.target.value } : x)))} />
@@ -72,6 +72,7 @@ export function StagesForm({ stages, canEdit }: { stages: StageRow[]; canEdit: b
               <Field label="Default rate per piece (₹)" htmlFor={`st-rate-${r.id}`}>
                 <Input id={`st-rate-${r.id}`} type="number" inputMode="decimal" min={0} step="0.5" placeholder="none" value={r.rate} disabled={!canEdit} onChange={(e) => setRows(rows.map((x) => (x.id === r.id ? { ...x, rate: e.target.value } : x)))} />
               </Field>
+              <Checkbox label="Can be skipped" checked={r.optional} disabled={!canEdit} onChange={(e) => setRows(rows.map((x) => (x.id === r.id ? { ...x, optional: e.target.checked } : x)))} className="min-h-11" />
               {canEdit && (
                 <div className="flex items-center gap-1.5">
                   {!locked && (

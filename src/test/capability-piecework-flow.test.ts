@@ -197,8 +197,10 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     await executeCommand(owner, updateStage, { stageId: stage.stitching!, defaultRateMinor: 1000 });
     await executeCommand(owner, updateStage, { stageId: stage.finishing!, defaultRateMinor: 300 });
     const { lotId, bundleId } = await lotWith(50, "Plain");
+    // Only an optional stage can be skipped: stitching is required until it is marked optional.
+    await reject(executeCommand(owner, setLotRates, { lotId, rows: [{ stageId: stage.stitching!, skipped: true }] }), /required stage and cannot be skipped/);
+    await executeCommand(owner, updateStage, { stageId: stage.stitching!, optional: true });
     await executeCommand(owner, setLotRates, { lotId, rows: [{ stageId: stage.stitching!, skipped: true }] });
-
     const p = await executeCommand(owner, recordIssue, { bundleId, stageId: stage.pasting!, workerId: worker.W!, pieces: 50 });
     await executeCommand(owner, recordReturn, { issueId: p.id, good: 50, rejected: 0, rework: 0, short: 0 });
     await reject(executeCommand(owner, recordIssue, { bundleId, stageId: stage.stitching!, workerId: worker.W!, pieces: 50 }), /does not use Stitching/);
@@ -209,7 +211,9 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     expect(ready.find((r) => r.lotId === lotId)?.readyPieces).toBe(50);
 
     // A stage that already has work on the lot cannot then be skipped, and the card says which have work.
+    await executeCommand(owner, updateStage, { stageId: stage.pasting!, optional: true });
     await reject(executeCommand(owner, setLotRates, { lotId, rows: [{ stageId: stage.pasting!, skipped: true }] }), /already has work recorded/);
+    await executeCommand(owner, updateStage, { stageId: stage.pasting!, optional: false });
     const card = await executeQuery(owner, lotRateCard, { lotId });
     expect(card.find((r) => r.stageId === stage.stitching)).toMatchObject({ skipped: true });
     expect(card.find((r) => r.stageId === stage.pasting)).toMatchObject({ hasWork: true, effectiveMinor: 200 });

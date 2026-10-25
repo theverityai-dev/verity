@@ -7704,6 +7704,8 @@ model PieceworkStage {
   active    Boolean  @default(true)
   /// What this stage pays per piece (paise) when neither the lot nor the worker sets a rate. Null: no default.
   defaultRateMinor Int? @map("default_rate_minor")
+  /// A lot may skip this stage on its rate card only when it is optional. Required stages are on every lot's route.
+  optional  Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   version   Int      @default(1)

@@ -56,9 +56,9 @@ export function RateCard({ lotId, rows, factoryCharge, canEdit }: { lotId: strin
             <li key={r.stageId} className={`grid grid-cols-2 items-center gap-3 px-1 py-3 md:grid-cols-[1.3fr_0.9fr_1fr_1fr] ${d.use ? "" : "opacity-70"}`}>
               <span className="text-[15px] font-medium text-text">
                 {r.label}
-                {r.hasWork && <span className="ml-2 text-[12px] font-normal text-text-tertiary">has work</span>}
+                {r.hasWork && <span className="ml-2 text-[12px] font-normal text-text-tertiary">has work</span>}{!r.optional && <span className="ml-2 text-[12px] font-normal text-text-tertiary">required</span>}
               </span>
-              <Checkbox label={d.use ? "Used" : "Skipped"} checked={d.use} disabled={!canEdit || (r.hasWork && d.use)} onChange={(e) => set(r.stageId, { use: e.target.checked })} />
+              <Checkbox label={d.use ? "Used" : "Skipped"} checked={d.use} disabled={!canEdit || (d.use && (r.hasWork || !r.optional))} onChange={(e) => set(r.stageId, { use: e.target.checked })} />
               <Field label="Rate per piece (₹)" htmlFor={`rc-rate-${r.stageId}`}>
                 <Input id={`rc-rate-${r.stageId}`} type="number" inputMode="decimal" min={0} step="0.5" value={d.rate} disabled={!canEdit || !d.use}
                   placeholder={r.stageDefaultMinor === null ? "none" : `${rupees(r.stageDefaultMinor)} default`} onChange={(e) => set(r.stageId, { rate: e.target.value })} />

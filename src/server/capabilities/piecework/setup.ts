@@ -103,7 +103,7 @@ export async function lostPieceCharge(tx: Tx, lotId: string, stageId: string): P
 
 /* =================================== stages ==================================== */
 
-export const updateStage: CommandDefinition<{ stageId: string; label?: string; defaultRateMinor?: number | null; active?: boolean }, { id: string }> = {
+export const updateStage: CommandDefinition<{ stageId: string; label?: string; defaultRateMinor?: number | null; active?: boolean; optional?: boolean }, { id: string }> = {
   key: "verity.piecework.update_stage",
   entity: STAGE_ENTITY,
   verb: "Edit",
@@ -112,6 +112,7 @@ export const updateStage: CommandDefinition<{ stageId: string; label?: string; d
     label: z.string().trim().min(1).max(80).optional(),
     defaultRateMinor: z.number().int().min(0).max(10_000_000).nullable().optional(),
     active: z.boolean().optional(),
+    optional: z.boolean().optional(),
   }),
   preconditions: async (ctx, input) => {
     const stage = await ctx.tx.pieceworkStage.findUnique({ where: { id: input.stageId } });
@@ -128,6 +129,7 @@ export const updateStage: CommandDefinition<{ stageId: string; label?: string; d
         ...(input.label !== undefined ? { label: input.label } : {}),
         ...(input.defaultRateMinor !== undefined ? { defaultRateMinor: input.defaultRateMinor } : {}),
         ...(input.active !== undefined ? { active: input.active } : {}),
+        ...(input.optional !== undefined ? { optional: input.optional } : {}),
         version: { increment: 1 },
       },
     });
@@ -181,13 +183,16 @@ export const setLotRates: CommandDefinition<{ lotId: string; rows: RateRowInput[
     const lot = await ctx.tx.pieceworkLot.findUnique({ where: { id: input.lotId } });
     if (!lot || lot.cancelledAt) throw new ValidationError("E_VALIDATION: lot not found in this tenant");
     if (lot.status === "closed") throw new ValidationError("E_VALIDATION: a closed lot's rates cannot change");
-    const stages = new Map((await ctx.tx.pieceworkStage.findMany()).map((s) => [s.id, s.label]));
+    const stageRows = await ctx.tx.pieceworkStage.findMany();
+    const stages = new Map(stageRows.map((s) => [s.id, s.label]));
+    const optionalIds = new Set(stageRows.filter((s) => s.optional).map((s) => s.id));
     const seen = new Set<string>();
     for (const row of input.rows) {
       if (!stages.has(row.stageId)) throw new ValidationError("E_VALIDATION: stage not found in this tenant");
       if (seen.has(row.stageId)) throw new ValidationError("E_VALIDATION: one row per stage");
       seen.add(row.stageId);
       if (row.skipped) {
+        if (!optionalIds.has(row.stageId)) throw new ValidationError(`E_VALIDATION: ${stages.get(row.stageId)} is a required stage and cannot be skipped; mark it optional in Production settings first`);
         const used = await ctx.tx.pieceworkEntry.findFirst({ where: { lotId: lot.id, stageId: row.stageId }, select: { id: true } });
         if (used) throw new ValidationError(`E_VALIDATION: ${stages.get(row.stageId)} already has work recorded on this lot and cannot be skipped`);
       }
@@ -217,6 +222,8 @@ export type RateCardRow = {
   rateMinor: number | null; lostPieceChargeMinor: number | null; wageBasis: WageBasis | null; skipped: boolean;
   /** What the lot pays at this stage if no worker has a rate of their own: the lot's rate, else the stage default. */
   effectiveMinor: number | null; source: "lot" | "stage" | null; hasWork: boolean;
+  /** Only an optional stage may be skipped by a lot. */
+  optional: boolean;
 };
 
 export async function rateCardOf(tx: Tx, lotId: string): Promise<RateCardRow[]> {
@@ -225,7 +232,7 @@ export async function rateCardOf(tx: Tx, lotId: string): Promise<RateCardRow[]> 
     tx.pieceworkLotRate.findMany({ where: { lotId } }),
     tx.pieceworkEntry.groupBy({ by: ["stageId"], where: { lotId } }),
   ]);
-  const defaults = new Map((await tx.pieceworkStage.findMany({ select: { id: true, defaultRateMinor: true } })).map((s) => [s.id, s.defaultRateMinor]));
+  const stageRows = await tx.pieceworkStage.findMany({ select: { id: true, defaultRateMinor: true, optional: true } }); const defaults = new Map(stageRows.map((s) => [s.id, s.defaultRateMinor])); const optionalOf = new Map(stageRows.map((s) => [s.id, s.optional]));
   const usedIds = new Set(used.map((u) => u.stageId));
   return stages.map((s): RateCardRow => {
     const r: LotRateRow | undefined = rows.find((x) => x.stageId === s.id);
@@ -234,7 +241,7 @@ export async function rateCardOf(tx: Tx, lotId: string): Promise<RateCardRow[]> 
     return {
       stageId: s.id, label: s.label, sequence: s.sequence, stageDefaultMinor,
       rateMinor: r?.rateMinor ?? null, lostPieceChargeMinor: r?.lostPieceChargeMinor ?? null, wageBasis: (r?.wageBasis as WageBasis | null) ?? null, skipped: r?.skipped ?? false,
-      effectiveMinor: lotRate ?? stageDefaultMinor, source: lotRate !== null ? "lot" : stageDefaultMinor !== null ? "stage" : null, hasWork: usedIds.has(s.id),
+      effectiveMinor: lotRate ?? stageDefaultMinor, source: lotRate !== null ? "lot" : stageDefaultMinor !== null ? "stage" : null, hasWork: usedIds.has(s.id), optional: optionalOf.get(s.id) ?? false,
     };
   });
 }
@@ -305,7 +312,7 @@ export const saveReasons: CommandDefinition<{ kind: ReasonKind; items: Array<{ l
 /* ================================== queries ====================================== */
 
 export type ProductionSettings = {
-  stages: Array<{ id: string; label: string; sequence: number; defaultRateMinor: number | null; active: boolean; hasWork: boolean }>;
+  stages: Array<{ id: string; label: string; sequence: number; defaultRateMinor: number | null; active: boolean; hasWork: boolean; optional: boolean }>;
   lostPieceChargeMinor: number | null; challanTitle: string | null; challanAddress: string | null; lowFabricCenti: number | null;
   reasons: Awaited<ReturnType<typeof reasonsOf>>;
   limits: { deductionLimitMinor: number; writeoffLimitPieces: number };
@@ -324,7 +331,7 @@ export const productionSettings: QueryDefinition<Record<string, never>, Producti
     ]);
     const usedIds = new Set(used.map((u) => u.stageId));
     return {
-      stages: stages.map((s) => ({ id: s.id, label: s.label, sequence: s.sequence, defaultRateMinor: s.defaultRateMinor, active: s.active, hasWork: usedIds.has(s.id) })),
+      stages: stages.map((s) => ({ id: s.id, label: s.label, sequence: s.sequence, defaultRateMinor: s.defaultRateMinor, active: s.active, hasWork: usedIds.has(s.id), optional: s.optional })),
       lostPieceChargeMinor: setting?.defaultLostPieceChargeMinor ?? null, challanTitle: setting?.challanTitle ?? null, challanAddress: setting?.challanAddress ?? null, lowFabricCenti: setting?.lowFabricCenti ?? null,
       reasons,
       limits: { deductionLimitMinor: setting?.managerDeductionLimitMinor ?? 100_000, writeoffLimitPieces: setting?.managerWriteoffLimitPieces ?? 5 },

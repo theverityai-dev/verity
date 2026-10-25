@@ -293,6 +293,8 @@ async function main() {
   // straight to stitching. Karigar G, who has no rate of his own, is paid the stage default for pasting.
   const lot5 = await lot("Mandarin collar, linen blend", "Mandarin collar shirts", 120, 4, 18, "Linen blend");
   const [b7, b8] = await cut(lot5, [{ copies: 2, netPieces: 60, sizeNote: "M and L" }], [[mandarin[0]!, 74], [mandarin[1]!, 70]], 4);
+  // A lot may skip only an optional stage: collar and cuff is optional at this factory (a shirt without one is a different design).
+  await executeCommand(actor, piecework.updateStage, { stageId: stage.collar!, optional: true });
   await executeCommand(actor, piecework.setLotRates, { lotId: lot5, rows: [{ stageId: stage.collar!, skipped: true }, { stageId: stage.stitching!, rateMinor: 1500, lostPieceChargeMinor: 6000 }] });
   const p7 = await out(b7!, "pasting", "G", 60, 3);
   await back(p7.id, { good: 60 }, 2);
