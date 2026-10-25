@@ -32,9 +32,6 @@ const CORE = [STAGE, LOT, BUNDLE, WORKER, ENTRY, PAYMENT];
 const FLOOR = [ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_DAY_CLOSE, ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ENTITY_PIECEWORK_REASON];
 const OFFICE = [ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, ENTITY_PIECEWORK_LOT_COST];
 
-/** Every role may open the platform overview; it shows nothing the other grants do not allow. */
-const OVERVIEW: PresetGrant = ["verity.platform.overview", ["Read"]];
-
 export const ROLE_PRESETS: readonly RolePreset[] = [
   {
     name: "Owner",
@@ -42,7 +39,6 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     grants: [
       ...full([...CORE, ...FLOOR, ...OFFICE, ENTITY_EVIDENCE]),
       [ENTITY_MEMBERSHIP, ["Read", "Create", "Edit"]], [ENTITY_MEMBERSHIP_ACCESS, ["Read", "ActionExecute"]], [ENTITY_ROLE, ["Read", "Create", "Edit"]],
-      OVERVIEW,
     ],
   },
   {
@@ -51,7 +47,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     grants: [
       ...full([...CORE, ...OFFICE]),
       [ENTITY_PIECEWORK_APPROVAL, ALL], [ENTITY_PIECEWORK_SETTING, ["Read"]], [ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ["Read"]],
-      [ENTITY_PIECEWORK_DAY_CLOSE, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]], OVERVIEW,
+      [ENTITY_PIECEWORK_DAY_CLOSE, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
   {
@@ -60,7 +56,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     grants: [
       [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]],
       [ENTRY, ["Read", "Create", "ActionExecute"]], [ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]],
-      [ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]], OVERVIEW,
+      [ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
   {
@@ -68,7 +64,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     summary: "The office clerk: daily entry, lots, karigars, fabric and payments. Asks for approvals, does not give them.",
     grants: [
       ...full([...CORE, ...OFFICE]),
-      [ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]], [ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]], OVERVIEW,
+      [ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]], [ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
   {
@@ -76,7 +72,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     summary: "Receives fabric rolls, prints labels and moves rolls. Sees lots and bundles, no money and no karigar rates.",
     grants: [
       ...full([ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE]),
-      [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]], [ENTRY, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]], OVERVIEW,
+      [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]], [ENTRY, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
   {
@@ -84,7 +80,7 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
     summary: "Cuts a lot into bundles from the rolls and prints the slips. Sees no money and no karigar rates.",
     grants: [
       [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read", "Create"]],
-      [ENTITY_PIECEWORK_ROLL, ["Read"]], [ENTITY_PIECEWORK_ROLL_MOVE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]], OVERVIEW,
+      [ENTITY_PIECEWORK_ROLL, ["Read"]], [ENTITY_PIECEWORK_ROLL_MOVE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
 ];
@@ -95,3 +91,21 @@ export const presetNamed = (name: string) => ROLE_PRESETS.find((p) => p.name ===
 /** One row per verb, for inserting a preset's grants as permissions. */
 export const presetPermissions = (preset: RolePreset) =>
   preset.grants.flatMap(([entity, verbs]) => verbs.map((verb) => ({ verb, entity, scope: "Tenant" as const })));
+
+/**
+ * Where each person opens when they sign in or press the logo: the page their work is on, never the platform's own Overview (asset
+ * states, grants and an event log), which means nothing to a factory. Derived from what the role can DO, not from its name, so a role
+ * the factory renames or builds itself still lands somewhere sensible. A null answer leaves the caller to decide.
+ */
+export function pieceworkLandingRouteFor(resolved: Array<{ verb: string; entity: string }>): string | null {
+  const has = (verb: string, entity: string) => resolved.some((p) => p.verb === verb && p.entity === entity);
+  // Whoever reads lots and money (owner, manager, munshi) opens on the factory dashboard.
+  if (has("Read", LOT) && has("Read", PAYMENT)) return "/lots/dashboard";
+  // Whoever gives out and takes back (a supervisor) opens on their floor.
+  if (has("Read", ENTRY) && has("Create", ENTRY)) return "/shopfloor";
+  // Whoever cuts lots (the cutting master, who has no money) opens on the lots; the store, on the fabric.
+  if (has("Create", BUNDLE)) return "/lots";
+  if (has("Read", ENTITY_PIECEWORK_ROLL)) return "/fabric";
+  if (has("Read", LOT)) return "/lots";
+  return null;
+}
