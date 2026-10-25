@@ -87,7 +87,7 @@ The system ends at ready garments. Dispatch is not in it.
 Every popup in the piece-rate screens now uses one sheet (`FormModal`): Cancel then the primary action in the footer, the refusal at the
 foot of the form, a pending label on the submit. Text glyphs used as icons were replaced by the drawn icon set.
 
-Decided, not built: the office screens (lots, fabric, costs, settings) stay in English. The chat asks for Hindi where karigars and
+Decided 2026-10-25 (owner: "you decide"), stated to the client as decision D-15 in document 2: Hindi stays on the floor screens, daily entry and slips; the office screens stay English in this release and a Hindi office interface is the first quoted next step. Decided, not built: the office screens (lots, fabric, costs, settings) stay in English. The chat asks for Hindi where karigars and
 supervisors work, and the floor screens and the daily entry have it; the owner, manager and munshi screens are read in English today.
 A language toggle on them is a contained follow-up if Stylified asks.
 
