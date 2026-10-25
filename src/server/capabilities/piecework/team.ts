@@ -222,10 +222,55 @@ export const supervisorChoices: QueryDefinition<Record<string, never>, Array<{ u
   },
 };
 
+/* ============================== set-up progress ============================== */
+
+export type SetupStep = { key: string; title: string; detail: string; done: boolean; optional: boolean; href: string; action: string };
+
+/**
+ * Where a new workspace stands, worked out from what exists (never ticked by hand): the heading on the challan, the stages and their rates, the
+ * roles, the people, the karigars and who looks after them, fabric on the shelf, opening balances, a first lot. Each step names the real
+ * screen that does it, so the list is a map and not a copy of those screens.
+ */
+export const setupProgress: QueryDefinition<Record<string, never>, { steps: SetupStep[]; done: number; required: number }> = {
+  key: "verity.piecework.setup_progress",
+  entity: ENTITY_PIECEWORK_SETTING,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const [setting, stages, roleNames, members, workers, rolls, openings, lots] = await Promise.all([
+      ctx.tx.pieceworkSetting.findFirst({ select: { challanTitle: true } }),
+      ctx.tx.pieceworkStage.findMany({ where: { active: true }, select: { defaultRateMinor: true } }),
+      ctx.tx.role.findMany({ select: { name: true } }),
+      ctx.tx.tenantMembership.count({ where: { disabledAt: null } }),
+      ctx.tx.pieceworkWorker.findMany({ where: { active: true }, select: { supervisorUserId: true } }),
+      ctx.tx.pieceworkRoll.count({ where: { cancelledAt: null } }),
+      // An opening balance that was reversed no longer counts: originals minus their reversals.
+      Promise.all([ctx.tx.pieceworkPayment.count({ where: { kind: "opening", reversesId: null } }), ctx.tx.pieceworkPayment.count({ where: { kind: "opening", reversesId: { not: null } } })]).then(([made, undone]) => made - undone),
+      ctx.tx.pieceworkLot.count({ where: { cancelledAt: null } }),
+    ]);
+    const have = new Set(roleNames.map((r) => r.name));
+    const presets = ROLE_PRESETS.filter((p) => have.has(p.name)).length;
+    const rated = stages.filter((s) => s.defaultRateMinor !== null).length;
+    const placed = workers.filter((w) => w.supervisorUserId !== null).length;
+    const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+    const steps: SetupStep[] = [
+      { key: "company", title: "Name the business on the challan", detail: setting?.challanTitle ? `Heading: ${setting.challanTitle}` : "The challan carries the company name until you set a heading and address", done: Boolean(setting?.challanTitle), optional: false, href: "/lots/settings", action: "Open production settings" },
+      { key: "stages", title: "Stages and their rates", detail: stages.length === 0 ? "No stages yet" : `${plural(stages.length, "stage")}, ${rated} with a default rate per piece`, done: stages.length > 0 && rated === stages.length, optional: false, href: "/lots/settings", action: "Open production settings" },
+      { key: "roles", title: "The factory's roles", detail: `${presets} of ${ROLE_PRESETS.length} roles made`, done: presets === ROLE_PRESETS.length, optional: false, href: "/shopfloor/team", action: "Open Team" },
+      { key: "people", title: "Add the people", detail: members <= 1 ? "Only the owner so far" : `${plural(members, "person", "people")} can sign in`, done: members > 1, optional: false, href: "/shopfloor/team", action: "Add a person" },
+      { key: "karigars", title: "Add the karigars", detail: workers.length === 0 ? "Paste the list from Excel, or add them one by one" : `${plural(workers.length, "karigar")}`, done: workers.length > 0, optional: false, href: "/karigars", action: "Import a list" },
+      { key: "supervisors", title: "Put each karigar under a supervisor", detail: workers.length === 0 ? "After the karigars are added" : `${placed} of ${workers.length} are set under a supervisor; the rest are open to any`, done: workers.length > 0 && placed === workers.length, optional: true, href: "/karigars", action: "Open karigars" },
+      { key: "fabric", title: "Enter the fabric on the shelf", detail: rolls === 0 ? "Receive the rolls with the opening stock tick, and print their labels" : `${plural(rolls, "roll")} in stock`, done: rolls > 0, optional: false, href: "/fabric", action: "Receive rolls" },
+      { key: "opening", title: "Opening balances owed to karigars", detail: openings === 0 ? "Wages owed from before Verity, entered on each karigar's page" : `${plural(openings, "opening balance")} entered`, done: openings > 0, optional: true, href: "/karigars", action: "Open karigars" },
+      { key: "lot", title: "Make the first lot", detail: lots === 0 ? "A design, a rate card, then cut it from the rolls" : `${plural(lots, "lot")} made`, done: lots > 0, optional: false, href: "/lots", action: "Open lots" },
+    ];
+    return { steps, done: steps.filter((s) => s.done && !s.optional).length, required: steps.filter((s) => !s.optional).length };
+  },
+};
 export function registerTeam(): void {
   registerCommand(installRolePresets);
   registerCommand(updateWorker);
   registerCommand(importWorkers);
   registerQuery(teamDirectory);
   registerQuery(supervisorChoices);
+  registerQuery(setupProgress);
 }

@@ -28,6 +28,7 @@ import {
   recordPayment,
   registerPieceworkCapability,
   setLotStatus,
+  setupProgress,
   supervisorChoices,
   teamDirectory,
   updateWorker,
@@ -218,6 +219,17 @@ describeDb("capability: team management (role presets, supervisor link, director
     expect(board.groups[0]!.karigars[0]!.bundles[0]).toMatchObject({ open: 10, stageLabel: "Pasting" });
     // A supervisor sees the pieces at their own stages, and never a rupee.
     expect(JSON.stringify(await executeQuery(supA, custodyBoard, {}))).not.toMatch(/rate|wage|balance|Minor/i);
+  });
+  it("works out the set-up journey from what exists", async () => {
+    const { steps, done, required } = await executeQuery(owner, setupProgress, {});
+    const by = Object.fromEntries(steps.map((s) => [s.key, s.done]));
+    // Roles, people, karigars and a lot exist; no challan heading, a stage with no default rate, no rolls, and the opening balance was reversed.
+    expect(by).toMatchObject({ company: false, stages: false, roles: true, people: true, karigars: true, supervisors: false, fabric: false, opening: false, lot: true });
+    expect(done).toBe(4);
+    expect(required).toBe(steps.filter((s) => !s.optional).length);
+    expect(steps.filter((s) => s.optional).map((s) => s.key)).toEqual(["supervisors", "opening"]);
+    // A supervisor cannot read it (no grant on the setting entity).
+    await expect(executeQuery(supA, setupProgress, {})).rejects.toThrow();
   });
   it("refuses a supervisor who can no longer sign in, and lists only active members as choices", async () => {
     await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: supBMembershipId }, data: { disabledAt: new Date() } }));

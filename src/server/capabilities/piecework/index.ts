@@ -1082,6 +1082,7 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor/scan", label: "Scan", group: "Production", order: 17.5, icon: "search", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
+      { href: "/shopfloor/setup", label: "Set up the factory", group: "Production", order: 24.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/shopfloor/team", label: "Team", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/shopfloor/custody", label: "Who holds what", group: "Production", order: 18.5, icon: "user", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
