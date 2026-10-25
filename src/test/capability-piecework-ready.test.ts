@@ -15,6 +15,7 @@ import {
   ROLE_PRESETS,
   createBundle,
   createLot,
+  dayRecap,
   defineStage,
   defineWorker,
   lotDetail,
@@ -106,6 +107,15 @@ describeDb("capability: ready garment inventory", () => {
     expect(out.balance).toBe(50);
     await expect(executeCommand(owner, recordReadyMove, { kind: "out", lotId, pieces: 51 })).rejects.toThrow(/only 50 pieces are in stock/);
     expect(await line((l) => l.number === lotNumber)).toMatchObject({ made: 90, out: 40, balance: 50 });
+  });
+
+  it("reads the day in a few figures: what was given, taken back, short, and what left as ready stock", async () => {
+    const recap = await executeQuery(owner, dayRecap, {});
+    expect(recap).toMatchObject({ given: 100, takenBack: 100, good: 90, rejected: 5, rework: 3, short: 2, readyOut: 40, pendingApprovals: 0 });
+    expect(recap.date).toBe(recap.today);
+    // A day before anything happened is empty, and a day in the future is read as today.
+    expect(await executeQuery(owner, dayRecap, { date: "2001-01-01" })).toMatchObject({ given: 0, takenBack: 0, readyOut: 0 });
+    expect((await executeQuery(owner, dayRecap, { date: "2099-01-01" })).date).toBe(recap.today);
   });
 
   it("starts stock that existed before Verity from a named opening line, which can go out too", async () => {

@@ -596,6 +596,30 @@ async function summaryFor(tx: Tx, actor: ActorContext, date: string): Promise<Da
   };
 }
 
+export type DayRecap = DaySummary & { today: string; pendingApprovals: number; readyOut: number };
+
+/**
+ * One day of the factory in a few figures, for the owner or manager to read at the end of it: what was given out and taken back, what came
+ * back short, what is late and what waits for a decision, and what left as ready stock. The day-close summary is the base, so the two can never
+ * disagree. No wage, rate or balance. A person who works at one stage sees that stage's day; a person who works at every stage sees the factory's.
+ */
+export const dayRecap: QueryDefinition<{ date?: string }, DayRecap> = {
+  key: "verity.piecework.day_recap",
+  entity: ENTRY_ENTITY,
+  input: z.object({ date: isoDate.optional() }),
+  handler: async (ctx, input) => {
+    const today = await todayFor(ctx.tx);
+    const date = input.date && input.date <= today ? input.date : today;
+    const [summary, pendingApprovals, moves] = await Promise.all([
+      summaryFor(ctx.tx, ctx.actor, date),
+      ctx.tx.pieceworkApproval.count({ where: { status: "pending" } }),
+      ctx.tx.pieceworkReadyMove.findMany({ where: { kind: "out", movedOn: asDate(date) }, select: { pieces: true, reversesId: true } }),
+    ]);
+    const readyOut = moves.reduce((s, m) => s + (m.reversesId ? -m.pieces : m.pieces), 0);
+    return { ...summary, today, pendingApprovals, readyOut };
+  },
+};
+
 export const dayPreview: QueryDefinition<Record<string, never>, { summary: DaySummary; closed: { note: string | null; lang: string } | null }> = {
   key: "verity.piecework.day_preview",
   entity: ENTITY_PIECEWORK_DAY_CLOSE,
@@ -644,4 +668,5 @@ export function registerFloor(): void {
   registerQuery(approvalsInbox);
   registerQuery(teamSetup);
   registerQuery(dayPreview);
+  registerQuery(dayRecap);
 }
