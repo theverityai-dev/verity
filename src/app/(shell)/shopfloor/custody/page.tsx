@@ -57,7 +57,7 @@ async function CustodyPage() {
                     <li key={k.workerId} className="list-none py-3 first:pt-0 last:pb-0">
                       <div className="mb-2 flex items-baseline justify-between gap-3">
                         <span className="min-w-0 truncate text-[15px] font-medium text-text">{k.name}</span>
-                        <span className="tabular shrink-0 text-[13px] text-text-secondary">{k.held} pcs · {k.oldestDays === 0 ? "today" : `${k.oldestDays} day${k.oldestDays === 1 ? "" : "s"}`}</span>
+                        <span className="tabular shrink-0 text-[13px] text-text-secondary">{k.held} {k.held === 1 ? "pc" : "pcs"} · {k.oldestDays === 0 ? "today" : `${k.oldestDays} day${k.oldestDays === 1 ? "" : "s"}`}</span>
                       </div>
                       <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
                         {k.bundles.map((b) => (
