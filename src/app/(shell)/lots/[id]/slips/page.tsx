@@ -39,6 +39,7 @@ async function SlipsPage({ params }: { params: Promise<{ id: string }> }) {
     cutOn: new Date(`${b.cutOn}T00:00:00Z`).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }),
     qr: await QRCode.toDataURL(publicUrl(`/lots/bundles/${b.id}`).toString(), { width: 276, margin: 1, errorCorrectionLevel: "M" }),
     backHref: `/lots/bundles/${b.id}`,
+    qrUrl: publicUrl(`/lots/bundles/${b.id}`).toString(),
   })));
 
   return (

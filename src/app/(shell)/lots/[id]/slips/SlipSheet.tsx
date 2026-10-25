@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { runCommand } from "@/server/actions/platform";
+import { zplFile } from "@/lib/zpl";
 import { Button, Checkbox, Panel } from "@/components/ui/primitives";
 import { SlipCard, type SlipData } from "../../bundles/[id]/slip/SlipDoc";
 
-export type SlipItem = SlipData & { id: string; /** Nothing of it has been given out: a fresh bundle that still needs its slip on it. */ fresh: boolean; /** Printed before with this button. */ printed: boolean };
+export type SlipItem = SlipData & { id: string; /** Nothing of it has been given out: a fresh bundle that still needs its slip on it. */ fresh: boolean; /** Printed before with this button. */ printed: boolean; /** What the slip's QR opens, for the label printer's file. */ qrUrl: string };
 
 const LAYOUTS = [
   { key: "full", label: "Full slip", hint: "10 cm, two across an A4 sheet" },
@@ -45,6 +46,12 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
     window.print();
     void runCommand("verity.piecework.mark_slips_printed", { bundleIds: ids }, lotHref).then(() => router.refresh());
   };
+  // A Zebra thermal printer takes one small text file (ZPL); the sticker size maps onto it. Not yet tried on a printer.
+  const zebra = () => {
+    const file = zplFile(chosen.map((s) => ({ title: s.bundleNumber, lines: [`${s.netPieces} pcs`, `${s.lotNumber} ${s.lotName}`, s.business], qr: s.qrUrl })));
+    const url = URL.createObjectURL(new Blob([file], { type: "text/plain" }));
+    const a = document.createElement("a"); a.href = url; a.download = `slips-${lotNumber}.zpl`; a.click(); URL.revokeObjectURL(url);
+  };
   const toggle = (id: string, on: boolean) => setPicked((p) => { const n = new Set(p); if (on) n.add(id); else n.delete(id); return n; });
   const compact = layout === "sticker";
 
@@ -60,6 +67,7 @@ export function SlipSheet({ slips, lotHref, lotNumber }: { slips: SlipItem[]; lo
           <div className="flex flex-col gap-5">
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="primary" disabled={chosen.length === 0} onClick={print}>Print {chosen.length === slips.length ? "all" : chosen.length} slip{chosen.length === 1 ? "" : "s"}</Button>
+              <Button variant="secondary" disabled={chosen.length === 0} title="For a Zebra thermal label printer, 50 by 30 mm. Not yet tried on a printer." onClick={zebra}>Zebra file (.zpl)</Button>
               <Link href={lotHref} className="inline-flex min-h-11 items-center rounded-[10px] px-4 text-[15px] font-semibold text-accent-ink no-underline hover:bg-[var(--color-control)]">Back to the lot</Link>
             </div>
 

@@ -27,6 +27,7 @@ async function LabelsPage({ searchParams }: { searchParams: Promise<{ ids?: stri
   const labels = await Promise.all(found.flatMap((d) => (d ? [d.roll] : [])).map(async (r) => ({
     id: r.id, number: r.number, fabric: r.fabricType, quantity: qty(r.receivedCenti, r.unit), received: shortDate(r.receivedOn),
     from: [r.supplier, r.invoiceNumber].filter(Boolean).join(" · "), business: tenant?.name ?? "",
+    qrUrl: publicUrl(`/fabric/${r.id}`).toString(),
     qr: await QRCode.toDataURL(publicUrl(`/fabric/${r.id}`).toString(), { width: 240, margin: 1, errorCorrectionLevel: "M" }),
   })));
 
