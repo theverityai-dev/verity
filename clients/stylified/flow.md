@@ -152,6 +152,4 @@ karigar profile fields in 7 as a migration of nullable columns; seed the six pre
 sign-in by phone or username follows the identity provider that production uses and needs the owner to say which (Supabase email today),
 so it stays a question until then. Not building: payroll, attendance by clock-in, shift rosters (not asked, and a Ludhiana floor pays by the piece).
 
-Production: migrations `20261024100000_piecework_flow`, `20261024200000_piecework_lot_costs` and `20261024300000_piecework_low_fabric` are
-written and applied locally; applying them to production (`npx prisma migrate deploy`) is the owner's step. All three only add tables and
-nullable columns.
+Production: the migrations `20261024100000_piecework_flow`, `20261024200000_piecework_lot_costs`, `20261024300000_piecework_low_fabric` and `20261025100000_piecework_karigar_profile` were applied by the owner on 2026-10-25 (`npx prisma migrate deploy`). All four only add tables and nullable columns. The code reaches the hosted site when the owner pushes.

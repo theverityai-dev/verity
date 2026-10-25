@@ -5,35 +5,43 @@ Five documents in the Verity document theme (ADR-053 Obsidian, print edition), a
 | # | Source | PDF |
 |---|---|---|
 | 1 | `01-proposal.html` | `pdf/01-Proposal.pdf` |
-| 2 | `02-mvp-build-and-demo-plan.html` | `pdf/02-MVP-Build-and-Demo-Plan.pdf` |
+| 2 | `02-mvp-build-and-demo-plan.html` (scope, screens and acceptance) | `pdf/02-MVP-Build-and-Demo-Plan.pdf` |
 | 3 | `03-service-terms.html` | `pdf/03-Service-Terms.pdf` |
 | 4 | `04-company-and-platform.html` | `pdf/04-Company-and-Platform.pdf` |
 | 5 | `05-technical-solution-document.html` | `pdf/05-Technical-Solution-Document.pdf` |
 | all | assembled by the build script | `pdf/Stylified-Proposal-Package.pdf` |
 
-Rebuild after any edit: `node clients/stylified/proposal/build-pdf.mjs` (needs Microsoft Edge or Chrome and an internet
-connection for the fonts). The shared theme is `verity-doc.css`. `_package.html` is generated and can be deleted.
+Rebuild after any edit: `node clients/stylified/proposal/build-pdf.mjs` (needs Microsoft Edge or Chrome and an internet connection for the
+fonts). The shared theme is `verity-doc.css`. `_package.html` is generated and can be deleted. The file names of document 2 keep their old
+names so links and the build script stay valid; its title is "Scope, screens and acceptance".
 
-## Commercial terms and the reading we recorded (2026-10-22)
+## Commercial terms (2026-10-25, replaces the 2026-10-22 offer)
 
-The owner gave: ₹25,000 + GST customization; server ₹4,500; maintenance ₹4,000; subscription ₹6,500 ("15k incl GST");
-3-month lock-in.
+The owner set two options. Both include the same software and scope; only the way of paying differs. All amounts are plus GST.
+
+| | One-time | Monthly |
+|---|---|---|
+| Option A, own it | ₹90,000 | ₹8,500 |
+| Option B, start light | ₹25,000 | ₹12,000 |
+
+Worked out, with break-even (A is cheaper in total from the 19th month) and the margin reading, in `../pricing.md`. The invoice amounts with
+18% GST are in document 3, section 02 (A: ₹1,06,200 once and ₹10,030 a month; B: ₹29,500 once and ₹14,160 a month).
 
 | Decision | Basis |
 |---|---|
-| The three recurring amounts are monthly and add to ₹15,000 | 4,500 + 4,000 + 6,500 = 15,000 exactly |
-| ₹15,000 is **per month, GST included** (₹12,711.86 + ₹2,288.14) | **Confirmed by the owner, 2026-10-22** |
-| Hosting: PlotArmour-hosted first (Verity's shared hosted deployment); a move to Stylified's own Vercel and Supabase accounts is a priced option offered later, **not promised** | Owner choice, 2026-10-22. ADR-054 (PROPOSED) parks client-owned cloud accounts (Mode D) and bars proposals that promise it until the owner reopens it; `docs/deployment/client-owned-vercel-supabase.md` lists seven open blockers |
-| If the move happens, provider bills stay inside the ₹4,500 server line (accounts in Stylified's name, billed to PlotArmour) | Owner choice, 2026-10-22. Provider floor per the research: Vercel Pro from $20 a month and Supabase Pro about $25 a month plus compute; we carry any excess, with 60 days' notice before changing the fee |
-| One-time fee is ₹29,500 (₹25,000 + 18% IGST ₹4,500), paid 50% at kickoff and 50% on go-live | PlotArmour is registered in Delhi, Stylified is in Punjab, so IGST is expected. The 50/50 split is our proposal |
-| Initial term is 3 months **from go-live** (the owner's "lock-in"); after it, month to month with 30 days' notice | Counted from the date the service starts. Stated plainly in document 3 section 1 and as one factual line in document 1; no "commitment" or ₹74,500 figure is shown |
-| Documents are value-led and sell, per the owner (2026-10-22): "dont show it as commitments and dont highligh gst included figure, sole purpose of proposals and all documents is to attract and impress" | Document 1 shows ₹25,000 + GST and ₹15,000 a month as plain figures; the GST-inclusive wording is a footnote and the ₹29,500 invoice arithmetic lives only in document 3. Terms stay accurate everywhere (the initial term and GST are not hidden), and the "not claiming" list became "where things stand, and what follows" without claiming anything unbuilt |
+| Both options are plus GST, shown as plain figures | Owner's instruction 2026-10-25; the earlier "GST included" monthly figure is gone |
+| Hosting: PlotArmour-hosted first (Verity's shared hosted deployment); a move to Stylified's own Vercel and Supabase accounts is a priced option offered later, **not promised** | Owner choice, 2026-10-22. ADR-054 parks client-owned cloud accounts (Mode D); `docs/deployment/client-owned-vercel-supabase.md` lists the open blockers |
+| One-time fee invoiced 50% at kickoff and 50% on go-live | Our proposal, unchanged |
+| Initial term 3 months **from go-live**, then month to month with 30 days' notice | Stated plainly in document 3 section 1 and as one factual line in document 1; no "commitment" figure is shown |
 | Up to 10 named users, one unit | Our proposal; more are priced separately |
-| Support hours, response targets, 4 hours a month of configuration, 7-day payment terms, liability cap of 3 months' fees | Our proposals in document 3, subject to legal review |
+| Support hours, response targets, up to 4 hours a month of configuration, 7-day payment terms, liability cap of 3 months' fees | Our proposals in document 3, subject to legal review. Under Option A consider 2 hours (see `../pricing.md`) |
 
-Not stated by the owner and therefore proposals to confirm: payment split, user limit, support hours, backup retention
-(daily, 30 days), liability cap, governing law (Delhi courts), the 30-day validity.
+Not stated by the owner and therefore proposals to confirm: payment split, user limit, support hours, backup retention (daily, 30 days),
+liability cap, governing law (Delhi courts), the 30-day validity.
 
-## Documents follow the build (2026-10-23)
+## Documents follow the build
 
-After the floor was built, documents 1, 2 and 5 were edited to say only what exists: the roles matrix matches the seeded grants (a manager may record payments and sees wages; limits apply to approvals), "mark found" was dropped from the shortage register (a found piece is a manager reversal), the approval record is kept in the piece-rate capability rather than the platform approval substrate, the language is chosen per device, alerts are cards on My floor and in Approvals, lot pictures are set up with Stylified, and a defect photograph is added right after a return is saved.
+The pack says only what exists. Rewritten 2026-10-25 for the current build: fabric rolls, the lot rate card, scan, challans, the receiver's count,
+cases, lot costing, team management, six roles, opening balances, Excel and PDF export. Not claimed: joining whole lots, Hindi on the office
+screens, dispatch, WhatsApp or SMS, offline use, a Tally export. Hosted-workspace facts (photograph storage, a supervisor on a real phone, the
+restore rehearsal) are stated as happening at go-live, not as done.

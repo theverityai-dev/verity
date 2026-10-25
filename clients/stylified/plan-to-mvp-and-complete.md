@@ -88,7 +88,7 @@ completes give-out, take-back and scan on a phone at 390 px.
 6. **Hypercare**: a named person answers within the hour for the first two weeks, then the 4 hours a month in the service terms.
 7. Go-live gate: restore rehearsed on the hosted site, three lots through every stage with no manual correction, opening balances signed off by the owner.
 
-Commercial hooks already agreed: ₹25,000 + GST one time (50% at kickoff, 50% at go-live), ₹15,000 a month GST included from go-live, three-month initial term.
+Commercial terms (2026-10-25, replacing the 2026-10-22 offer; worked out in `pricing.md`): Option A ₹90,000 + GST once and ₹8,500 + GST a month, or Option B ₹25,000 + GST once and ₹12,000 + GST a month; same scope; one-time invoiced 50% at kickoff and 50% at go-live; three-month initial term from go-live.
 
 ## 5. Phase 3: a complete Verity for him
 

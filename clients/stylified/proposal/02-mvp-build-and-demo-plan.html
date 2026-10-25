@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>MVP build and demo plan: Verity for Stylified</title>
+<title>Scope, screens and acceptance: Verity for Stylified</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="verity-doc.css">
@@ -14,12 +14,12 @@
   <div class="cover-photo" style="background-image:url('../assets/web/banner-fabric-rolls.webp')"></div>
   <div class="cover-inner">
     <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div>
-    <h1>MVP build and demo plan</h1>
-    <p class="sub">What gets built for Stylified, who sees which screen, how the demonstration runs, and how we agree it is done.</p>
+    <h1>Scope, screens and acceptance</h1>
+    <p class="sub">What is in the Stylified workspace, who sees which screen, how the demonstration runs, and how we agree it is done.</p>
     <div class="cover-meta">
       <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
       <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
-      <div><span class="mono">Date</span><b>22 October 2026</b></div>
+      <div><span class="mono">Date</span><b>25 October 2026</b></div>
       <div><span class="mono">Document</span><b>2 of 5</b></div>
     </div>
   </div>
@@ -28,219 +28,243 @@
 
 <!--DOC:body-->
 <main>
-<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 2 of 5 · MVP build and demo plan</span></div>
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 2 of 5 · Scope, screens and acceptance</span></div>
 
 <h1 class="page-title">What we build, and for whom</h1>
-<p class="lede">The MVP is the smallest Verity workspace that lets the owner, a manager, a supervisor and the munshi run a real lot from cutting to ready stock, with money and quality kept honest. It reuses a working core and adds what the floor needs: supervisor screens, a role set, approvals, photographs and bilingual labels.</p>
+<p class="lede">The workspace runs a real lot from the fabric roll to the ready garment, with every handover counted by both sides, money and quality kept honest, and the cost of the lot known. It is built from your requirement sheet (version 2.0, 23 October) and from the working chat with Ayushmaan Gaur on how the floor actually moves.</p>
 
-<h2><span class="num">01</span>What the demonstration has to prove</h2>
+<h2><span class="num">01</span>The flow, in seven steps</h2>
+<table>
+<thead><tr><th>#</th><th>Step</th><th>What happens</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Receive rolls</td><td>Each roll gets a number and a printed QR label: fabric type, quantity, supplier, invoice. A repeated invoice is warned before it is saved</td></tr>
+<tr><td>2</td><td>Make a lot</td><td>A design, a planned quantity, and a rate card: what each stage pays per piece. A stage can be skipped for a lot</td></tr>
+<tr><td>3</td><td>Cut</td><td>Choose the rolls, say how much fabric went in and how many pieces came out. Verity makes the numbered bundles, each with a slip and a QR</td></tr>
+<tr><td>4</td><td>Give out</td><td>Scan a bundle, pick the worker, confirm the count. A challan prints for the worker</td></tr>
+<tr><td>5</td><td>Take back</td><td>Scan the bundle and count what returned: good, rejected, rework, short. <strong>The receiver's count is the truth.</strong> A shortage opens a case on the worker who held the pieces and raises a charge request</td></tr>
+<tr><td>6</td><td>Next stage</td><td>Good pieces flow to the next stage in the order you set. The last stage's good pieces are ready garments</td></tr>
+<tr><td>7</td><td>Pay</td><td>Wages come from the lot's rate card times accepted pieces. Advances, deductions, payments and the balance live on each worker. The lot's cost is fabric plus wages plus other costs, less charges recovered</td></tr>
+</tbody></table>
+<p class="footnote">The system ends at ready garments. Dispatch is outside release one, as your own sheet says (FR-020).</p>
+
+<h2><span class="num">02</span>What the demonstration has to prove</h2>
 <table>
 <thead><tr><th>To whom</th><th>They should leave believing</th></tr></thead>
 <tbody>
-<tr><td>Owner</td><td>"I can see where every piece is, what is late and what I owe, without asking anyone."</td></tr>
+<tr><td>Owner</td><td>"I can see where every roll and piece is, what is late, what I owe and what each lot cost, without asking anyone. I decide who can do what."</td></tr>
 <tr><td>Manager</td><td>"Deductions and write-offs come to me with the facts and a photograph, and I can say yes or no from my phone."</td></tr>
-<tr><td>Supervisor</td><td>"My screen is my stages only. Receiving a bundle takes a minute and I cannot make a counting mistake without being told."</td></tr>
-<tr><td>Munshi</td><td>"I enter once, in Hindi or English, and the slip is printed. Nothing is typed twice."</td></tr>
+<tr><td>Supervisor</td><td>"I scan, I count, the challan prints. My screen is my stages and my karigars. I cannot make a counting mistake without being told."</td></tr>
+<tr><td>Munshi, store, cutting master</td><td>"I enter once, in Hindi or English, and the label, slip and challan are printed. Nothing is typed twice."</td></tr>
 </tbody></table>
 
-<h2><span class="num">02</span>What already exists</h2>
-<p>These parts of the cycle are built and covered by automated tests (28 logic tests and 30 database tests for the piece-rate core and the floor, plus the platform's tenancy and permission tests). They have been opened in a browser on a local copy with fictional data. They are <strong>not yet on a Stylified workspace</strong>.</p>
-<table>
-<thead><tr><th>Area</th><th>What works today</th></tr></thead>
-<tbody>
-<tr><td>Lots</td><td>Draft, active, on hold, completed, closed; planned against cut pieces; due dates; a lot cannot complete while pieces are pending or in rework</td></tr>
-<tr><td>Bundles</td><td>Numbered B-0001 onward without gaps; net pieces; printable bilingual slip with a QR that opens the bundle</td></tr>
-<tr><td>Movement</td><td>Issue a bundle at a stage to a karigar or outside unit with a due date; take it back split into good, rejected, rework and short, with a live "accounted for X of Y" line; rework waits in a pool and is reissued</td></tr>
-<tr><td>Wages and money</td><td>Wage basis per karigar and per stage (issued, returned or accepted good), advances, recoveries, deductions with a reason, payments with mode and reference; corrections by reversal only</td></tr>
-<tr><td>Owner views</td><td>Factory dashboard with a ring gauge of where the pieces are, a floor board by stage, what is late, what is owed; eight reports with CSV download</td></tr>
-<tr><td>Platform</td><td>Per-company data isolation, sign-in, role-based permissions, audit trail, bilingual slip, dark and light themes</td></tr>
-</tbody></table>
-
-<h2><span class="num">03</span>MVP scope</h2>
+<h2><span class="num">03</span>Scope</h2>
+<p>These parts are built and covered by automated tests (more than 85 tests on the piece-rate rules, the floor, fabric and costing, team management and company isolation, besides the platform's own tenancy and permission tests). They have been opened in a browser on a demonstration workspace with fictional data. <strong>On your workspace they run from week one.</strong></p>
 <table>
 <thead><tr><th>Item</th><th>Who it is for</th><th>Status</th></tr></thead>
 <tbody>
-<tr><td>Role set: Owner, Manager, Supervisor, Munshi, with the matrix in section 4</td><td>All</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Supervisor stage assignment (which stages a supervisor looks after)</td><td>Owner sets, Supervisor limited by it</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Supervisor screens S1 to S6 (section 5)</td><td>Supervisor</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Approvals: deduction, shortage write-off, lot hold or close, with limits the owner sets</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Photographs: defect photos on rejected or rework entries; lot pictures set up with you at go-live</td><td>Munshi, Supervisor, Owner</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Bilingual Hindi and English labels on daily entry and all supervisor screens</td><td>Munshi, Supervisor</td><td><span class="tag in">built</span></td></tr>
-<tr><td>In-app alerts for late returns, open shortages and requests waiting</td><td>Supervisor, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Speed work: fewer database round trips per page, instant press feedback, a loading bar</td><td>All</td><td><span class="tag new">in progress</span></td></tr>
-<tr><td>Lots, bundles, slips, issue and return, rework, wages, money, dashboard, reports</td><td>Owner, Manager, Munshi</td><td><span class="tag in">exists</span></td></tr>
-<tr><td>Seeded demonstration with fictional data and a reset command</td><td>All</td><td><span class="tag in">built</span></td></tr><tr><td>Half-day training; go-live on Stylified's workspace</td><td>All</td><td><span class="tag new">at go-live</span></td></tr>
+<tr><td>Fabric: receive rolls, QR labels, roll balances, low-stock warning, duplicate invoice warning, opening stock</td><td>Store, Munshi, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Lots, lot rate card with skippable stages, one-step cut from chosen rolls, numbered bundles</td><td>Munshi, Cutting master, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Slips and labels: bundle slip full or sticker size, choose which to print, print the day's challans together, print shelf roll labels together</td><td>All who print</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Scan with the phone camera (or a hand scanner, or a typed number): opens a bundle, roll, lot or challan and shows the move open to this person now</td><td>Supervisor, Store, Cutting master</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Give out with the karigar's count and a printed challan; take back with the receiver's count and the factory's own reasons</td><td>Supervisor, Munshi, Manager</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Cases for short pieces, charge requests, approvals within limits the owner sets, a change history</td><td>Supervisor, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Wages, advances, recoveries, deductions, payments, opening balance owed, karigar account</td><td>Munshi, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Lot costing with shared bills, cost per good piece, a refusal of costs that would be counted twice</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Team: people as cards by role, add a person, change role and stages, reset a password, switch off and on, six role presets</td><td>Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Karigar profile, supervisor per karigar, a pasted-from-Excel karigar list</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Reports led by graphics with Excel, CSV and Print or PDF; factory dashboard; ready garments</td><td>Owner, Manager, Munshi</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Photographs: defect photos on rejected or rework entries, lot pictures set up with you</td><td>Supervisor, Munshi, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Hindi and English on the floor screens, daily entry and every slip</td><td>Supervisor, Munshi</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Your own workspace: roles, people, stages and rates, opening balances, challan heading</td><td>All</td><td><span class="tag new">week 1</span></td></tr>
+<tr><td>A test lot on your floor, training in Hindi and English, a restore rehearsed in front of you, go-live</td><td>All</td><td><span class="tag new">weeks 2 to 4</span></td></tr>
 </tbody></table>
 
 <h2><span class="num">04</span>Roles and what each can do</h2>
-<p>Permissions are checked on the server for every action, never only by hiding a button. "Own stages" means only the stages the owner has assigned to that supervisor.</p>
+<p>Permissions are checked on the server for every action, never only by hiding a button. "Own" means only the stages the owner has assigned to that supervisor, and the karigars set under them or under nobody yet. A role is only a list of permissions, so Stylified can change any of them on the Roles screen.</p>
 <table>
-<thead><tr><th>Action</th><th>Owner</th><th>Manager</th><th>Supervisor</th><th>Munshi</th></tr></thead>
+<thead><tr><th>Action</th><th>Owner</th><th>Manager</th><th>Supervisor</th><th>Munshi</th><th>Store</th><th>Cutting</th></tr></thead>
 <tbody>
-<tr><td>See the factory dashboard and all lots</td><td>Yes</td><td>Yes</td><td>Yes, without any money</td><td>Yes</td></tr>
-<tr><td>See wage rates, wages and balances</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
-<tr><td>Cut a bundle, print a slip</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
-<tr><td>Give a bundle out (issue)</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
-<tr><td>Take a bundle back and inspect (return)</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
-<tr><td>Reissue rework</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
-<tr><td>Raise a shortage</td><td>Yes</td><td>Yes</td><td>Own stages</td><td>Yes</td></tr>
-<tr><td>Write off a shortage</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td></tr>
-<tr><td>Record an advance, recovery or payment</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td></tr>
-<tr><td>Record a deduction</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td></tr>
-<tr><td>Reverse a wrong entry (with a reason)</td><td>Yes</td><td>Yes</td><td>Own entries, same day</td><td>Own entries, same day</td></tr>
-<tr><td>Activate, hold or complete a lot</td><td>Yes</td><td>Yes</td><td>Request a hold</td><td>No</td></tr>
-<tr><td>Close a lot</td><td>Yes</td><td>Approves within limit</td><td>No</td><td>No</td></tr>
-<tr><td>Lot reports and costing</td><td>All</td><td>All</td><td>Quantity reports only; costing and wages never</td><td>All</td></tr>
-<tr><td>Users, roles, stage assignments, limits</td><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>See the factory dashboard and lots</td><td>Yes</td><td>Yes</td><td>Yes, no money</td><td>Yes</td><td>Lots, bundles</td><td>Lots, bundles</td></tr>
+<tr><td>See wage rates, wages and balances</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Receive rolls, print roll labels, move rolls</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>See and move</td></tr>
+<tr><td>Set a lot's rate card</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Cut a lot, print slips</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Give out, take back, rework</td><td>Yes</td><td>Yes</td><td>Own</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Open a case, raise a shortage</td><td>Yes</td><td>Yes</td><td>Own</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Write off a shortage; record a deduction</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td><td>No</td><td>No</td></tr>
+<tr><td>Record an advance, recovery or payment</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Reverse a wrong entry (with a reason)</td><td>Yes</td><td>Yes</td><td>Own, same day</td><td>Own, same day</td><td>No</td><td>No</td></tr>
+<tr><td>Hold or complete a lot</td><td>Yes</td><td>Yes</td><td>Request a hold</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Close a lot</td><td>Yes</td><td>Approves within limit</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Lot costing and cost reports</td><td>Yes</td><td>Yes</td><td>Never</td><td>Yes</td><td>No</td><td>No</td></tr>
+<tr><td>Change history</td><td>Yes</td><td>Yes</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>People, roles, stage assignment, limits, production settings</td><td>Yes</td><td>View</td><td>No</td><td>No</td><td>No</td><td>No</td></tr>
 </tbody></table>
-<p class="footnote">The limits a manager may approve alone (a rupee amount for deductions, a number of pieces for write-offs and lot closes) are set by the owner on the Team and limits screen; above them only the owner can approve. Nobody can decide their own request. The workbook's matrix is confirmed with Stylified at kickoff.</p>
+<p class="footnote">The limits a manager may approve alone (a rupee amount for deductions, a number of pieces for write-offs and lot closes) are set by the owner on the Team screen; above them only the owner can approve. Nobody can decide their own request. Your sheet's role matrix is confirmed with Stylified at kickoff.</p>
 
-<h2><span class="num">05</span>The supervisor screens</h2>
-<p>Supervisors work standing on the floor with a phone, so these screens are designed phone-first: one task per screen, large touch targets, counts entered with plus and minus controls, and no wage figures anywhere. On a desktop they use the same layout, wider.</p>
+<h2><span class="num">05</span>The screens</h2>
+<p>Supervisors work standing on the floor with a phone, so their screens are phone-first: one task per screen, large touch targets, counts entered with plus and minus controls, and no wage figure anywhere. On a desktop they use the same layout, wider.</p>
 
-<div class="screen"><h3>S1 · My floor</h3><div class="mono who">Supervisor · phone and desktop</div>
+<div class="screen"><h3>Scan</h3><div class="mono who">Supervisor, Store, Cutting master · phone</div>
 <ul>
-<li>The stages this supervisor looks after, as chips, and today's date.</li>
-<li>One ring gauge: pieces in my stages, split into out with karigars, waiting to be issued, rework and short.</li>
-<li>"Late and due today": one card per open issue, showing the bundle, the karigar, pieces still out and the due date. Tapping a card opens S2 for that issue.</li>
-<li>Two big buttons: <em>Take back</em> (S2) and <em>Give out</em> (S3).</li>
-<li>Alerts for this supervisor's stages at the top, tappable.</li>
+<li>A viewfinder. Point the camera at a slip, a roll label or a challan, or type the number, or use a hand scanner.</li>
+<li>A card for what was scanned, with its one next action for this person: give out, take back, or open the roll.</li>
 </ul></div>
 
-<div class="screen"><h3>S2 · Receive and inspect</h3><div class="mono who">Supervisor · phone first</div>
+<div class="screen"><h3>My floor</h3><div class="mono who">Supervisor · phone and desktop</div>
 <ul>
-<li>Choose the issue coming back (cards grouped by karigar, each showing pieces out).</li>
-<li>Enter good, rejected, rework and short with plus and minus steppers. A live line reads "accounted for 96 of 98, 2 will stay open"; it turns red if the total is more than the pieces out, and Save stays disabled.</li>
-<li>Rejected and rework need a reason (stitch defect, measurement, stain, hole, other). Right after saving, a photograph can be taken with the phone camera and attached to the entry.</li>
-<li>Saving writes one entry that cannot be edited later, only reversed with a reason (a supervisor reverses their own entry on the same day; the manager any entry). If rejected pieces would justify a wage deduction, the screen offers "Request deduction", which goes to the manager.</li>
+<li>The stages this supervisor looks after, and today's date. A gauge of pieces in these stages: out with karigars, waiting, rework, short.</li>
+<li>"Late and due today": one card per open issue with the bundle, karigar, pieces still out and due date.</li>
+<li>Alerts for these stages, tappable: late returns, open shortages, requests waiting.</li>
 </ul></div>
 
-<div class="screen"><h3>S3 · Give out</h3><div class="mono who">Supervisor · phone and desktop</div>
+<div class="screen"><h3>Give out and take back</h3><div class="mono who">Supervisor · phone first</div>
 <ul>
-<li>Bundles waiting at my stage appear as cards with their pieces and the lot's cover photo.</li>
-<li>Pick a karigar (the screen shows what they already hold and whether a rate is set), set the due date, and give out. The wage basis defaults to the karigar's usual and can be changed for one job.</li>
-<li>Rework waiting in the pool is reissued from the same screen and carries its own "rework" flag.</li>
+<li>Give out: pick the karigar (from the supervisor's own list), confirm the count they accept, set a due date. The wage basis defaults to the karigar's and can be changed for one job. A challan prints.</li>
+<li>Take back: enter good, rejected, rework and short with plus and minus. A live line reads "accounted for 96 of 98, 2 will stay open" and turns red if the total is more than is out; Save stays disabled.</li>
+<li>Rejected and rework need a reason from your own list, and a photograph can be taken right after saving.</li>
+<li>Saving writes one entry that cannot be edited, only reversed with a reason.</li>
 </ul></div>
 
-<div class="screen"><h3>S4 · Rework and shortage register</h3><div class="mono who">Supervisor, Manager</div>
+<div class="screen"><h3>Cases</h3><div class="mono who">Supervisor, Manager, Owner</div>
 <ul>
-<li>Every open rework piece by bundle and age, with the reason and photograph from when it came back. One tap reissues it.</li>
-<li>Every open shortage (pieces that did not come back and cannot be found). The supervisor can request a write-off, which goes to the manager with the history. A piece that turns up later is corrected by the manager reversing the return and entering it again.</li>
-<li>Nothing here changes a good count: rework is not output until it is redone and accepted.</li>
+<li>Every shortage as a case, oldest first: who held the pieces, how many, which bundle, who recorded it, what was decided, by whom and when.</li>
+<li>A case opens a charge request for the lost pieces. It is decided by the manager or owner within their limits; a piece that turns up later is corrected by reversal.</li>
 </ul></div>
 
-<div class="screen"><h3>S5 · Day close</h3><div class="mono who">Supervisor → Owner and Manager</div>
+<div class="screen"><h3>Day close</h3><div class="mono who">Supervisor → Owner and Manager</div>
 <ul>
-<li>A one-screen summary of the day for my stages: pieces given, taken back, good, rejected, rework, short, and what is late.</li>
-<li>A short handover note in Hindi or English. Submitting it freezes the summary for the owner and manager to read.</li>
-<li>Open warnings (a late return, an unreconciled shortage) are listed but do not block the close.</li>
+<li>A one-screen summary of the day for these stages: given, taken back, good, rejected, rework, short, and what is late.</li>
+<li>A short handover note in Hindi or English. Submitting freezes the summary for the owner and manager to read.</li>
 </ul></div>
 
-<div class="screen"><h3>S6 · Karigar quick view</h3><div class="mono who">Supervisor</div>
+<h3>Manager and office screens</h3>
+<div class="screen"><h3>Approvals</h3><div class="mono who">Manager, Owner</div>
 <ul>
-<li>For a karigar: pieces held now, due dates, today's returns, and their reject and rework rate over the last 30 days. No rates, wages or balances.</li>
-</ul></div>
-
-<h3>Manager screens</h3>
-<div class="screen"><h3>M1 · Approvals</h3><div class="mono who">Manager, Owner</div>
-<ul>
-<li>One inbox: deduction requests, shortage write-offs, lot hold and close. Each shows the facts (bundle, karigar, amount or pieces, the photograph, who asked) and two buttons, approve and decline with a reason.</li>
+<li>One inbox: deduction requests, write-offs, lot hold and close, charge requests. Each shows the facts and the photograph, and two buttons: approve, and decline with a reason.</li>
 <li>Anything above the manager's limit is shown but only the owner can approve it.</li>
 </ul></div>
-<div class="screen"><h3>M2 · Limits and assignments</h3><div class="mono who">Owner</div>
+<div class="screen"><h3>Fabric</h3><div class="mono who">Store, Munshi, Manager, Owner</div>
 <ul>
-<li>Set the rupee limits for manager approvals, assign stages to each supervisor, and see each supervisor's day closes.</li>
+<li>Stock by fabric with a balance ring, roll cards with what is left on each, a flag on any fabric under the level you set. Receive many rolls in one sheet; print every label together.</li>
+</ul></div>
+<div class="screen"><h3>Lots</h3><div class="mono who">Munshi, Cutting master, Manager, Owner</div>
+<ul>
+<li>A journey from rolls to cut, stages and ready; the rate card; one-step cut with the slips; the bundles; the lot's cost.</li>
+</ul></div>
+<div class="screen"><h3>Karigars</h3><div class="mono who">Manager, Munshi, Owner</div>
+<ul>
+<li>People cards with what each holds, what is owed, who looks after them. A profile (joined, ID note, emergency contact), rates per stage, and the account: wages, advances, deductions, payments, opening balance. Import a whole list pasted from Excel.</li>
+</ul></div>
+<div class="screen"><h3>Team and production settings</h3><div class="mono who">Owner</div>
+<ul>
+<li>People as cards by role: add a person in one sheet, change a role, assign stages, set a new password, switch off. Manager limits. The roles and what each is for.</li>
+<li>Stages and their default rates, the charge for a lost piece, reasons in two languages, the low-fabric level, the challan heading.</li>
+</ul></div>
+<div class="screen"><h3>Reports and change history</h3><div class="mono who">Owner, Manager, Munshi</div>
+<ul>
+<li>Lot status, where every bundle is, work in hand, wages, quality, production by stage, costing, ready garments. Each with Excel, CSV and Print or PDF, and totals that match the screen.</li>
+<li>Change history: who did what and when, newest first, each line opening its record.</li>
 </ul></div>
 
-<h2><span class="num">06</span>The fourteen build decisions</h2>
-<p>Your requirement sheet left fourteen questions open. We decided each from the sheet's own suggested default, and each can be changed by configuration, not by a rebuild. <strong>Please confirm or change them at kickoff.</strong></p>
+<h2><span class="num">06</span>The decisions we made from your sheet</h2>
+<p>Your sheet left questions open. We decided each from the sheet's own suggested default, and each can be changed by configuration, not by a rebuild. <strong>Please confirm or change them at kickoff.</strong></p>
 <table>
-<thead><tr><th>ID</th><th>Decision</th><th>Applies to</th></tr></thead>
+<thead><tr><th>ID</th><th>Decision</th><th>State</th></tr></thead>
 <tbody>
-<tr><td>D-01</td><td>Bundle quantity is free per bundle; no mandatory size split; an optional size-mix note</td><td>MVP</td></tr>
-<tr><td>D-02</td><td>Wage basis is set per karigar and stage and can be overridden on one issue: issued, returned or accepted good</td><td>MVP</td></tr>
-<tr><td>D-03</td><td>No automatic wage deduction for short or rejected pieces; the system flags it for an approved deduction</td><td>MVP</td></tr>
-<tr><td>D-04</td><td>An advance is recovered only by an explicit entry of a chosen amount, never silently</td><td>MVP</td></tr>
-<tr><td>D-05</td><td>Each cost category is a separate entry with an "included in another rate" flag to stop double counting</td><td>Phase 2</td></tr>
-<tr><td>D-06, D-07</td><td>The labels "Thread" and "Side Feed Up" are data you can change without code</td><td>Phase 2</td></tr>
-<tr><td>D-08</td><td>A movement names a process and a karigar, unit or place; no separate floor or table master yet</td><td>MVP</td></tr>
-<tr><td>D-09</td><td>Split and join allocate cost by quantity or an approved percentage that always sums to 100</td><td>Phase 2</td></tr>
-<tr><td>D-10</td><td>Fabric inward takes date, rate and amount as optional; lot fabric cost is metres used times the inward rate</td><td>Phase 2</td></tr>
-<tr><td>D-11</td><td>Online-first web app; no offline mode in this phase</td><td>MVP</td></tr>
-<tr><td>D-12</td><td>Opening ready stock can be entered on launch day as an opening adjustment</td><td>MVP</td></tr>
-<tr><td>D-13</td><td>Owner full; Manager limited by approval limits; Supervisor scoped to assigned stages (section 4)</td><td>MVP</td></tr>
-<tr><td>D-14</td><td>Dispatch (lot, packet, quantity, party, transport reference) can be switched off per workspace</td><td>Phase 2</td></tr>
+<tr><td>D-01</td><td>Bundle quantity is free per bundle; no mandatory size split; an optional size-mix note</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-02</td><td>Wage basis is set per karigar and stage and can be overridden on one issue: issued, returned or accepted good. A lot's rate card comes first, then the worker's own rate, then the stage default</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-03</td><td>No automatic wage deduction for short or rejected pieces. A charge request goes to the manager or owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-04</td><td>An advance is recovered only by an explicit entry of a chosen amount, never silently</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-05</td><td>Each cost category is a separate entry; a cost named like fabric, wages or a stage is refused because those are already counted</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-06, D-07</td><td>The labels "Thread" and "Side Feed Up" are data you can change without code (cost categories, in two languages)</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-08</td><td>A movement names a stage and a karigar, unit or place; no separate floor or table master</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-09</td><td>Joining or splitting lots allocates cost by pieces or an approved percentage that always sums to 100. Bundles can be split and joined at the cutting table today; lots are a next step</td><td><span class="tag later">next step</span></td></tr>
+<tr><td>D-10</td><td>Fabric inward takes date, rate and amount as optional; a lot's fabric cost is what was used times the roll's invoice rate</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-11</td><td>Online-first web app; no offline mode in this release</td><td><span class="tag in">decided</span></td></tr>
+<tr><td>D-12</td><td>Opening fabric stock and each karigar's opening balance owed or advance given are entered on launch day. Opening ready garments are agreed with you at kickoff</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-13</td><td>Owner full; manager limited by approval limits; supervisor scoped to assigned stages and karigars (section 4)</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-14</td><td>Dispatch is outside release one, as your sheet says; it can be added later as a scope change</td><td><span class="tag out">out of scope</span></td></tr>
 </tbody></table>
 
-<h2><span class="num">07</span>After the MVP: what is quoted separately</h2>
+<h2><span class="num">07</span>After go-live: what is quoted separately</h2>
 <table>
 <thead><tr><th>Item</th><th>Why it waits</th></tr></thead>
 <tbody>
-<tr><td>Fabric inward and the metre ledger (decimal quantities, issue to lot, returns, adjustments)</td><td>Needs a new kind of quantity (metres) and a stock ledger of its own</td></tr>
-<tr><td>Twelve-category lot costing with cost per good piece</td><td>Depends on fabric and on your cost categories</td></tr>
-<tr><td>Packing, ready stock and dispatch</td><td>Needs parties, packets and transport references</td></tr>
-<tr><td>Bundle and lot split or join with cost allocation</td><td>Depends on costing</td></tr>
-<tr><td>Full Hindi interface with a language switch</td><td>Touches every screen; the MVP is bilingual on entry and supervisor screens only</td></tr>
-<tr><td>Store Manager role, configurable alert thresholds, an audit viewer, native Excel and PDF export, barcode scanning</td><td>Each is a separate piece of work</td></tr>
-<tr><td>Move of the workspace to Stylified's own Vercel and Supabase accounts</td><td>Needs install steps we have not yet scripted or validated (the database runtime role, the first-operator setup, scheduled jobs, file backups); quoted once validated. See document 1, section 2</td></tr>
+<tr><td>Join or link whole lots, with cost re-allocated</td><td>Rewrites cost across lots; needs your approval rules first</td></tr>
+<tr><td>A Hindi interface on the office screens, with a language switch</td><td>Touches every office screen, report and error; the floor, daily entry and slips are bilingual already</td></tr>
+<tr><td>Packing, packets, parties, dispatch</td><td>Outside release one by your sheet; needs parties and transport references</td></tr>
+<tr><td>WhatsApp or SMS: a daily summary, the challan, the wage slip</td><td>Needs a provider you choose and who pays it</td></tr>
+<tr><td>Leave and cover for supervisors, a roll stock-take by scanning, label-printer support, a print queue</td><td>Each is a separate piece of work</td></tr>
+<tr><td>Tally voucher export, supplier and party master, GST job-work challan for outside units</td><td>Needs your accountant's format</td></tr>
+<tr><td>Style and size master with buyer orders; offline scanning; a second unit</td><td>New modules; offline only if the test lot shows signal drops</td></tr>
+<tr><td>Move of the workspace to Stylified's own Vercel and Supabase accounts</td><td>Needs install steps we have not yet scripted or validated; quoted once validated</td></tr>
 </tbody></table>
 
 <h2><span class="num">08</span>What changes under the hood</h2>
 <p>For readers who want to know what "customization" means in practice. Detail is in document 5.</p>
 <ul>
-<li><strong>Roles.</strong> Four roles are created from permissions (an action on a record type within a scope). No role name is fixed in the code.</li>
-<li><strong>Stage assignment.</strong> A small record links a supervisor to the stages they look after. The piece-rate commands check it before accepting an issue or a return from a supervisor. The platform's own scope list is not changed.</li>
-<li><strong>Approvals.</strong> A request record (deduction, write-off, hold, close) with a state, an amount or quantity, the people involved and the decision. The request is kept inside the piece-rate capability, with the same company isolation as every other record; approving applies the ordinary change (a deduction entry, a lot status) through the same rules as any other user.</li>
-<li><strong>Photographs.</strong> A defect photograph is platform Evidence about the return entry, uploaded in two steps and checked before it is recorded, stored in the platform file store with the same company isolation as every other record. Lot pictures are set up with you.</li>
-<li><strong>Bilingual labels.</strong> A small label catalogue for the daily-entry and supervisor screens; the language is chosen on each device and remembered there.</li>
-<li><strong>Alerts.</strong> Late returns, open shortages and requests waiting for a decision are shown as alert cards on My floor and in Approvals. No SMS or WhatsApp in the MVP.</li>
+<li><strong>Roles.</strong> Six roles are made from permissions (an action on a record type within a scope), installed once per workspace and editable. No role name is fixed in the code.</li>
+<li><strong>Stage and karigar scope.</strong> A small record links a supervisor to the stages they look after, and a karigar can be set under a supervisor. The commands that give out and take back check both, for every caller.</li>
+<li><strong>Rate card.</strong> A rate per stage for each lot, taken first; then the worker's own rate; then the stage's default. The rate used is copied onto each entry, so a later change never rewrites history.</li>
+<li><strong>Rolls and cost.</strong> A roll carries its invoice rate. Fabric used by a lot is recorded when it is cut, and the lot's cost is built from the records, never typed.</li>
+<li><strong>Cases and approvals.</strong> A shortage opens a case on the worker who held the pieces. Approving applies the ordinary change through the same rules as any other user.</li>
+<li><strong>Photographs.</strong> A defect photograph is platform evidence about the entry, uploaded in two steps and checked before it is recorded.</li>
+<li><strong>Bilingual labels.</strong> A label catalogue for the floor screens and daily entry; the language is chosen on each device and remembered there.</li>
 </ul>
 
 <h2><span class="num">09</span>The demonstration</h2>
-<p>About fifteen minutes, on fictional data that includes the reconciliation from your own sheet (100 pieces: 94 good, 2 rejected, 1 rework, 2 short, 1 still open), one late outside unit and one lot on hold. A reset command returns the workspace to this state.</p>
+<p>About fifteen minutes, on fictional data that includes the reconciliation from your own sheet (100 pieces: 94 good, 2 rejected, 1 rework, 2 short, 1 still open), one late outside unit and one lot that skips a stage. A reset command returns the workspace to this state.</p>
 <table>
 <thead><tr><th>#</th><th>Who</th><th>Scene</th><th>Shows</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>Owner</td><td>Open the factory dashboard</td><td>Ring gauge, what is late, what is owed, the floor by stage</td></tr>
-<tr><td>2</td><td>Munshi</td><td>Cut a bundle, print the slip, give it to a karigar</td><td>Gapless numbering, bilingual slip with QR, due date</td></tr>
-<tr><td>3</td><td>Supervisor (phone)</td><td>My floor, then take a bundle back</td><td>Stage-scoped view, counting steppers, "accounted for 96 of 98", a photograph on a rejected piece</td></tr>
-<tr><td>4</td><td>Supervisor</td><td>Try to take back more pieces than are out</td><td>The screen refuses with the figures</td></tr>
-<tr><td>5</td><td>Supervisor</td><td>Reissue the rework; request a write-off for a shortage</td><td>Rework flag, shortage register, request to the manager</td></tr>
-<tr><td>6</td><td>Manager (phone)</td><td>Approve a deduction and decline a write-off</td><td>Approvals inbox with the photograph and the facts</td></tr>
-<tr><td>7</td><td>Supervisor</td><td>Close the day with a Hindi note</td><td>Day summary the owner can read</td></tr>
-<tr><td>8</td><td>Owner</td><td>Open the karigar's account and the reports</td><td>Wages on the agreed basis, advance recovered, CSV download</td></tr>
-<tr><td>9</td><td>Supervisor</td><td>Try to open wages</td><td>Refused: supervisors never see money</td></tr>
+<tr><td>1</td><td>Store</td><td>Receive three rolls and print the labels</td><td>Roll numbers, QR labels, balance per fabric, duplicate invoice warning</td></tr>
+<tr><td>2</td><td>Munshi, cutting master</td><td>New lot, rate card with a skipped stage, cut from the rolls, print sticker slips</td><td>Gapless numbering, fabric used, slips full or sticker</td></tr>
+<tr><td>3</td><td>Supervisor (phone)</td><td>Scan a bundle, give it out, take the challan from the printer</td><td>Scan, the karigar's count, the challan</td></tr>
+<tr><td>4</td><td>Supervisor</td><td>Take back 98 of 100</td><td>The receiver's count, a case on the worker, a charge request, a photograph on a rejected piece</td></tr>
+<tr><td>5</td><td>Supervisor</td><td>Try to take back more pieces than are out</td><td>The screen refuses, with the figures</td></tr>
+<tr><td>6</td><td>Manager (phone)</td><td>Approve a charge and decline a write-off</td><td>Approvals inbox with the facts, within limits</td></tr>
+<tr><td>7</td><td>Owner</td><td>Open the lot's cost and the karigar's account; download a report to Excel</td><td>Cost per good piece, wages on the lot's rate, totals that match</td></tr>
+<tr><td>8</td><td>Owner</td><td>Team: add a supervisor, give stages, set karigars under them</td><td>Roles, stages, the supervisor's own list</td></tr>
+<tr><td>9</td><td>Supervisor</td><td>Close the day with a Hindi note; try to open wages</td><td>The day summary; money is refused to a supervisor</td></tr>
 </tbody></table>
 
 <h2><span class="num">10</span>How we agree it is done</h2>
 <ol>
-<li>All four roles can sign in, and each sees only the screens in section 4. A supervisor cannot issue or receive at a stage that is not assigned to them, tested with a second supervisor.</li>
+<li>All six roles can sign in, and each sees only the screens in section 4. A supervisor cannot give out at a stage that is not assigned to them, nor to a karigar who is set under another supervisor, tested with a second supervisor.</li>
 <li>The reconciliation from your sheet reproduces exactly: 100 = 94 + 2 + 1 + 2 + 1 open.</li>
+<li>100 sent and 98 received shows 2 as a case on the worker who held them, with a charge request, both people recorded and the handover history kept.</li>
 <li>A return that accounts for more pieces than are out is refused with the figures; a correction is a reversal, and both rows stay.</li>
 <li>A rejected or rework entry accepts a photograph, and the photograph shows in the register and in the approval.</li>
-<li>A deduction or write-off above the manager's limit cannot be approved by the manager; the owner can.</li>
+<li>A deduction, charge or write-off above the manager's limit cannot be approved by the manager; the owner can.</li>
 <li>A closed lot cannot be changed.</li>
-<li>Every screen in this document opens at desktop width and at 390 px phone width, in both light and dark themes, with the demonstration data and no unrecorded defect.</li>
-<li>Hindi labels show on daily entry and every supervisor screen for a user whose language is Hindi.</li>
-<li>The demonstration reset command restores the data in under two minutes.</li>
+<li>A roll is received with a label; scanning the label opens it; cutting a lot from rolls reduces their balances; a repeated invoice is warned.</li>
+<li>A lot's cost equals fabric plus wages plus other costs less charges recovered, and a cost that would be counted twice is refused.</li>
+<li>Opening fabric stock and a karigar's opening balance can be entered and reversed, and appear in the ledgers.</li>
+<li>A person added on the Team screen can sign in with the role and stages given; a person switched off cannot.</li>
+<li>Every report downloads to Excel and the totals equal the screen.</li>
+<li>Every screen in this document opens at desktop width and at 390 px phone width, in both light and dark themes, with your data and no unrecorded defect.</li>
+<li>Hindi labels show on the daily entry and every supervisor screen for a user whose language is Hindi.</li>
 <li>A backup is taken and a restore is rehearsed on the Stylified workspace before go-live.</li>
 </ol>
 
 <h2><span class="num">11</span>Schedule and risks</h2>
 <table>
-<thead><tr><th>Week</th><th>Build</th><th>Checkpoint</th></tr></thead>
+<thead><tr><th>Week</th><th>Work</th><th>Checkpoint</th></tr></thead>
 <tbody>
-<tr><td>0</td><td>Kickoff, decisions, user list, stage names</td><td>Decisions confirmed in writing</td></tr>
-<tr><td>1</td><td>Roles, stage assignment, S1 and S2, approvals data</td><td>Supervisor can sign in and take a bundle back</td></tr>
-<tr><td>2</td><td>S3 to S6, M1 and M2, photographs, bilingual labels, alerts</td><td><strong>Demonstration to Stylified</strong></td></tr>
-<tr><td>3</td><td>Your feedback, hardening, training, go-live</td><td>Acceptance in section 10</td></tr>
+<tr><td>0</td><td>Kickoff, decisions, people, stages, sign-in for people without an email</td><td>Decisions confirmed in writing</td></tr>
+<tr><td>1</td><td>Your workspace: roles, people, karigars, rates, opening balances; supervisors shown the phone screens</td><td>Each person can sign in and see their own screens</td></tr>
+<tr><td>2</td><td>A test lot on your floor, paper running beside it</td><td><strong>Demonstration on your own lot</strong></td></tr>
+<tr><td>3</td><td>Your feedback, fixes, a restore rehearsed, training</td><td>Acceptance in section 10</td></tr>
+<tr><td>4</td><td>Go-live, stage by stage, paper kept as a control</td><td>Numbers on paper and in Verity agree</td></tr>
 </tbody></table>
 <table>
 <thead><tr><th>Risk</th><th>What we do</th></tr></thead>
 <tbody>
-<tr><td>Decisions or user lists arrive late</td><td>Dates move by the same number of days; we say so in writing</td></tr>
-<tr><td>Floor internet is weak</td><td>The MVP is online only (D-11); if it is a real problem, offline entry is a separate quote</td></tr>
-<tr><td>The wage matrix or limits differ from the sheet</td><td>They are settings, changed on screen; we confirm them in UAT</td></tr>
+<tr><td>The floor scans only when watched</td><td>The test lot and the paper control exist for this: every difference between paper and Verity is logged and explained before a stage moves over</td></tr>
+<tr><td>Decisions or lists arrive late</td><td>Dates move by the same number of days; we say so in writing</td></tr>
+<tr><td>Floor internet is weak</td><td>The workspace is online only (D-11); if it is a real problem, offline scanning is a separate quote</td></tr>
+<tr><td>The wage matrix or limits differ from the sheet</td><td>They are settings, changed on screen; we confirm them in acceptance</td></tr>
 <tr><td>Scope grows during the build</td><td>A written change request with a price and a date before any extra work starts</td></tr>
 </tbody></table>
 </main>

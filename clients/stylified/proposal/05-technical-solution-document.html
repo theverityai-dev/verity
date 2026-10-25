@@ -25,7 +25,7 @@
     <div class="cover-meta">
       <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
       <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
-      <div><span class="mono">Date</span><b>22 October 2026</b></div>
+      <div><span class="mono">Date</span><b>25 October 2026</b></div>
       <div><span class="mono">Document</span><b>5 of 5</b></div>
     </div>
   </div>
@@ -37,13 +37,13 @@
 <div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 5 of 5 · Technical solution</span></div>
 
 <h1 class="page-title">How it is built</h1>
-<p class="lede">For Stylified's owner and for anyone you ask to review the solution. It says what exists, what is built in this project, and where we are still working.</p>
+<p class="lede">For Stylified's owner and for anyone you ask to review the solution. It says what exists, how it is checked, and what is not built.</p>
 
 <h2><span class="num">01</span>Overview</h2>
 <p>Stylified gets its own workspace on Verity's hosted platform. The workspace is a set of screens and rules for the piece-rate cycle, on top of a shared foundation that provides sign-in, roles, an audit trail, files, notifications and company isolation.</p>
 <div class="stack">
-  <div class="layer"><span class="mono">Experience</span><p>Web application for desktop, tablet and phone, dark and light themes. Supervisor screens are designed phone-first. Hindi and English labels on entry and supervisor screens.</p></div>
-  <div class="layer"><span class="mono">Piece-rate module</span><p>Lots, bundles, stages, karigars and rates, issues and returns, rework, shortages, wages and money, approvals, day close, reports. Every change is a <em>command</em> with its own checks; every screen reads through a <em>query</em>.</p></div>
+  <div class="layer"><span class="mono">Experience</span><p>Web application for desktop, tablet and phone, dark and light themes. Supervisor screens are designed phone-first and open from a camera scan. Hindi and English labels on the floor screens, daily entry and slips.</p></div>
+  <div class="layer"><span class="mono">Piece-rate module</span><p>Fabric rolls, lots and rate cards, bundles, stages, karigars and rates, handovers and returns, rework, cases, wages and money, lot costing, approvals, day close, team, reports. Every change is a <em>command</em> with its own checks; every screen reads through a <em>query</em>.</p></div>
   <div class="layer"><span class="mono">Platform foundation</span><p>Company isolation, identity and memberships, roles built from permissions, an audit trail, an event log, file storage, notifications, numbering, configuration.</p></div>
   <div class="layer"><span class="mono">Data and hosting</span><p>A relational database with row-level security forced on every Stylified table, file storage, application hosting in an Indian region, backups.</p></div>
 </div>
@@ -74,31 +74,33 @@
 <h2><span class="num">04</span>Roles and permissions</h2>
 <ul>
 <li>A permission is an action on a kind of record within a scope (for example "issue" on a piece-rate entry for the company). A role is a named set of permissions. There are no hard-coded role names in the code, so changing a role is a setting, not a release.</li>
-<li>The four Stylified roles (Owner, Manager, Supervisor, Munshi) and their matrix are in document 2, section 4.</li>
+<li>The six Stylified roles (Owner, Manager, Supervisor, Munshi, Store, Cutting master) and their matrix are in document 2, section 4. They are installed once per workspace from a preset and can be edited.</li>
 <li>The server checks the permission for every command and every query. Hiding a button is only a convenience; it is never the control.</li>
-<li><strong>Supervisor stage scope.</strong> The platform's scope list stays as it is. A supervisor's assigned stages are held as a small record in the piece-rate module, and the issue and return commands refuse a supervisor acting on a stage that is not theirs. This is tested with a second supervisor.</li>
+<li><strong>Supervisor scope.</strong> The platform's scope list stays as it is. A supervisor's assigned stages are held as a small record in the piece-rate module, and a karigar can be set under a supervisor. The give-out and take-back commands refuse a supervisor acting on a stage that is not theirs, and a give-out to a karigar who is set under another supervisor. This is tested with a second supervisor.</li>
 </ul>
 
 <h2><span class="num">05</span>The data model</h2>
 <table>
 <thead><tr><th>Record</th><th>What it holds</th><th>Rules</th></tr></thead>
 <tbody>
-<tr><td>Stage</td><td>A step in the line, in order (pasting, collar and cuff, stitching, button and kaj, finishing and press)</td><td>Stages are Stylified's data; the order is frozen once work exists</td></tr>
-<tr><td>Lot</td><td>Number, name, design, fabric type, planned pieces, dates, status</td><td>Numbers are gapless and never reused; a closed lot is locked</td></tr>
-<tr><td>Bundle</td><td>Number B-0001 onward, net pieces, size-mix note, the lot it belongs to</td><td>Numbers are gapless per workspace</td></tr>
-<tr><td>Karigar or unit</td><td>Name, kind (in the factory or outside), contact, active</td><td>Retired, never deleted</td></tr>
-<tr><td>Rate</td><td>Rupees per piece for a karigar at a stage, the wage basis, the date it applies from</td><td>History is kept; each return takes a snapshot of the rate used</td></tr>
-<tr><td>Entry (issue or return)</td><td>Bundle, stage, karigar, pieces, due date, and for a return the split into good, rejected, rework and short</td><td>Append-only. A database check makes the four parts sum to the pieces returned. Corrections are reversals</td></tr>
-<tr><td>Payment</td><td>Advance, recovery, deduction or payment, amount, mode, reference, reason</td><td>Append-only; amounts are whole paise, so there is no rounding drift</td></tr>
-<tr><td>Stage assignment <span class="tag new">new</span></td><td>A supervisor and a stage</td><td>Set by the owner; checked by the commands</td></tr>
-<tr><td>Approval request <span class="tag new">new</span></td><td>Kind (deduction, write-off, hold, close), subject, amount or pieces, requester, state, decision and reason</td><td>Decided once; above-limit requests need the owner</td></tr>
-<tr><td>Evidence photo <span class="tag new">new</span></td><td>Platform Evidence about a rejected or rework return entry; lot pictures set up with you</td><td>Stored with company isolation; never a public link</td></tr>
-<tr><td>Day close <span class="tag new">new</span></td><td>Supervisor, date, summary figures at the time, a note</td><td>Frozen once submitted</td></tr>
+<tr><td>Stage</td><td>A step in the line, in order, with a default rate per piece and an active flag</td><td>Stages are Stylified's data; they can be renamed and reordered</td></tr>
+<tr><td>Roll and roll movement</td><td>Roll number, fabric, unit (metres or kilograms), quantity, supplier, invoice, rate, and every movement in or out</td><td>Append-only movements; the balance is worked out from them; a repeated invoice is warned</td></tr>
+<tr><td>Lot and lot rate card</td><td>Number, name, design, planned pieces, dates, status; a rate per stage for this lot, and a stage can be skipped</td><td>Numbers are gapless and never reused; a closed lot is locked. The lot's rate is used before the worker's, then the stage default</td></tr>
+<tr><td>Bundle</td><td>Number B-0001 onward, net pieces, size-mix note, the lot and the rolls it was cut from</td><td>Numbers are gapless per workspace; bundles can be split or joined at the cutting table until work has left it</td></tr>
+<tr><td>Karigar or unit</td><td>Name, kind, contact, address, joined on, ID note, emergency contact, the supervisor, active</td><td>Retired, never deleted</td></tr>
+<tr><td>Rate</td><td>Rupees per piece for a karigar at a stage, the wage basis, the date it applies from</td><td>History is kept; each entry takes a snapshot of the rate used</td></tr>
+<tr><td>Entry (issue or return)</td><td>Bundle, stage, karigar, pieces sent and counted, due date, confirmation method, challan number, and for a return the split into good, rejected, rework and short</td><td>Append-only. A database check makes the four parts sum to the pieces returned. Corrections are reversals</td></tr>
+<tr><td>Payment</td><td>Advance, recovery, deduction, payment or opening balance, amount, mode, reference, reason</td><td>Append-only; amounts are whole paise, so there is no rounding drift</td></tr>
+<tr><td>Lot cost</td><td>A cost in one of your categories against a lot, with the date and who entered it</td><td>Append-only; a cost named like fabric, wages or a stage is refused (already counted)</td></tr>
+<tr><td>Stage assignment</td><td>A supervisor and a stage</td><td>Set by the owner; checked by the commands</td></tr>
+<tr><td>Approval and case</td><td>Kind (deduction, write-off, hold, close, charge), subject, amount or pieces, requester, state, decision and reason; a case ties a shortage to the worker who held the pieces and the supervisor who recorded it</td><td>Decided once; above-limit requests need the owner; nobody decides their own request</td></tr>
+<tr><td>Evidence photo</td><td>A photograph about a rejected or rework entry; lot pictures set up with you</td><td>Stored with company isolation; never a public link</td></tr>
+<tr><td>Day close</td><td>Supervisor, date, summary figures at the time, a note</td><td>Frozen once submitted</td></tr>
+<tr><td>Settings and reasons</td><td>Manager limits, the lost-piece charge, the low-fabric level, the challan heading, reasons and cost categories in two languages</td><td>Your data, editable on screen</td></tr>
 </tbody></table>
 
 <h3>How the figures are made</h3>
-<p>Nothing on a dashboard is typed in. Pieces out, pieces waiting, good, rejected, rework, short, days at a stage, wages and balances are all computed from the entries and payments by one piece of logic, which is covered by automated tests that use the worked examples from your requirement sheet (for example 100 pieces issued, 94 good, 2 rejected, 1 rework, 2 short and 1 still open; and ₹48,000 over 960 good pieces is ₹50 a piece). A figure on a report always agrees with the entries it is built from.</p>
-
+<p>Nothing on a dashboard is typed in. Pieces out, pieces waiting, good, rejected, rework, short, days at a stage, roll balances, wages, balances and lot costs are all computed from the entries, movements and payments by one piece of logic, which is covered by automated tests that use the worked examples from your requirement sheet (for example 100 pieces issued, 94 good, 2 rejected, 1 rework, 2 short and 1 still open; and ₹48,000 over 960 good pieces is ₹50 a piece). A figure on a report always agrees with the entries it is built from.</p>
 <h2><span class="num">06</span>Audit and corrections</h2>
 <ul>
 <li>Every command records who did it, when, from which role, and what changed, in an audit trail the owner can read.</li>
@@ -127,32 +129,29 @@
 <tr><td>Altering history</td><td>Append-only ledgers enforced by the database; reversal only</td></tr>
 <tr><td>Staff access to your data</td><td>Only to support you; each session recorded in your audit trail and time-limited</td></tr>
 <tr><td>Secrets</td><td>Held in the hosting environment, never in code or in the database</td></tr>
-<tr><td>Public links</td><td>The bundle QR opens a sign-in screen, then the bundle. It carries only the bundle's address, no figures or names</td></tr>
+<tr><td>Public links</td><td>The bundle QR opens a sign-in screen, then the bundle. It carries only the bundle's address, no figures or names. Roll and challan labels work the same way</td></tr>
 </tbody></table>
 
 <h2><span class="num">10</span>Speed</h2>
-<p>We measured the local build: a page made about 10 to 16 database calls, mostly shared overhead from sign-in and navigation rather than the page itself. We have already removed the repeated identity lookups (the first of several steps), added an instant top progress bar and press feedback on every card and button, and replaced the lone loading spinner with a page-shaped skeleton. The remaining planned steps are folding the layout's queries into one, caching each user's navigation and permissions for about a minute, and narrowing the dashboard's queries as history grows. We will report measured times on Stylified's workspace before go-live, not estimates.</p>
-
+<p>Measured on a production build of the demonstration workspace with the database beside the application: a page is made on the server in 50 to 80 milliseconds and is idle in the browser in 0.7 to 1.0 seconds. On a year of generated history (24,000 entries over 120 lots) the factory dashboard takes about 0.5 seconds, the lot list 0.5 seconds and the supervisor's screens about 50 milliseconds. On the hosted service the network and the sign-in check add to these; we will report measured times on Stylified's workspace before go-live, not estimates.</p>
 <h2><span class="num">11</span>Testing</h2>
 <table>
 <thead><tr><th>Layer</th><th>What is covered</th></tr></thead>
 <tbody>
-<tr><td>Logic tests</td><td>28 tests on the piece-rate calculations, using the requirement sheet's own examples</td></tr>
-<tr><td>Database tests</td><td>30 tests against a real database: stage scope for supervisors, approvals within the owner's limits, the frozen day close, reconciliation, over-issue and over-return refusals, rework pool, the three wage bases, payment guards, reversal rules, concurrent entries, append-only rules, the owner role refused every write, company isolation</td></tr>
+<tr><td>Logic tests</td><td>The piece-rate calculations, the spreadsheet writer and the sign-in address rules, using the requirement sheet's own examples</td></tr>
+<tr><td>Database tests</td><td>More than 85 tests in all against a real database: stage and karigar scope for supervisors, approvals within the owner's limits, the frozen day close, reconciliation, over-issue and over-return refusals, rework pool, the wage bases and the lot rate card, the receiver's count with cases and charge requests, rolls and fabric used by a cut, lot costing and its refusals, role presets that cannot grant more than the installer holds, opening balances, append-only rules, company isolation</td></tr>
 <tr><td>Platform tests</td><td>Identity, membership, tenant isolation and permission tests that every capability inherits</td></tr>
-<tr><td>Browser checks</td><td>Every screen opened in dark and light on desktop and at 390 px, with the demonstration data, before go-live; defects are logged and fixed</td></tr>
-<tr><td>Acceptance</td><td>The ten criteria in document 2, section 10, run with Stylified</td></tr>
+<tr><td>Browser checks</td><td>Every route opened as each role in dark and light on desktop and at 390 px, with the demonstration data, before go-live; defects are logged and fixed</td></tr>
+<tr><td>Acceptance</td><td>The criteria in document 2, section 10, run with Stylified</td></tr>
 </tbody></table>
-
 <h2><span class="num">12</span>Where things stand, and what follows</h2>
 <ul>
 <li>The piece-rate module is built and proven on demonstration data in our test environment; it moves onto Stylified's own workspace and people at kickoff.</li>
-<li>The supervisor, approval, photograph and bilingual screens are the build of this project, and each passes its tests before you see it.</li>
 <li>Speed on the hosted service is measured on your workspace during the week-three checks; the figures above are from a local build.</li>
-<li>Offline use, SMS or WhatsApp alerts, barcode scanning and the Phase 2 modules come after go-live, quoted separately.</li>
+<li>The hosted run (photograph storage, a supervisor on a real phone) and the restore rehearsal happen on your workspace before go-live and are acceptance criteria.</li>
+<li>Not built: joining whole lots, Hindi on the office screens, packing and dispatch, WhatsApp or SMS, offline use, a Tally export. They are quoted separately.</li>
 <li>A deployment on Stylified's own Vercel and Supabase accounts is a later option, offered after a full rehearsal.</li>
-</ul>
-</main>
+</ul></main>
 <!--/DOC:body-->
 </body>
 </html>

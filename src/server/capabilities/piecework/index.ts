@@ -72,8 +72,8 @@ export * from "./role-presets";
  *   recovery within the advance outstanding   | refused beyond it
  *   reverse an entry nothing depends on       | refused when it would strand a later stage
  *
- * Not built here yet (named, not hidden): fabric stock, lot costing by category, packing and dispatch, bundle and lot
- * split or join, Hindi, PDF and Excel export. They are the next stages in clients/stylified/requirement-sheet-review.md.
+ * Not built here yet (named, not hidden): joining or linking whole lots with cost re-allocation, packing and dispatch,
+ * Hindi on the office screens, WhatsApp or SMS, offline use. They are listed in clients/stylified/plan-to-mvp-and-complete.md.
  */
 
 export const PIECEWORK_CAPABILITY = "verity.capability.piecework";
