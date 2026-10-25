@@ -6,6 +6,8 @@ import { installCapabilities } from "@/server/capabilities/registry";
 import { ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, PIECEWORK_CAPABILITY, listRolls } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { EmptyState, PageHeader, PermissionDenied } from "@/components/ui/primitives";
+import { LangToggle } from "../../shopfloor/LangToggle";
+import { getOfficeLang } from "../office-lang";
 import { CountRolls } from "./CountRolls";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,7 @@ export const dynamic = "force-dynamic";
 async function CountPage() {
   installCapabilities();
   const actor = await requireActor();
+  const { lang, o } = await getOfficeLang();
   const { canRead, canCount } = await withTenant(actor.tenantId, async (tx) => ({
     canRead: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_ROLL),
     canCount: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_ROLL_MOVE),
@@ -24,11 +27,11 @@ async function CountPage() {
 
   return (
     <>
-      <PageHeader back={{ href: "/fabric", label: "Fabric" }} title="Count the shelf" description="Walk the shelf, scan or type each roll's number, and enter what is really there. Only the differences are posted, each as an adjustment with the reason Stock-take." />
+      <PageHeader back={{ href: "/fabric", label: o.fabric }} title={o.countTitle} description={o.countDesc} actions={<LangToggle lang={lang} />} />
       {shelf.length === 0 ? (
-        <EmptyState title="No roll has fabric left" description="There is nothing to count. Receive rolls first." />
+        <EmptyState title={o.noRollLeft} description={o.nothingToCountDesc} />
       ) : (
-        <CountRolls rolls={shelf.map((r) => ({ id: r.id, number: r.number, fabricType: r.fabricType, unit: r.unit, balanceCenti: r.balanceCenti }))} />
+        <CountRolls o={o} rolls={shelf.map((r) => ({ id: r.id, number: r.number, fabricType: r.fabricType, unit: r.unit, balanceCenti: r.balanceCenti }))} />
       )}
     </>
   );
