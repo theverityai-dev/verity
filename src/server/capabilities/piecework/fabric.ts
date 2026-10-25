@@ -176,6 +176,36 @@ export const moveFabric: CommandDefinition<MoveInput, { id: string; balanceCenti
   },
 };
 
+/**
+ * A stock-take of the shelf: the rolls that were counted, each with the quantity found. Only a difference is posted, as an adjustment with
+ * the reason "Stock-take", so a roll found as the ledger says leaves no row. Rolls not counted are left as they are. One transaction:
+ * either every difference is posted or none is.
+ */
+export const countRolls: CommandDefinition<{ counts: Array<{ rollId: string; countedCenti: number }>; movedOn?: string }, { counted: number; adjusted: number; differences: Array<{ rollId: string; deltaCenti: number }> }> = {
+  key: "verity.piecework.count_rolls",
+  entity: ENTITY_PIECEWORK_ROLL_MOVE,
+  verb: "Create",
+  input: z.object({
+    counts: z.array(z.object({ rollId: uuid, countedCenti: z.number().int().min(0).max(MAX_CENTI) })).min(1).max(300),
+    movedOn: isoDate.optional(),
+  }),
+  preconditions: async (ctx, input) => {
+    if (new Set(input.counts.map((c) => c.rollId)).size !== input.counts.length) throw new ValidationError("E_VALIDATION: count each roll once");
+  },
+  handler: async (ctx, input) => {
+    const differences: Array<{ rollId: string; deltaCenti: number }> = [];
+    for (const c of input.counts) {
+      const roll = await lockRoll(ctx.tx, c.rollId);
+      if (!roll) throw new ValidationError("E_VALIDATION: roll not found in this tenant");
+      const delta = c.countedCenti - (await balanceOf(ctx.tx, roll.id, roll.quantityCenti));
+      if (delta === 0) continue;
+      await applyMove(ctx.tx, ctx.actor.tenantId, ctx.actor.userId, { rollId: c.rollId, kind: "adjust", quantityCenti: delta, reason: "Stock-take", movedOn: input.movedOn });
+      differences.push({ rollId: c.rollId, deltaCenti: delta });
+    }
+    return { result: { counted: input.counts.length, adjusted: differences.length, differences }, events: differences.map((d) => ({ name: "verity.piecework.fabric_moved", entityId: d.rollId })) };
+  },
+};
+
 /* ================================== queries ================================== */
 
 export type RollRow = {
@@ -292,6 +322,7 @@ export function registerFabric(): void {
   registerCommand(receiveRolls);
   registerCommand(cancelRoll);
   registerCommand(moveFabric);
+  registerCommand(countRolls);
   registerQuery(listRolls);
   registerQuery(rollDetail);
   registerQuery(lotFabric);

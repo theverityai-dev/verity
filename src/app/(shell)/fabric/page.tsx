@@ -38,6 +38,7 @@ async function FabricPage() {
     <>
       <PageHeader title="Fabric" description={shelf.length === 0 ? "No roll has fabric left." : `${shelf.length} roll${shelf.length === 1 ? "" : "s"} on the shelf`} actions={<>
         {shelf.length > 0 && <ButtonLink href={`/fabric/labels?ids=${shelf.slice(0, 100).map((r) => r.id).join(",")}`} variant="secondary">Print labels{shelf.length > 100 ? " (first 100)" : ""}</ButtonLink>}
+        {canReceive && shelf.length > 0 && <ButtonLink href="/fabric/count" variant="secondary">Count the shelf</ButtonLink>}
         {canReceive && <ReceiveRolls fabricTypes={[...new Set(live.map((r) => r.fabricType))]} today={today} seen={live.filter((r) => r.invoiceNumber).map((r) => ({ supplier: r.supplier, invoice: r.invoiceNumber!, number: r.number }))} />}
       </>} />
 

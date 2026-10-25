@@ -41,6 +41,7 @@ import {
   floorReasons,
   lotFabric,
   lotRateCard,
+  countRolls,
   listRolls,
   moveFabric,
   challansOnDay,
@@ -58,6 +59,7 @@ import {
   productionSettings,
   readyGarments,
   receiveRolls,
+  rollDetail,
   recordIssue,
   recordReturn,
   registerPieceworkCapability,
@@ -191,6 +193,19 @@ describeDb("capability: the Stylified flow (rate card, route, challan, charge, f
     await executeCommand(owner, setLotRates, { lotId, rows: [{ stageId: stage.pasting!, rateMinor: 999 }] });
     const row = await withTenant(tenantId, (tx) => tx.pieceworkEntry.findUniqueOrThrow({ where: { id: back.id } }));
     expect(row.rateMinor).toBe(250);
+  });
+
+  it("counts the shelf: only a difference is posted, a match leaves no row, and rolls not counted are untouched", async () => {
+    const received = await executeCommand(owner, receiveRolls, { fabricType: "Count test cloth", quantitiesCenti: [10_000, 20_000, 5_000] });
+    const [a, b, c] = received.rollIds;
+    const result = await executeCommand(owner, countRolls, { counts: [{ rollId: a!, countedCenti: 10_000 }, { rollId: b!, countedCenti: 19_550 }] });
+    expect(result).toMatchObject({ counted: 2, adjusted: 1, differences: [{ rollId: b, deltaCenti: -450 }] });
+    const rolls = (await executeQuery(owner, listRolls, {})).rolls;
+    expect(rolls.find((r) => r.id === a)!.balanceCenti).toBe(10_000);
+    expect(rolls.find((r) => r.id === b)!.balanceCenti).toBe(19_550);
+    expect(rolls.find((r) => r.id === c)!.balanceCenti).toBe(5_000);
+    expect((await executeQuery(owner, rollDetail, { rollId: b! }))!.moves.some((m) => m.kind === "adjust" && m.reason === "Stock-take")).toBe(true);
+    await reject(executeCommand(owner, countRolls, { counts: [{ rollId: a!, countedCenti: 1 }, { rollId: a!, countedCenti: 2 }] }), /count each roll once/);
   });
 
   it("lets a lot skip a stage: its pieces go on to the next one, and the skipped stage refuses work", async () => {
