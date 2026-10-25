@@ -69,6 +69,7 @@
 <div class="card"><h3>Lot costing</h3><p>Fabric at the roll's invoice rate, wages, and the cost categories you choose (thread, printing, packing and more), less charges recovered. Cost per good piece for every lot, and a shared bill split by pieces cut.</p></div>
 <div class="card"><h3>Team</h3><p>Add a person in one sheet with their role and stages. Each karigar has a profile and a supervisor, so a supervisor's list shows their own people. Switch someone off when they leave; their history stays. People without an email sign in with a username.</p></div>
 <div class="card"><h3>Ready stock</h3><p>The garments that finished the last stage, less what has gone out. Enter the stock already on the shelf as opening stock, take stock out as sold, dispatched or a sample, and correct a count with a reason. Every movement is on a ledger you can reverse and download.</p></div>
+<div class="card"><h3>Away, counted and printed</h3><p>Mark a supervisor away and let another cover their stages and karigars for the dates. Count the fabric shelf by scanning roll numbers and post only the differences. The slip sheet remembers which bundles have a slip printed.</p></div>
 <div class="card"><h3>Routes that fit the factory</h3><p>Mark a stage required or optional. A lot can skip only an optional stage, so a shirt without a collar and cuff follows its own route while every other lot keeps the full one. Each person opens on the page their work is on.</p></div>
 <div class="card"><h3>Reports and records</h3><p>Reports led by graphics with the table folded below, each with Excel, CSV and Print or PDF. A change history of who did what and when. Defect photographs taken on the phone and attached to the entry.</p></div>
 </div>
@@ -120,7 +121,7 @@
 <tr><td><strong>Hindi on the office screens</strong></td><td>A language switch for the owner, manager and munshi screens, reports and errors</td></tr>
 <tr><td><strong>Packing and dispatch</strong></td><td>Packing, packets, parties and transport references (outside release one by your own requirement sheet)</td></tr>
 <tr><td><strong>Alerts to the phone</strong></td><td>A daily summary and challans sent by WhatsApp or SMS, once a provider is chosen</td></tr>
-<tr><td><strong>Floor extras</strong></td><td>Leave and cover for supervisors, a roll stock-take by scanning, label-printer support, a print queue that remembers which slips were printed</td></tr>
+<tr><td><strong>Label printer</strong></td><td>Printing the roll labels and bundle slips in a label printer's own language (Zebra or TSC) instead of A4, once the model is chosen</td></tr>
 <tr><td><strong>Accounts and parties</strong></td><td>A Tally voucher export, a supplier and party master, a GST job-work challan for outside units</td></tr>
 <tr><td><strong>More</strong></td><td>Style and size master with buyer orders, offline scanning for weak signal, a second unit</td></tr>
 </tbody></table>
@@ -205,6 +206,7 @@
 <tr><td>Karigar profile, supervisor per karigar, a pasted-from-Excel karigar list</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Reports led by graphics with Excel, CSV and Print or PDF; factory dashboard; ready garments</td><td>Owner, Manager, Munshi</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Ready stock inventory: what production made ready, opening stock, stock out (sold, dispatched, sample), count corrections with a reason, a reversible ledger</td><td>Store, Munshi, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Leave and cover (a supervisor away, another covering their stages and karigars for the dates), a roll stock-take by scanning, a print queue that remembers which slips were printed</td><td>Owner, Store, Cutting master</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Required and optional stages: a lot can skip only an optional stage; each role opens on the page its work is on</td><td>Owner, Manager</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Photographs: defect photos on rejected or rework entries, lot pictures set up with you</td><td>Supervisor, Munshi, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Hindi and English on the floor screens, daily entry and every slip</td><td>Supervisor, Munshi</td><td><span class="tag in">built</span></td></tr>
@@ -346,7 +348,7 @@
 <tr><td>A Hindi interface on the office screens, with a language switch</td><td>Touches every office screen, report and error; the floor, daily entry and slips are bilingual already</td></tr>
 <tr><td>Packing, packets, parties, dispatch</td><td>Outside release one by your sheet; needs parties and transport references</td></tr>
 <tr><td>WhatsApp or SMS: a daily summary, the challan, the wage slip</td><td>Needs a provider you choose and who pays it</td></tr>
-<tr><td>Leave and cover for supervisors, a roll stock-take by scanning, label-printer support, a print queue</td><td>Each is a separate piece of work</td></tr>
+<tr><td>Label-printer support (Zebra or TSC) for roll labels and slips</td><td>Needs the printer model; the A4 and sticker sheets work today</td></tr>
 <tr><td>Tally voucher export, supplier and party master, GST job-work challan for outside units</td><td>Needs your accountant's format</td></tr>
 <tr><td>Style and size master with buyer orders; offline scanning; a second unit</td><td>New modules; offline only if the test lot shows signal drops</td></tr>
 <tr><td>Move of the workspace to Stylified's own Vercel and Supabase accounts</td><td>Needs install steps we have not yet scripted or validated; quoted once validated</td></tr>
@@ -828,6 +830,9 @@
 <tr><td>15</td><td><strong>Backup.</strong> We take a backup and restore it into a separate copy in front of you.</td><td>The restored copy has the same lots, bundles and balances. A restore returns the workspace to the time of the backup.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>16</td><td><strong>Ready stock.</strong> Enter opening ready stock. Take some out as sold. Try to take out more than is in stock. Correct a count with a reason. Reverse the stock-out.</td><td>The balance is what was made plus opening less what went out. Taking out more than is there is refused. The count correction needs a reason. The reversal returns the stock and both rows stay on the ledger.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>17</td><td><strong>Optional stages.</strong> Try to skip a required stage on a lot's rate card. Mark a stage optional and skip it.</td><td>A required stage cannot be skipped, and the screen says why. After marking it optional the lot skips it and its pieces go on to the next stage.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>18</td><td><strong>Away and cover.</strong> Mark a supervisor away for today with another covering. As the cover, open Give out. End the cover.</td><td>While the cover lasts the covering person can work at the absent supervisor's stages and give out to their karigars; after it ends they cannot. The Team card shows who is away.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>19</td><td><strong>Shelf count.</strong> Count the fabric shelf: scan or type three roll numbers, enter one quantity that differs, and post.</td><td>Only the difference is posted, as an adjustment with the reason Stock-take. The matching rolls leave no row and the rolls not counted are untouched.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>20</td><td><strong>Print queue.</strong> Print some of a lot's slips with the Print button. Reopen the sheet.</td><td>The printed bundles are labelled printed, the others not printed yet, and "Only not printed yet" picks exactly those. The lot page says how many have no slip.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 </tbody></table>
 
 <h2><span class="num">03</span>The pilot, before paper stops</h2>
