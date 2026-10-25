@@ -47,7 +47,7 @@ Against the old offer (25,000 once and 12,711.86 a month before GST), Option B i
 - B is the easier yes: ₹25,000 is a small decision for a factory that has not yet seen its own lot on Verity. It carries more margin per month.
 - Both are low against what the system does. Lead with whichever the owner is more comfortable defending; both documents show both options and the
   comparison, ex-GST, with no emphasis on commitment (the owner's standing instruction for the proposal pack).
-- Anything beyond document 2 (join or link lots, Hindi on office screens, dispatch, WhatsApp, Tally export, offline, a second unit) is a change request
+- Anything beyond document 2 (Hindi on lots, costs and reports, a TSC label file, dispatch, WhatsApp, Tally export, offline, a second unit) is a change request
   priced separately and never folded into the monthly amount.
 
 ## Where the figures live

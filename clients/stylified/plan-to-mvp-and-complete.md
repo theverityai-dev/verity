@@ -12,8 +12,8 @@ local only, nothing of this week's work on production yet:
 | State | Requirements |
 |---|---|
 | **Built and tested** | FR-004 fabric inward (duplicate invoice), FR-005 roll stock ledger, FR-006 lots, FR-007 bundles and QR slips, FR-008 bundle split and merge, FR-010 handover with sent and received counts and a challan, FR-012 issue, FR-013 return in four parts, FR-014 wage basis, FR-015 advances, deductions, payments, FR-016 rework, FR-017 costing with shared costs, FR-019 ready garments, FR-021 Excel, CSV, Print / PDF, FR-022 change history, FR-025 acknowledgement method |
-| **Built, with a gap** | FR-001 (platform has it; the owner cannot find or run it, section 3 step 1), FR-002 (floor and slips in Hindi; office screens English), FR-003 dashboards (owner and supervisor; no per-role fabric or cost view), FR-011 karigar master (no supervisor link, thin profile), FR-024 alerts (cards only; low-fabric flag; nothing pushed to a phone), FR-026 cases (status derived from approvals, no stored case record), FR-027 intermediary supervisor (the recorder is captured; no custody view, no role), FR-028 routing (order, rename and skip per lot; no optional or predecessor rules) |
-| **Not built** | FR-009 join or link lots, FR-018 cost re-allocation on join, FR-023 hosted restore rehearsal |
+| **Built, with a gap** | FR-001 (platform has it; the owner cannot find or run it, section 3 step 1), FR-002 (floor, slips and the munshi's and store's daily screens in Hindi; lots, costs, reports, settings English), FR-003 dashboards (owner and supervisor; no per-role fabric or cost view), FR-011 karigar master (no supervisor link, thin profile), FR-024 alerts (cards only; low-fabric flag; nothing pushed to a phone), FR-026 cases (status derived from approvals, no stored case record), FR-027 intermediary supervisor (the recorder is captured; no custody view, no role), FR-028 routing (order, rename and skip per lot; no optional or predecessor rules) |
+| **Not built** | FR-023 hosted restore rehearsal. (FR-009 join or link lots and FR-018 cost re-allocation were built 2026-10-26: `piecework_lot_share`.) |
 | **Out of scope by the sheet** | FR-020 dispatch |
 
 Things the sheet implies that nothing in the code does yet: **opening balances** (fabric on the shelf, ready garments, karigar dues and
@@ -58,7 +58,8 @@ The Team screen groups people by role as cards; a card opens a sheet to change r
 A karigar has a profile and a supervisor; a supervisor's give-out list and the issue command follow it.
 **Q1 decided (2026-10-25):** one sign-in method, Supabase email and password; a person with no email signs in with a username, which is shorthand for `username@login.verity.local` (`src/lib/login-address.ts`). Unique across Verity, so the Team screen suggests `ravi.stylified`; the owner resets forgotten passwords (nothing is ever emailed to that address). "Last seen" dropped.
 **Built 2026-10-25 (later):** ready stock inventory (opening stock, stock out, count corrections, a reversible ledger, migration `20261025200000`), required or optional stages (FR-028, migration `20261025300000`), landing pages by role (the logo and `/` no longer open the platform overview), the acceptance walkthrough as document 6 of the pack. Not built: a stored case table (the derived case carries who recorded and decided; kept), phone alerts (parked by the owner), join or link lots, leave and cover, a roll stock-take, label-printer support, a print queue, an owner summary, packing, Hindi on office screens.
-**Also built 2026-10-25 (later still):** leave and cover (migration `20261025500000`), a print queue (`20261025400000`), a roll stock-take (Count the shelf). Still not built: join or link whole lots with cost re-allocation (needs Stylified's allocation rules, D-09), Hindi on the office screens (decision D-15), label-printer language, a daily owner summary, phone alerts (parked). Packing is a stage added before the first piece is given out (stages are data).
+**Also built 2026-10-25 (later still):** leave and cover (migration `20261025500000`), a print queue (`20261025400000`), a roll stock-take (Count the shelf). Packing is a stage added before the first piece is given out (stages are data).
+**Built 2026-10-26 (the owner: "finish them too", Hindi scope my decision):** join or link lots with cost re-allocation (migration `20261025600000`, `piecework_lot_share`; all, a percentage, or by pieces; one level; reversible; source records untouched), Hindi on the munshi's and store's daily screens (Fabric, Receive rolls, Count the shelf, Ready stock, Karigars list), **Today** (`/lots/today`, the owner's daily summary on screen), and a Zebra label file (ZPL, checked as text, not yet run on a printer). Still not built: Hindi on lots, costs, reports and settings (decision D-15), a TSC file, phone alerts (parked by the owner), a stored case table (kept derived on purpose).
 **1.4 and 1.6 built (2026-10-25):** "Set up the factory" (`/shopfloor/setup`, a journey worked out from what exists) and "Who holds what" (`/shopfloor/custody`, open pieces by supervisor and karigar), both tested and opened at desktop width.
 **1.5 opening balances, partly built:** opening fabric stock (a tick on Receive rolls, tagged "Opening stock"), karigar opening balance owed (a payment kind `opening`, counted as wages, reversible), an advance already given (the ordinary Advance), and a pasted-from-Excel karigar list (Import a list). Not yet: opening ready garments (needs a decision: a closed "opening" lot), onboarding wizard (1.4).
 
@@ -102,14 +103,14 @@ Two groups. Group A is in the sheet and closes release one. Group B is not in th
 
 | # | Item | Covers | Size |
 |---|---|---|---|
-| 3.1 | **Join or link lots**, with cost re-allocation by pieces or an approved percentage that always sums to 100; sources never edited | FR-009, FR-018 | L |
-| 3.2 | **Hindi on office screens**, if the client keeps "all core screens" from FR-002 (today decided English; the sheet reads the other way, so confirm) | FR-002 | L |
+| 3.1 | **Join or link lots**, with cost moved by pieces or a percentage; sources never edited. **Built 2026-10-26** | FR-009, FR-018 | L |
+| 3.2 | **Hindi on office screens**. Munshi and store screens **built 2026-10-26**; lots, costs, reports and settings remain (confirm in UAT) | FR-002 | L |
 | 3.3 | **Packing step** if the owner confirms it (FR-019 says only if confirmed) | FR-019 | M |
 | 3.4 | **Leave and cover**: mark a supervisor away; another takes their stages and karigars for the days | FR-027 | M |
 | 3.5 | **Print queue**: remembers which slips were printed, flags a bundle with no slip, reprints in bundle order | usability | S |
 | 3.6 | **Stock-take mode**: scan every roll on the shelf, show the difference against the ledger, post it as an adjustment with a reason | FR-005 | M |
-| 3.7 | **Label printer language** (Zebra or TSC) instead of A4, if Q4 says they have one | FR-007 | M |
-| 3.8 | **Daily owner summary** by message: given, taken back, short, cost, cases open, late | FR-003, FR-024 | S |
+| 3.7 | **Label printer language**. Zebra (ZPL) file **built 2026-10-26**, not yet run on a printer; TSC remains | FR-007 | M |
+| 3.8 | **Daily owner summary**. **Today** screen built 2026-10-26; by message is parked with 3.9 | FR-003, FR-024 | S |
 | 3.9 | **WhatsApp or SMS of a karigar's challan and wage slip** (the worker has no app; this is the nearest thing to one) | FR-025 | M |
 
 ### Group B: beyond the sheet, in the order a garment maker needs them
@@ -138,7 +139,7 @@ Not building, because nothing says they are wanted: payroll with attendance, shi
 | # | Question | My default |
 |---|---|---|
 | Q1 | How do supervisors sign in on production: email, or a username and password you hand out? | Email-shaped usernames (`ravi@stylified.local`), same Supabase login, no new method |
-| Q2 | Does Stylified want Hindi on office screens (FR-002 reads "all core screens")? | Floor and slips Hindi now; office English; ask in UAT |
+| Q2 | Does Stylified want Hindi on office screens (FR-002 reads "all core screens")? | Floor, slips, munshi and store screens Hindi now; lots, costs, reports, settings English; ask in UAT |
 | Q3 | WhatsApp or SMS for alerts and challans, and who pays the provider? | Build the outbox only (already in the platform); no provider until you choose |
 | Q4 | Phone models, printer model, sticker size on the floor? | A4 and a 6.4 cm sticker sheet; camera scanning |
 | Q5 | Does their accountant need a GST job-work challan for outside units? | Internal challan as built; GST format after the accountant answers |

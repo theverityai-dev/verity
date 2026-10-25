@@ -60,6 +60,6 @@ Things that trip people: a running server keeps the Prisma client it started wit
   `login-address.test.ts`, `import-list.test.ts`).
 - **ROUTE-WALKED, DEMO-READY locally:** `acceptance-record.md` and `docs/demo/evidence/`. The newest screens (Team, karigar profile, import,
   opening stock) were opened at desktop and 390 px on 2026-10-25; the whole-route walk should be rerun before the next show.
-- **NOT YET BUILT:** joining whole lots and cost re-allocation, Hindi on the office screens, packing and dispatch (out of release one),
-  WhatsApp or SMS, offline use, a Tally export, opening ready garments. See `plan-to-mvp-and-complete.md`.
+- **NOT YET BUILT:** Hindi on lots, costs, reports and settings, a TSC label file (the Zebra file is built but not run on a printer),
+  packing and dispatch (out of release one), WhatsApp or SMS, offline use, a Tally export. See `plan-to-mvp-and-complete.md`.
 - **Not yet run on Stylified's hosted workspace:** photograph storage, a supervisor on a real phone, the restore rehearsal.

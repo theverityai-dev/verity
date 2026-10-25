@@ -89,9 +89,11 @@ The system ends at ready garments. Dispatch is not in it.
 Every popup in the piece-rate screens now uses one sheet (`FormModal`): Cancel then the primary action in the footer, the refusal at the
 foot of the form, a pending label on the submit. Text glyphs used as icons were replaced by the drawn icon set.
 
-Decided 2026-10-25 (owner: "you decide"), stated to the client as decision D-15 in document 2: Hindi stays on the floor screens, daily entry and slips; the office screens stay English in this release and a Hindi office interface is the first quoted next step. Decided, not built: the office screens (lots, fabric, costs, settings) stay in English. The chat asks for Hindi where karigars and
-supervisors work, and the floor screens and the daily entry have it; the owner, manager and munshi screens are read in English today.
-A language toggle on them is a contained follow-up if Stylified asks.
+Decided 2026-10-25 (owner: "you decide"), stated to the client as decision D-15 in document 2, and widened 2026-10-26 when the owner said to finish the
+rest: Hindi is on the floor screens, the daily entry, the slips, and the screens the munshi and the store use every day (Fabric, Receive rolls,
+Count the shelf, Ready stock, the Karigars list: `fabric/office-labels.ts`, the same language cookie and toggle as the floor). Lots, costs, reports,
+settings and error messages stay in English; Hindi there is the first quoted next step. The chat asks for Hindi where karigars and supervisors
+work, which is where it is.
 
 MVP completion pass (same day):
 
@@ -114,13 +116,19 @@ Usability pass (2026-10-25, from the owner's review):
 | Bulk printing | Slips: choose which, only those not yet given out, full or sticker size (remembered); the day's challans printed together; all shelf roll labels in one go |
 | Reports and stage tables | Graphics first (tiles, stage bars, lot cards, loss bars, money bars), every table folded below with Excel, CSV and Print / PDF |
 
-Ideas not built yet, in the order I would do them: a "print queue" that remembers which slips were printed and flags a bundle with no slip
-printed; a pick list per supervisor for the day; WhatsApp or SMS of a karigar's challan and wage slip; a stock-take mode for rolls by scanning;
-barcode printer (Zebra / TSC) language instead of A4; a daily owner summary by message.
+Ideas, in the order I would do them: a pick list per supervisor for the day; WhatsApp or SMS of a karigar's challan and wage slip, and of Today's
+figures (parked by the owner: no SMS or WhatsApp for now); a TSC (TSPL) label file for the day a client has one.
 
-Still not built: joining or linking whole lots, and re-allocating cost when lots are split or joined (FR-009 and FR-018, priority Should);
-a stored case record with its own status field (the status is derived from the approvals); a separate role for an intermediary supervisor
-beyond the person who records the handover; Hindi on the office screens (decided); the Supabase restore rehearsal (FR-023).
+Built 2026-10-26: **join or link lots** (FR-009, FR-018). A lot carries a part of another lot's cost: `piecework_lot_share`, append-only, each row a
+part of the source lot's own cost in basis points (all, a percentage, or by pieces on the sheet), reversed with a reason, never edited. The
+source's own records are untouched; lot costing, the cost report and the change history read the shares in force. One level only (a lot that
+gives cannot receive), never more than all of a source's cost, refused on a closed lot. Pieces stay where they were made, so a lot joined
+into another is shared at 100%. Also built: **Today** (`/lots/today`, the day in a few figures) and a **Zebra file (ZPL)** for roll labels and
+bundle slips, written to the printer's specification and checked as text, not yet run on a printer.
+
+Still not built: a stored case record with its own status field (the status is derived from the approvals; kept derived on purpose); a separate
+role for an intermediary supervisor beyond the person who records the handover; Hindi on lots, costs, reports and settings; a TSC file;
+phone alerts; the Supabase restore rehearsal (FR-023).
 
 ## Team management: what is there and what is missing (2026-10-25, from the owner's question "why no team management")
 
@@ -142,7 +150,7 @@ a fresh workspace starts with none.
 | 6 | **Who looks after which karigars**: each karigar has a supervisor; a supervisor's give-out list shows only theirs | No link between a karigar and a supervisor at all |
 | 7 | **Karigar profile**: photo, mobile, address, join date, skills (stages they can do), wage basis, ID note, emergency contact, in-house or outside | name, mobile, kind, address, active only; the stage default rate is the only trace of skill |
 | 8 | **Supervisor profile and workload**: stages, karigars, bundles open now, late, day closes, charge requests raised | Day-close list on Team and limits; nothing per person |
-| 9 | **Leave and cover**: mark a supervisor away; another takes their stages for the days | Not built |
+| 9 | **Leave and cover**: mark a supervisor away; another takes their stages for the days | Built 2026-10-25 (`piecework_cover`) |
 | 10 | Who did what | Change history already shows the actor |
 
 **Built 2026-10-25 (local, tested, walked at desktop and 390 px):** needs 1, 2, 3, 5 and part of 7 and 8: the Team screen (`/shopfloor/team`), add a person in one sheet, six installable role presets, 

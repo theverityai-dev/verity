@@ -66,14 +66,15 @@
 <div class="card"><h3>Give out and take back, by scan</h3><p>Scan a bundle, pick the karigar, confirm the count, and a challan prints for the worker. Taking back is counted as good, rejected, rework and short. The receiver's count is the truth, and the supervisor who recorded each handover answers for it.</p></div>
 <div class="card"><h3>Cases and charges</h3><p>Pieces that go short open a case on the worker who held them and raise a charge request for the lost pieces. Nothing is deducted silently: the manager or the owner decides within their limits, and the decision, who made it and why stay on the case.</p></div>
 <div class="card"><h3>Wages, advances and balances</h3><p>The lot's rate times the accepted pieces. Advances, recoveries, deductions with a reason, payments with mode and reference, and an opening balance for what was owed before Verity. Every karigar has a clear account.</p></div>
-<div class="card"><h3>Lot costing</h3><p>Fabric at the roll's invoice rate, wages, and the cost categories you choose (thread, printing, packing and more), less charges recovered. Cost per good piece for every lot, and a shared bill split by pieces cut.</p></div>
+<div class="card"><h3>Lot costing</h3><p>Fabric at the roll's invoice rate, wages, and the cost categories you choose (thread, printing, packing and more), less charges recovered. Cost per good piece for every lot, and a shared bill split by pieces cut. Two lots cut or finished together can be joined: one carries a part of the other's cost (all of it, a percentage or by pieces), the first lot's own records stay as they are, and the move can be reversed.</p></div>
 <div class="card"><h3>Team</h3><p>Add a person in one sheet with their role and stages. Each karigar has a profile and a supervisor, so a supervisor's list shows their own people. Switch someone off when they leave; their history stays. People without an email sign in with a username.</p></div>
 <div class="card"><h3>Ready stock</h3><p>The garments that finished the last stage, less what has gone out. Enter the stock already on the shelf as opening stock, take stock out as sold, dispatched or a sample, and correct a count with a reason. Every movement is on a ledger you can reverse and download.</p></div>
-<div class="card"><h3>Away, counted and printed</h3><p>Mark a supervisor away and let another cover their stages and karigars for the dates. Count the fabric shelf by scanning roll numbers and post only the differences. The slip sheet remembers which bundles have a slip printed.</p></div>
+<div class="card"><h3>Away, counted and printed</h3><p>Mark a supervisor away and let another cover their stages and karigars for the dates. Count the fabric shelf by scanning roll numbers and post only the differences. The slip sheet remembers which bundles have a slip printed, and roll labels and slips also download as a file for a Zebra label printer.</p></div>
+<div class="card"><h3>Today</h3><p>One page for the owner's morning or evening: what was given out, taken back, rejected, sent for rework and short on any day, what garments left, and how many requests wait for a decision. It reads the same entries as every report, so it can never disagree with them.</p></div>
 <div class="card"><h3>Routes that fit the factory</h3><p>Mark a stage required or optional. A lot can skip only an optional stage, so a shirt without a collar and cuff follows its own route while every other lot keeps the full one. Each person opens on the page their work is on.</p></div>
 <div class="card"><h3>Reports and records</h3><p>Reports led by graphics with the table folded below, each with Excel, CSV and Print or PDF. A change history of who did what and when. Defect photographs taken on the phone and attached to the entry.</p></div>
 </div>
-<p class="footnote">Hindi and English: the floor screens, the daily entry and every slip are bilingual, chosen on each phone. The owner and office screens are in English today; a Hindi office interface is one of the next steps in section 05.</p>
+<p class="footnote">Hindi and English: the floor screens, the daily entry, every slip, and the screens the munshi and the store use every day (fabric, receiving rolls, counting the shelf, ready stock, the karigar list) are bilingual, chosen on each phone. Lots, costs, reports and settings are in English today; the rest of the office is one of the next steps in section 05.</p>
 
 <h2><span class="num">03</span>Your investment</h2>
 <p>The software and everything in document 2 are the same on both options. What differs is how you pay for it: more once and less each month, or less once and a little more each month.</p>
@@ -117,11 +118,10 @@
 <p>When Stylified is ready, the same workspace grows with it, each step quoted on its own and agreed in writing first:</p>
 <table>
 <tbody>
-<tr><td style="width:36%"><strong>Join or link lots</strong></td><td>With cost re-allocated by pieces or an approved percentage, and the source lots kept intact</td></tr>
-<tr><td><strong>Hindi on the office screens</strong></td><td>A language switch for the owner, manager and munshi screens, reports and errors</td></tr>
+<tr><td style="width:36%"><strong>Hindi on the rest of the office</strong></td><td>The same language switch for lots, costs, reports, settings and error messages</td></tr>
 <tr><td><strong>Packing and dispatch</strong></td><td>Packing, packets, parties and transport references (outside release one by your own requirement sheet)</td></tr>
-<tr><td><strong>Alerts to the phone</strong></td><td>A daily summary and challans sent by WhatsApp or SMS, once a provider is chosen</td></tr>
-<tr><td><strong>Label printer</strong></td><td>Printing the roll labels and bundle slips in a label printer's own language (Zebra or TSC) instead of A4, once the model is chosen</td></tr>
+<tr><td><strong>Alerts to the phone</strong></td><td>Today's figures and challans sent by WhatsApp or SMS, once a provider is chosen</td></tr>
+<tr><td><strong>Label printer</strong></td><td>The Zebra file exists but is not yet tried on a printer. We test it on yours once the model is chosen, and add a TSC file if you use one</td></tr>
 <tr><td><strong>Accounts and parties</strong></td><td>A Tally voucher export, a supplier and party master, a GST job-work challan for outside units</td></tr>
 <tr><td><strong>More</strong></td><td>Style and size master with buyer orders, offline scanning for weak signal, a second unit</td></tr>
 </tbody></table>
@@ -200,6 +200,8 @@
 <tr><td>Cases for short pieces, charge requests, approvals within limits the owner sets, a change history</td><td>Supervisor, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Wages, advances, recoveries, deductions, payments, opening balance owed, karigar account</td><td>Munshi, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Lot costing with shared bills, cost per good piece, a refusal of costs that would be counted twice</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Join or link lots: one lot carries a part of another's cost (all, a percentage, or by pieces), the source's own records untouched, reversible, shown on the lot, the cost report and the change history</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Today: the day's given, taken back, rejected, rework, short, garments out and requests waiting, for any day</td><td>Owner, Manager</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Team: people as cards by role, add a person, change role and stages, reset a password, switch off and on, six role presets</td><td>Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Set up the factory: a journey from the challan heading to the first lot, worked out from what exists, each step opening the real screen</td><td>Owner, Manager</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Who holds what: open pieces by supervisor, karigar and bundle, with how long and what is late</td><td>Owner, Manager, Supervisor</td><td><span class="tag in">built</span></td></tr>
@@ -209,7 +211,8 @@
 <tr><td>Leave and cover (a supervisor away, another covering their stages and karigars for the dates), a roll stock-take by scanning, a print queue that remembers which slips were printed</td><td>Owner, Store, Cutting master</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Required and optional stages: a lot can skip only an optional stage; each role opens on the page its work is on</td><td>Owner, Manager</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Photographs: defect photos on rejected or rework entries, lot pictures set up with you</td><td>Supervisor, Munshi, Owner</td><td><span class="tag in">built</span></td></tr>
-<tr><td>Hindi and English on the floor screens, daily entry and every slip</td><td>Supervisor, Munshi</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Hindi and English on the floor screens, daily entry, every slip, and the munshi's and store's daily screens (fabric, receiving, shelf count, ready stock, karigar list)</td><td>Supervisor, Munshi, Store</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Zebra label-printer file (ZPL) for roll labels and bundle slips, beside the A4 and sticker sheets (written to the printer's specification and checked as text; not yet tried on a printer)</td><td>Store, Cutting master</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Your own workspace: roles, people, stages and rates, opening balances, challan heading</td><td>All</td><td><span class="tag new">week 1</span></td></tr>
 <tr><td>A test lot on your floor, training in Hindi and English, a restore rehearsed in front of you, go-live</td><td>All</td><td><span class="tag new">weeks 2 to 4</span></td></tr>
 </tbody></table>
@@ -331,24 +334,23 @@
 <tr><td>D-05</td><td>Each cost category is a separate entry; a cost named like fabric, wages or a stage is refused because those are already counted</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-06, D-07</td><td>The labels "Thread" and "Side Feed Up" are data you can change without code (cost categories, in two languages)</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-08</td><td>A movement names a stage and a karigar, unit or place; no separate floor or table master</td><td><span class="tag in">built</span></td></tr>
-<tr><td>D-09</td><td>Joining or splitting lots allocates cost by pieces or an approved percentage that always sums to 100. Bundles can be split and joined at the cutting table today; lots are a next step</td><td><span class="tag later">next step</span></td></tr>
+<tr><td>D-09</td><td>Joining or linking lots moves a part of one lot's cost to another: all of it, a percentage, or by pieces. Never more than all of a lot's cost, one level only (a lot that gives cannot also receive), refused on a closed lot, and reversed with a reason rather than edited. Bundles can also be split and joined at the cutting table. If you need an approval step before cost moves, say so at kickoff</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-10</td><td>Fabric inward takes date, rate and amount as optional; a lot's fabric cost is what was used times the roll's invoice rate</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-11</td><td>Online-first web app; no offline mode in this release</td><td><span class="tag in">decided</span></td></tr>
 <tr><td>D-12</td><td>Opening fabric stock and each karigar's opening balance owed or advance given are entered on launch day. Opening ready garments are entered as opening stock on the Ready stock screen</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-13</td><td>Owner full; manager limited by approval limits; supervisor scoped to assigned stages and karigars (section 4)</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-14</td><td>Dispatch is outside release one, as your sheet says; it can be added later as a scope change</td><td><span class="tag out">out of scope</span></td></tr>
-<tr><td>D-15</td><td>Hindi and English: the floor screens, the daily entry, every slip, the reasons and the cost categories are bilingual now. Your sheet (FR-002) says "all core screens"; the owner, manager and munshi office screens, reports and error messages stay in English in this release and a Hindi office interface is quoted as the first next step. Please confirm at kickoff</td><td><span class="tag later">next step</span></td></tr>
+<tr><td>D-15</td><td>Hindi and English: the floor screens, the daily entry, every slip, the reasons and the cost categories are bilingual now. Your sheet (FR-002) says "all core screens"; the screens the munshi and the store use every day (fabric, receiving rolls, shelf count, ready stock, karigar list) are in Hindi too, chosen on each phone. Lots, costs, reports, settings and error messages stay in English in this release and the rest of the office is quoted as the first next step. Please confirm at kickoff</td><td><span class="tag later">next step</span></td></tr>
 </tbody></table>
 
 <h2><span class="num">07</span>After go-live: what is quoted separately</h2>
 <table>
 <thead><tr><th>Item</th><th>Why it waits</th></tr></thead>
 <tbody>
-<tr><td>Join or link whole lots, with cost re-allocated</td><td>Rewrites cost across lots; needs your approval rules first</td></tr>
-<tr><td>A Hindi interface on the office screens, with a language switch</td><td>Touches every office screen, report and error; the floor, daily entry and slips are bilingual already</td></tr>
+<tr><td>Hindi on the remaining office screens (lots, costs, reports, settings) and error messages</td><td>Touches many screens; the floor, daily entry, slips and the munshi's and store's daily screens are bilingual already</td></tr>
 <tr><td>Packing, packets, parties, dispatch</td><td>Outside release one by your sheet; needs parties and transport references</td></tr>
-<tr><td>WhatsApp or SMS: a daily summary, the challan, the wage slip</td><td>Needs a provider you choose and who pays it</td></tr>
-<tr><td>Label-printer support (Zebra or TSC) for roll labels and slips</td><td>Needs the printer model; the A4 and sticker sheets work today</td></tr>
+<tr><td>WhatsApp or SMS: today's figures, the challan, the wage slip</td><td>Needs a provider you choose and who pays it</td></tr>
+<tr><td>Testing the Zebra file on your printer, a TSC file, printing straight from the screen</td><td>Needs the printer model; the A4 and sticker sheets and the Zebra file download today</td></tr>
 <tr><td>Tally voucher export, supplier and party master, GST job-work challan for outside units</td><td>Needs your accountant's format</td></tr>
 <tr><td>Style and size master with buyer orders; offline scanning; a second unit</td><td>New modules; offline only if the test lot shows signal drops</td></tr>
 <tr><td>Move of the workspace to Stylified's own Vercel and Supabase accounts</td><td>Needs install steps we have not yet scripted or validated; quoted once validated</td></tr>
@@ -606,8 +608,9 @@
 <tr><td>Fabric rolls, stock, labels, lot costing with shared bills, cost per good piece</td><td>Piece-rate module, tested, shown on fictional data</td><td>Your fabrics, suppliers and cost categories</td></tr>
 <tr><td>Team: roles, people, stages, karigar profiles, a supervisor per karigar, username sign-in</td><td>Piece-rate module, tested, shown on fictional data</td><td>Your people</td></tr>
 <tr><td>Reports with Excel, CSV and PDF, a change history, a factory dashboard</td><td>Piece-rate module, tested, shown on fictional data</td><td>Your lots</td></tr>
-<tr><td>Hindi and English on the floor screens, daily entry and slips</td><td>Built</td><td>Your labels and reasons in both languages</td></tr>
-<tr><td>Hindi on the office screens, join or link lots, packing and dispatch, WhatsApp and SMS, Tally export</td><td>Not built</td><td>Quoted separately when you ask</td></tr>
+<tr><td>Hindi and English on the floor screens, daily entry, slips, and the munshi's and store's daily screens</td><td>Built</td><td>Your labels and reasons in both languages</td></tr>
+<tr><td>Join or link lots with cost moved between them, and the Today page</td><td>Built</td><td>Reversible, with the source lot's records untouched</td></tr>
+<tr><td>Hindi on lots, costs, reports and settings; a Zebra file tried on your printer, or a TSC file; packing and dispatch; WhatsApp and SMS; Tally export</td><td>Not built</td><td>Quoted separately when you ask</td></tr>
 </tbody></table>
 
 <h2><span class="num">03</span>Experience</h2>
@@ -666,7 +669,7 @@
 <h2><span class="num">01</span>Overview</h2>
 <p>Stylified gets its own workspace on Verity's hosted platform. The workspace is a set of screens and rules for the piece-rate cycle, on top of a shared foundation that provides sign-in, roles, an audit trail, files, notifications and company isolation.</p>
 <div class="stack">
-  <div class="layer"><span class="mono">Experience</span><p>Web application for desktop, tablet and phone, dark and light themes. Supervisor screens are designed phone-first and open from a camera scan. Hindi and English labels on the floor screens, daily entry and slips.</p></div>
+  <div class="layer"><span class="mono">Experience</span><p>Web application for desktop, tablet and phone, dark and light themes. Supervisor screens are designed phone-first and open from a camera scan. Hindi and English labels on the floor screens, daily entry, slips, and the munshi's and store's daily screens.</p></div>
   <div class="layer"><span class="mono">Piece-rate module</span><p>Fabric rolls, lots and rate cards, bundles, stages, karigars and rates, handovers and returns, rework, cases, wages and money, lot costing, approvals, day close, team, reports. Every change is a <em>command</em> with its own checks; every screen reads through a <em>query</em>.</p></div>
   <div class="layer"><span class="mono">Platform foundation</span><p>Company isolation, identity and memberships, roles built from permissions, an audit trail, an event log, file storage, notifications, numbering, configuration.</p></div>
   <div class="layer"><span class="mono">Data and hosting</span><p>A relational database with row-level security forced on every Stylified table, file storage, application hosting in an Indian region, backups.</p></div>
@@ -774,7 +777,8 @@
 <li>The piece-rate module is built and proven on demonstration data in our test environment; it moves onto Stylified's own workspace and people at kickoff.</li>
 <li>Speed on the hosted service is measured on your workspace during the week-three checks; the figures above are from a local build.</li>
 <li>The hosted run (photograph storage, a supervisor on a real phone) and the restore rehearsal happen on your workspace before go-live and are acceptance criteria.</li>
-<li>Not built: joining whole lots, Hindi on the office screens, packing and dispatch, WhatsApp or SMS, offline use, a Tally export. They are quoted separately.</li>
+<li>The Zebra label file (ZPL) is written to the printer's specification and checked as text; it has not been run on a printer, because the model is not chosen.</li>
+<li>Not built: Hindi on lots, costs, reports and settings, a TSC label file, packing and dispatch, WhatsApp or SMS, offline use, a Tally export. They are quoted separately.</li>
 <li>A deployment on Stylified's own Vercel and Supabase accounts is a later option, offered after a full rehearsal.</li>
 </ul></main>
 
@@ -826,13 +830,15 @@
 <tr><td>11</td><td><strong>Team.</strong> Add a person with a role, stages and a username. Sign in as them. Then switch them off.</td><td>The new person signs in with the role and stages given. After switching off they cannot sign in, and their history stays.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>12</td><td><strong>Excel and PDF.</strong> Download three reports to Excel and print one to PDF.</td><td>The totals in the files equal the totals on the screen.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>13</td><td><strong>Phone and themes.</strong> Open every screen of your role at desktop width and at phone width, in light and dark.</td><td>Nothing is cut off, overlaps or scrolls sideways; every button can be pressed with a thumb.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
-<tr><td>14</td><td><strong>Hindi.</strong> Switch a supervisor's phone to Hindi and open every floor screen, the daily entry and a slip.</td><td>Labels are in Hindi; names and codes stay as they are. (The owner and office screens are English in this release: decision D-15.)</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>14</td><td><strong>Hindi.</strong> Switch a phone to Hindi and open every floor screen, the daily entry, a slip, and the fabric, receive, shelf count, ready stock and karigar list screens.</td><td>Labels are in Hindi; names and codes stay as they are. (Lots, costs, reports and settings are English in this release: decision D-15.)</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>15</td><td><strong>Backup.</strong> We take a backup and restore it into a separate copy in front of you.</td><td>The restored copy has the same lots, bundles and balances. A restore returns the workspace to the time of the backup.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>16</td><td><strong>Ready stock.</strong> Enter opening ready stock. Take some out as sold. Try to take out more than is in stock. Correct a count with a reason. Reverse the stock-out.</td><td>The balance is what was made plus opening less what went out. Taking out more than is there is refused. The count correction needs a reason. The reversal returns the stock and both rows stay on the ledger.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>17</td><td><strong>Optional stages.</strong> Try to skip a required stage on a lot's rate card. Mark a stage optional and skip it.</td><td>A required stage cannot be skipped, and the screen says why. After marking it optional the lot skips it and its pieces go on to the next stage.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>18</td><td><strong>Away and cover.</strong> Mark a supervisor away for today with another covering. As the cover, open Give out. End the cover.</td><td>While the cover lasts the covering person can work at the absent supervisor's stages and give out to their karigars; after it ends they cannot. The Team card shows who is away.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>19</td><td><strong>Shelf count.</strong> Count the fabric shelf: scan or type three roll numbers, enter one quantity that differs, and post.</td><td>Only the difference is posted, as an adjustment with the reason Stock-take. The matching rolls leave no row and the rolls not counted are untouched.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 <tr><td>20</td><td><strong>Print queue.</strong> Print some of a lot's slips with the Print button. Reopen the sheet.</td><td>The printed bundles are labelled printed, the others not printed yet, and "Only not printed yet" picks exactly those. The lot page says how many have no slip.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>21</td><td><strong>Join lots.</strong> On a lot with a cost, choose Join or link to a lot and move 40% of its cost to another lot. Try to move 70% more. Reverse the move.</td><td>The first lot's total falls by that part and the other's rises by the same amount, on the lot page and the cost report; the lot's own cost lines are unchanged. Moving more than is left is refused. After the reversal both lots return to their figures and both rows stay on the list.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
+<tr><td>22</td><td><strong>Today.</strong> Open Today for today and for a day with work. Compare the figures with the daily entry and the reports.</td><td>Given, taken back, rejected, rework, short and garments out equal the same figures in the reports for that day.</td><td class="res"><span class="check"></span>Pass &nbsp;<span class="check"></span>Fail</td></tr>
 </tbody></table>
 
 <h2><span class="num">03</span>The pilot, before paper stops</h2>

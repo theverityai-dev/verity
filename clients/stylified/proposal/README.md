@@ -43,6 +43,7 @@ liability cap, governing law (Delhi courts), the 30-day validity.
 ## Documents follow the build
 
 The pack says only what exists. Rewritten 2026-10-25 for the current build: fabric rolls, the lot rate card, scan, challans, the receiver's count,
-cases, lot costing, team management, six roles, opening balances, Excel and PDF export. Not claimed: joining whole lots, Hindi on the office
-screens, dispatch, WhatsApp or SMS, offline use, a Tally export. Hosted-workspace facts (photograph storage, a supervisor on a real phone, the
+cases, lot costing, team management, six roles, opening balances, Excel and PDF export; updated 2026-10-26 for joined lots with cost moved
+between them, Today, Hindi on the munshi's and store's daily screens, and the Zebra file. Not claimed: Hindi on lots, costs, reports and
+settings, a TSC file, a Zebra file proven on a printer, dispatch, WhatsApp or SMS, offline use, a Tally export. Hosted-workspace facts (photograph storage, a supervisor on a real phone, the
 restore rehearsal) are stated as happening at go-live, not as done.
