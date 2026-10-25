@@ -406,6 +406,46 @@ export const floorWorkers: QueryDefinition<Record<string, never>, FloorWorker[]>
   },
 };
 
+export type CustodyBundle = Pick<FloorIssue, "issueId" | "bundleId" | "bundleNumber" | "lotNumber" | "stageLabel" | "open" | "dueDate" | "late" | "daysOut" | "isRework">;
+export type CustodyKarigar = { workerId: string; name: string; held: number; late: number; oldestDays: number; bundles: CustodyBundle[] };
+export type CustodyGroup = { supervisorUserId: string | null; supervisorName: string; held: number; late: number; karigars: CustodyKarigar[] };
+
+/**
+ * Who holds what right now: the open pieces grouped by the supervisor each karigar is set under, then by karigar, with the bundles, how long
+ * they have been out and what is late. No rate, wage or balance. A person who works at every stage sees every group; a supervisor sees the
+ * pieces at their own stages.
+ */
+export const custodyBoard: QueryDefinition<Record<string, never>, { today: string; groups: CustodyGroup[] }> = {
+  key: "verity.piecework.custody_board",
+  entity: ENTRY_ENTITY,
+  input: z.object({}),
+  handler: async (ctx) => {
+    const [st, workers, members] = await Promise.all([
+      floorState(ctx.tx, ctx.actor),
+      ctx.tx.pieceworkWorker.findMany({ select: { id: true, supervisorUserId: true } }),
+      ctx.tx.tenantMembership.findMany({ select: { userId: true, user: { select: { party: { select: { displayName: true } } } } } }),
+    ]);
+    const supervisorOf = new Map(workers.map((w) => [w.id, w.supervisorUserId]));
+    const names = new Map(members.map((m) => [m.userId, m.user.party.displayName]));
+    const groups = new Map<string, CustodyGroup>();
+    for (const i of st.issues) {
+      const sup = supervisorOf.get(i.workerId) ?? null;
+      const key = sup ?? "";
+      const group = groups.get(key) ?? { supervisorUserId: sup, supervisorName: sup ? names.get(sup) ?? "Someone who has left" : "No supervisor yet", held: 0, late: 0, karigars: [] };
+      groups.set(key, group);
+      let k = group.karigars.find((x) => x.workerId === i.workerId);
+      if (!k) { k = { workerId: i.workerId, name: i.workerName, held: 0, late: 0, oldestDays: 0, bundles: [] }; group.karigars.push(k); }
+      k.held += i.open; k.late += i.late ? 1 : 0; k.oldestDays = Math.max(k.oldestDays, i.daysOut);
+      k.bundles.push({ issueId: i.issueId, bundleId: i.bundleId, bundleNumber: i.bundleNumber, lotNumber: i.lotNumber, stageLabel: i.stageLabel, open: i.open, dueDate: i.dueDate, late: i.late, daysOut: i.daysOut, isRework: i.isRework });
+      group.held += i.open; group.late += i.late ? 1 : 0;
+    }
+    const out = [...groups.values()];
+    for (const g of out) { g.karigars.sort((a, b) => b.late - a.late || b.held - a.held || a.name.localeCompare(b.name)); for (const k of g.karigars) k.bundles.sort((a, b) => Number(b.late) - Number(a.late) || b.daysOut - a.daysOut); }
+    // The unassigned group last; the others by what is late, then what is held.
+    out.sort((a, b) => Number(a.supervisorUserId === null) - Number(b.supervisorUserId === null) || b.late - a.late || b.held - a.held || a.supervisorName.localeCompare(b.supervisorName));
+    return { today: st.today, groups: out };
+  },
+};
 export type FloorRegister = Awaited<ReturnType<typeof registers>>;
 export const floorRegister: QueryDefinition<Record<string, never>, FloorRegister & { today: string }> = {
   key: "verity.piecework.floor_register",
@@ -588,6 +628,7 @@ export function registerFloor(): void {
   registerQuery(floorWorkers);
   registerQuery(floorRegister);
   registerQuery(floorKarigar);
+  registerQuery(custodyBoard);
   registerQuery(approvalsInbox);
   registerQuery(teamSetup);
   registerQuery(dayPreview);

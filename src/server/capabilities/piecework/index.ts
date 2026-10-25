@@ -1083,6 +1083,7 @@ export function registerPieceworkCapability(): void {
       { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
       { href: "/shopfloor/team", label: "Team", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
+      { href: "/shopfloor/custody", label: "Who holds what", group: "Production", order: 18.5, icon: "user", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
       { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
       { href: "/lots/ready", label: "Ready garments", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },

@@ -16,6 +16,7 @@ import {
   assignStages,
   createBundle,
   createLot,
+  custodyBoard,
   defineStage,
   defineWorker,
   floorWorkers,
@@ -208,6 +209,15 @@ describeDb("capability: team management (role presets, supervisor link, director
     ledger = (await executeQuery(owner, workerLedger, { workerId: worker.A! }))!;
     expect(ledger.money.wagesMinor).toBe(0);
     expect(ledger.money.balanceMinor).toBe(-200_000);
+  });
+  it("shows who holds what: pieces grouped under the supervisor each karigar is set under, the rest last", async () => {
+    const board = await executeQuery(owner, custodyBoard, {});
+    expect(board.groups.map((g) => [g.supervisorName, g.held])).toEqual([["Supervisor A", 10], ["No supervisor yet", 25]]);
+    expect(board.groups[0]!.karigars.map((k) => [k.name, k.held])).toEqual([["Karigar A", 10]]);
+    expect(board.groups[1]!.karigars.map((k) => k.name).sort()).toEqual(["Karigar B", "Karigar C"]);
+    expect(board.groups[0]!.karigars[0]!.bundles[0]).toMatchObject({ open: 10, stageLabel: "Pasting" });
+    // A supervisor sees the pieces at their own stages, and never a rupee.
+    expect(JSON.stringify(await executeQuery(supA, custodyBoard, {}))).not.toMatch(/rate|wage|balance|Minor/i);
   });
   it("refuses a supervisor who can no longer sign in, and lists only active members as choices", async () => {
     await withTenant(tenantId, (tx) => tx.tenantMembership.update({ where: { id: supBMembershipId }, data: { disabledAt: new Date() } }));
