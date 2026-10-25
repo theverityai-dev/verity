@@ -20,7 +20,7 @@
       <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
       <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
       <div><span class="mono">Date</span><b>25 October 2026</b></div>
-      <div><span class="mono">Document</span><b>2 of 5</b></div>
+      <div><span class="mono">Document</span><b>2 of 6</b></div>
     </div>
   </div>
 </section>
@@ -28,7 +28,7 @@
 
 <!--DOC:body-->
 <main>
-<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 2 of 5 · Scope, screens and acceptance</span></div>
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 2 of 6 · Scope, screens and acceptance</span></div>
 
 <h1 class="page-title">What we build, and for whom</h1>
 <p class="lede">The workspace runs a real lot from the fabric roll to the ready garment, with every handover counted by both sides, money and quality kept honest, and the cost of the lot known. It is built from your requirement sheet (version 2.0, 23 October) and from the working chat with Ayushmaan Gaur on how the floor actually moves.</p>
@@ -75,6 +75,8 @@
 <tr><td>Who holds what: open pieces by supervisor, karigar and bundle, with how long and what is late</td><td>Owner, Manager, Supervisor</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Karigar profile, supervisor per karigar, a pasted-from-Excel karigar list</td><td>Manager, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Reports led by graphics with Excel, CSV and Print or PDF; factory dashboard; ready garments</td><td>Owner, Manager, Munshi</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Ready stock inventory: what production made ready, opening stock, stock out (sold, dispatched, sample), count corrections with a reason, a reversible ledger</td><td>Store, Munshi, Manager, Owner</td><td><span class="tag in">built</span></td></tr>
+<tr><td>Required and optional stages: a lot can skip only an optional stage; each role opens on the page its work is on</td><td>Owner, Manager</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Photographs: defect photos on rejected or rework entries, lot pictures set up with you</td><td>Supervisor, Munshi, Owner</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Hindi and English on the floor screens, daily entry and every slip</td><td>Supervisor, Munshi</td><td><span class="tag in">built</span></td></tr>
 <tr><td>Your own workspace: roles, people, stages and rates, opening balances, challan heading</td><td>All</td><td><span class="tag new">week 1</span></td></tr>
@@ -91,6 +93,7 @@
 <tr><td>Receive rolls, print roll labels, move rolls</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>See and move</td></tr>
 <tr><td>Set a lot's rate card</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>No</td></tr>
 <tr><td>Cut a lot, print slips</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>No</td><td>Yes</td></tr>
+<tr><td>Take stock out, correct a ready stock count</td><td>Yes</td><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td><td>No</td></tr>
 <tr><td>Give out, take back, rework</td><td>Yes</td><td>Yes</td><td>Own</td><td>Yes</td><td>No</td><td>No</td></tr>
 <tr><td>Open a case, raise a shortage</td><td>Yes</td><td>Yes</td><td>Own</td><td>Yes</td><td>No</td><td>No</td></tr>
 <tr><td>Write off a shortage; record a deduction</td><td>Yes</td><td>Approves within limit</td><td>Requests</td><td>Requests</td><td>No</td><td>No</td></tr>
@@ -154,6 +157,12 @@
 <ul>
 <li>A journey from rolls to cut, stages and ready; the rate card; one-step cut with the slips; the bundles; the lot's cost.</li>
 </ul></div>
+<div class="screen"><h3>Ready stock</h3><div class="mono who">Store, Munshi, Manager, Owner</div>
+<ul>
+<li>One card per lot or opening line: what production made ready, what has gone out, count fixes, and the balance in stock, with the bundles it sits in. A card opens the lot.</li>
+<li>Stock out (sold, dispatched, sample, with the party and the invoice or challan number), opening stock, and a count correction that needs a reason. The screen and the server both refuse more than is in stock.</li>
+<li>Every movement on a ledger, newest first, each one reversible with a reason, and downloadable to Excel.</li>
+</ul></div>
 <div class="screen"><h3>Karigars</h3><div class="mono who">Manager, Munshi, Owner</div>
 <ul>
 <li>People cards with what each holds, what is owed, who looks after them. A profile (joined, ID note, emergency contact), rates per stage, and the account: wages, advances, deductions, payments, opening balance. Import a whole list pasted from Excel.</li>
@@ -194,7 +203,7 @@
 <tr><td>D-09</td><td>Joining or splitting lots allocates cost by pieces or an approved percentage that always sums to 100. Bundles can be split and joined at the cutting table today; lots are a next step</td><td><span class="tag later">next step</span></td></tr>
 <tr><td>D-10</td><td>Fabric inward takes date, rate and amount as optional; a lot's fabric cost is what was used times the roll's invoice rate</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-11</td><td>Online-first web app; no offline mode in this release</td><td><span class="tag in">decided</span></td></tr>
-<tr><td>D-12</td><td>Opening fabric stock and each karigar's opening balance owed or advance given are entered on launch day. Opening ready garments are agreed with you at kickoff</td><td><span class="tag in">built</span></td></tr>
+<tr><td>D-12</td><td>Opening fabric stock and each karigar's opening balance owed or advance given are entered on launch day. Opening ready garments are entered as opening stock on the Ready stock screen</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-13</td><td>Owner full; manager limited by approval limits; supervisor scoped to assigned stages and karigars (section 4)</td><td><span class="tag in">built</span></td></tr>
 <tr><td>D-14</td><td>Dispatch is outside release one, as your sheet says; it can be added later as a scope change</td><td><span class="tag out">out of scope</span></td></tr>
 <tr><td>D-15</td><td>Hindi and English: the floor screens, the daily entry, every slip, the reasons and the cost categories are bilingual now. Your sheet (FR-002) says "all core screens"; the owner, manager and munshi office screens, reports and error messages stay in English in this release and a Hindi office interface is quoted as the first next step. Please confirm at kickoff</td><td><span class="tag later">next step</span></td></tr>
@@ -243,6 +252,7 @@
 </tbody></table>
 
 <h2><span class="num">10</span>How we agree it is done</h2>
+<p>Document 6 turns each of these into a step to run, the figures to expect and a box to tick, with the sign-off at the end.</p>
 <ol>
 <li>All six roles can sign in, and each sees only the screens in section 4. A supervisor cannot give out at a stage that is not assigned to them, nor to a karigar who is set under another supervisor, tested with a second supervisor.</li>
 <li>The reconciliation from your sheet reproduces exactly: 100 = 94 + 2 + 1 + 2 + 1 open.</li>
@@ -258,6 +268,8 @@
 <li>Every report downloads to Excel and the totals equal the screen.</li>
 <li>Every screen in this document opens at desktop width and at 390 px phone width, in both light and dark themes, with your data and no unrecorded defect.</li>
 <li>Hindi labels show on the daily entry and every supervisor screen for a user whose language is Hindi.</li>
+<li>Ready stock: opening stock is entered, stock out beyond what is in stock is refused, a count correction needs a reason, and a reversal returns the stock with both rows kept.</li>
+<li>A lot can skip an optional stage but not a required one, and its pieces go on to the next stage.</li>
 <li>A backup is taken and a restore is rehearsed on the Stylified workspace before go-live.</li>
 </ol>
 

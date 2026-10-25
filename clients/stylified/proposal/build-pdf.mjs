@@ -14,6 +14,7 @@ const docs = [
   ["03-service-terms", "03-Service-Terms"],
   ["04-company-and-platform", "04-Company-and-Platform"],
   ["05-technical-solution-document", "05-Technical-Solution-Document"],
+  ["06-acceptance-walkthrough", "06-Acceptance-Walkthrough"],
 ];
 
 const footer = `<div style="width:100%;font-family:Inter,Arial,sans-serif;font-size:7px;color:#6a6a72;padding:0 17mm;display:flex;justify-content:space-between;">

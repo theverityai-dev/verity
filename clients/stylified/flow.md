@@ -81,6 +81,8 @@ The system ends at ready garments. Dispatch is not in it.
 | Scan: camera (browser detector on Android, a small decoder on iPhone), a hand scanner, or a typed number opens a bundle, roll, lot or challan; a bundle shows only the moves open to this person now | `/shopfloor/scan` (first floor tab) | built |
 | What you can do now, on the bundle page a phone's camera opens from a slip | `/lots/bundles/[id]` | built |
 | Lot cost: fabric at roll rates + wages + other costs by the factory's own categories - charges recovered; cost per good piece; a shared bill split by pieces cut, shown before saving; reversal, never edit | lot page, `/lots/reports` | built, tested |
+| Ready stock: what production made ready, opening stock, stock out (sold, dispatched, sample), count corrections with a reason, a reversible ledger, Excel | `/lots/ready` | built, tested |
+| Required or optional stages: a lot can skip only an optional one | Production settings, lot rate card | built, tested |
 | Cost categories in two languages, edited with the other lists | `/lots/settings` | built |
 | Split and join bundles at the cutting table (refused once any of it is given out, because its pieces already move in parts) | bundle page | built, tested |
 

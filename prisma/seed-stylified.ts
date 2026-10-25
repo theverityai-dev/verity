@@ -282,6 +282,10 @@ async function main() {
   await executeCommand(actor, piecework.addLotCost, { lotIds: [lot3], category: "Packing", amountMinor: 38_000, incurredOn: day(-30), note: "Polybags and cartons" });
   await executeCommand(actor, piecework.setLotStatus, { lotId: lot3, to: "completed" });
   await executeCommand(actor, piecework.setLotStatus, { lotId: lot3, to: "closed" });
+  // Ready stock: LOT-0003's 50 finished garments, 20 already dispatched to a buyer, and stock that was on the shelf before Verity.
+  await executeCommand(actor, piecework.recordReadyMove, { kind: "out", lotId: lot3, pieces: 20, reason: "Dispatched", party: "Mehta Garments, Delhi", reference: "INV-2041", movedOn: day(-10) });
+  await executeCommand(actor, piecework.recordReadyMove, { kind: "opening", label: "Oxford formal, white, M to XL", pieces: 120, note: "Counted on the shelf at launch", movedOn: day(-20) });
+  await executeCommand(actor, piecework.recordReadyMove, { kind: "out", label: "Oxford formal, white, M to XL", pieces: 35, reason: "Sold", party: "Bansal Retail, Ludhiana", reference: "INV-2044", movedOn: day(-6) });
 
   // LOT-0004, on hold: part of one bundle is out.
   const lot4 = await lot("Export check shirt", "Export sample", 200, 6, 15, "Cotton check");

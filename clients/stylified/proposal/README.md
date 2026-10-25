@@ -1,6 +1,6 @@
 # Stylified proposal pack
 
-Five documents in the Verity document theme (ADR-053 Obsidian, print edition), authored as HTML and printed to PDF.
+Six documents in the Verity document theme (ADR-053 Obsidian, print edition), authored as HTML and printed to PDF.
 
 | # | Source | PDF |
 |---|---|---|
@@ -9,6 +9,7 @@ Five documents in the Verity document theme (ADR-053 Obsidian, print edition), a
 | 3 | `03-service-terms.html` | `pdf/03-Service-Terms.pdf` |
 | 4 | `04-company-and-platform.html` | `pdf/04-Company-and-Platform.pdf` |
 | 5 | `05-technical-solution-document.html` | `pdf/05-Technical-Solution-Document.pdf` |
+| 6 | `06-acceptance-walkthrough.html` (every check to run, the figures to expect, a box to tick, the sign-off) | `pdf/06-Acceptance-Walkthrough.pdf` |
 | all | assembled by the build script | `pdf/Stylified-Proposal-Package.pdf` |
 
 Rebuild after any edit: `node clients/stylified/proposal/build-pdf.mjs` (needs Microsoft Edge or Chrome and an internet connection for the

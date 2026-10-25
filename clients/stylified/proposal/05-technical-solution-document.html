@@ -26,7 +26,7 @@
       <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
       <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
       <div><span class="mono">Date</span><b>25 October 2026</b></div>
-      <div><span class="mono">Document</span><b>5 of 5</b></div>
+      <div><span class="mono">Document</span><b>5 of 6</b></div>
     </div>
   </div>
 </section>
@@ -34,7 +34,7 @@
 
 <!--DOC:body-->
 <main>
-<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 5 of 5 · Technical solution</span></div>
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">Document 5 of 6 · Technical solution</span></div>
 
 <h1 class="page-title">How it is built</h1>
 <p class="lede">For Stylified's owner and for anyone you ask to review the solution. It says what exists, how it is checked, and what is not built.</p>
@@ -83,7 +83,7 @@
 <table>
 <thead><tr><th>Record</th><th>What it holds</th><th>Rules</th></tr></thead>
 <tbody>
-<tr><td>Stage</td><td>A step in the line, in order, with a default rate per piece and an active flag</td><td>Stages are Stylified's data; they can be renamed and reordered</td></tr>
+<tr><td>Stage</td><td>A step in the line, in order, with a default rate per piece, an active flag and whether it is required or optional (a lot can skip only an optional stage)</td><td>Stages are Stylified's data; they can be renamed and reordered</td></tr>
 <tr><td>Roll and roll movement</td><td>Roll number, fabric, unit (metres or kilograms), quantity, supplier, invoice, rate, and every movement in or out</td><td>Append-only movements; the balance is worked out from them; a repeated invoice is warned</td></tr>
 <tr><td>Lot and lot rate card</td><td>Number, name, design, planned pieces, dates, status; a rate per stage for this lot, and a stage can be skipped</td><td>Numbers are gapless and never reused; a closed lot is locked. The lot's rate is used before the worker's, then the stage default</td></tr>
 <tr><td>Bundle</td><td>Number B-0001 onward, net pieces, size-mix note, the lot and the rolls it was cut from</td><td>Numbers are gapless per workspace; bundles can be split or joined at the cutting table until work has left it</td></tr>
@@ -92,6 +92,7 @@
 <tr><td>Entry (issue or return)</td><td>Bundle, stage, karigar, pieces sent and counted, due date, confirmation method, challan number, and for a return the split into good, rejected, rework and short</td><td>Append-only. A database check makes the four parts sum to the pieces returned. Corrections are reversals</td></tr>
 <tr><td>Payment</td><td>Advance, recovery, deduction, payment or opening balance, amount, mode, reference, reason</td><td>Append-only; amounts are whole paise, so there is no rounding drift</td></tr>
 <tr><td>Lot cost</td><td>A cost in one of your categories against a lot, with the date and who entered it</td><td>Append-only; a cost named like fabric, wages or a stage is refused (already counted)</td></tr>
+<tr><td>Ready stock move</td><td>Opening stock (named, no lot), stock out with the party and reference, and count corrections with a reason; what production made ready is derived from the bundles</td><td>Append-only; a reversal is the only undo; nothing can leave that is not in stock</td></tr>
 <tr><td>Stage assignment</td><td>A supervisor and a stage</td><td>Set by the owner; checked by the commands</td></tr>
 <tr><td>Approval and case</td><td>Kind (deduction, write-off, hold, close, charge), subject, amount or pieces, requester, state, decision and reason; a case ties a shortage to the worker who held the pieces and the supervisor who recorded it</td><td>Decided once; above-limit requests need the owner; nobody decides their own request</td></tr>
 <tr><td>Evidence photo</td><td>A photograph about a rejected or rework entry; lot pictures set up with you</td><td>Stored with company isolation; never a public link</td></tr>
@@ -139,7 +140,7 @@
 <thead><tr><th>Layer</th><th>What is covered</th></tr></thead>
 <tbody>
 <tr><td>Logic tests</td><td>The piece-rate calculations, the spreadsheet writer and the sign-in address rules, using the requirement sheet's own examples</td></tr>
-<tr><td>Database tests</td><td>More than 85 tests in all against a real database: stage and karigar scope for supervisors, approvals within the owner's limits, the frozen day close, reconciliation, over-issue and over-return refusals, rework pool, the wage bases and the lot rate card, the receiver's count with cases and charge requests, rolls and fabric used by a cut, lot costing and its refusals, role presets that cannot grant more than the installer holds, opening balances, append-only rules, company isolation</td></tr>
+<tr><td>Database tests</td><td>More than 85 tests in all against a real database: stage and karigar scope for supervisors, approvals within the owner's limits, the frozen day close, reconciliation, over-issue and over-return refusals, rework pool, the wage bases and the lot rate card, the receiver's count with cases and charge requests, rolls and fabric used by a cut, lot costing and its refusals, ready stock in and out, required and optional stages, where each role opens, role presets that cannot grant more than the installer holds, opening balances, append-only rules, company isolation</td></tr>
 <tr><td>Platform tests</td><td>Identity, membership, tenant isolation and permission tests that every capability inherits</td></tr>
 <tr><td>Browser checks</td><td>Every route opened as each role in dark and light on desktop and at 390 px, with the demonstration data, before go-live; defects are logged and fixed</td></tr>
 <tr><td>Acceptance</td><td>The criteria in document 2, section 10, run with Stylified</td></tr>
