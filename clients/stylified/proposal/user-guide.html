@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>User guide: Verity for Stylified</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="verity-doc.css">
+<style>
+  .i { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* ---------- the factory on one page ---------- */
+  .rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4.4mm 7.5mm; margin: 3mm 0 3.4mm; }
+  .stop { position: relative; border: 0.25mm solid var(--line); border-radius: 3.4mm; padding: 2.8mm 3.6mm 2.8mm; background: linear-gradient(160deg, #fff, #f8faff); break-inside: avoid; }
+  .stop:not(:nth-child(4n))::after { content: ""; position: absolute; top: 9.4mm; right: -6.2mm; width: 5mm; height: 0.35mm; background: var(--blue); }
+  .stop:not(:nth-child(4n))::before { content: ""; position: absolute; top: 8.35mm; right: -6.2mm; width: 1.6mm; height: 1.6mm; border-top: 0.35mm solid var(--blue); border-right: 0.35mm solid var(--blue); transform: rotate(45deg); transform-origin: 100% 0; margin-top: 0.2mm; }
+  .ic { display: grid; place-items: center; width: 9mm; height: 9mm; border-radius: 2.6mm; background: var(--blue-soft); color: var(--blue); box-shadow: inset 0 0 0 0.25mm var(--blue-line); font-size: 5mm; }
+  .stop .n { position: absolute; top: 3.8mm; right: 4mm; font-family: "IBM Plex Mono", monospace; font-size: 7pt; color: var(--tert); }
+  .stop h4 { margin: 1.8mm 0 0.3mm; font-size: 10.4pt; font-weight: 600; letter-spacing: -0.015em; }
+  .stop p { margin: 0; font-size: 8.4pt; line-height: 1.45; color: var(--sec); }
+  .stop .by { display: inline-block; margin-top: 1.6mm; padding: 0.4mm 2mm; border-radius: 99px; background: #eef0f5; font-family: "IBM Plex Mono", monospace; font-size: 6.2pt; letter-spacing: 0.06em; text-transform: uppercase; color: var(--sec); }
+  .loop { display: flex; align-items: center; gap: 3mm; padding: 2.4mm 4.5mm; border-radius: 3.4mm; background: var(--blue-soft); box-shadow: inset 0 0 0 0.25mm var(--blue-line); font-size: 8.8pt; break-inside: avoid; }
+  .loop .i { font-size: 5mm; color: var(--blue); }
+  .roster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3.6mm; margin: 3mm 0 0; }
+  .who { display: flex; gap: 3mm; align-items: center; padding: 2.4mm 3.4mm; border: 0.25mm solid var(--line); border-radius: 3.4mm; background: #fff; break-inside: avoid; }
+  .who .ic { flex: none; background: var(--graphite); color: #bfe0ff; box-shadow: none; }
+  .who b { display: block; font-size: 10pt; font-weight: 600; letter-spacing: -0.015em; }
+  .who div span { font-size: 8pt; color: var(--sec); line-height: 1.35; display: block; }
+
+  /* ---------- a role page ---------- */
+  .role { break-before: page; }
+  .rolehead { position: relative; overflow: hidden; display: flex; align-items: center; gap: 5.5mm; padding: 5mm 7mm; border-radius: 4.2mm; background: var(--graphite); color: #fff; margin-bottom: 4.5mm; break-inside: avoid; }
+  .rolehead::before { content: ""; position: absolute; inset: 0; background: radial-gradient(90mm 50mm at 92% -30%, rgba(10,132,255,0.55), transparent 70%), radial-gradient(60mm 40mm at 0% 120%, rgba(64,156,255,0.22), transparent 70%); }
+  .rolehead > * { position: relative; }
+  .rolehead .tile { display: grid; place-items: center; width: 17mm; height: 17mm; border-radius: 4.6mm; background: rgba(10,132,255,0.22); box-shadow: inset 0 0 0 0.3mm rgba(113,184,255,0.45); color: #bfe0ff; font-size: 8.6mm; flex: none; }
+  .rolehead h1 { margin: 0; font-size: 28pt; line-height: 1; font-weight: 200; letter-spacing: -0.05em; }
+  .rolehead p { margin: 1.4mm 0 0; font-size: 9.6pt; line-height: 1.4; font-weight: 300; color: #d5d8e0; max-width: 100mm; }
+  .chips { margin-left: auto; display: flex; flex-direction: column; gap: 1.6mm; align-items: flex-end; flex: none; }
+  .chip { display: inline-block; padding: 0.9mm 3mm; border-radius: 99px; background: rgba(255,255,255,0.12); box-shadow: inset 0 0 0 0.25mm rgba(255,255,255,0.22); font-family: "IBM Plex Mono", monospace; font-size: 6.4pt; letter-spacing: 0.06em; text-transform: uppercase; color: #dfe9ff; white-space: nowrap; }
+  .chip b { font-weight: 500; color: #fff; }
+
+  .rolebody { display: grid; grid-template-columns: 1fr 80mm; gap: 8mm; align-items: start; }
+  .rolebody.wide { grid-template-columns: 1fr 84mm; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: grid; grid-template-columns: 8.4mm 1fr; gap: 3.2mm; padding: 2.5mm 0; border-bottom: 0.2mm solid var(--line); margin: 0; break-inside: avoid; }
+  .steps li:first-child { padding-top: 0; }
+  .steps li:last-child { border-bottom: 0; }
+  .steps .no { display: grid; place-items: center; width: 8.4mm; height: 8.4mm; border-radius: 50%; background: var(--blue); color: #fff; font-family: "IBM Plex Mono", monospace; font-size: 8pt; font-weight: 500; }
+  .steps b { display: block; font-size: 10.4pt; font-weight: 600; letter-spacing: -0.015em; line-height: 1.3; }
+  .steps span { display: block; margin-top: 0.4mm; font-size: 8.8pt; line-height: 1.45; color: var(--sec); }
+  .steps em { font-style: normal; color: var(--ink); font-weight: 500; }
+
+  .phones { display: flex; gap: 4.4mm; justify-content: flex-end; }
+  .phone { margin: 0; width: 37mm; }
+  .phone.solo { width: 46mm; margin-left: auto; }
+  .phone .glass { border-radius: 5.6mm; border: 1.2mm solid #1c1c1e; overflow: hidden; background: #000; box-shadow: 0 2.4mm 5mm rgba(11, 11, 15, 0.16); }
+  .phone img { display: block; width: 100%; aspect-ratio: 560 / 1100; object-fit: cover; object-position: top; }
+  figcaption { margin-top: 1.8mm; font-family: "IBM Plex Mono", monospace; font-size: 6.2pt; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tert); line-height: 1.35; }
+  .phone figcaption { text-align: center; }
+  .wins { display: flex; flex-direction: column; gap: 5mm; }
+  .win { margin: 0; }
+  .win .frame { border-radius: 2.8mm; overflow: hidden; background: #fff; box-shadow: 0 0 0 0.25mm var(--line), 0 2.2mm 5mm rgba(11, 11, 15, 0.12); }
+  .win .bar { display: flex; gap: 1.1mm; align-items: center; height: 4.2mm; padding: 0 2mm; background: #eceef4; }
+  .win .bar i { width: 1.3mm; height: 1.3mm; border-radius: 50%; background: #c5c9d4; }
+  .win img { display: block; width: 100%; aspect-ratio: 5 / 4; object-fit: cover; object-position: top left; }
+  .win.tall img { aspect-ratio: 5 / 4.6; }
+  .win.short img { aspect-ratio: 16 / 9.4; }
+
+  .can-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 4mm; margin-top: 4.5mm; break-inside: avoid; }
+  .can, .cant { border-radius: 3.4mm; padding: 4mm 4.8mm 3.2mm; }
+  .can { background: #eef8f1; box-shadow: inset 0 0 0 0.25mm #cfe9d7; }
+  .cant { background: #f4f5f8; box-shadow: inset 0 0 0 0.25mm var(--line); }
+  .can h3, .cant h3 { margin: 0 0 2mm; font-family: "IBM Plex Mono", monospace; font-size: 7pt; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 500; }
+  .can h3 { color: var(--ok); } .cant h3 { color: var(--tert); }
+  .can ul, .cant ul { list-style: none; margin: 0; padding: 0; }
+  .can li, .cant li { display: flex; gap: 2.2mm; margin: 0 0 1.6mm; font-size: 8.8pt; line-height: 1.4; }
+  .can li .i { color: var(--ok); margin-top: 0.7mm; font-size: 9pt; stroke-width: 2.2; }
+  .cant li .i { color: var(--tert); margin-top: 0.7mm; font-size: 9pt; stroke-width: 2.2; }
+  .tip { display: flex; gap: 3mm; align-items: flex-start; margin-top: 4mm; padding: 3.4mm 4.6mm; border-radius: 3.4mm; background: var(--blue-soft); box-shadow: inset 0 0 0 0.25mm var(--blue-line); font-size: 9pt; break-inside: avoid; }
+  .tip .i { font-size: 5mm; color: var(--blue); margin-top: 0.4mm; }
+  .tip p { margin: 0; }
+  .slipwin { margin-top: 5mm; }
+  .slipwin .win img { aspect-ratio: 1400 / 480; }
+
+  /* ---------- common page ---------- */
+  .four { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+  .tilecard { border: 0.25mm solid var(--line); border-radius: 3.4mm; padding: 4.2mm 4.8mm; background: linear-gradient(160deg, #fff, #f8faff); break-inside: avoid; }
+  .tilecard .ic { margin-bottom: 2.4mm; }
+  .tilecard h3 { margin: 0 0 1mm; }
+  .tilecard p { margin: 0; font-size: 8.8pt; color: var(--sec); line-height: 1.5; }
+  .commonbody { display: grid; grid-template-columns: 1fr 40mm; gap: 7mm; align-items: start; }
+  .commonbody .tilecard { padding: 3.4mm 4mm; }
+  .commonbody .tilecard p { font-size: 8.4pt; }
+  .commonbody .phone.solo { width: 40mm; }
+  td .i { vertical-align: -0.15em; color: var(--blue); margin-right: 1.4mm; }
+</style>
+</head>
+<body>
+
+<!--DOC:cover-->
+<section class="cover">
+  <div class="cover-photo" style="background-image:url('../assets/web/banner-stitching-floor.webp')"></div>
+  <div class="cover-inner">
+    <div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div>
+    <h1>How everyone uses it</h1>
+    <p class="sub">One page for each person in the factory: what they open, what they do through the day, and what they can and cannot do.</p>
+    <div class="cover-meta">
+      <div><span class="mono">Prepared for</span><b>Stylified</b><br>Garment manufacturer, Ludhiana, Punjab</div>
+      <div><span class="mono">Prepared by</span><b>PlotArmour</b><br>team@plotarmour.in · +91 87440 69597</div>
+      <div><span class="mono">Date</span><b>26 October 2026</b></div>
+      <div><span class="mono">Document</span><b>User guide</b> · six roles</div>
+    </div>
+    <span class="status">Screens shown use demonstration data</span>
+  </div>
+</section>
+<!--/DOC:cover-->
+
+<!--DOC:body-->
+<main>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/></symbol>
+    <symbol id="i-cut" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.6"/><circle cx="6" cy="18" r="2.6"/><path d="M8 7.6 20 17M8 16.4 20 7"/></symbol>
+    <symbol id="i-roll" viewBox="0 0 24 24"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M5 19h14M12 15V4M7.5 8.5 12 4l4.5 4.5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M5 19h14M12 4v11M7.5 10.5 12 15l4.5-4.5"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+    <symbol id="i-rupee" viewBox="0 0 24 24"><path d="M7 5h10M7 9h10M7 5c5 0 8 1.5 8 4s-3 4-8 4l8 6"/></symbol>
+    <symbol id="i-ready" viewBox="0 0 24 24"><path d="M4 8h16v11H4zM4 8l2-4h12l2 4M10 13h4"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-checkc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.4 2.6 2.6L16 9.6"/></symbol>
+    <symbol id="i-dash" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3 7.8 7.5 9.5 4.5-1.7 7.5-5 7.5-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c.8-3.8 3.5-5.6 7-5.6s6.2 1.8 7 5.6"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M8 8h6M8 12h6"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v6H7z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9S14.6 18.4 12 21c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 6 4 11l5 5"/><path d="M4 11h9a6 6 0 0 1 0 11h-3"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15v-4M12 15V8M16 15v-6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-ledger" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  </defs>
+</svg>
+
+<div class="doc-head"><div class="brand-sm"><svg viewBox="0 0 100 100" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="9" stroke-linejoin="round"><path d="M26 20H74L50 43Z"/><path d="M26 80H74L50 57Z"/></g></svg>verity</div><span class="mono">User guide · The factory on one page</span></div>
+
+<h1 class="page-title">One lot, from fabric to finished</h1>
+<p class="lede" style="margin-bottom:3mm">Every lot follows this road. Each stop has one person who does it, and the next stop starts from what they recorded. Nothing is typed twice.</p>
+
+<div class="rail">
+  <div class="stop"><span class="n">01</span><span class="ic"><svg class="i"><use href="#i-roll"/></svg></span><h4>Fabric comes in</h4><p>Rolls are received by invoice. Each roll gets a number and a QR label.</p><span class="by">Store</span></div>
+  <div class="stop"><span class="n">02</span><span class="ic"><svg class="i"><use href="#i-cut"/></svg></span><h4>Cut into bundles</h4><p>The lot is cut from chosen rolls. Every bundle gets a number and a slip.</p><span class="by">Cutting master</span></div>
+  <div class="stop"><span class="n">03</span><span class="ic"><svg class="i"><use href="#i-out"/></svg></span><h4>Give out</h4><p>Scan the slip, pick the karigar, count the pieces. A challan prints.</p><span class="by">Supervisor</span></div>
+  <div class="stop"><span class="n">04</span><span class="ic"><svg class="i"><use href="#i-back"/></svg></span><h4>Take back</h4><p>Counted as good, rejected, rework and short. The receiver's count is the truth.</p><span class="by">Supervisor</span></div>
+  <div class="stop"><span class="n">05</span><span class="ic"><svg class="i"><use href="#i-moon"/></svg></span><h4>Close the day</h4><p>A short handover note. What is still out, what is late, what is short.</p><span class="by">Supervisor</span></div>
+  <div class="stop"><span class="n">06</span><span class="ic"><svg class="i"><use href="#i-rupee"/></svg></span><h4>Pay</h4><p>Wages come from accepted pieces at the lot's rate. Advances and payments are kept per karigar.</p><span class="by">Munshi · Manager</span></div>
+  <div class="stop"><span class="n">07</span><span class="ic"><svg class="i"><use href="#i-ready"/></svg></span><h4>Ready stock</h4><p>Finished garments are counted in. Sold, dispatched or sampled pieces go out.</p><span class="by">Store</span></div>
+  <div class="stop"><span class="n">08</span><span class="ic"><svg class="i"><use href="#i-chart"/></svg></span><h4>Approve and watch</h4><p>Charges and write-offs are decided. Cost per good piece shows for every lot.</p><span class="by">Manager · Owner</span></div>
+</div>
+<div class="loop"><svg class="i"><use href="#i-undo"/></svg><span><strong>Steps 3 and 4 repeat for every stage:</strong> Pasting, Collar &amp; Cuff, Stitching, Button / Kaj, Finishing / Press. A lot can skip a stage the owner has marked optional.</span></div>
+
+<h2 style="margin-top:6mm"><span class="num">01</span>Six people, six first screens</h2>
+<p style="margin-bottom:2mm">Each person opens on the page their work is on. What each can do is a list of permissions the owner can change on the Team and Roles screens; this guide shows the six roles as they are set up on day one.</p>
+<div class="roster">
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-shield"/></svg></span><div><b>Owner</b><span>Opens on the factory dashboard · laptop and phone</span></div></div>
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-checkc"/></svg></span><div><b>Manager</b><span>Opens on the factory dashboard · laptop and phone</span></div></div>
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-book"/></svg></span><div><b>Munshi</b><span>Opens on the factory dashboard · laptop, Hindi or English</span></div></div>
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-scan"/></svg></span><div><b>Supervisor</b><span>Opens on My floor · phone first, Hindi or English</span></div></div>
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-cut"/></svg></span><div><b>Cutting master</b><span>Opens on Lots · phone or laptop</span></div></div>
+  <div class="who"><span class="ic"><svg class="i"><use href="#i-roll"/></svg></span><div><b>Store</b><span>Opens on Fabric · phone, Hindi or English</span></div></div>
+</div>
+
+
+<!-- ================= OWNER ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-shield"/></svg></span>
+    <div><h1>Owner</h1><p>Sees everything, decides what is above the manager's limit, and sets the factory up.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>Factory dashboard</b></span><span class="chip">Laptop &amp; phone</span></div>
+  </div>
+  <div class="rolebody wide">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Open Today</b><span>Given out, taken back, good, short, what is late, how many requests wait for a decision. Pick any earlier day from the date box.</span></div></li>
+      <li><span class="no">2</span><div><b>Decide what is waiting</b><span><em>Approvals</em> shows each request with who asked and why. Anything above the manager's limit says <em>Needs the owner</em>. Approve or decline.</span></div></li>
+      <li><span class="no">3</span><div><b>Read the money</b><span><em>Lot reports</em> and each lot's cost panel: fabric, wages, other costs, cost per good piece. Download Excel or print to PDF.</span></div></li>
+      <li><span class="no">4</span><div><b>Look after people</b><span><em>Team</em>: add a person in one sheet with role, stages, language and a temporary password. Reset a password, set who is away, switch someone off.</span></div></li>
+      <li><span class="no">5</span><div><b>Set up once, then adjust</b><span><em>Set up the factory</em> walks you from the challan heading to the first lot. <em>Production settings</em> hold stages, reasons, cost categories and the manager's limits.</span></div></li>
+    </ol>
+    <div class="wins">
+      <figure class="win short"><div class="frame"><div class="bar"><i></i><i></i><i></i></div><img src="../assets/guide/own-today.webp" alt="The Today page: pieces given out, taken back, good and short, with late bundles and waiting decisions"></div><figcaption>Today · the day in a few figures</figcaption></figure>
+      <figure class="win short"><div class="frame"><div class="bar"><i></i><i></i><i></i></div><img src="../assets/guide/own-team.webp" alt="The Team page with people as cards grouped by role"></div><figcaption>Team · people by role, with their stages</figcaption></figure>
+    </div>
+  </div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>Add, change and switch off people and roles</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Approve any charge, write-off, hold or lot close</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Set rates, manager limits, stages and settings</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Record every payment, advance and recovery</li>
+      <li><svg class="i"><use href="#i-check"/></svg>See every report, the cost of every lot and the change history</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Join lots so one carries part of the other's cost</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot, by design</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>Edit or delete a posted entry. It is reversed, with a reason, and both rows stay</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Change a closed lot. Extra work goes on a new lot</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Decide a request they asked for themselves</li>
+    </ul></div>
+  </div>
+  <div class="tip"><svg class="i"><use href="#i-lock"/></svg><p><strong>The change history</strong> lists who did what and when, newest first. Open it before you ask anyone "who changed this?".</p></div>
+</section>
+
+<!-- ================= MANAGER ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-checkc"/></svg></span>
+    <div><h1>Manager</h1><p>Runs lots, fabric, karigars and payments day to day, and approves within the limits the owner sets.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>Factory dashboard</b></span><span class="chip">Laptop &amp; phone</span></div>
+  </div>
+  <div class="rolebody wide">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Start with Today and the dashboard</b><span>Late bundles, open cases, pieces held by each karigar, and the lots in work.</span></div></li>
+      <li><span class="no">2</span><div><b>Clear Approvals</b><span>Approve or decline within the limit (for example ₹1,000 or 5 pieces). Above it the button is greyed and says <em>Needs the owner</em>.</span></div></li>
+      <li><span class="no">3</span><div><b>Run the lots</b><span>Set a lot's rate card, start, hold or complete it, cut it, and print its slips. Close a lot within your limit.</span></div></li>
+      <li><span class="no">4</span><div><b>Keep karigars paid</b><span>Record advances, recoveries and payments. Every karigar has a clear account with the opening balance.</span></div></li>
+      <li><span class="no">5</span><div><b>Watch the cost</b><span>Add thread, buttons or packing to a lot, or split one bill across lots by pieces cut. Join two lots when they are finished as one.</span></div></li>
+    </ol>
+    <div class="wins">
+      <figure class="win tall"><div class="frame"><div class="bar"><i></i><i></i><i></i></div><img src="../assets/guide/mgr-approvals.webp" alt="The Approvals page: four requests with Approve and Decline buttons, one marked Needs the owner"></div><figcaption>Approvals · the owner-only request is greyed</figcaption></figure>
+    </div>
+  </div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>Everything on lots, bundles, fabric and karigars</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Give out, take back and reverse any entry with a reason</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Record wages, advances and payments</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Take stock out of ready stock and correct a count</li>
+      <li><svg class="i"><use href="#i-check"/></svg>See lot costing, every report and the change history</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>Approve above the limit. It goes to the owner</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Add people, change roles or change the limits</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Change production settings (view only)</li>
+    </ul></div>
+  </div>
+  <div class="tip"><svg class="i"><use href="#i-ledger"/></svg><p><strong>A decision stays on the case.</strong> Who decided, when and what they wrote are kept, so nobody has to remember why a charge was waived.</p></div>
+</section>
+
+<!-- ================= MUNSHI ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-book"/></svg></span>
+    <div><h1>Munshi</h1><p>The office clerk. Enters the day once, keeps karigars and their money, and asks for approvals.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>Factory dashboard</b></span><span class="chip">Laptop · <b>हिंदी</b> or English</span></div>
+  </div>
+  <div class="rolebody wide">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Enter the day in Daily entry</b><span>Choose <em>Give out</em> or <em>Take back</em>, then bundle, stage, karigar and pieces. Switch to हिंदी at the top if you prefer. The slip and challan print from it.</span></div></li>
+      <li><span class="no">2</span><div><b>Keep Karigars up to date</b><span>Add one, paste a list from Excel, set their supervisor and wage basis, and see each account.</span></div></li>
+      <li><span class="no">3</span><div><b>Record the money</b><span>Advances, recoveries, payments with mode and reference, and an opening balance for what was owed before Verity.</span></div></li>
+      <li><span class="no">4</span><div><b>Prepare lots</b><span>Create a new lot, set its rate card, cut it from rolls and print the slips. Receive fabric when the store is busy.</span></div></li>
+      <li><span class="no">5</span><div><b>Ask, do not decide</b><span>A deduction or a write-off is a <em>request</em>. The manager or the owner decides, and you see the answer.</span></div></li>
+    </ol>
+    <div class="wins">
+      <figure class="win tall"><div class="frame"><div class="bar"><i></i><i></i><i></i></div><img src="../assets/guide/munshi-entry.webp" alt="The Daily entry page with Give out and Take back, and today's entries beside it"></div><figcaption>Daily entry · type it once</figcaption></figure>
+    </div>
+  </div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>Enter give-outs and take-backs for any stage</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Add karigars and set their rates and supervisor</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Record advances, recoveries, payments and opening balances</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Create and cut lots, receive fabric, print slips</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Reverse their own entry the same day</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>Approve a deduction, write-off or close</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Hold or complete a lot</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>See the change history or production settings</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Add people or change roles</li>
+    </ul></div>
+  </div>
+  <div class="tip"><svg class="i"><use href="#i-undo"/></svg><p><strong>Entered the wrong count?</strong> Press Reverse and say why. The wrong row stays, the reversal sits beside it, and you enter it again correctly.</p></div>
+</section>
+
+<!-- ================= SUPERVISOR ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-scan"/></svg></span>
+    <div><h1>Supervisor</h1><p>Works the floor with a phone. Gives out, takes back, and answers for what the karigars hold.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>My floor</b></span><span class="chip">Phone · <b>हिंदी</b> or English</span></div>
+  </div>
+  <div class="rolebody">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Open My floor</b><span>Your stages, and the pieces out with karigars, waiting to give out, in rework and short. Tap any number to see which bundles.</span></div></li>
+      <li><span class="no">2</span><div><b>Scan the slip</b><span>Tap <em>Scan</em> and point the camera at the bundle's QR. No camera? Type the number.</span></div></li>
+      <li><span class="no">3</span><div><b>Give out</b><span>Pick the karigar, count with <em>+</em> and <em>−</em>, confirm. A challan prints for them to carry.</span></div></li>
+      <li><span class="no">4</span><div><b>Take back</b><span>Count <em>good</em>, <em>rejected</em>, <em>rework</em> and <em>short</em>. Rejected pieces take a photograph. Short pieces open a case on the karigar who held them.</span></div></li>
+      <li><span class="no">5</span><div><b>Close the day</b><span>Write a short handover note. It is kept for the manager and owner to read.</span></div></li>
+    </ol>
+    <div class="phones">
+      <figure class="phone"><div class="glass"><img src="../assets/guide/sup-floor.webp" alt="My floor on a phone: a ring showing 193 pieces with karigars, and the stages looked after"></div><figcaption>My floor</figcaption></figure>
+      <figure class="phone"><div class="glass"><img src="../assets/guide/sup-takeback.webp" alt="Take back on a phone: bundles still out, grouped by karigar, one marked 2 days late"></div><figcaption>Take back · by karigar</figcaption></figure>
+    </div>
+  </div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>Give out and take back at their own stages, to their own karigars</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Attach a photograph to rejected or rework pieces</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Ask for a deduction, a write-off or a lot hold</li>
+      <li><svg class="i"><use href="#i-check"/></svg>See Who holds what, and the cases on their floor</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Reverse their own entry on the same day</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>See any rate, wage or balance. No money appears anywhere</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Work at another supervisor's stages, unless covering for them</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Approve anything or edit anyone's entry</li>
+    </ul></div>
+  </div>
+  <div class="tip"><svg class="i"><use href="#i-checkc"/></svg><p><strong>The receiver's count is the truth.</strong> Count in front of the karigar. If more comes back than went out, the screen refuses and shows both figures.</p></div>
+</section>
+
+<!-- ================= CUTTING MASTER ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-cut"/></svg></span>
+    <div><h1>Cutting master</h1><p>Turns fabric rolls into numbered bundles and prints the slips that travel with them.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>Lots</b></span><span class="chip">Phone &amp; laptop</span></div>
+  </div>
+  <div class="rolebody">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Open the lot</b><span>Lots lists what is in work and what is still a draft. Open the lot you are about to cut.</span></div></li>
+      <li><span class="no">2</span><div><b>Cut the lot</b><span>Choose the rolls used and how many pieces go in each bundle. The metres used come off each roll's balance by themselves.</span></div></li>
+      <li><span class="no">3</span><div><b>Bundles number themselves</b><span>B-0001, B-0002 and on, with no gaps. Every bundle carries its own record from now on.</span></div></li>
+      <li><span class="no">4</span><div><b>Print the slips</b><span>Full size or a small sticker for the tie. Print only the ones not printed yet, or download a file for a Zebra label printer.</span></div></li>
+      <li><span class="no">5</span><div><b>Move rolls when asked</b><span>See the fabric on the shelf and move a roll when a lot needs it.</span></div></li>
+    </ol>
+    <div class="phones">
+      <figure class="phone solo"><div class="glass"><img src="../assets/guide/cut-lot.webp" alt="A draft lot on a phone with Start the lot and Cut the lot buttons"></div><figcaption>A lot, ready to cut</figcaption></figure>
+    </div>
+  </div>
+  <div class="slipwin"><figure class="win"><div class="frame"><div class="bar"><i></i><i></i><i></i></div><img src="../assets/guide/cut-slips.webp" alt="The slip sheet: bundle slips with number, pieces, lot and a QR, in Hindi and English"></div><figcaption>The slip sheet · bilingual, one QR per bundle, tick which to print</figcaption></figure></div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>See lots and their bundles</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Cut a lot and print its slips</li>
+      <li><svg class="i"><use href="#i-check"/></svg>See fabric rolls and move them</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>See money or any karigar rate</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Give out or take back pieces</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Set a rate card or change a lot's status</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ================= STORE ================= -->
+<section class="role">
+  <div class="rolehead">
+    <span class="tile"><svg class="i"><use href="#i-roll"/></svg></span>
+    <div><h1>Store</h1><p>Keeps the fabric shelf and the ready garments. Knows what came in, what is left and what went out.</p></div>
+    <div class="chips"><span class="chip">Opens on <b>Fabric</b></span><span class="chip">Phone · <b>हिंदी</b> or English</span></div>
+  </div>
+  <div class="rolebody">
+    <ol class="steps">
+      <li><span class="no">1</span><div><b>Receive rolls</b><span>Pick the fabric, enter the invoice, supplier, rate and metres. Each roll gets a number and a QR label to stick on it. The same invoice entered twice is warned first.</span></div></li>
+      <li><span class="no">2</span><div><b>Print labels</b><span>Print every roll's label in one go, as an A4 sheet or a Zebra file.</span></div></li>
+      <li><span class="no">3</span><div><b>Count the shelf</b><span><em>Count the shelf</em>: scan or type the roll numbers, enter the metres you find, and post. Only the differences are posted, with the reason <em>Stock-take</em>.</span></div></li>
+      <li><span class="no">4</span><div><b>Take garments out</b><span><em>Ready stock</em> shows what was made. Use <em>Stock out</em> for sold, dispatched or sample. More than is in stock is refused.</span></div></li>
+      <li><span class="no">5</span><div><b>Correct a count, with a reason</b><span>Found three extra or two torn? <em>Correct a count</em> needs a reason and keeps both sides on the record.</span></div></li>
+    </ol>
+    <div class="phones">
+      <figure class="phone"><div class="glass"><img src="../assets/guide/store-fabric.webp" alt="Fabric on a phone: Print labels, Count the shelf and Receive rolls, then stock by fabric in metres"></div><figcaption>Fabric</figcaption></figure>
+      <figure class="phone"><div class="glass"><img src="../assets/guide/store-ready.webp" alt="Ready stock on a phone: 201 garments in stock, with Stock out and Correct a count"></div><figcaption>Ready stock</figcaption></figure>
+    </div>
+  </div>
+  <div class="can-grid">
+    <div class="can"><h3>Can</h3><ul>
+      <li><svg class="i"><use href="#i-check"/></svg>Receive rolls, print labels, move rolls, count the shelf</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Enter opening ready stock and take stock out</li>
+      <li><svg class="i"><use href="#i-check"/></svg>Correct a ready-stock count with a reason</li>
+      <li><svg class="i"><use href="#i-check"/></svg>See lots, bundles and the entries on them</li>
+    </ul></div>
+    <div class="cant"><h3>Cannot</h3><ul>
+      <li><svg class="i"><use href="#i-dash"/></svg>See wages, balances or karigar rates</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Give out or take back pieces</li>
+      <li><svg class="i"><use href="#i-dash"/></svg>Change a lot or its rate card</li>
+    </ul></div>
+  </div>
+  <div class="tip"><svg class="i"><use href="#i-roll"/></svg><p><strong>Low fabric is flagged for you.</strong> The owner sets one level in settings, and Fabric marks every fabric under it, including ones with nothing left.</p></div>
+</section>
+
+<!-- ================= COMMON ================= -->
+<section class="role">
+  <h1 class="page-title">The same for everyone</h1>
+  <p class="lede">Four things work the same way on every screen, for every role.</p>
+  <div class="commonbody">
+    <div class="four">
+      <div class="tilecard"><span class="ic"><svg class="i"><use href="#i-lock"/></svg></span><h3>Signing in</h3><p>Use your email, or the username the owner gave you, and your password. People without an email sign in with a username such as <em>ravi.stylified</em>. Forgot it? Ask the owner, who sets a new one on the Team screen.</p></div>
+      <div class="tilecard"><span class="ic"><svg class="i"><use href="#i-globe"/></svg></span><h3>Hindi or English</h3><p>The switch sits at the top of the floor, fabric, stock and entry screens. Your choice is remembered on that phone. Names and numbers stay as they are written.</p></div>
+      <div class="tilecard"><span class="ic"><svg class="i"><use href="#i-scan"/></svg></span><h3>Scanning</h3><p>Point the camera at a bundle slip, a roll label or a challan and the right screen opens. A hand scanner works as a keyboard, and any number can be typed.</p></div>
+      <div class="tilecard"><span class="ic"><svg class="i"><use href="#i-undo"/></svg></span><h3>Mistakes</h3><p>Nothing is edited or deleted. A wrong entry is reversed with a reason; the original, the reversal and the person who made them all stay. Then enter it again correctly.</p></div>
+    </div>
+    <figure class="phone solo" style="margin:0"><div class="glass"><img src="../assets/guide/sup-floor-hi.webp" alt="My floor in Hindi"></div><figcaption>The same screen in हिंदी</figcaption></figure>
+  </div>
+
+</section>
+
+<!-- ================= LOOKUP ================= -->
+<section class="role">
+  <h1 class="page-title">I want to…</h1>
+  <p class="lede">Find the job, see who can do it and where to open it.</p>
+  <table>
+    <thead><tr><th>I want to</th><th>Who can</th><th>Open</th></tr></thead>
+    <tbody>
+      <tr><td><svg class="i"><use href="#i-roll"/></svg>Receive fabric and print labels</td><td>Store, Munshi, Manager, Owner</td><td>Fabric › Receive rolls</td></tr>
+      <tr><td><svg class="i"><use href="#i-cut"/></svg>Cut a lot and print slips</td><td>Cutting master, Munshi, Manager, Owner</td><td>Lots › the lot › Cut the lot</td></tr>
+      <tr><td><svg class="i"><use href="#i-out"/></svg>Give pieces to a karigar</td><td>Supervisor (own), Munshi, Manager, Owner</td><td>Scan, or My floor › Give out, or Daily entry</td></tr>
+      <tr><td><svg class="i"><use href="#i-back"/></svg>Take pieces back</td><td>Supervisor (own), Munshi, Manager, Owner</td><td>My floor › Take back, or Daily entry</td></tr>
+      <tr><td><svg class="i"><use href="#i-ledger"/></svg>Ask for a deduction or write-off</td><td>Supervisor, Munshi</td><td>On the take-back screen, or Cases</td></tr>
+      <tr><td><svg class="i"><use href="#i-checkc"/></svg>Approve a request</td><td>Manager (within limit), Owner</td><td>Approvals</td></tr>
+      <tr><td><svg class="i"><use href="#i-rupee"/></svg>Pay a karigar or give an advance</td><td>Munshi, Manager, Owner</td><td>Karigars › the karigar</td></tr>
+      <tr><td><svg class="i"><use href="#i-ready"/></svg>Take finished garments out of stock</td><td>Store, Munshi, Manager, Owner</td><td>Ready stock › Stock out</td></tr>
+      <tr><td><svg class="i"><use href="#i-link"/></svg>Join two lots, sharing the cost</td><td>Munshi, Manager, Owner</td><td>The lot › What this lot cost › Join or link</td></tr>
+      <tr><td><svg class="i"><use href="#i-chart"/></svg>See what a lot cost per good piece</td><td>Munshi, Manager, Owner</td><td>The lot, or Lot reports</td></tr>
+      <tr><td><svg class="i"><use href="#i-user"/></svg>Add a person or reset a password</td><td>Owner</td><td>Team › Add a person</td></tr>
+      <tr><td><svg class="i"><use href="#i-clock"/></svg>See who changed what</td><td>Manager, Owner</td><td>Change history</td></tr>
+    </tbody>
+  </table>
+  <p class="footnote">Questions during the first weeks: PlotArmour, team@plotarmour.in · +91 87440 69597.</p>
+</section>
+</main>
+<!--/DOC:body-->
+</body>
+</html>

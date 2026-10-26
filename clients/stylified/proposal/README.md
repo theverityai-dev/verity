@@ -12,6 +12,12 @@ Six documents in the Verity document theme (ADR-053 Obsidian, print edition), au
 | 6 | `06-acceptance-walkthrough.html` (every check to run, the figures to expect, a box to tick, the sign-off) | `pdf/06-Acceptance-Walkthrough.pdf` |
 | all | assembled by the build script | `pdf/Stylified-Proposal-Package.pdf` |
 
+Outside the numbered pack, for the people who use the system rather than the person who decides: `user-guide.html`, a ten-page visual user guide
+(the factory on one page, one page for each of the six roles with a real screen, the steps, and what each can and cannot do, a page common to
+everyone, and an "I want to" lookup) printed to `pdf/Stylified-User-Guide.pdf`. Its screens are real captures of the demonstration workspace in
+`../assets/guide/`; retake them after a screen changes (the role's demo login, a 390 px phone or 1280 px laptop window). It is not part of
+`Stylified-Proposal-Package.pdf`.
+
 Rebuild after any edit: `node clients/stylified/proposal/build-pdf.mjs` (needs Microsoft Edge or Chrome and an internet connection for the
 fonts). The shared theme is `verity-doc.css`. `_package.html` is generated and can be deleted. The file names of document 2 keep their old
 names so links and the build script stay valid; its title is "Scope, screens and acceptance".

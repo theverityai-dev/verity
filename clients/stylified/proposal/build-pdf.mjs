@@ -17,7 +17,10 @@ const docs = [
   ["06-acceptance-walkthrough", "06-Acceptance-Walkthrough"],
 ];
 
-const footer = `<div style="width:100%;font-family:Inter,Arial,sans-serif;font-size:7px;color:#6a6a72;padding:0 17mm;display:flex;justify-content:space-between;">
+// Printed on their own, outside the numbered pack: the user guide is handed to staff, not to the owner for a decision.
+const standalone = [["user-guide", "Stylified-User-Guide"]];
+
+const footer =`<div style="width:100%;font-family:Inter,Arial,sans-serif;font-size:7px;color:#6a6a72;padding:0 17mm;display:flex;justify-content:space-between;">
   <span>Verity by PlotArmour · Stylified · Confidential draft</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
 
 const section = (html, name) => html.match(new RegExp(`<!--DOC:${name}-->([\\s\\S]*?)<!--/DOC:${name}-->`))?.[1] ?? "";
@@ -45,7 +48,7 @@ async function print(browser, url, file) {
 await mkdir(outDir, { recursive: true });
 const browser = await launch();
 try {
-  for (const [src, name] of docs) await print(browser, pathToFileURL(path.join(dir, `${src}.html`)).href, path.join(outDir, `${name}.pdf`));
+  for (const [src, name] of [...docs, ...standalone]) await print(browser, pathToFileURL(path.join(dir, `${src}.html`)).href, path.join(outDir, `${name}.pdf`));
 
   // The combined package: every cover and body in order, one document.
   const parts = [];

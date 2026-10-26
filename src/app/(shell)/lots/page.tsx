@@ -87,7 +87,7 @@ async function LotsPage({ searchParams }: { searchParams: Promise<{ show?: strin
           description={active.key === "open" ? "Create a lot, start it, then cut its bundles." : "No lot matches this view."}
         />
       ) : (
-        <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-2 2xl:grid-cols-3">
+        <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 2xl:grid-cols-3">
           {shown.map((l) => {
             const finished = l.status === "completed" || l.status === "closed";
             return (
