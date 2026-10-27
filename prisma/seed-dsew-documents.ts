@@ -77,10 +77,12 @@ async function main() {
       [ENTITY_DOCUMENT_RELEASE, ["ActionExecute"]],
       [ENTITY_DOCUMENT_SELF_RELEASE, ["ActionExecute"]],
     ];
+    const roleId = setup.actor.roleId;
+    if (!roleId) throw new Error("the Owner membership has no role to grant Document permissions to");
     for (const [entity, verbs] of grants) {
       for (const verb of verbs) {
-        const has = await tx.permission.findFirst({ where: { tenantId, roleId: setup.actor.roleId, verb, entity } });
-        if (!has) await tx.permission.create({ data: { tenantId, roleId: setup.actor.roleId, verb, entity, scope: "Tenant" } });
+        const has = await tx.permission.findFirst({ where: { tenantId, roleId, verb, entity } });
+        if (!has) await tx.permission.create({ data: { tenantId, roleId, verb, entity, scope: "Tenant" } });
       }
     }
   });

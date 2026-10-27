@@ -97,9 +97,11 @@ async function main() {
   // Owner use it, as a real DSEW setup would. Idempotent.
   await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     await activateCapability(tx as never, tenantId, EVIDENCE_CAPABILITY);
+    const roleId = setup.actor.roleId;
+    if (!roleId) throw new Error("the Owner membership has no role to grant Evidence permissions to");
     for (const verb of ["Read", "Create", "Edit", "ActionExecute"] as const) {
-      const has = await tx.permission.findFirst({ where: { tenantId, roleId: setup.actor.roleId, verb, entity: ENTITY_EVIDENCE } });
-      if (!has) await tx.permission.create({ data: { tenantId, roleId: setup.actor.roleId, verb, entity: ENTITY_EVIDENCE, scope: "Tenant" } });
+      const has = await tx.permission.findFirst({ where: { tenantId, roleId, verb, entity: ENTITY_EVIDENCE } });
+      if (!has) await tx.permission.create({ data: { tenantId, roleId, verb, entity: ENTITY_EVIDENCE, scope: "Tenant" } });
     }
   });
   invalidateCapabilityCache();
