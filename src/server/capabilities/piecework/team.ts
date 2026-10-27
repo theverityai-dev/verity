@@ -294,7 +294,7 @@ export const setupProgress: QueryDefinition<Record<string, never>, { steps: Setu
   entity: ENTITY_PIECEWORK_SETTING,
   input: z.object({}),
   handler: async (ctx) => {
-    const [setting, stages, roleNames, members, workers, rolls, openings, lots] = await Promise.all([
+    const [setting, stages, roleNames, members, workers, rolls, openings, lots, readyOpenings] = await Promise.all([
       ctx.tx.pieceworkSetting.findFirst({ select: { challanTitle: true } }),
       ctx.tx.pieceworkStage.findMany({ where: { active: true }, select: { defaultRateMinor: true } }),
       ctx.tx.role.findMany({ select: { name: true } }),
@@ -304,6 +304,8 @@ export const setupProgress: QueryDefinition<Record<string, never>, { steps: Setu
       // An opening balance that was reversed no longer counts: originals minus their reversals.
       Promise.all([ctx.tx.pieceworkPayment.count({ where: { kind: "opening", reversesId: null } }), ctx.tx.pieceworkPayment.count({ where: { kind: "opening", reversesId: { not: null } } })]).then(([made, undone]) => made - undone),
       ctx.tx.pieceworkLot.count({ where: { cancelledAt: null } }),
+      // Ready garments already on the shelf at launch: opening lines, less the ones reversed.
+      Promise.all([ctx.tx.pieceworkReadyMove.count({ where: { kind: "opening", reversesId: null } }), ctx.tx.pieceworkReadyMove.count({ where: { kind: "opening", reversesId: { not: null } } })]).then(([made, undone]) => made - undone),
     ]);
     const have = new Set(roleNames.map((r) => r.name));
     const presets = ROLE_PRESETS.filter((p) => have.has(p.name)).length;
@@ -319,6 +321,7 @@ export const setupProgress: QueryDefinition<Record<string, never>, { steps: Setu
       { key: "supervisors", title: "Put each karigar under a supervisor", detail: workers.length === 0 ? "After the karigars are added" : `${placed} of ${workers.length} are set under a supervisor; the rest are open to any`, done: workers.length > 0 && placed === workers.length, optional: true, href: "/karigars", action: "Open karigars" },
       { key: "fabric", title: "Enter the fabric on the shelf", detail: rolls === 0 ? "Receive the rolls with the opening stock tick, and print their labels" : `${plural(rolls, "roll")} in stock`, done: rolls > 0, optional: false, href: "/fabric", action: "Receive rolls" },
       { key: "opening", title: "Opening balances owed to karigars", detail: openings === 0 ? "Wages owed from before Verity, entered on each karigar's page" : `${plural(openings, "opening balance")} entered`, done: openings > 0, optional: true, href: "/karigars", action: "Open karigars" },
+      { key: "readyOpening", title: "Enter the ready garments on the shelf", detail: readyOpenings === 0 ? "Finished stock from before Verity, named by design and size, counted at launch" : `${plural(readyOpenings, "opening line")} entered`, done: readyOpenings > 0, optional: true, href: "/lots/ready", action: "Open ready stock" },
       { key: "lot", title: "Make the first lot", detail: lots === 0 ? "A design, a rate card, then cut it from the rolls" : `${plural(lots, "lot")} made`, done: lots > 0, optional: false, href: "/lots", action: "Open lots" },
     ];
     return { steps, done: steps.filter((s) => s.done && !s.optional).length, required: steps.filter((s) => !s.optional).length };

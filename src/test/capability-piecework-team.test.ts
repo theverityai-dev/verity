@@ -229,7 +229,8 @@ describeDb("capability: team management (role presets, supervisor link, director
     expect(by).toMatchObject({ company: false, stages: false, roles: true, people: true, karigars: true, supervisors: false, fabric: false, opening: false, lot: true });
     expect(done).toBe(4);
     expect(required).toBe(steps.filter((s) => !s.optional).length);
-    expect(steps.filter((s) => s.optional).map((s) => s.key)).toEqual(["supervisors", "opening"]);
+    expect(steps.filter((s) => s.optional).map((s) => s.key)).toEqual(["supervisors", "opening", "readyOpening"]);
+    expect(by.readyOpening).toBe(false);
     // A supervisor cannot read it (no grant on the setting entity).
     await expect(executeQuery(supA, setupProgress, {})).rejects.toThrow();
   });
