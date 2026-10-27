@@ -80,6 +80,17 @@ export function toActionFailure(error: unknown): ActionFailure {
     // Someone else changed the record; reloading and retrying can succeed.
     return { ok: false, code: "E_CONFLICT", message: error.message, retryable: true };
   }
+  // Every storage driver and files.ts throw E_STORAGE… errors. They are an outage of the file store, not a defect in the action, and
+  // "something went wrong" on a photo upload sent people to support with nothing to say. The detail still goes to the log.
+  if (error instanceof Error && error.message.startsWith("E_STORAGE")) {
+    captureError(error);
+    return {
+      ok: false,
+      code: "E_UNKNOWN",
+      message: "Photo and file storage is not reachable right now, so nothing was saved. Try again in a minute; if it continues, tell the person who runs the system.",
+      retryable: true,
+    };
+  }
   captureError(error);
   const message = "Something went wrong. Please try again. If it continues, contact support.";
   return { ok: false, code: "E_UNKNOWN", message, retryable: false };
