@@ -21,6 +21,7 @@ import { PrismaClient } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 import { provisionIdentity } from "../src/server/platform/identity";
 import * as manufacturing from "../src/server/capabilities/manufacturing";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -59,13 +60,6 @@ function password(): string {
   return out;
 }
 
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
-
 /** OIDC deployments (the local demo environment, the on-premise profile): the IdP `sub` of each existing login, by email. */
 const OIDC_SUBS: Record<string, string | undefined> = {
   "worker@dsew.demo": process.env.DSEW_WORKER_SUB,
@@ -83,14 +77,14 @@ async function main() {
   const shared = password();
   let generated = !process.env.DSEW_WORKER_PASSWORD;
 
-  const organizationId = await withTenant(tenantId, async (tx) => {
+  const organizationId = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     const m = await tx.tenantMembership.findFirst({ where: { tenantId }, select: { organizationId: true } });
     if (!m) throw new Error("tenant has no membership");
     return m.organizationId;
   });
 
   for (const spec of ROLES) {
-    const roleId = await withTenant(tenantId, async (tx) => {
+    const roleId = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
       const existing = await tx.role.findFirst({ where: { tenantId, name: spec.name } });
       const role = existing ?? (await tx.role.create({ data: { tenantId, name: spec.name } }));
       await tx.permission.createMany({
@@ -100,15 +94,15 @@ async function main() {
       return role.id;
     });
 
-    const have = await withTenant(tenantId, (tx) => tx.tenantMembership.count({ where: { tenantId, roleId } }));
+    const have = await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.tenantMembership.count({ where: { tenantId, roleId } }));
     if (have > 0) {
-      if (spec.stageKinds) await withTenant(tenantId, (tx) => tx.tenantMembership.updateMany({ where: { tenantId, roleId }, data: { customFields: { stageKinds: spec.stageKinds } } }));
+      if (spec.stageKinds) await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.tenantMembership.updateMany({ where: { tenantId, roleId }, data: { customFields: { stageKinds: spec.stageKinds } } }));
       console.log(`${spec.name}: role and login already exist.`);
       generated = false;
       continue;
     }
     if (oidc) {
-      await withTenant(tenantId, async (tx) => {
+      await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
         const identity = await provisionIdentity(tx, { organizationId, authUserId: OIDC_SUBS[spec.email]!, displayName: spec.person, email: spec.email });
         await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId, ...(spec.stageKinds ? { customFields: { stageKinds: spec.stageKinds } } : {}) } });
       });
@@ -124,7 +118,7 @@ async function main() {
     });
     if (created.error || !created.data.user) throw new Error(`could not create ${spec.email}: ${created.error?.message}`);
     try {
-      await withTenant(tenantId, async (tx) => {
+      await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
         const identity = await provisionIdentity(tx, { organizationId, authUserId: created.data.user!.id, displayName: spec.person, email: spec.email });
         await tx.tenantMembership.update({ where: { id: identity.membershipId }, data: { roleId, ...(spec.stageKinds ? { customFields: { stageKinds: spec.stageKinds } } : {}) } });
       });

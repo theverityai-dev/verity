@@ -13,6 +13,7 @@ import { installCapabilities } from "../src/server/capabilities/registry";
 import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import * as hr from "../src/server/capabilities/hr";
 import * as accounting from "../src/server/capabilities/accounting";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
@@ -27,13 +28,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
     }
   }
 }) as typeof rawExecute;
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 const iso = (offsetDays: number) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offsetDays)).toISOString();
 
@@ -51,7 +45,7 @@ async function main() {
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
 
-  const setup = await withTenant(tenantId, async (tx) => {
+  const setup = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     const ownerMembership = await tx.tenantMembership.findFirst({
       where: { tenantId, role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
       include: { role: true },

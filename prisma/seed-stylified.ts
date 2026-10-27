@@ -29,6 +29,7 @@ import { executeCommand as rawExecute, type ActorContext } from "../src/server/p
 import * as piecework from "../src/server/capabilities/piecework";
 import { EVIDENCE_CAPABILITY } from "../src/server/capabilities/evidence";
 import { LOCATION_CAPABILITY } from "../src/server/capabilities/location";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const TENANT_NAME = "Stylified";
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -85,13 +86,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
   }
 }) as typeof rawExecute;
 
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
-
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 
 async function main() {
@@ -105,7 +99,7 @@ async function main() {
   }
   const tenantId = randomUUID();
 
-  const ids = await withTenant(tenantId, async (tx) => {
+  const ids = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     await tx.tenant.create({ data: { id: tenantId, name: TENANT_NAME, timeZone: "Asia/Kolkata", customFields: { demo: true, demoFor: "stylified" } } });
     const org = await tx.organization.create({ data: { tenantId, name: TENANT_NAME, parentId: null } });
 
@@ -205,7 +199,8 @@ async function main() {
 
   /** A lot or bundle made `ago` days ago: its creation date is moved back so entries can carry real, earlier dates. */
   const backdate = async (table: "piecework_lot" | "piecework_bundle", id: string, ago: number) => {
-    await admin.$executeRawUnsafe(`UPDATE ${table} SET created_at = '${day(-ago)}T06:00:00Z' WHERE id = '${id}'::uuid`);
+    // The table name is one of two literals; the values are bound.
+    await admin.$executeRawUnsafe(`UPDATE ${table} SET created_at = $1::timestamptz WHERE id = $2::uuid`, `${day(-ago)}T06:00:00Z`, id);
   };
   const lot = async (design: string, name: string, planned: number, ago: number, dueIn: number, fabric = "Oxford") => {
     const created = await executeCommand(actor, piecework.createLot, { design, name, plannedPieces: planned, fabricType: fabric, startDate: day(-ago), dueDate: day(dueIn) });
@@ -351,7 +346,7 @@ async function main() {
   }
   // The charge asked for Karigar C's two lost pieces is decided: approved by the owner, so the case shows as settled.
   if (ownerActor) {
-    const asked = await withTenant(tenantId, (tx) => tx.pieceworkApproval.findFirst({ where: { entryId: p1ret.id, kind: "deduction", status: "pending" } }));
+    const asked = await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.pieceworkApproval.findFirst({ where: { entryId: p1ret.id, kind: "deduction", status: "pending" } }));
     if (asked) await executeCommand(ownerActor, piecework.decideApproval, { approvalId: asked.id, decision: "approved" });
   }
   void managerActor;
@@ -360,7 +355,7 @@ async function main() {
   // the customer; these are generated stills and belong to this demo only.
   const covers: Array<[string, string]> = [[lot1, "lot-spring-formals-thumb"], [lot2, "lot-winter-flannel-thumb"], [lot3, "lot-summer-poplin-thumb"], [lot4, "lot-export-check-thumb"]];
   for (const [id, file] of covers) {
-    await admin.$executeRawUnsafe(`UPDATE piecework_lot SET custom_fields = custom_fields || '{"coverImage":"/demo/stylified/${file}.webp"}'::jsonb WHERE id = '${id}'::uuid`);
+    await admin.$executeRaw`UPDATE piecework_lot SET custom_fields = custom_fields || jsonb_build_object('coverImage', ${`/demo/stylified/${file}.webp`}::text) WHERE id = ${id}::uuid`;
   }
 
   console.log("\nStylified demo tenant is ready.\n");

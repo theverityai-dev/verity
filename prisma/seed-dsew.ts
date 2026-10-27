@@ -36,6 +36,7 @@ import {
   planOperations,
   startOperation,
 } from "../src/server/capabilities/manufacturing/stages";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const OWNER_EMAIL = process.env.DSEW_OWNER_EMAIL ?? "owner@dsew.demo";
 let OWNER_SUB = process.env.DSEW_OWNER_SUB;
@@ -90,13 +91,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
     }
   }
 }) as typeof rawExecute;
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 /** Every ENTITY_* a capability module exports, so the owner can use every screen without a hand list. */
 function entitiesOf(...modules: Array<Record<string, unknown>>): string[] {
@@ -180,7 +174,7 @@ async function main() {
   await ensureOwnerLogin();
   const tenantId = randomUUID();
 
-  const ids = await withTenant(tenantId, async (tx) => {
+  const ids = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     await tx.tenant.create({
       data: { id: tenantId, name: "D & S Electric Works", timeZone: "Asia/Kolkata", customFields: { demo: true, demoFor: "dsew" } },
     });
@@ -311,7 +305,7 @@ async function main() {
     await executeCommand(owner, planOperations, { orderId: order.id, routeId });
     if (!run) return order.id;
     await executeCommand(owner, manufacturing.startManufacturingOrder, { orderId: order.id });
-    const ops = await withTenant(tenantId, (tx) =>
+    const ops = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
       tx.manufacturingOperation.findMany({ where: { orderId: order.id }, orderBy: { sequence: "asc" } }),
     );
     for (const op of ops.slice(0, done)) {

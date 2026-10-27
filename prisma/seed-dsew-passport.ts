@@ -24,6 +24,7 @@ import {
   startOperation,
 } from "../src/server/capabilities/manufacturing/stages";
 import { issuePassport } from "../src/server/capabilities/manufacturing/passport";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 const REFERENCE = "DSEW 100 kVA | Sunrise Telecom (delivered)";
@@ -39,13 +40,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
     }
   }
 }) as typeof rawExecute;
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 /** Instrument readings for the measured checks, by checkpoint key: numeric, in the check's own unit (same figures as the hero journey). */
 const READINGS: Record<string, { value: number; condition: string; instrument: string }> = {
@@ -64,7 +58,7 @@ async function main() {
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
 
-  const setup = await withTenant(tenantId, async (tx) => {
+  const setup = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     const membership = await tx.tenantMembership.findFirst({
       where: { tenantId, role: { name: "Owner", permissions: { some: { entity: accounting.ENTITY_ACCOUNT, verb: "Create" } } } },
       include: { role: true },
@@ -99,7 +93,7 @@ async function main() {
   await executeCommand(owner, planOperations, { orderId: order.id, routeId: setup.routeId });
   await executeCommand(owner, manufacturing.startManufacturingOrder, { orderId: order.id });
 
-  const ops = await withTenant(tenantId, (tx) =>
+  const ops = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
     tx.manufacturingOperation.findMany({ where: { orderId: order.id, state: { not: "cancelled" } }, orderBy: { sequence: "asc" } }),
   );
   for (const op of ops) {
@@ -116,7 +110,7 @@ async function main() {
       if (cp.measure) {
         // A measured check wants a numeric Reading in its own unit, and a photo record of the instrument where it asks for one.
         const r = READINGS[cp.key] ?? { value: 0, condition: "demo", instrument: "demo" };
-        const reading = await withTenant(tenantId, async (tx) => {
+        const reading = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
           const photo = cp.requireEvidence
             ? await tx.evidence.create({
                 data: {
@@ -135,7 +129,7 @@ async function main() {
         });
         evidenceId = reading.id;
       } else if (cp.requireEvidence) {
-        const evidence = await withTenant(tenantId, (tx) =>
+        const evidence = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
           tx.evidence.create({
             data: {
               tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",

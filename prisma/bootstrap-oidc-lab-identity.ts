@@ -26,6 +26,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { provisionIdentity } from "../src/server/platform/identity";
 import { bootstrapOperator } from "./operator-bootstrap-core";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const email = process.argv[2];
 const displayName = process.argv[3] ?? "WP-09 Lab Operator";
@@ -39,13 +40,6 @@ if (!authUserId) throw new Error("DEX_TEST_USER_ID must be set to the Dex static
 // its own to run under.
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
-async function withTenant<T>(tenantId: string, fn: (tx: PrismaClient) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as never);
-  });
-}
-
 async function main() {
   const [existingPlatform] = await admin.$queryRaw<{ id: string }[]>`SELECT id FROM tenant WHERE is_platform LIMIT 1`;
 
@@ -53,14 +47,14 @@ async function main() {
   let organizationId: string;
 
   if (tenantId) {
-    organizationId = await withTenant(tenantId, async (tx) => {
+    organizationId = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
       const org = await tx.organization.findFirst({ where: { tenantId, parentId: null }, orderBy: { createdAt: "asc" }, select: { id: true } });
       if (!org) throw new Error("platform tenant has no root organization");
       return org.id;
     });
   } else {
     tenantId = randomUUID();
-    organizationId = await withTenant(tenantId, async (tx) => {
+    organizationId = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
       await tx.tenant.create({ data: { id: tenantId!, name: "Verity Platform", isPlatform: true } });
       const org = await tx.organization.create({ data: { tenantId: tenantId!, name: "Verity Platform", parentId: null }, select: { id: true } });
       return org.id;
@@ -75,7 +69,7 @@ async function main() {
   if (existingParty) {
     console.log(`Identity for auth_user_id ${authUserId} already provisioned (party ${existingParty.id})`);
   } else {
-    const identity = await withTenant(tenantId, (tx) =>
+    const identity = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
       provisionIdentity(tx as never, { organizationId, authUserId: authUserId!, displayName, email }),
     );
     console.log(`Provisioned party ${identity.partyId}, user ${identity.userId}, membership ${identity.membershipId}`);

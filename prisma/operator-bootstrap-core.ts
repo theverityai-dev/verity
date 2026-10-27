@@ -12,6 +12,7 @@
  */
 import { randomUUID } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 export const PLATFORM_TENANT_NAME = "Verity Platform";
 export const OPERATOR_ROLE_NAME = "Verity Operator";
@@ -27,17 +28,6 @@ export type BootstrapOperatorResult = {
   grantCreated: boolean;
   membershipOutcome: MembershipOutcome;
 };
-
-async function withTenant<T>(
-  prisma: PrismaClient,
-  tenantId: string,
-  fn: (tx: Omit<PrismaClient, "$transaction">) => Promise<T>,
-): Promise<T> {
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as never);
-  });
-}
 
 /**
  * Creates the Verity platform tenant if one does not already exist, and
@@ -64,7 +54,7 @@ export async function bootstrapOperator(
   const platformTenantCreated = !tenantId;
 
   if (tenantId) {
-    organizationId = await withTenant(prisma, tenantId, async (tx) => {
+    organizationId = await asMigrationRoleInTenant(prisma, tenantId, async (tx) => {
       const org = await tx.organization.findFirst({
         where: { tenantId, parentId: null },
         orderBy: { createdAt: "asc" },
@@ -77,7 +67,7 @@ export async function bootstrapOperator(
     // Setting the scope to the id being created is what lets the INSERT satisfy
     // the tenant policy's WITH CHECK without any role that bypasses RLS.
     tenantId = randomUUID();
-    organizationId = await withTenant(prisma, tenantId, async (tx) => {
+    organizationId = await asMigrationRoleInTenant(prisma, tenantId, async (tx) => {
       await tx.tenant.create({
         data: { id: tenantId!, name: PLATFORM_TENANT_NAME, isPlatform: true },
       });
@@ -127,7 +117,7 @@ export async function bootstrapOperator(
   let grantCreated = false;
   let membershipOutcome: MembershipOutcome;
 
-  await withTenant(prisma, tenantId, async (tx) => {
+  await asMigrationRoleInTenant(prisma, tenantId, async (tx) => {
     let role = await tx.role.findFirst({
       where: { tenantId, name: OPERATOR_ROLE_NAME },
       select: { id: true },

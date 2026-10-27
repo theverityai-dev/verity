@@ -6,7 +6,7 @@
  * Supabase Auth login for the owner, roles, the shared central menu, and a
  * floor (zone + tables) at each of the three outlets.
  *
- * Modelled on `operator-bootstrap-core.ts`'s `withTenant` (raw tenant/org
+ * Modelled on `operator-bootstrap-core.ts`'s `asMigrationRoleInTenant` (raw tenant/org
  * rows, RLS satisfied by setting the tenant GUC even though this connection
  * is the migration role) and `seed-plywood-demo.ts`'s use of `executeCommand`
  * for everything the capability itself owns — a seed script writes through
@@ -45,6 +45,7 @@ import {
 } from "../src/server/capabilities/dinein";
 import { ENTITY_LOCATION } from "../src/server/capabilities/location";
 import { ENTITY_MEMBERSHIP, ENTITY_ORGANIZATION } from "../src/server/platform/administration";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const OWNER_EMAIL = "owner@colonelkebabz.verity.app";
 
@@ -59,13 +60,6 @@ function suggestPassword(): string {
 }
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 const OUTLETS = [
   { name: "Defence Colony" },
@@ -105,7 +99,7 @@ async function main() {
 
   try {
     const { rootOrgId, outletOrgIds, outletLocationIds, ownerRoleId, ownerMembershipId, ownerUserId } =
-      await withTenant(tenantId, async (tx) => {
+      await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
         await tx.tenant.create({ data: { id: tenantId, name: "Colonel Kebabz", timeZone: "Asia/Kolkata" } });
 
         const rootOrg = await tx.organization.create({

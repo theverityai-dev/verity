@@ -13,6 +13,7 @@ import { PrismaClient } from "@prisma/client";
 import { installCapabilities } from "../src/server/capabilities/registry";
 import { executeCommand as rawExecute, type ActorContext } from "../src/server/platform/command";
 import * as accounting from "../src/server/capabilities/accounting";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
@@ -27,13 +28,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
     }
   }
 }) as typeof rawExecute;
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 const CHART = [
   { code: "1000", name: "Bank, current account", type: "Asset" },
@@ -73,7 +67,7 @@ async function main() {
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
 
-  const owner = await withTenant(tenantId, async (tx) => {
+  const owner = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     // More than one "Owner" role can exist in a tenant; the right one is the one a member holds
     // and that carries the accounting grant.
     const membership = await tx.tenantMembership.findFirst({
@@ -92,7 +86,7 @@ async function main() {
     return actor;
   });
 
-  const existing = await withTenant(tenantId, (tx) => tx.account.findMany({ select: { id: true, code: true } }));
+  const existing = await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.account.findMany({ select: { id: true, code: true } }));
   const byCode = new Map(existing.map((a) => [a.code, a.id]));
   for (const account of CHART) {
     if (byCode.has(account.code)) continue;
@@ -101,7 +95,7 @@ async function main() {
   }
   const acct = (code: string) => byCode.get(code)!;
 
-  const entries = await withTenant(tenantId, (tx) => tx.journalEntry.count());
+  const entries = await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.journalEntry.count());
   if (entries > 0) {
     console.log(`Ledger already has ${entries} entries; accounts ensured, nothing posted.`);
     return;

@@ -23,7 +23,7 @@
  * Each login's password is printed to this console ONCE, at creation time,
  * and nowhere else — there is no way to retrieve it after this run exits.
  *
- * Modelled directly on `seed-colonel-kebabz.ts` — same `withTenant` raw-row
+ * Modelled directly on `seed-colonel-kebabz.ts` — same `asMigrationRoleInTenant` raw-row
  * bootstrap, same `executeCommand`-through-commands discipline for
  * everything the capability itself owns.
  *
@@ -62,6 +62,7 @@ import {
   ENTITY_COACHING_NOTE,
   ENTITY_AI_INSIGHT,
 } from "../src/server/capabilities/outreach";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const TENANT_NAME = "PlotArmour Studio";
 
@@ -117,13 +118,6 @@ const TEAM_2_JUNIORS: Person[] = [
 ];
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 async function main() {
   const supabaseUrl = process.env.SUPABASE_URL;
@@ -195,7 +189,7 @@ async function main() {
     authUserIds.set(TEAM_2_LEADER.email, await createLogin(TEAM_2_LEADER));
     for (const p of TEAM_2_JUNIORS) authUserIds.set(p.email, await createLogin(p));
 
-    const { rootOrgId, founderRoleId, byPartyId, byEmail } = await withTenant(tenantId, async (tx) => {
+    const { rootOrgId, founderRoleId, byPartyId, byEmail } = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
       await tx.tenant.create({ data: { id: tenantId, name: TENANT_NAME, timeZone: "Asia/Kolkata" } });
       const rootOrg = await tx.organization.create({ data: { tenantId, name: TENANT_NAME, parentId: null } });
 

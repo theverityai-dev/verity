@@ -26,6 +26,7 @@ import { createOrderFromBom } from "../src/server/capabilities/manufacturing/bom
 import { completeOperation, planOperations, recordCheckpoint, startOperation } from "../src/server/capabilities/manufacturing/stages";
 import { issuePassport } from "../src/server/capabilities/manufacturing/passport";
 import { confirmDelivery, dispatchOrder } from "../src/server/capabilities/manufacturing/logistics";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 const HERO_TITLE = "100 kVA cast resin dry-type transformer, 11 kV / 415 V (hero journey)";
@@ -44,13 +45,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
     }
   }
 }) as typeof rawExecute;
-
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
 
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 const line = (description: string, qty: number, rupees: number) => ({ description, qty, unitPriceMinor: rupees * 100 });
@@ -77,7 +71,7 @@ async function main() {
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
 
-  const setup = await withTenant(tenantId, async (tx) => {
+  const setup = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     const membership = await tx.tenantMembership.findFirst({
       where: { tenantId, role: { name: "Owner" } },
       include: { role: true },
@@ -101,7 +95,7 @@ async function main() {
   // Evidence is a capability of its own. A checkpoint that requires a reading or photo cannot be completed without
   // it, and a role that cannot read Evidence cannot see the readings. Activate it for the demo tenant and let the
   // Owner use it, as a real DSEW setup would. Idempotent.
-  await withTenant(tenantId, async (tx) => {
+  await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     await activateCapability(tx as never, tenantId, EVIDENCE_CAPABILITY);
     for (const verb of ["Read", "Create", "Edit", "ActionExecute"] as const) {
       const has = await tx.permission.findFirst({ where: { tenantId, roleId: setup.actor.roleId, verb, entity: ENTITY_EVIDENCE } });
@@ -143,7 +137,7 @@ async function main() {
   await executeCommand(owner, project.linkOrder, { jobId: job.id, orderId: order.id });
   await executeCommand(owner, project.startJob, { jobId: job.id });
 
-  const ops = await withTenant(tenantId, (tx) =>
+  const ops = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
     tx.manufacturingOperation.findMany({ where: { orderId: order.id, state: { not: "cancelled" } }, orderBy: { sequence: "asc" } }),
   );
   for (const op of ops) {
@@ -156,7 +150,7 @@ async function main() {
     }>;
     /** A reading as Evidence about this operation, with a photo record of the instrument where the check asks for one. */
     const captureReading = (cp: (typeof checkpoints)[number], r: { value: number; condition: string; instrument: string }) =>
-      withTenant(tenantId, async (tx) => {
+      asMigrationRoleInTenant(admin, tenantId, async (tx) => {
         const photo = cp.requireEvidence
           ? await tx.evidence.create({
               data: {
@@ -182,7 +176,7 @@ async function main() {
       if (cp.measure) {
         evidenceId = (await captureReading(cp, READINGS[cp.key] ?? { value: 0, condition: "demo", instrument: "demo" })).id;
       } else if (cp.requireEvidence) {
-        const evidence = await withTenant(tenantId, (tx) =>
+        const evidence = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
           tx.evidence.create({
             data: {
               tenantId, entityKey: manufacturing.ENTITY_MANUFACTURING_OPERATION, entityId: op.id, kind: "Photo",
@@ -207,7 +201,7 @@ async function main() {
   // Spread the stage times over the build so the traveler reads like a real week of work. Stages are a plain
   // table (only the checkpoint results are append-only), so this changes timestamps, not facts.
   try {
-    await withTenant(tenantId, async (tx) => {
+    await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
       for (const [i, op] of ops.entries()) {
         const started = new Date(Date.now() - (22 - i * 4) * 86_400_000);
         const completed = new Date(started.getTime() + 3 * 86_400_000);
@@ -220,7 +214,7 @@ async function main() {
 
   // 3. Passport and dispatch. The packing photograph is a record that points at no image.
   await executeCommand(owner, issuePassport, { orderId: order.id, reference: "DSEW-100K-DEMO-0001" });
-  const photo = await withTenant(tenantId, (tx) =>
+  const photo = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
     tx.evidence.create({
       data: {
         tenantId,

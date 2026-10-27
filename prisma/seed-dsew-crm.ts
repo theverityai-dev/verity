@@ -41,6 +41,7 @@ import {
   setStagePlaybook,
   updateOpportunity,
 } from "../src/server/capabilities/relationship";
+import { asMigrationRoleInTenant } from "./migration-role";
 
 const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
 
@@ -56,13 +57,6 @@ const executeCommand = (async (...args: Parameters<typeof rawExecute>) => {
   }
 }) as typeof rawExecute;
 
-async function withTenant<T>(tenantId: string, fn: (tx: typeof admin) => Promise<T>): Promise<T> {
-  return admin.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('verity.tenant_id', ${tenantId}, true)`;
-    return fn(tx as typeof admin);
-  });
-}
-
 const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
 const at = (offsetDays: number, hour = 11) => {
   const d = new Date(Date.now() + offsetDays * 86_400_000);
@@ -76,7 +70,7 @@ async function main() {
   if (tenants.length !== 1) throw new Error(`expected exactly one DSEW demo tenant, found ${tenants.length}`);
   const tenantId = tenants[0]!.id;
 
-  const owner = await withTenant(tenantId, async (tx) => {
+  const owner = await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     const membership = await tx.tenantMembership.findFirst({ where: { tenantId, role: { name: "Owner" } }, include: { role: true } });
     if (!membership?.role) throw new Error("no Owner membership in the DSEW tenant");
     return {
@@ -84,7 +78,7 @@ async function main() {
     } satisfies ActorContext;
   });
 
-  await withTenant(tenantId, async (tx) => {
+  await asMigrationRoleInTenant(admin, tenantId, async (tx) => {
     await activateCapability(tx as never, tenantId, RELATIONSHIP_CAPABILITY);
     const grants: Array<[string, Array<"Read" | "Create" | "Edit">]> = [
       [ENTITY_COMPANY, ["Read", "Create", "Edit"]],
@@ -106,7 +100,7 @@ async function main() {
   });
   invalidateCapabilityCache();
 
-  if ((await withTenant(tenantId, (tx) => tx.relationshipCompany.count())) > 0) {
+  if ((await asMigrationRoleInTenant(admin, tenantId, (tx) => tx.relationshipCompany.count())) > 0) {
     console.log("The demo CRM already has companies; adding only what is new since (tender fields, playbook).");
     await addStage3(owner, tenantId);
     return;
@@ -249,7 +243,7 @@ async function addStage3(owner: ActorContext, tenantId: string) {
   if (!existing.has("Tender number")) await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "Tender number", type: "String" });
   if (!existing.has("EMD amount")) await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD amount", type: "Number" });
   await executeCommand(owner, defineCustomField, { entityKey: ENTITY_OPPORTUNITY, name: "EMD status", type: "Select", options: ["Paid", "Exempt", "Pending"] });
-  const tenders = await withTenant(tenantId, (tx) =>
+  const tenders = await asMigrationRoleInTenant(admin, tenantId, (tx) =>
     tx.relationshipOpportunity.findMany({ where: { source: { in: ["tender", "rfq"] } }, select: { id: true, number: true, amount: true } }),
   );
   for (const t of tenders) {
