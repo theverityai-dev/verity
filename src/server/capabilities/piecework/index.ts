@@ -32,7 +32,7 @@ import { registerCosts } from "./costs";
 import { registerRebundle } from "./rebundle";
 import { registerHistory } from "./history";
 import { assertActiveMember, registerTeam } from "./team";
-import { registerReady } from "./ready";
+import { ENTITY_PIECEWORK_READY_MOVE, registerReady } from "./ready";
 
 export * from "./ledger";
 export * from "./reports";
@@ -1083,24 +1083,27 @@ export function registerPieceworkCapability(): void {
   const shells: Array<"platform" | "operations"> = ["platform", "operations"];
   registerContribution({
     capabilityId: PIECEWORK_CAPABILITY,
+    // Each entry asks for the grant that marks the person it is for, not just any read of a record they happen to share: the store and the
+    // cutting master read bundles and entries too, but give out nothing and see no money, so the floor and money screens stay off their menu.
+    // The menu only chooses what to draw; every query and command still checks the grant itself.
     navigation: [
-      { href: "/lots/today", label: "Today", group: "Production", order: 16.5, icon: "clock", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
-      { href: "/shopfloor/scan", label: "Scan", group: "Production", order: 17.5, icon: "search", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
-      { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
+      { href: "/lots/today", label: "Today", group: "Production", order: 16.5, icon: "clock", requiresEntity: ENTITY_PIECEWORK_PAYMENT, shells },
+      { href: "/shopfloor/scan", label: "Scan", group: "Production", order: 17.5, icon: "search", requiresEntity: ENTITY_PIECEWORK_BUNDLE, shells },
+      { href: "/shopfloor", label: "My floor", group: "Production", order: 18, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ENTRY, requiresVerb: "Create", shells },
       { href: "/shopfloor/approvals", label: "Approvals", group: "Production", order: 19, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_APPROVAL, shells },
       { href: "/shopfloor/setup", label: "Set up the factory", group: "Production", order: 24.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/shopfloor/team", label: "Team", group: "Production", order: 25, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
-      { href: "/shopfloor/custody", label: "Who holds what", group: "Production", order: 18.5, icon: "user", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
-      { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, shells },
+      { href: "/shopfloor/custody", label: "Who holds what", group: "Production", order: 18.5, icon: "user", requiresEntity: ENTITY_PIECEWORK_ENTRY, requiresVerb: "Create", shells },
+      { href: "/shopfloor/cases", label: "Cases", group: "Production", order: 19.5, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_ENTRY, requiresVerb: "Create", shells },
       { href: "/fabric", label: "Fabric", group: "Production", order: 19.8, icon: "batch", requiresEntity: ENTITY_PIECEWORK_ROLL, shells },
-      { href: "/lots/ready", label: "Ready stock", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/ready", label: "Ready stock", group: "Production", order: 23.5, icon: "overview", requiresEntity: ENTITY_PIECEWORK_READY_MOVE, shells },
       { href: "/lots/audit", label: "Change history", group: "Production", order: 27, icon: "clock", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
       { href: "/lots/settings", label: "Production settings", group: "Production", order: 26, icon: "user", requiresEntity: ENTITY_PIECEWORK_SETTING, shells },
-      { href: "/lots/dashboard", label: "Factory dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/dashboard", label: "Factory dashboard", group: "Production", order: 20, icon: "overview", requiresEntity: ENTITY_PIECEWORK_PAYMENT, shells },
       { href: "/lots", label: "Lots", group: "Production", order: 21, icon: "batch", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
       { href: "/lots/entry", label: "Daily entry", group: "Production", order: 22, icon: "plus", requiresEntity: ENTITY_PIECEWORK_WORKER, shells },
       { href: "/karigars", label: "Karigars", group: "Production", order: 23, icon: "user", requiresEntity: ENTITY_PIECEWORK_WORKER, shells },
-      { href: "/lots/reports", label: "Lot reports", group: "Production", order: 24, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_LOT, shells },
+      { href: "/lots/reports", label: "Lot reports", group: "Production", order: 24, icon: "ledger", requiresEntity: ENTITY_PIECEWORK_PAYMENT, shells },
     ],
   });
   registerCommand(defineStage);
