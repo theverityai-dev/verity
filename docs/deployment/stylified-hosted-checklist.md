@@ -9,8 +9,16 @@ Checked 2026-10-23: `prisma migrate status` against production reports **Databas
 
 ## A. One run of the floor flows on the hosted workspace
 
-1. **Storage.** The hosted deployment stores photographs in Supabase Storage. Confirm the bucket named by `SUPABASE_MEDIA_BUCKET` exists
-   (`prisma/ensure-storage-bucket.ts` creates it) and that `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set on Vercel.
+1. **Storage.** The hosted deployment stores photographs in Supabase Storage. Three things must all be true, and a photo upload fails
+   with the storage message if any one is not:
+   - `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`), `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_MEDIA_BUCKET` are all set on Vercel for
+     Production. With any one missing the storage driver is never bound.
+   - The bucket named by `SUPABASE_MEDIA_BUCKET` exists. Create it by hand in the Supabase dashboard (Storage, New bucket).
+     `prisma/ensure-storage-bucket.ts` provisions S3 buckets only and does nothing for Supabase.
+   - The bucket is **private** and has a **file size limit of 25 MB or less** (for example 10 MB). The driver refuses a public bucket or one
+     with no limit (`E_STORAGE: configure a private bucket with an upload limit of at most 25 MB`), and a bucket made with the dashboard
+     defaults has no limit.
+   Redeploy after changing environment variables; Vercel does not apply them to a running deployment.
 2. **A demo tenant to run it on** (not Stylified's real workspace). `prisma/seed-stylified.ts` with the production variables creates one login
    per role (owner, manager, two supervisors, munshi) through Supabase Auth and prints each password once. Run it only with the owner's say-so,
    on production, with `DEMO_TENANT_NAME=Stylified` flagged `demo`; `reset-demo.ts --yes` removes it again.
