@@ -30,6 +30,8 @@ own state outside `withTenant()`. What Verity lacked was narrower, and this plan
 
 The thresholds in ADR-055 cl. 5 and ADR-056 cl. 5 are the author's initial choice. Change them in the ADR text, no new ADR.
 
+> **2026-11-06:** Task 132 extends phases E to G with patterns from four reference ERPs: tool search, budgets and a tenant token ceiling, stale re-check at confirm, semantic datasets for the analyst, and a trust envelope plus accuracy scoreboard for document proposals.
+
 ## Phases
 
 | Phase | What | Status |

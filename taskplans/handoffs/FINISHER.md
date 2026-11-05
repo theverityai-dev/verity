@@ -1,6 +1,6 @@
 # Finisher: the priority-ordered list of everything left to finish
 
-**Last updated: 2026-10-24** (Task 131 added: the assistant's durable approvals and turn records built locally; Task 130 steps 1 to 4 built, locally; demo walk run on two tenants; Stylified MVP DEMO-READY locally)
+**Last updated: 2026-11-06** (Task 132 added: reference-ERP audit, stage 1 as P2-13; Task 131 added: the assistant's durable approvals and turn records built locally; Task 130 steps 1 to 4 built, locally; demo walk run on two tenants; Stylified MVP DEMO-READY locally)
 
 This file is the single work order. It lists only what is **not finished**, highest priority first,
 with how to finish each item and how to know it is done. When an item is finished it is **deleted
@@ -509,6 +509,21 @@ authorised. Lot covers: none generated yet (typed tiles show).
      `video/docs/qa-report.md` (not written yet), then merge `dsew` into `main`.
   4. Stopping a background render must also kill `remotion`, `ffmpeg.exe` and `chrome-headless-shell.exe`
      under `video/node_modules`; stopping only the shell leaves them running.
+
+### P2-13. Task 132 stage 1: agent cost and safety, from the reference-ERP audit
+
+- **What:** Five items from `taskplans/132_reference_erp_audit_ai_native_adoption.md` section 4: A1 tool search
+  (`find_tools` / `describe_tool` over the actor-scoped manifest instead of sending ~110 schemas), A3 per-turn budgets plus
+  token usage on `agent_turn` and a per-tenant daily token ceiling, A4 refuse a confirm with `E_STALE` when the target record
+  changed since the proposal and show old beside new, A9 required command `description` plus `resolve_by_name` that asks on
+  more than one candidate for party/account, A10 a "what just happened" read.
+- **Why:** The full manifest is ~18k tokens a turn; no spend ceiling exists before a paid provider (131 D) is switched on;
+  a confirm can apply to a record that moved since it was proposed.
+- **How:** `tool-manifest.ts`, `agent-chat.ts`, `agent-approval.ts`, one migration for the `agent_turn` and pending-action
+  columns. No dependency (ADR-056 cl. 2). Later stages (datasets, analyst, document proposals, MSME clock) are in 132 section 6.
+- **Done when:** agent tests pass unchanged plus new tests for each item; prompt tokens per turn recorded and lower.
+- **Source:** Task 132 section 4 and 6, under Task 131 and ADR-055/056.
+- **Status:** PENDING (analysis written 2026-11-06; stage 5 items need the owner).
 
 ## P3: verification, coverage, housekeeping
 

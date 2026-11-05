@@ -7,6 +7,8 @@ mood).
 
 ## Status: PENDING — genuinely new gap, platform-primitive-shaped
 
+> **2026-11-06:** Task 132 (P1) takes the concrete shape from OpenConstructionERP's `deadlines` sweep: registered due-date sources, one scheduled classifier, outbox notice, escalation on repeat.
+
 ## What's missing
 
 Every capability accumulates things that need a human: overdue, blocked,
