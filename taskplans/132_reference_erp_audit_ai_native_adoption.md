@@ -10,9 +10,27 @@ content is data), ADR-055 (approval classes, stored pending actions, turn record
 capability), ADR-029 (external tool surface, inert), ADR-051 (saved views), ADR-054 (no model on-premises). Paired work:
 Task 131 (agent approvals, phases D to I), Task 90 (Attention), Task 88 (reconciliation), Task 129 (demo inventory).
 
-## Status: PROPOSED 2026-11-06 — analysis only, no code
+## Status: STAGE 1 PARTLY BUILT 2026-11-07 (local database only); stages 2 to 5 PROPOSED
 
-Nothing below is built. Section 6 is the recommended order; section 7 lists what needs a decision.
+Owner said "go ahead" on 2026-11-06. Built in stage 1, proven on a migrated local database (`verity_t132`):
+
+| Item | What was built | Proof |
+|---|---|---|
+| A1 tool search | Above 12 tools (`TOOL_SEARCH_THRESHOLD`) a general turn gets one `find_tools` tool instead of every schema; each search adds up to 8 matching tools from the actor's own manifest (`searchTools` in `tool-manifest.ts`). `toolKeys` turns and small manifests are unchanged | `agent-pending.test.ts` (first request carries only `find_tools`; a role-less actor finds nothing), `agent-tool-search.test.ts` |
+| A3 budgets and usage | Per turn: 16 tool calls, 90 s, 150,000 tokens (`TURN_BUDGET`). Provider-reported tokens summed and stored on `agent_turn` (`prompt_tokens`, `completion_tokens`). Per-tenant ceiling over any 24 hours, `AGENT_TENANT_DAILY_TOKENS`, default 1,000,000; reached means a plain reply and no provider call | `agent-pending.test.ts` (tokens recorded, ceiling stops without calling the model, call budget ends a turn) |
+| A4 stale re-check | Confirm is refused with `E_STALE` (HTTP 409) and the row marked `stale` when the activity trail shows a change, by anyone, to any record the stored input names in a `*Id` field since the proposal | `agent-pending.test.ts` (changed record refused and never run, unrelated change still runs) |
+| A9 plain words (part) | Prompt rules 6 and 7; `plainDescription` gives the model and the confirmation card a readable name when a command has no `description` | `agent-tool-search.test.ts` |
+| A10 what just happened | `verity.platform.recent_changes` on `verity.platform.activity`: the caller's own changes in the last N minutes (or everyone's with `mine: false`), field names only, through the ordinary Read grant | registry search test |
+
+Mutation check: disabling the stale check, the search, or the call budget each fails its test. Migration
+`20261107000000_agent_turn_usage_and_stale` is **not on production**; the build's migration assertion blocks a deploy until it is.
+
+Not built in stage 1: the old-beside-new diff on the confirmation card (needs a per-entity read of the target row); `resolve_by_name`
+(the prompt's exact-match rule and grounding's ambiguity check stand in); writing `description` on the 318 of 384 commands and
+239 of 259 queries that lack one (`plainDescription` covers the gap, so the search still matches key words).
+The per-tenant ceiling override (section 7.4) is not built; the deployment-wide setting is.
+
+Section 6 is the recommended order; section 7 lists what needs a decision.
 
 ---
 

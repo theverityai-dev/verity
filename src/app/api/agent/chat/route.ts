@@ -44,7 +44,8 @@ const decidePendingSchema = z.object({
   decidePending: z.object({ id: z.string().uuid(), decision: z.enum(["approve", "reject"]) }).strict(),
 }).strict();
 
-const PENDING_FAILURE_STATUS = { E_NOT_FOUND: 404, E_ALREADY_DECIDED: 409, E_EXPIRED: 410 } as const;
+/** E_STALE (Task 132 A4) is a conflict: a record changed under the request. */
+const PENDING_FAILURE_STATUS = { E_NOT_FOUND: 404, E_ALREADY_DECIDED: 409, E_EXPIRED: 410, E_STALE: 409 } as const;
 
 export async function POST(request: Request): Promise<Response> {
   let actor;

@@ -1,6 +1,6 @@
 import "server-only";
 import { withTenant } from "./tenancy";
-import { buildToolManifest, type ToolDescriptor } from "./tool-manifest";
+import { buildToolManifest, plainDescription, searchTools, type ToolDescriptor } from "./tool-manifest";
 import { getCommand, type ActorContext } from "./command";
 import { getQuery, executeQuery } from "./query";
 import { GroundingCache, GroundingError, assertGrounded, checkProseClaims } from "./grounding";
@@ -13,6 +13,8 @@ import {
   proposePendingAction,
   recordAgentTurn,
   recordPendingOutcome,
+  tenantDailyTokenLimit,
+  tenantTokensUsed,
   type PendingActionFailure,
 } from "./agent-approval";
 
@@ -44,6 +46,22 @@ import {
 
 const MAX_TOOL_ITERATIONS = 8;
 
+/**
+ * Per-turn budgets (Task 132 A3). Whichever is reached first ends the turn with a plain message; nothing half-done is hidden,
+ * because every tool call already made is in `toolCalls` and the turn record. Iterations alone did not bound cost: one
+ * iteration can carry many calls and a long history.
+ */
+export const TURN_BUDGET = { maxToolCalls: 16, maxWallClockMs: 90_000, maxTokens: 150_000 } as const;
+
+/**
+ * Above this many tools the model is given `find_tools` instead of every schema (Task 132 A1). Below it the whole manifest is
+ * cheap enough to send, and one round trip fewer is worth more than the tokens saved.
+ */
+export const TOOL_SEARCH_THRESHOLD = 12;
+/** Tools one `find_tools` call adds to the turn. */
+const FOUND_PER_SEARCH = 8;
+const FIND_TOOLS = "find_tools";
+
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
 export type ToolCallRecord = {
@@ -74,8 +92,12 @@ export type PendingPreview = {
   expiresAt: string;
 };
 
+export type TurnUsage = { promptTokens: number; completionTokens: number };
+
 export type AgentTurnResult = {
   reply: string;
+  /** Provider-reported tokens for the turn; absent when the provider reports none. */
+  usage?: TurnUsage;
   toolCalls: ToolCallRecord[];
   /** Present when this turn stopped short of executing an action to show it first — see `PendingPreview`. `toolCalls`
    *  for the previewed command(s) is empty in this case: nothing ran. */
@@ -103,13 +125,29 @@ function fromToolName(name: string): string {
   return name.replaceAll("__", ".");
 }
 
+/** The one tool always offered when the manifest is searched rather than sent whole (Task 132 A1). */
+const findToolsTool = {
+  type: "function" as const,
+  function: {
+    name: FIND_TOOLS,
+    description:
+      "Find the tools that can do something, by describing it in plain words (for example: unpaid invoices, record a payment, " +
+      "stock of an item). Returns matching tools, which you may call next. Call it again with other words if nothing fits.",
+    parameters: {
+      type: "object",
+      properties: { need: { type: "string", description: "What you need to read or do, in plain words." } },
+      required: ["need"],
+    },
+  },
+};
+
 function toOpenAiTool(tool: ToolDescriptor) {
   return {
     type: "function" as const,
     function: {
       name: toToolName(tool.key),
       description:
-        `[${tool.kind}] ${tool.description ?? tool.key}` +
+        `[${tool.kind}] ${plainDescription(tool.key, tool.description)}` +
         (tool.impact === "destructive" ? " (destructive)" : ""),
       parameters: tool.inputSchema,
     },
@@ -142,7 +180,11 @@ permissions as the person you are helping — never more, never less. Rules:
    E_UNGROUNDED means query for the real ID first; anything else, explain
    the message plainly and don't retry blindly.
 5. Keep answers short and in the platform's own terminology (Work, Party,
-   Organization, Resource — never "job", "client", "employee").`;
+   Organization, Resource — never "job", "client", "employee").
+6. Describe actions in plain words, by what they do ("record the payment"),
+   never by a tool's internal name.
+7. If you have a find_tools tool, you were not given every tool: call it with
+   what you need in plain words, then call one of the tools it returns.`;
 
 type OpenAiToolCall = {
   id: string;
@@ -167,7 +209,7 @@ async function callProvider(
    *  `"auto"` — a reply with no tool call is often the CORRECT answer there
    *  (e.g. "thanks", answered from history). */
   forceTool = false,
-): Promise<{ message: OpenAiMessage }> {
+): Promise<{ message: OpenAiMessage; usage?: TurnUsage }> {
   const config = readAgentProviderConfig();
   if (!config) throw new AgentNotConfiguredError();
 
@@ -192,10 +234,14 @@ async function callProvider(
 
   const json = (await res.json()) as {
     choices: Array<{ message: OpenAiMessage }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
   };
   const message = json.choices[0]?.message;
   if (!message) throw new Error("E_AGENT_PROVIDER: no choice returned");
-  return { message };
+  const usage = json.usage
+    ? { promptTokens: Math.max(0, json.usage.prompt_tokens ?? 0), completionTokens: Math.max(0, json.usage.completion_tokens ?? 0) }
+    : undefined;
+  return { message, usage };
 }
 
 async function runTool(
@@ -317,6 +363,7 @@ const NOT_DONE: Record<PendingActionFailure, string> = {
   E_NOT_FOUND: "That request is no longer available.",
   E_ALREADY_DECIDED: "That request was already answered, so nothing ran again.",
   E_EXPIRED: "That request expired. Ask again and I will show it afresh.",
+  E_STALE: "Nothing was changed: a record in that request was changed after I showed it to you. Ask again and I will show it afresh.",
 };
 
 /**
@@ -377,9 +424,20 @@ async function runTurnLoop(
     toolKeys?: readonly string[];
   } = {},
 ): Promise<AgentTurnResult> {
+  if ((await tenantTokensUsed(actor)) >= tenantDailyTokenLimit()) {
+    return {
+      reply: "The assistant has reached this workspace's limit for today. It will be available again within 24 hours; nothing was changed.",
+      toolCalls: [],
+    };
+  }
+
   const fullManifest = await withTenant(actor.tenantId, (tx) => buildToolManifest(tx, actor));
   const manifest = options.toolKeys ? fullManifest.filter((t) => options.toolKeys!.includes(t.key)) : fullManifest;
-  const tools = manifest.map(toOpenAiTool);
+  // Task 132 A1: a narrowed turn (`toolKeys`) or a small manifest is sent whole; otherwise the model searches it. `offered` only
+  // ever holds descriptors from `manifest`, so searching can never reach a tool the actor does not hold.
+  const searched = options.toolKeys === undefined && manifest.length > TOOL_SEARCH_THRESHOLD;
+  const offered = new Map<string, ToolDescriptor>();
+  const toolsForCall = () => (searched ? [findToolsTool, ...[...offered.values()].map(toOpenAiTool)] : manifest.map(toOpenAiTool));
   const grounding = new GroundingCache();
 
   const messages: OpenAiMessage[] = [
@@ -389,30 +447,75 @@ async function runTurnLoop(
   ];
 
   const toolCalls: ToolCallRecord[] = [];
+  const started = Date.now();
+  let usage: TurnUsage | undefined;
+  let callCount = 0;
+  const spent = () => (usage ? usage.promptTokens + usage.completionTokens : 0);
+  const budgetStop = (what: string): AgentTurnResult => ({
+    reply: `I stopped before finishing: this request ${what}. Anything listed as done is done; please narrow the request.`,
+    toolCalls,
+    usage,
+  });
+
+  const findTools = (call: OpenAiToolCall): ToolCallRecord => {
+    let need = "";
+    try {
+      need = String((JSON.parse(call.function.arguments || "{}") as { need?: unknown }).need ?? "");
+    } catch {
+      return { key: FIND_TOOLS, kind: "query", input: call.function.arguments, ok: false, output: "E_VALIDATION: arguments were not valid JSON" };
+    }
+    const found = searchTools(manifest, need, FOUND_PER_SEARCH);
+    for (const tool of found) offered.set(tool.key, tool);
+    return {
+      key: FIND_TOOLS,
+      kind: "query",
+      input: { need },
+      ok: true,
+      output:
+        found.length > 0
+          ? found.map((t) => ({ tool: toToolName(t.key), kind: t.kind, does: plainDescription(t.key, t.description) }))
+          : "No tool matches those words. Try other words, or tell the person this cannot be done here.",
+    };
+  };
+  const execute = (call: OpenAiToolCall): Promise<ToolCallRecord> =>
+    searched && call.function.name === FIND_TOOLS
+      ? Promise.resolve(findTools(call))
+      : runTool(actor, grounding, call.function.name, call.function.arguments);
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+    if (Date.now() - started > TURN_BUDGET.maxWallClockMs) return budgetStop("took too long");
+    if (spent() > TURN_BUDGET.maxTokens) return budgetStop("needed more reading than one answer allows");
     // Force a tool call on the FIRST turn only, and only when the manifest
     // was narrowed (`toolKeys` set) — a restriction the caller applied
     // specifically because this turn must ground in real reads. Later
     // iterations go back to "auto" so the model can produce its final
     // answer once it has read what it needs.
     const forceTool = i === 0 && options.toolKeys !== undefined;
-    const { message } = await callProvider(messages, tools, forceTool);
+    const { message, usage: callUsage } = await callProvider(messages, toolsForCall(), forceTool);
+    if (callUsage) {
+      usage = {
+        promptTokens: (usage?.promptTokens ?? 0) + callUsage.promptTokens,
+        completionTokens: (usage?.completionTokens ?? 0) + callUsage.completionTokens,
+      };
+    }
     messages.push(message);
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
       const reply = message.content ?? "";
-      const hasQuery = toolCalls.some((c) => c.kind === "query" && c.ok);
+      const hasQuery = toolCalls.some((c) => c.kind === "query" && c.ok && c.key !== FIND_TOOLS);
       const groundingWarnings = hasQuery ? checkProseClaims(reply, grounding) : [];
-      return { reply, toolCalls, groundingWarnings: groundingWarnings.length > 0 ? groundingWarnings : undefined };
+      return { reply, toolCalls, usage, groundingWarnings: groundingWarnings.length > 0 ? groundingWarnings : undefined };
     }
+
+    callCount += message.tool_calls.length;
+    if (callCount > TURN_BUDGET.maxToolCalls) return budgetStop("needed more steps than one answer allows");
 
     const proposal = detectProposal(message.tool_calls);
     if (proposal) {
       const refusal = refuseProposal(proposal, grounding);
       if (!refusal) {
         const command = getCommand(proposal.commandKey)!;
-        const label = command.description ?? proposal.commandKey;
+        const label = plainDescription(proposal.commandKey, command.description);
         const description = `This will run "${label}" on ${proposal.inputs.length} ${proposal.inputs.length === 1 ? "record" : "records"}.`;
         const stored = await proposePendingAction(actor, { commandKey: proposal.commandKey, summary: description, inputs: proposal.inputs });
         const preview: PendingPreview = {
@@ -422,7 +525,7 @@ async function runTurnLoop(
           details: detailLines(proposal.inputs),
           expiresAt: stored.expiresAt,
         };
-        return { reply: description + " Confirm to proceed.", toolCalls, preview };
+        return { reply: description + " Confirm to proceed.", toolCalls, usage, preview };
       }
       // Refused before storing: the proposal's own calls get the refusal as their result, the rest run as usual, and the
       // model may correct itself (query for the real id, fix the input) within the turn's iteration cap.
@@ -430,7 +533,7 @@ async function runTurnLoop(
         const isProposal = fromToolName(call.function.name) === proposal.commandKey;
         const record = isProposal
           ? ({ key: proposal.commandKey, kind: "command", input: call.function.arguments, ok: false, output: refusal } satisfies ToolCallRecord)
-          : await runTool(actor, grounding, call.function.name, call.function.arguments);
+          : await execute(call);
         toolCalls.push(record);
         messages.push({
           role: "tool",
@@ -442,7 +545,7 @@ async function runTurnLoop(
     }
 
     for (const call of message.tool_calls) {
-      const record = await runTool(actor, grounding, call.function.name, call.function.arguments);
+      const record = await execute(call);
       toolCalls.push(record);
       messages.push({
         role: "tool",
@@ -455,6 +558,7 @@ async function runTurnLoop(
   return {
     reply: "I reached the tool-call limit for this turn without a final answer. Please rephrase or narrow the request.",
     toolCalls,
+    usage,
   };
 }
 
@@ -478,6 +582,8 @@ export async function runAgentTurn(
       pendingActionId: result.preview?.id,
       model: readAgentProviderConfig()?.model,
       durationMs: Date.now() - started,
+      promptTokens: result.usage?.promptTokens,
+      completionTokens: result.usage?.completionTokens,
     });
   } catch (err) {
     console.error("agent turn record failed", err instanceof Error ? err.message : err);

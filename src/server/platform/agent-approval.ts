@@ -30,7 +30,22 @@ export type PendingActionView = {
   expiresAt: string;
 };
 
-export type PendingActionFailure = "E_NOT_FOUND" | "E_ALREADY_DECIDED" | "E_EXPIRED";
+export type PendingActionFailure = "E_NOT_FOUND" | "E_ALREADY_DECIDED" | "E_EXPIRED" | "E_STALE";
+
+const ID_FIELD = /Id$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Every record id a stored input names, from its top-level `*Id` fields (the same fields grounding checks). */
+export function referencedIds(inputs: unknown[]): string[] {
+  const ids = new Set<string>();
+  for (const input of inputs) {
+    if (!input || typeof input !== "object") continue;
+    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+      if (ID_FIELD.test(key) && typeof value === "string" && UUID.test(value)) ids.add(value.toLowerCase());
+    }
+  }
+  return [...ids];
+}
 
 export async function proposePendingAction(
   actor: ActorContext,
@@ -64,6 +79,20 @@ export async function claimPendingAction(
   now: Date = new Date(),
 ): Promise<{ ok: true; commandKey: string; inputs: unknown[] } | { ok: false; code: PendingActionFailure }> {
   return withTenant(actor.tenantId, async (tx) => {
+    // Task 132 A4: a record the action names changed after it was proposed (by anyone, through any channel), so what the
+    // person was shown is no longer what would run. Read from the activity trail every command already writes. Only an approve
+    // is refused; a reject runs nothing either way.
+    if (decision === "approve") {
+      const open = await tx.agentPendingAction.findFirst({ where: { id, actorId: actor.userId, status: "pending", expiresAt: { gt: now } } });
+      const ids = open ? referencedIds(open.inputs as unknown[]) : [];
+      if (open && ids.length > 0) {
+        const changed = await tx.activity.count({ where: { entityId: { in: ids }, occurredAt: { gt: open.createdAt } } });
+        if (changed > 0) {
+          const marked = await tx.agentPendingAction.updateMany({ where: { id, status: "pending" }, data: { status: "stale", decidedAt: now } });
+          if (marked.count === 1) return { ok: false, code: "E_STALE" } as const;
+        }
+      }
+    }
     const claimed = await tx.agentPendingAction.updateMany({
       where: { id, actorId: actor.userId, status: "pending", expiresAt: { gt: now } },
       data: { status: decision === "approve" ? "approved" : "rejected", decidedAt: now },
@@ -75,7 +104,7 @@ export async function claimPendingAction(
       await tx.agentPendingAction.updateMany({ where: { id, status: "pending" }, data: { status: "expired" } });
       return { ok: false, code: "E_EXPIRED" } as const;
     }
-    return { ok: false, code: row.status === "expired" ? "E_EXPIRED" : "E_ALREADY_DECIDED" } as const;
+    return { ok: false, code: row.status === "expired" ? "E_EXPIRED" : row.status === "stale" ? "E_STALE" : "E_ALREADY_DECIDED" } as const;
   });
 }
 
@@ -97,6 +126,9 @@ export type TurnRecord = {
   pendingActionId?: string;
   model?: string;
   durationMs: number;
+  /** Provider-reported tokens for the whole turn, when the provider reports them. */
+  promptTokens?: number;
+  completionTokens?: number;
 };
 
 function bounded(value: unknown): unknown {
@@ -117,9 +149,32 @@ export async function recordAgentTurn(actor: ActorContext, turn: TurnRecord): Pr
         pendingActionId: turn.pendingActionId ?? null,
         model: turn.model ?? null,
         durationMs: Math.max(0, Math.round(turn.durationMs)),
+        promptTokens: turn.promptTokens ?? null,
+        completionTokens: turn.completionTokens ?? null,
       },
     }),
   );
+}
+
+/**
+ * Task 132 A3: one tenant may not spend more than this many provider tokens in any 24 hours. Hosted Verity shares one provider
+ * account across tenants, so without a ceiling one tenant's chat could spend everyone's budget. Set per deployment with
+ * `AGENT_TENANT_DAILY_TOKENS`; an unset or unreadable value means the default. A per-tenant override is not built (Task 132 §7.4).
+ */
+export const DEFAULT_TENANT_DAILY_TOKENS = 1_000_000;
+
+export function tenantDailyTokenLimit(env: Record<string, string | undefined> = process.env): number {
+  const raw = Number(env.AGENT_TENANT_DAILY_TOKENS);
+  return Number.isInteger(raw) && raw >= 0 ? raw : DEFAULT_TENANT_DAILY_TOKENS;
+}
+
+/** Tokens this tenant's recorded turns used in the 24 hours before `now`. */
+export async function tenantTokensUsed(actor: ActorContext, now: Date = new Date()): Promise<number> {
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const sum = await withTenant(actor.tenantId, (tx) =>
+    tx.agentTurn.aggregate({ where: { createdAt: { gt: since } }, _sum: { promptTokens: true, completionTokens: true } }),
+  );
+  return (sum._sum.promptTokens ?? 0) + (sum._sum.completionTokens ?? 0);
 }
 
 /** One tenant, one run (ADR-055 clause 5). Idempotent. */

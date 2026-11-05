@@ -136,3 +136,57 @@ export async function buildToolManifest(
 
   return tools;
 }
+
+/** Words that carry no meaning for picking a tool. */
+const SEARCH_STOP_WORDS = new Set([
+  "a", "an", "the", "of", "for", "to", "in", "on", "and", "or", "by", "with", "my", "our", "all", "me", "show", "list", "get",
+  "verity", "please", "what", "which", "who", "how", "is", "are", "this", "that",
+]);
+
+function searchTerms(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length > 1 && !SEARCH_STOP_WORDS.has(t))
+    .map((t) => (t.length > 3 && t.endsWith("s") ? t.slice(0, -1) : t));
+}
+
+/**
+ * Ranks an actor's manifest against a plain-language need (Task 132 A1). The agent is offered this search instead of every
+ * tool schema at once: the full manifest is about 18k tokens a turn. Searches only the descriptors it is given, so it can never
+ * surface a tool outside the actor's own manifest (ADR-017 unchanged). Lexical on purpose: a few hundred descriptors need no
+ * index. A hit in the key or entity counts double a hit in the description; ties keep queries before commands, then key order.
+ */
+export function searchTools(manifest: readonly ToolDescriptor[], need: string, limit = 8): ToolDescriptor[] {
+  const terms = [...new Set(searchTerms(need))];
+  if (terms.length === 0) return [];
+  const scored = manifest.map((tool) => {
+    const name = new Set(searchTerms(`${tool.key} ${tool.entity}`));
+    const words = new Set(searchTerms(tool.description ?? ""));
+    let score = 0;
+    for (const term of terms) {
+      if (name.has(term)) score += 2;
+      if (words.has(term)) score += 1;
+    }
+    return { tool, score };
+  });
+  return scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score || (a.tool.kind === b.tool.kind ? a.tool.key.localeCompare(b.tool.key) : a.tool.kind === "query" ? -1 : 1))
+    .slice(0, limit)
+    .map((s) => s.tool);
+}
+
+/**
+ * What a tool does, in words a person can read (Task 132 A9): its own description, or one made from its key when it has none
+ * (`verity.trading.record_payment` -> "Record payment (trading)"). Most commands predate `description`, and the model and the
+ * confirmation card must never be left with only an internal key.
+ */
+export function plainDescription(key: string, description?: string): string {
+  if (description) return description;
+  const parts = key.split(".");
+  const action = (parts.at(-1) ?? key).replaceAll("_", " ");
+  const area = parts.length > 2 ? parts.at(-2)!.replaceAll("_", " ") : "";
+  const sentence = action.charAt(0).toUpperCase() + action.slice(1);
+  return area ? `${sentence} (${area})` : sentence;
+}

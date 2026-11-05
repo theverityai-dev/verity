@@ -523,7 +523,10 @@ authorised. Lot covers: none generated yet (typed tiles show).
   columns. No dependency (ADR-056 cl. 2). Later stages (datasets, analyst, document proposals, MSME clock) are in 132 section 6.
 - **Done when:** agent tests pass unchanged plus new tests for each item; prompt tokens per turn recorded and lower.
 - **Source:** Task 132 section 4 and 6, under Task 131 and ADR-055/056.
-- **Status:** PENDING (analysis written 2026-11-06; stage 5 items need the owner).
+- **Status:** PARTLY BUILT 2026-11-07, local only (A1, A3, A4 without the diff card, A9 in part, A10; see Task 132 Status).
+  Left: (1) apply `20261107000000_agent_turn_usage_and_stale` to production with the owner's go-ahead, then push (the build's
+  migration check blocks deploys until then); (2) old-beside-new diff on the confirmation card; (3) `resolve_by_name`;
+  (4) `description` on the 318 commands and 239 queries without one.
 
 ## P3: verification, coverage, housekeeping
 

@@ -83,11 +83,17 @@ const listThings: QueryDefinition<Record<string, never>, Array<{ id: string; nam
 };
 
 const toolName = (key: string) => key.replaceAll(".", "__");
-type Reply = { content?: string; calls?: Array<{ key: string; args: unknown }> };
+type Reply = {
+  content?: string;
+  /** A raw tool name, for tools that are not commands or queries (`find_tools`). */
+  calls?: Array<{ key?: string; name?: string; args: unknown }>;
+  usage?: { prompt_tokens: number; completion_tokens: number };
+};
+type Body = { messages: Array<{ role: string; content: string | null }>; tools?: Array<{ function: { name: string } }> };
 
 /** A model that says exactly what the test scripts. Every request body is kept so a test can read what the model was shown. */
-function scriptModel(replies: Reply[]): { bodies: Array<{ messages: Array<{ role: string; content: string | null }> }> } {
-  const bodies: Array<{ messages: Array<{ role: string; content: string | null }> }> = [];
+function scriptModel(replies: Reply[]): { bodies: Body[] } {
+  const bodies: Body[] = [];
   let next = 0;
   vi.stubGlobal("fetch", async (_url: string, init: { body: string }) => {
     bodies.push(JSON.parse(init.body));
@@ -98,10 +104,10 @@ function scriptModel(replies: Reply[]): { bodies: Array<{ messages: Array<{ role
       tool_calls: reply.calls?.map((c, i) => ({
         id: `call_${next}_${i}`,
         type: "function",
-        function: { name: toolName(c.key), arguments: JSON.stringify(c.args) },
+        function: { name: c.name ?? toolName(c.key!), arguments: JSON.stringify(c.args) },
       })),
     };
-    return { ok: true, json: async () => ({ choices: [{ message }] }) };
+    return { ok: true, json: async () => ({ choices: [{ message }], ...(reply.usage ? { usage: reply.usage } : {}) }) };
   });
   return { bodies };
 }
@@ -336,6 +342,87 @@ describeDb("agent pending actions and turn records (ADR-055)", () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it("refuses a Confirm when a record it names changed after it was shown, and never runs it (Task 132 A4)", async () => {
+    const view = await proposePendingAction(owner, { commandKey: recordPayment.key, summary: "x", inputs: [{ thingId: tenantA, note: "Moved" }] });
+    // Someone else changes the named record between the proposal and the click.
+    await withTenant(tenantA, (tx) =>
+      tx.activity.create({ data: { tenantId: tenantA, entityKey: ENTITY, entityId: tenantA, actorUserId: colleague.userId, fieldChanged: "name", source: "human" } }),
+    );
+    const result = await decidePendingAction(owner, view.id, "approve");
+    expect(result.failure).toBe("E_STALE");
+    expect(ran).toEqual([]);
+    const row = (await pendingRows()).find((r) => r.id === view.id)!;
+    expect(row.status).toBe("stale");
+    expect(row.decidedAt).not.toBeNull();
+    expect((await decidePendingAction(owner, view.id, "approve")).failure).toBe("E_STALE");
+    expect(ran).toEqual([]);
+  });
+
+  it("still runs a Confirm when only records it does not name changed", async () => {
+    const view = await proposePendingAction(owner, { commandKey: recordPayment.key, summary: "x", inputs: [{ thingId: tenantA, note: "Fine" }] });
+    await withTenant(tenantA, (tx) =>
+      tx.activity.create({ data: { tenantId: tenantA, entityKey: ENTITY, entityId: randomUUID(), actorUserId: colleague.userId, fieldChanged: "name", source: "human" } }),
+    );
+    expect((await decidePendingAction(owner, view.id, "approve")).failure).toBeUndefined();
+    expect(ran).toEqual(["record_payment"]);
+  });
+
+  it("records the tokens a turn used, summed across its calls (Task 132 A3)", async () => {
+    scriptModel([
+      { calls: [{ key: listThings.key, args: {} }], usage: { prompt_tokens: 100, completion_tokens: 10 } },
+      { content: "One thing.", usage: { prompt_tokens: 140, completion_tokens: 20 } },
+    ]);
+    const result = await runAgentTurn(owner, [], "how many things?");
+    expect(result.usage).toEqual({ promptTokens: 240, completionTokens: 30 });
+    const turn = (await withTenant(tenantA, (tx) => tx.agentTurn.findFirst({ where: { userMessage: "how many things?" } })))!;
+    expect(turn).toMatchObject({ promptTokens: 240, completionTokens: 30 });
+  });
+
+  it("stops a tenant at its daily token ceiling without calling the model, and other tenants are unaffected", async () => {
+    process.env.AGENT_TENANT_DAILY_TOKENS = "200";
+    try {
+      const { bodies } = scriptModel([{ content: "should not be asked" }]);
+      const result = await runAgentTurn(owner, [], "anything");
+      expect(bodies).toHaveLength(0);
+      expect(result.reply).toContain("limit for today");
+      expect(result.toolCalls).toEqual([]);
+    } finally {
+      delete process.env.AGENT_TENANT_DAILY_TOKENS;
+    }
+  });
+
+  it("ends a turn that asks for more tool calls than the budget allows", async () => {
+    const many = Array.from({ length: 6 }, () => ({ key: listThings.key, args: {} }));
+    scriptModel([{ calls: many }, { calls: many }, { calls: many }, { content: "never reached" }]);
+    const result = await runAgentTurn(owner, [], "read everything");
+    expect(result.reply).toContain("more steps than one answer allows");
+    expect(result.toolCalls).toHaveLength(12);
+  });
+
+  it("offers find_tools instead of every schema once the manifest is large, and only ever returns the actor's own tools (Task 132 A1)", async () => {
+    for (let n = 0; n < 12; n++) {
+      registerQuery({ ...listThings, key: `verity.test.agent_filler_${n}`, description: `Filler report number ${n}.` });
+    }
+    const { bodies } = scriptModel([
+      { calls: [{ name: "find_tools", args: { need: "list the things" } }] },
+      { calls: [{ key: listThings.key, args: {} }] },
+      { content: "There is one thing." },
+    ]);
+    const result = await runAgentTurn(owner, [], "what things are there?");
+    expect(result.reply).toBe("There is one thing.");
+    expect(bodies[0].tools!.map((t) => t.function.name)).toEqual(["find_tools"]);
+    const found = JSON.parse(bodies[1].messages.find((m) => m.role === "tool")!.content!).untrusted_data as Array<{ tool: string }>;
+    expect(found[0].tool).toBe(toolName(listThings.key));
+    expect(bodies[1].tools!.map((t) => t.function.name)).toContain(toolName(listThings.key));
+    expect(result.toolCalls.map((c) => c.key)).toEqual(["find_tools", listThings.key]);
+
+    // A colleague with no role holds no tools, so a search finds nothing at all.
+    const roleless: ActorContext = { ...colleague, roleId: null };
+    const { bodies: none } = scriptModel([{ calls: [{ name: "find_tools", args: { need: "list the things" } }] }, { content: "Nothing." }]);
+    await runAgentTurn(roleless, [], "what things are there?");
+    expect(none[0].tools).toBeUndefined();
   });
 
   it("purges turns after 90 days and decided actions after 30, and keeps what is newer", async () => {

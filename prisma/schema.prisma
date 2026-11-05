@@ -8165,7 +8165,7 @@ model AgentPendingAction {
   commandKey String    @map("command_key")
   summary    String
   inputs     Json
-  /// pending | approved | rejected | expired
+  /// pending | approved | rejected | expired | stale (a named record changed before Confirm, Task 132 A4)
   status     String    @default("pending")
   expiresAt  DateTime  @map("expires_at")
   decidedAt  DateTime? @map("decided_at")
@@ -8195,12 +8195,16 @@ model AgentTurn {
   pendingActionId String?  @map("pending_action_id") @db.Uuid
   model           String?
   durationMs      Int      @map("duration_ms")
+  /// Provider-reported tokens for the turn (Task 132 A3); null when the provider reports none.
+  promptTokens     Int?     @map("prompt_tokens")
+  completionTokens Int?     @map("completion_tokens")
   createdAt       DateTime @default(now()) @map("created_at")
 
   tenant        Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   pendingAction AgentPendingAction? @relation(fields: [pendingActionId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, actorId, createdAt])
+  @@index([tenantId, createdAt])
   @@index([createdAt])
   @@map("agent_turn")
 }

@@ -1339,7 +1339,43 @@ export function installAdministration(): void {
   registerQuery(listModules);
   registerQuery(listConfiguration);
   registerQuery(operationsSnapshot);
+  registerQuery(recentChanges);
 }
+
+/**
+ * What changed in the last few minutes (Task 132 A10): the most common follow-up after the assistant runs something ("what did
+ * that just do?"). Reads the activity trail every command writes, through the ordinary `Read` grant on
+ * `verity.platform.activity`, so nobody sees more than the audit screens already show them. Field names, never values.
+ */
+export const recentChanges: QueryDefinition<
+  { minutes?: number; mine?: boolean },
+  Array<{ occurredAt: Date; entityKey: string; entityId: string; field: string; commandKey: string | null; channel: string | null; byMe: boolean }>
+> = {
+  key: "verity.platform.recent_changes",
+  entity: "verity.platform.activity",
+  description:
+    "List what was changed in the last few minutes (default 15, at most one day): which record, which field, by which action. " +
+    "Only the caller's own changes unless mine is false.",
+  input: z.object({ minutes: z.number().int().min(1).max(1440).optional(), mine: z.boolean().optional() }),
+  handler: async (ctx, input) => {
+    const since = new Date(Date.now() - (input.minutes ?? 15) * 60_000);
+    const rows = await ctx.tx.activity.findMany({
+      where: { occurredAt: { gt: since }, ...(input.mine === false ? {} : { actorUserId: ctx.actor.userId }) },
+      orderBy: { occurredAt: "desc" },
+      take: 100,
+      select: { occurredAt: true, entityKey: true, entityId: true, fieldChanged: true, commandKey: true, source: true, actorUserId: true },
+    });
+    return rows.map((r) => ({
+      occurredAt: r.occurredAt,
+      entityKey: r.entityKey,
+      entityId: r.entityId,
+      field: r.fieldChanged,
+      commandKey: r.commandKey,
+      channel: r.source,
+      byMe: r.actorUserId === ctx.actor.userId,
+    }));
+  },
+};
 
 /** Test seam: allows a suite to re-install after clearing the registries. */
 export function resetAdministrationInstall(): void {
