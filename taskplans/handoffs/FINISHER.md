@@ -308,6 +308,17 @@ double-counted costs, change history, case record). Not built: lot join/link and
 **Status.** DEMO-READY locally 2026-10-23 (acceptance record: `clients/stylified/acceptance-record.md`; criteria 1 to 9 met on the demonstration workspace, 10 met locally). Built: roles, stage scope, approvals with limits, day close, supervisor screens S1 to S6 at `/shopfloor`, Approvals, Team and limits, Hindi and English, lot covers with upload, defect photographs, a year-of-history speed fix (owner dashboard 49 s and failing, now 0.5 s), money withheld from supervisors at the query. Still open: (1) one run of the supervisor, manager and photograph flows on Stylified's hosted workspace with its storage bucket set; (2) the Supabase restore rehearsal into a scratch project (`docs/deployment/stylified-backup-restore.md`); (3) confirm migration `20261023110000_piecework_floor_roles` is on production (the owner said on 2026-10-23 they deployed; not verified here); (4) **owner decision**: verify the session token locally (`getClaims`) on every page to remove one authentication round trip per page, at the cost of a revoked session living up to an hour (details in the acceptance record). **Pricing changed 2026-10-25:** two options, both plus GST, same scope (A ₹90,000 once and ₹8,500 a month; B ₹25,000 once and ₹12,000 a month); see `clients/stylified/pricing.md`. Production migrations confirmed applied by the owner 2026-10-25 (including `20261025100000_piecework_karigar_profile`); the push of the code is the owner's. Hosting: PlotArmour-hosted first; a move to
 Stylified's own Vercel and Supabase accounts is an option quoted later and not promised (ADR-054 keeps Mode D parked; see P2-0).
 
+### P1-5. Akhand Export (Noida garment exporter): show the demo, then scope (added 2026-11-05)
+
+**Built 2026-11-05 (local only, no new code path):** analysis `clients/akhand-exports/README.md`; demo tenant "Akhand Export" seeded by
+`prisma/seed-akhand.ts` on the same `piecework` capability (buyer POs as lots, knit rolls in kg, outside printer and fabricator, final
+checking as the last stage, shipments out of ready stock); four logins in `scripts/demo-env.sh`. ROUTE-WALKED as owner, supervisor and
+munshi at 1280 and 390 in both themes, 0 failures (`docs/demo/evidence/walk-akhand-*-2026-11-05.md`). The walk found one shared
+defect, fixed: long lot names clipped on the phone factory dashboard. **Not DEMO-READY yet:** a person must still open the main flow
+(give out, take back, scan) on it. **Next:** the first meeting, using the eight questions in section 6 of the README; the export-house
+gaps (PO master with size matrix, sampling, inspection, packing list, export documents) are listed in section 5 and are NOT built and NOT
+authorised. Lot covers: none generated yet (typed tiles show).
+
 ## P2: planned build work, unblocked
 
 ### P2-0. Client-owned Vercel and Supabase deployments: decide, then pilot

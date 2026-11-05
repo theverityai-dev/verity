@@ -149,7 +149,7 @@ async function OwnerDashboardPage() {
               {byLot.map(({ lot, total, counts, bundles }) => (
                 <li key={lot.id} className="list-none">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <Link href={`/lots/${lot.id}`} className="min-w-0 truncate text-[15px] font-semibold text-accent-ink no-underline hover:underline">
+                    <Link href={`/lots/${lot.id}`} className="line-clamp-2 min-w-0 text-[15px] font-semibold text-accent-ink no-underline hover:underline">
                       {lot.number} <span className="font-normal text-text-secondary">· {lot.name ?? lot.design}</span>
                     </Link>
                     <StateBadge category={STATUS_CATEGORY[lot.status]!} label={`${STATUS_LABEL[lot.status]}${lot.overdue ? " · overdue" : ""}`} />

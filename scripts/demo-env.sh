@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local demo environment: DSEW and Stylified side by side, every user with a login you can type.
+# Local demo environment: DSEW, Stylified and Akhand Export side by side, every user with a login you can type.
 #
 #   bash scripts/demo-env.sh up         start Docker services, create and seed the database, create every login, start the app
 #   bash scripts/demo-env.sh up --reset throw the demo database away first and seed both tenants again (about 6 minutes)
@@ -39,6 +39,10 @@ USERS=(
   "stylified-supervisor-a|Stylified|Supervisor A|stylified-supervisor-a@stylified.demo|Stylified|Supervisor|Floor screens at Collar and Stitching; no money anywhere"
   "stylified-supervisor-b|Stylified|Supervisor B|stylified-supervisor-b@stylified.demo|Stylified|Supervisor|Floor screens at Pasting, Kaj and Finishing; has a closed day with a Hindi note"
   "stylified-munshi|Stylified|Munshi|stylified-munshi@stylified.demo|Stylified|Munshi|Daily entry in Hindi or English, lots, bundles, karigars, wages"
+  "akhand-owner|Akhand|Owner|akhand-owner@akhand.demo|Akhand Export|Owner|Everything: buyer orders as lots, approvals, team and limits, wages, shipments out of ready stock"
+  "akhand-manager|Akhand|Manager|akhand-manager@akhand.demo|Akhand Export|Manager|Approvals within the owner's limits; lots, karigars and job workers, wages"
+  "akhand-supervisor|Akhand|Supervisor|akhand-supervisor@akhand.demo|Akhand Export|Supervisor|Floor screens at every stage; a closed day with a Hindi note; no money"
+  "akhand-munshi|Akhand|Munshi|akhand-munshi@akhand.demo|Akhand Export|Munshi|Daily entry in Hindi or English, fabric in kg, lots, bundles, karigars, wages"
 )
 
 die() { echo "demo-env: $*" >&2; exit 1; }
@@ -61,7 +65,8 @@ print_logins() {
   echo
 }
 
-port_pids() { netstat -ano | grep -E "[:.]$PORT[[:space:]].*LISTENING" | awk '{print $NF}' | tr -d '' | sort -u; }
+port_pids() { netstat -ano | grep -E "[:.]$PORT[[:space:]].*LISTENING" | awk '{print $NF}' | tr -d '
+' | sort -u; }
 
 stop_app() {
   local pid
@@ -170,6 +175,13 @@ else
     STYLIFIED_MUNSHI_SUB="${SUB[stylified-munshi]}" \
     node prisma/run-seed.cjs seed-stylified.ts > "$STATE_DIR/seed-stylified.log" 2>&1 \
     || { tail -15 "$STATE_DIR/seed-stylified.log"; die "seed-stylified failed"; }
+fi
+
+if has_tenant "Akhand Export"; then
+  say "Akhand Export already seeded"
+else
+  say "seeding Akhand Export (about 1 minute)"
+  seed env     AKHAND_OWNER_SUB="${SUB[akhand-owner]}" AKHAND_MANAGER_SUB="${SUB[akhand-manager]}"     AKHAND_SUPERVISOR_SUB="${SUB[akhand-supervisor]}" AKHAND_MUNSHI_SUB="${SUB[akhand-munshi]}"     node prisma/run-seed.cjs seed-akhand.ts > "$STATE_DIR/seed-akhand.log" 2>&1     || { tail -15 "$STATE_DIR/seed-akhand.log"; die "seed-akhand failed"; }
 fi
 
 # ---- 5. Photographs: a local S3 server and bucket, when the container exists -------------------------------------------------------
