@@ -198,6 +198,8 @@ model Tenant {
   pieceworkReadyMoves          PieceworkReadyMove[]
   pieceworkLotShares           PieceworkLotShare[]
   pieceworkCovers              PieceworkCover[]
+  pieceworkInspections        PieceworkInspection[]
+  pieceworkPackingLists       PieceworkPackingList[]
   agentPendingActions          AgentPendingAction[]
   agentTurns                   AgentTurn[]
   inventoryAttributes          InventoryAttribute[]
@@ -7761,6 +7763,8 @@ model PieceworkLot {
   readyMoves PieceworkReadyMove[]
   sharesOut  PieceworkLotShare[] @relation("PieceworkLotShareSource")
   sharesIn   PieceworkLotShare[] @relation("PieceworkLotShareTarget")
+  inspections        PieceworkInspection[]
+  packingLists       PieceworkPackingList[]
 
   @@unique([tenantId, number])
   @@unique([tenantId, sequenceNo])
@@ -8283,4 +8287,76 @@ model PieceworkCover {
   @@index([tenantId, coverUserId])
   @@index([tenantId, absentUserId])
   @@map("piecework_cover")
+}
+
+/// A quality inspection of a lot's garments (inline during production, final before shipment) judged by the AQL table (ISO 2859-1, single
+/// sampling, normal). The plan (code letter, sample size, acceptance numbers) is worked out by the command and STORED, so the record keeps
+/// saying what was applied that day. APPEND-ONLY: a mistake is a reversal row pointing at the original.
+model PieceworkInspection {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  lotId         String   @map("lot_id") @db.Uuid
+  /// inline | final
+  kind          String
+  inspectedOn   DateTime @map("inspected_on") @db.Date
+  /// Who inspected: the house's own checker, the buyer's QC or a third-party agency, as written.
+  inspector     String
+  /// Pieces offered for inspection (the lot size the table is read for).
+  offeredPieces Int      @map("offered_pieces")
+  /// General inspection level I | II | III.
+  level         String
+  aqlMajor      String   @map("aql_major")
+  aqlMinor      String   @map("aql_minor")
+  codeLetter    String   @map("code_letter")
+  sampleSize    Int      @map("sample_size")
+  acceptMajor   Int      @map("accept_major")
+  acceptMinor   Int      @map("accept_minor")
+  criticalFound Int      @map("critical_found")
+  majorFound    Int      @map("major_found")
+  minorFound    Int      @map("minor_found")
+  /// pass | fail, derived from the plan and the defects found when recorded.
+  result        String
+  note          String?
+  reversesId    String?  @unique @map("reverses_id") @db.Uuid
+  enteredById   String   @map("entered_by_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  tenant   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot      PieceworkLot         @relation(fields: [lotId], references: [id], onDelete: Restrict)
+  reverses PieceworkInspection? @relation("PieceworkInspectionReversal", fields: [reversesId], references: [id], onDelete: Restrict)
+  reversal PieceworkInspection? @relation("PieceworkInspectionReversal")
+
+  @@index([tenantId, lotId])
+  @@map("piecework_inspection")
+}
+
+/// A packing list for garments of one lot going to a buyer: carton ranges with the size assortment, weights and dimensions. The cartons
+/// are part of the document and are never edited; a wrong list is cancelled with a reason and a new one made. Its number is never reused.
+model PieceworkPackingList {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  /// PL-0001. Unique per tenant.
+  number       String
+  sequenceNo   Int       @map("sequence_no")
+  lotId        String    @map("lot_id") @db.Uuid
+  buyer        String
+  /// The buyer's order number, the invoice number, or both, as written on the shipment.
+  reference    String?
+  destination  String?
+  packedOn     DateTime  @map("packed_on") @db.Date
+  /// [{ from, to, colour, sizes: [{ size, qty }] per carton, netGrams, grossGrams, lengthCm, widthCm, heightCm }]
+  cartons      Json
+  note         String?
+  cancelledAt  DateTime? @map("cancelled_at")
+  cancelReason String?   @map("cancel_reason")
+  createdById  String    @map("created_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lot    PieceworkLot @relation(fields: [lotId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, number])
+  @@unique([tenantId, sequenceNo])
+  @@index([tenantId, lotId])
+  @@map("piecework_packing_list")
 }

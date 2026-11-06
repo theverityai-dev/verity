@@ -31,7 +31,7 @@ type MoveRow = { kind: string; pieces: number; reversesId: string | null; lotId:
 const net = (m: MoveRow) => signOf(m.kind) * m.pieces * (m.reversesId ? -1 : 1);
 
 /** Good pieces production has made ready, per lot (all lots, closed ones too: their stock is still stock). */
-async function producedByLot(tx: Tx, lotIds: string[]): Promise<Map<string, { ready: number; since: string | null }>> {
+export async function producedByLot(tx: Tx, lotIds: string[]): Promise<Map<string, { ready: number; since: string | null }>> {
   if (lotIds.length === 0) return new Map();
   const stages = await activeStages(tx);
   const bundles = (await loadBundles(tx, stages, { lotIds })).filter((b) => !b.cancelledAt);

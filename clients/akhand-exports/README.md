@@ -87,6 +87,11 @@ Kestrel Outfitters, Maison Bleue), the karigars, the mills and every number.
 - **Floor:** one supervisor over every stage, two deduction requests waiting (one within the manager's limit, one only the owner can
   decide), a closed day with a Hindi note.
 - **Ready stock:** domestic surplus counted at launch, part of it sold to a Delhi wholesaler.
+- **Quality inspections (AQL, ISO 2859-1):** LOT-0001's buyer final passed (32 of 200 checked, level II, AQL 2.5 / 4.0); LOT-0002 has an
+  inline check that failed on open seams and a re-check after rework that passed.
+- **Packing lists:** PL-0001 (8 cartons, 120 pcs) and PL-0002 (5 cartons, 76 pcs) for LOT-0001's two shipments, with the size
+  assortment per carton, net and gross weight and CBM, each printable from the lot.
+- **Pictures:** a generated cover for every lot (`public/demo/akhand`, prompts in `image-prompts.md`).
 
 Logins (local demo, `bash scripts/demo-env.sh up`; `bash scripts/demo-env.sh logins` prints the table and the shared password):
 `akhand-owner`, `akhand-manager`, `akhand-supervisor`, `akhand-munshi`. Reset: `DEMO_TENANT_NAME="Akhand Export"` with
@@ -94,18 +99,22 @@ Logins (local demo, `bash scripts/demo-env.sh up`; `bash scripts/demo-env.sh log
 
 ## 5. What an export house needs that the demo does not have
 
-Say these plainly in the meeting. None is built; each needs the owner's authorisation before work starts.
+Built on 2026-11-06 because none needs anything from the client (each follows an industry standard or is plain document work):
+the AQL inspection record, the packing list and the lot pictures. They are generic to the garment capability, so Stylified can use
+them too once its roles get the two new grants. What is left needs the client's own answer first; say these plainly in the meeting.
 
 | Gap | Why it matters to them | Size |
 |---|---|---|
 | Buyer and purchase-order master, with a size and colour matrix | Today the PO lives in the lot's name and note. Several lots per PO, and progress against each size, need a real order | Medium |
 | Sampling tracker (proto, fit, PP, salesman samples, buyer comments, approval dates) | Most of a small house's lost time is waiting on sample approvals | Small to medium |
 | Time and action calendar against the ex-factory date | Late shipment means air freight at the house's cost | Medium |
-| Inspection record (inline and final, AQL sample size, result) | Buyers ask for it; a failed final costs a re-check | Small |
-| Packing list and carton ratio, carton labels | Every shipment needs one | Medium |
 | Export invoice, shipping documents, LUT, RoDTEP and duty drawback tracking, foreign-currency receipts | The commercial side of exporting; usually the CA or a CHA does it today | Large; ask what they use first |
 | Trim and accessory stock per order | Zips, labels, snaps are counted against each PO | Medium |
-| Pictures | The Stylified demo uses generated lot covers; Akhand's lots show typed tiles until pictures are made | Small |
+| Carton labels (shipping marks printed per carton) | Most buyers send their own label format; ask for one | Small |
+
+Why each of these waits: the PO master decides whether a size grid is kept below the bundle (Stylified deliberately keeps bundles
+size-free); sampling stages and the T&A milestones differ by buyer; export documents depend on whether their CA or CHA already
+prepares them; trims depend on whether they stock trims or buy per order.
 
 ## 6. Questions for the first meeting
 

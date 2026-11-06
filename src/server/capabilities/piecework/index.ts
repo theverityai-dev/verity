@@ -33,6 +33,8 @@ import { registerRebundle } from "./rebundle";
 import { registerHistory } from "./history";
 import { assertActiveMember, registerTeam } from "./team";
 import { ENTITY_PIECEWORK_READY_MOVE, registerReady } from "./ready";
+import { registerInspection } from "./inspection";
+import { registerPacking } from "./packing";
 
 export * from "./ledger";
 export * from "./reports";
@@ -45,6 +47,8 @@ export * from "./rebundle";
 export * from "./history";
 export * from "./team";
 export * from "./ready";
+export * from "./inspection";
+export * from "./packing";
 export * from "./role-presets";
 
 /**
@@ -1128,6 +1132,8 @@ export function registerPieceworkCapability(): void {
   registerHistory();
   registerTeam();
   registerReady();
+  registerInspection();
+  registerPacking();
   registerCommand(cutLot);
   registerQuery(listStages);
   registerQuery(listLots);

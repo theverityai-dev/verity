@@ -7,7 +7,7 @@ import { executeQuery } from "@/server/platform/query";
 import { installCapabilities } from "@/server/capabilities/registry";
 import {
   ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_LOT, ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_SETTING, PIECEWORK_CAPABILITY,
-  ENTITY_PIECEWORK_LOT_COST, floorReasons, listLots, listRolls, lotCosting, lotDetail, lotFabric, lotRateCard, productionSettings,
+  ENTITY_PIECEWORK_LOT_COST, ENTITY_PIECEWORK_INSPECTION, ENTITY_PIECEWORK_PACKING_LIST, lotInspections, lotPackingLists, floorReasons, listLots, listRolls, lotCosting, lotDetail, lotFabric, lotRateCard, productionSettings,
 } from "@/server/capabilities/piecework";
 import { withCapabilityPageAccess } from "@/components/ui/PageAccess";
 import { CommandAccess } from "@/components/ui/CommandAccess";
@@ -21,6 +21,7 @@ import { RateCard } from "./RateCard";
 import { LotCost } from "./LotCost";
 import { LotRequests } from "./LotRequests";
 import { LotCover } from "./LotCover";
+import { Inspections, PackingLists } from "./Shipment";
 import { Cover } from "@/components/ui/Cover";
 import { floorLanes } from "../floor";
 import { STATUS_CATEGORY, STATUS_LABEL, rupees, shortDate } from "../format";
@@ -32,7 +33,13 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await requireActor();
 
-  const { allowed, canChange, canRequest, canPhoto, canRates, canEditRates, canFabric, canSettings, canCost, canAddCost } = await withTenant(actor.tenantId, async (tx) => ({
+  const { allowed, canChange, canRequest, canPhoto, canRates, canEditRates, canFabric, canSettings, canCost, canAddCost, canInspect, canRecordInspection, canReverseInspection, canPacking, canMakePacking, canCancelPacking } = await withTenant(actor.tenantId, async (tx) => ({
+    canInspect: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_INSPECTION),
+    canRecordInspection: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_INSPECTION),
+    canReverseInspection: await hasTenantPermission(tx, actor.roleId, "ActionExecute", ENTITY_PIECEWORK_INSPECTION),
+    canPacking: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_PACKING_LIST),
+    canMakePacking: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_PACKING_LIST),
+    canCancelPacking: await hasTenantPermission(tx, actor.roleId, "ActionExecute", ENTITY_PIECEWORK_PACKING_LIST),
     canCost: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT_COST),
     canAddCost: await hasTenantPermission(tx, actor.roleId, "Create", ENTITY_PIECEWORK_LOT_COST),
     canRates: await hasTenantPermission(tx, actor.roleId, "Read", ENTITY_PIECEWORK_LOT_RATE),
@@ -51,7 +58,8 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
 
   const cancelled = lot.status === "cancelled";
   // Money and fabric live on their own entities: a supervisor can open the lot and sees neither the rate card nor the metres.
-  const [card, fabric, stock, settings, costing, reasons, lots] = await Promise.all([
+  const shipping = !cancelled && lot.status !== "draft";
+  const [card, fabric, stock, settings, costing, reasons, lots, inspections, packing] = await Promise.all([
     canRates ? executeQuery(actor, lotRateCard, { lotId: id }) : null,
     canFabric ? executeQuery(actor, lotFabric, { lotId: id }) : null,
     canFabric && (lot.status === "draft" || lot.status === "active") ? executeQuery(actor, listRolls, {}) : null,
@@ -59,7 +67,10 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
     canCost ? executeQuery(actor, lotCosting, { lotId: id }) : null,
     canCost ? executeQuery(actor, floorReasons, {}) : null,
     canAddCost ? executeQuery(actor, listLots, {}) : null,
+    canInspect && shipping ? executeQuery(actor, lotInspections, { lotId: id }) : null,
+    canPacking && shipping ? executeQuery(actor, lotPackingLists, { lotId: id }) : null,
   ]);
+  const today = new Date().toISOString().slice(0, 10);
   const rollChoices = stock ? stock.rolls.filter((r) => !r.cancelled && r.balanceCenti > 0).map((r) => ({ id: r.id, number: r.number, fabricType: r.fabricType, unit: r.unit, balanceCenti: r.balanceCenti })) : null;
   const lanes = floorLanes(lot.stages.map((s) => ({ id: s.stageId, label: s.label })), lot.placements, false);
   const facts: Array<{ term: string; value: ReactNode }> = [
@@ -195,6 +206,21 @@ async function LotDetailPage({ params }: { params: Promise<{ id: string }> }) {
             </Panel>
           )}
           </div>
+        </div>
+      )}
+
+      {(inspections || packing) && (
+        <div className="mb-6 grid items-start gap-6 lg:grid-cols-2">
+          {inspections && (
+            <Panel title="Quality inspections" action={inspections.finalResult ? <StateBadge category={inspections.finalResult === "pass" ? "Completed" : "Blocked"} label={inspections.finalResult === "pass" ? "Final passed" : "Final failed"} /> : undefined}>
+              <Inspections lotId={lot.id} rows={inspections.inspections} offered={lot.readyPieces} today={today} canRecord={canRecordInspection} canReverse={canReverseInspection} />
+            </Panel>
+          )}
+          {packing && (
+            <Panel title="Packing lists">
+              <PackingLists lotId={lot.id} lists={packing.lists} readyToPack={packing.readyToPack} today={today} canCreate={canMakePacking} canCancel={canCancelPacking} />
+            </Panel>
+          )}
         </div>
       )}
 

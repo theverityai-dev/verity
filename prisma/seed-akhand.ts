@@ -246,6 +246,23 @@ async function main() {
   await executeCommand(actor, piecework.recordReadyMove, { kind: "out", lotId: lotRomper, pieces: 4, reason: "Sample", party: "Little Tern Ltd, United Kingdom", reference: "Shipment samples", movedOn: day(-17) });
   await executeCommand(actor, piecework.recordReadyMove, { kind: "out", lotId: lotRomper, pieces: 120, reason: "Shipped", party: "Little Tern Ltd, United Kingdom", reference: "AE/EXP/0031", movedOn: day(-16), note: "Air freight, 8 cartons" });
   await executeCommand(actor, piecework.recordReadyMove, { kind: "out", lotId: lotRomper, pieces: 76, reason: "Shipped", party: "Little Tern Ltd, United Kingdom", reference: "AE/EXP/0034", movedOn: day(-12), note: "Balance, 5 cartons" });
+  // The buyer's final inspection before the first shipment (AQL 2.5 major / 4.0 minor, level II: 32 of 200 checked), and the packing
+  // list of each shipment: sizes in the buyer's own labels, 15 rompers to a carton, the balance carton made up of what was left.
+  await executeCommand(actor, piecework.recordInspection, {
+    lotId: lotRomper, kind: "final", inspectedOn: day(-18), inspector: "Little Tern buyer QC", offeredPieces: 200, level: "II", aqlMajor: "2.5", aqlMinor: "4.0",
+    criticalFound: 0, majorFound: 1, minorFound: 2, note: "1 open seam at the leg snap; 2 loose threads. Report LT-FI-0921.",
+  });
+  const romperCarton = (from: number, to: number, sizes: Array<[string, number]>, netGrams: number, grossGrams: number) =>
+    ({ from, to, colour: "Oat melange", sizes: sizes.map(([size, qty]) => ({ size, qty })), netGrams, grossGrams, lengthCm: 50, widthCm: 35, heightCm: 25 });
+  await executeCommand(actor, piecework.createPackingList, {
+    lotId: lotRomper, buyer: "Little Tern Ltd, United Kingdom", reference: "PO LT-504 / AE/EXP/0031", destination: "London Heathrow (air)", packedOn: day(-17),
+    cartons: [romperCarton(1, 8, [["0-3M", 5], ["3-6M", 5], ["6-12M", 5]], 1650, 2300)], note: "Shipping marks: LITTLE TERN / LT-504 / C/No. 1-13",
+  });
+  await executeCommand(actor, piecework.createPackingList, {
+    lotId: lotRomper, buyer: "Little Tern Ltd, United Kingdom", reference: "PO LT-504 / AE/EXP/0034", destination: "London Heathrow (air)", packedOn: day(-13),
+    cartons: [romperCarton(1, 4, [["0-3M", 5], ["3-6M", 5], ["6-12M", 5]], 1650, 2300), romperCarton(5, 5, [["0-3M", 6], ["3-6M", 6], ["6-12M", 4]], 1760, 2420)],
+    note: "Balance shipment. Shipping marks: LITTLE TERN / LT-504 / C/No. 9-13",
+  });
   // Stock that sat in the godown before Verity: surplus from an older order, sold in the domestic market.
   await executeCommand(actor, piecework.recordReadyMove, { kind: "opening", label: "Men's round neck tee, white, surplus", pieces: 260, note: "Counted in the godown at launch", movedOn: day(-30) });
   await executeCommand(actor, piecework.recordReadyMove, { kind: "out", label: "Men's round neck tee, white, surplus", pieces: 150, reason: "Sold", party: "Gupta Hosiery, Gandhi Nagar, Delhi", reference: "AE/DOM/0112", movedOn: day(-8) });
@@ -284,6 +301,15 @@ async function main() {
   // Bundles 5 and 6 (6-7Y) at the printer.
   await out(h5!, "print", "printer", 50, 3, { dueDate: day(2) });
   await out(h6!, "print", "printer", 50, 3, { dueDate: day(2) });
+  // Inline checks on the hoodie: the first, on the opening bundles, failed on open side seams; after the rework the re-check passed.
+  await executeCommand(actor, piecework.recordInspection, {
+    lotId: lotHoodie, kind: "inline", inspectedOn: day(-9), inspector: "Pooja (own checker)", offeredPieces: 98, level: "II", aqlMajor: "2.5", aqlMinor: "4.0",
+    criticalFound: 0, majorFound: 3, minorFound: 1, note: "Open side seams on 3 pieces from one machine. Rework given back to stitching.",
+  });
+  await executeCommand(actor, piecework.recordInspection, {
+    lotId: lotHoodie, kind: "inline", inspectedOn: day(-5), inspector: "Pooja (own checker)", offeredPieces: 97, level: "II", aqlMajor: "2.5", aqlMinor: "4.0",
+    criticalFound: 0, majorFound: 0, minorFound: 1, note: "Re-check after rework.",
+  });
 
   // LOT-0003: a men's tee salesman-sample run for a new buyer, on hold for the buyer's fit comments.
   const lotSample = await lot("Men's round neck tee, 180 GSM, sample run", "Salesman samples · Kestrel Outfitters, Australia", 60, 9, 12, "Single jersey",
@@ -305,7 +331,7 @@ async function main() {
   await out(tee[1]!, "stitching", "rafiq", 90, 2, { dueDate: day(3) });
 
   // LOT-0005: PO MB-118, a French label's ladies rib crop top: fit sample approved, bulk not yet cut (the coral rib is on the shelf).
-  await lot("Ladies rib crop top, square neck", "PO MB-118 · Maison Bleue SARL, France", 400, 2, 35, "Rib",
+  const lotCrop = await lot("Ladies rib crop top, square neck", "PO MB-118 · Maison Bleue SARL, France", 400, 2, 35, "Rib",
     "Size break S 100, M 150, L 100, XL 50. Fit sample approved; bulk cut after shade approval.");
 
   // What the lots cost beyond fabric and wages: one thread bill shared by three lots (split by pieces cut), zips, trims, packing.
@@ -313,6 +339,13 @@ async function main() {
   await lotCost([lotHoodie], "Zips", 7_200, 15, "No. 5 nylon zips, 300 pcs");
   await lotCost([lotHoodie], "Labels and trims", 2_850, 15, "Main label, size label, hang tag");
   await lotCost([lotTee], "Packing", 1_900, 2, "Polybags and inner boxes");
+
+  // Lot pictures for the screens: the demo tenant's own generated images, served from public/demo/akhand (prompts in
+  // clients/akhand-exports/image-prompts.md). They belong to this demo only.
+  const covers: Array<[string, string]> = [[lotRomper, "lot-romper-thumb"], [lotHoodie, "lot-hoodie-thumb"], [lotSample, "lot-sample-tee-thumb"], [lotTee, "lot-plain-tee-thumb"], [lotCrop, "lot-crop-top-thumb"]];
+  for (const [id, file] of covers) {
+    await admin.$executeRaw`UPDATE piecework_lot SET custom_fields = custom_fields || jsonb_build_object('coverImage', ${`/demo/akhand/${file}.webp`}::text) WHERE id = ${id}::uuid`;
+  }
 
   // The karigar ledger: an advance, part of it recovered out of wages, a deduction, payments to people and job workers.
   const pay = (who: string, kind: "advance" | "recovery" | "deduction" | "payment", rupees: number, daysAgo: number, extra: Record<string, unknown> = {}) =>

@@ -360,6 +360,9 @@ describe("conformance: over-genericity (Phase G)", () => {
       "segments",
       // Piece-rate floor: a supervisor's closed day, a frozen document of what was handed over (append-only).
       "summary",
+      // Piece-rate packing list: the carton lines of one printed document, never edited (a wrong list is cancelled and made again),
+      // validated by the command and only ever read whole to print and total.
+      "cartons",
       // Agent (ADR-055): the exact inputs of a stored pending action, which must replay unchanged and so cannot be columns (their
       // shape is each command's own schema); its outcome, counts and error codes only; and a turn's tool calls, a bounded audit
       // record. All three are tenant rows under RLS, purged on a schedule, and never read to decide authorization.
@@ -576,6 +579,7 @@ describeDb("conformance: database enforcement", () => {
         // Piece-rate ledger (20261021300000): entries, payments and per-worker rates are facts, never edited.
         "piecework_day_close",
         "piecework_entry",
+        "piecework_inspection",
         "piecework_lot_cost",
         "piecework_lot_share",
         "piecework_payment",

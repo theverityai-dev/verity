@@ -315,9 +315,15 @@ Stylified's own Vercel and Supabase accounts is an option quoted later and not p
 checking as the last stage, shipments out of ready stock); four logins in `scripts/demo-env.sh`. ROUTE-WALKED as owner, supervisor and
 munshi at 1280 and 390 in both themes, 0 failures (`docs/demo/evidence/walk-akhand-*-2026-11-05.md`). The walk found one shared
 defect, fixed: long lot names clipped on the phone factory dashboard. **Not DEMO-READY yet:** a person must still open the main flow
-(give out, take back, scan) on it. **Next:** the first meeting, using the eight questions in section 6 of the README; the export-house
-gaps (PO master with size matrix, sampling, inspection, packing list, export documents) are listed in section 5 and are NOT built and NOT
-authorised. Lot covers: none generated yet (typed tiles show).
+(give out, take back, scan) on it.
+
+**Built 2026-11-06 (owner asked to close the gaps that need no client confirmation):** AQL inspections of a lot (`piecework/inspection.ts`,
+table in `src/lib/aql.ts`, ISO 2859-1 single normal, plan stored on the record, append-only) and packing lists (`piecework/packing.ts`,
+carton runs with a size assortment, weights, CBM, never more than is ready, printable at `/lots/[id]/packing/[plId]`); migration
+`20261106000000_piecework_inspection_and_packing`, local only; generated lot covers in `public/demo/akhand`. Existing tenants' roles do not
+get the two new grants by migration: add them on `/roles` (Stylified on production needs this when the migration ships). **Next:** the
+first meeting (README section 6); the remaining gaps (PO master with size grid, sampling, T&A, export documents, trims, carton labels)
+need the client's answers and are NOT authorised.
 
 ## P2: planned build work, unblocked
 

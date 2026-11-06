@@ -4,6 +4,8 @@ import { ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE } from "./fabric";
 import { ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_DAY_CLOSE, ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_STAGE_ASSIGNMENT } from "./floor";
 import { ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_REASON } from "./setup";
 import { ENTITY_PIECEWORK_READY_MOVE } from "./ready";
+import { ENTITY_PIECEWORK_INSPECTION } from "./inspection";
+import { ENTITY_PIECEWORK_PACKING_LIST } from "./packing";
 
 /**
  * The roles a garment factory starts with, as data. The capability's code knows no role name: a role is only the grants listed
@@ -31,7 +33,7 @@ const full = (entities: readonly string[]): PresetGrant[] => entities.map((e) =>
 
 const CORE = [STAGE, LOT, BUNDLE, WORKER, ENTRY, PAYMENT];
 const FLOOR = [ENTITY_PIECEWORK_APPROVAL, ENTITY_PIECEWORK_DAY_CLOSE, ENTITY_PIECEWORK_SETTING, ENTITY_PIECEWORK_STAGE_ASSIGNMENT, ENTITY_PIECEWORK_REASON];
-const OFFICE = [ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, ENTITY_PIECEWORK_LOT_COST, ENTITY_PIECEWORK_READY_MOVE];
+const OFFICE = [ENTITY_PIECEWORK_LOT_RATE, ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE, ENTITY_PIECEWORK_LOT_COST, ENTITY_PIECEWORK_READY_MOVE, ENTITY_PIECEWORK_INSPECTION, ENTITY_PIECEWORK_PACKING_LIST];
 
 export const ROLE_PRESETS: readonly RolePreset[] = [
   {
@@ -53,10 +55,11 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
   },
   {
     name: "Supervisor",
-    summary: "Gives out and takes back at the stages assigned to them, records short pieces and closes the day. Sees no rate, wage or balance.",
+    summary: "Gives out and takes back at the stages assigned to them, records short pieces and inspections, and closes the day. Sees no rate, wage or balance.",
     grants: [
       [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]],
       [ENTRY, ["Read", "Create", "ActionExecute"]], [ENTITY_PIECEWORK_APPROVAL, ["Read", "Create"]],
+      [ENTITY_PIECEWORK_INSPECTION, ["Read", "Create"]],
       [ENTITY_PIECEWORK_DAY_CLOSE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
@@ -70,10 +73,11 @@ export const ROLE_PRESETS: readonly RolePreset[] = [
   },
   {
     name: "Store",
-    summary: "Receives fabric rolls, prints labels and moves rolls, and keeps the ready garment stock: takes it out and corrects the count. Sees lots and bundles, no money and no karigar rates.",
+    summary: "Receives fabric rolls, prints labels and moves rolls, and keeps the ready garment stock: takes it out, corrects the count and makes the packing lists. Sees lots and bundles, no money and no karigar rates.",
     grants: [
       ...full([ENTITY_PIECEWORK_ROLL, ENTITY_PIECEWORK_ROLL_MOVE]),
-      [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]], [ENTRY, ["Read"]], [ENTITY_PIECEWORK_READY_MOVE, ["Read", "Create"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
+      [STAGE, ["Read"]], [LOT, ["Read"]], [BUNDLE, ["Read"]], [ENTRY, ["Read"]], [ENTITY_PIECEWORK_READY_MOVE, ["Read", "Create"]],
+      [ENTITY_PIECEWORK_PACKING_LIST, ["Read", "Create"]], [ENTITY_PIECEWORK_INSPECTION, ["Read"]], [ENTITY_EVIDENCE, ["Read", "Create"]],
     ],
   },
   {
