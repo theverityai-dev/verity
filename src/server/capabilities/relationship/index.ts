@@ -1,5 +1,6 @@
 import { registerCommand } from "@/server/platform/command";
 import { registerQuery } from "@/server/platform/query";
+import { registerNameResolver } from "@/server/platform/agent-targets";
 import { registerContribution } from "@/server/platform/contribution";
 import { registerExportable } from "@/server/platform/data-export";
 import { notify } from "@/server/platform/notification";
@@ -114,6 +115,30 @@ export function registerRelationshipCapability(): void {
   for (const object of RELATIONSHIP_OBJECTS) if (!getRecordObject(object.key)) registerRecordObject(object);
   for (const command of COMMANDS) registerCommand(command as never);
   for (const query of QUERIES) registerQuery(query as never);
+
+  // Task 132 A9: how the assistant looks a company or person up by the name someone typed. Merged duplicates are archived and left out.
+  registerNameResolver({
+    noun: "company",
+    entity: ENTITY_COMPANY,
+    find: async (tx, text, limit) =>
+      (await tx.relationshipCompany.findMany({ where: { archivedAt: null, name: { contains: text, mode: "insensitive" } }, orderBy: { name: "asc" }, take: limit, select: { id: true, name: true } })),
+  });
+  registerNameResolver({
+    noun: "person",
+    entity: ENTITY_PERSON,
+    find: async (tx, text, limit) => {
+      const rows = await tx.relationshipPerson.findMany({
+        where: {
+          archivedAt: null,
+          OR: [{ givenName: { contains: text, mode: "insensitive" } }, { familyName: { contains: text, mode: "insensitive" } }],
+        },
+        orderBy: [{ givenName: "asc" }],
+        take: limit,
+        select: { id: true, givenName: true, familyName: true },
+      });
+      return rows.map((r) => ({ id: r.id, name: [r.givenName, r.familyName].filter(Boolean).join(" ") }));
+    },
+  });
 
   registerContribution({
     capabilityId: RELATIONSHIP_CAPABILITY,

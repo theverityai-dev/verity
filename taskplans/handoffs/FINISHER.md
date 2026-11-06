@@ -540,12 +540,12 @@ boundary before any schema. Build is NOT authorised: it needs the owner's explic
   columns. No dependency (ADR-056 cl. 2). Later stages (datasets, analyst, document proposals, MSME clock) are in 132 section 6.
 - **Done when:** agent tests pass unchanged plus new tests for each item; prompt tokens per turn recorded and lower.
 - **Source:** Task 132 section 4 and 6, under Task 131 and ADR-055/056.
-- **Status:** PARTLY BUILT 2026-11-07 (A1, A3, A4 without the diff card, A9 in part, A10; see Task 132 Status). **On production
-  2026-11-06:** the owner approved shipping it with the Akhand work; `20261107000000_agent_turn_usage_and_stale` applied and main pushed.
-  Left: (2) `currentState` on more commands and `registerNameResolver` on more entities (built 2026-11-07 for
-  company, person, customer, supplier and `update_company`; one declaration each); (3) `description` on the 318 commands and 239 queries without one.
-  Production migration status 2026-11-07: pending only this one (checked from a clean worktree of HEAD); the apply was blocked by the
-  permission gate, so it has not been run.
+- **Status:** PARTLY BUILT 2026-11-07. **On production 2026-11-06:** A1, A3, A4 (stale check), A9 plain wording, A10, with
+  `20261107000000_agent_turn_usage_and_stale` applied and main pushed (owner approved shipping it with the Akhand work). **Built after,
+  local only (no migration needed):** the was → now confirmation (`CommandDefinition.currentState`) and `resolve_name`
+  (`registerNameResolver`), see Task 132 Status; push when ready.
+  Left: (1) `currentState` on more commands and `registerNameResolver` on more entities, one declaration each (done so far for
+  company, person, customer, supplier and `update_company`); (2) `description` on the 318 commands and 239 queries without one.
 
 ## P3: verification, coverage, housekeeping
 

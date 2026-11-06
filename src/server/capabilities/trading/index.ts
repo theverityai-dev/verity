@@ -5,6 +5,8 @@ import {
   type CommandDefinition,
 } from "@/server/platform/command";
 import { registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { registerNameResolver } from "@/server/platform/agent-targets";
+import { ENTITY_CUSTOMER, ENTITY_SUPPLIER } from "./keys";
 import { reachableGodownIds } from "./scope";
 import { registerBusinessIdentity } from "./business";
 import { registerTradingImport } from "./import";
@@ -360,6 +362,19 @@ export const listGodownRacks: QueryDefinition<
  * before registering its own commands/queries/navigation.
  */
 export function registerTradingCapability(): void {
+  // Task 132 A9: the assistant looks a customer or supplier up by the name someone typed; inactive ones are left out.
+  registerNameResolver({
+    noun: "customer",
+    entity: ENTITY_CUSTOMER,
+    find: async (tx, text, limit) =>
+      (await tx.tradingCustomer.findMany({ where: { active: true, displayName: { contains: text, mode: "insensitive" } }, orderBy: { displayName: "asc" }, take: limit, select: { id: true, displayName: true } })).map((r) => ({ id: r.id, name: r.displayName })),
+  });
+  registerNameResolver({
+    noun: "supplier",
+    entity: ENTITY_SUPPLIER,
+    find: async (tx, text, limit) =>
+      (await tx.tradingSupplier.findMany({ where: { active: true, displayName: { contains: text, mode: "insensitive" } }, orderBy: { displayName: "asc" }, take: limit, select: { id: true, displayName: true } })).map((r) => ({ id: r.id, name: r.displayName })),
+  });
   registerBusinessIdentity();
   registerTradingImport();
   registerTax();

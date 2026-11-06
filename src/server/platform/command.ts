@@ -105,6 +105,19 @@ export type CommandDefinition<TInput, TResult> = {
    */
   description?: string;
   /**
+   * How to read the record this command changes, so a confirmation can show "was X, now Y" (Task 132 A4). Names a registered query
+   * (run as the person, through the ordinary Read check and redaction; a query they may not run simply shows no "was") and the
+   * fields the command would set. Absent means the confirmation lists the new values alone. Read-only: it never changes anything.
+   */
+  currentState?: {
+    /** Key of a registered query that returns the record as an object, with the same field names `changes` uses. */
+    query: string;
+    /** Input for that query, from one of this command's inputs. */
+    input: (input: TInput) => unknown;
+    /** The values this input would set, by field name. */
+    changes: (input: TInput) => Record<string, unknown>;
+  };
+  /**
    * Business invariants (MET-ACT-003). Throw ValidationError to abort; the
    * surrounding transaction rolls back.
    */

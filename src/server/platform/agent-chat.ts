@@ -6,6 +6,7 @@ import { getQuery, executeQuery } from "./query";
 import { GroundingCache, GroundingError, assertGrounded, checkProseClaims } from "./grounding";
 import { readAgentProviderConfig } from "./config";
 import { runCommandBatch } from "./batch";
+import { availableNouns, currentStateLines, resolveName } from "./agent-targets";
 import { toActionFailure } from "./action-error";
 import {
   agentApprovalClass,
@@ -61,6 +62,7 @@ export const TOOL_SEARCH_THRESHOLD = 12;
 /** Tools one `find_tools` call adds to the turn. */
 const FOUND_PER_SEARCH = 8;
 const FIND_TOOLS = "find_tools";
+const RESOLVE_NAME = "resolve_name";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -141,6 +143,25 @@ const findToolsTool = {
   },
 };
 
+/** Offered when the person can look up at least one kind of record by name (Task 132 A9). */
+const resolveNameTool = (nouns: string[]) => ({
+  type: "function" as const,
+  function: {
+    name: RESOLVE_NAME,
+    description:
+      "Look up a record by the name the person gave, before using its id. Returns the one match, or the candidates when there are " +
+      "several (then ask the person which; never choose), or none. Kinds: " + nouns.join(", ") + ".",
+    parameters: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: nouns, description: "What kind of record." },
+        name: { type: "string", description: "The name exactly as the person gave it." },
+      },
+      required: ["kind", "name"],
+    },
+  },
+});
+
 function toOpenAiTool(tool: ToolDescriptor) {
   return {
     type: "function" as const,
@@ -183,7 +204,10 @@ permissions as the person you are helping — never more, never less. Rules:
    Organization, Resource — never "job", "client", "employee").
 6. Describe actions in plain words, by what they do ("record the payment"),
    never by a tool's internal name.
-7. If you have a find_tools tool, you were not given every tool: call it with
+7. For a customer, supplier, company or other party the person names, call
+   resolve_name (when you have it) instead of guessing; if it returns several,
+   list them and ask which one. Never pick for the person.
+8. If you have a find_tools tool, you were not given every tool: call it with
    what you need in plain words, then call one of the tools it returns.`;
 
 type OpenAiToolCall = {
@@ -437,7 +461,11 @@ async function runTurnLoop(
   // ever holds descriptors from `manifest`, so searching can never reach a tool the actor does not hold.
   const searched = options.toolKeys === undefined && manifest.length > TOOL_SEARCH_THRESHOLD;
   const offered = new Map<string, ToolDescriptor>();
-  const toolsForCall = () => (searched ? [findToolsTool, ...[...offered.values()].map(toOpenAiTool)] : manifest.map(toOpenAiTool));
+  const nouns = manifest.length > 0 && options.toolKeys === undefined ? await availableNouns(actor) : [];
+  const toolsForCall = () => [
+    ...(nouns.length > 0 ? [resolveNameTool(nouns)] : []),
+    ...(searched ? [findToolsTool, ...[...offered.values()].map(toOpenAiTool)] : manifest.map(toOpenAiTool)),
+  ];
   const grounding = new GroundingCache();
 
   const messages: OpenAiMessage[] = [
@@ -477,10 +505,27 @@ async function runTurnLoop(
           : "No tool matches those words. Try other words, or tell the person this cannot be done here.",
     };
   };
+  const findByName = async (call: OpenAiToolCall): Promise<ToolCallRecord> => {
+    let args: { kind?: unknown; name?: unknown };
+    try {
+      args = JSON.parse(call.function.arguments || "{}") as { kind?: unknown; name?: unknown };
+    } catch {
+      return { key: RESOLVE_NAME, kind: "query", input: call.function.arguments, ok: false, output: "E_VALIDATION: arguments were not valid JSON" };
+    }
+    const input = { kind: String(args.kind ?? ""), name: String(args.name ?? "") };
+    const found = await resolveName(actor, input.kind, input.name);
+    // A single match is grounded outright; several are recorded as a multi-row result, which grounding refuses to write until a
+    // narrower read returns one (Task 81 rule 2). The model cannot settle it by choosing.
+    if (found.status === "one") grounding.record({ id: found.match.id });
+    if (found.status === "several") grounding.record(found.candidates.map((c) => ({ id: c.id })));
+    return { key: RESOLVE_NAME, kind: "query", input, ok: found.status !== "unknown_noun", output: found };
+  };
   const execute = (call: OpenAiToolCall): Promise<ToolCallRecord> =>
     searched && call.function.name === FIND_TOOLS
       ? Promise.resolve(findTools(call))
-      : runTool(actor, grounding, call.function.name, call.function.arguments);
+      : nouns.length > 0 && call.function.name === RESOLVE_NAME
+        ? findByName(call)
+        : runTool(actor, grounding, call.function.name, call.function.arguments);
 
   for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
     if (Date.now() - started > TURN_BUDGET.maxWallClockMs) return budgetStop("took too long");
@@ -502,7 +547,7 @@ async function runTurnLoop(
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
       const reply = message.content ?? "";
-      const hasQuery = toolCalls.some((c) => c.kind === "query" && c.ok && c.key !== FIND_TOOLS);
+      const hasQuery = toolCalls.some((c) => c.kind === "query" && c.ok && c.key !== FIND_TOOLS && c.key !== RESOLVE_NAME);
       const groundingWarnings = hasQuery ? checkProseClaims(reply, grounding) : [];
       return { reply, toolCalls, usage, groundingWarnings: groundingWarnings.length > 0 ? groundingWarnings : undefined };
     }
@@ -522,7 +567,7 @@ async function runTurnLoop(
           id: stored.id,
           commandKey: stored.commandKey,
           description,
-          details: detailLines(proposal.inputs),
+          details: (await currentStateLines(actor, command, proposal.inputs)) ?? detailLines(proposal.inputs),
           expiresAt: stored.expiresAt,
         };
         return { reply: description + " Confirm to proceed.", toolCalls, usage, preview };

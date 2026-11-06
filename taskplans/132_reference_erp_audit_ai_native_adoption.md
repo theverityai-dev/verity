@@ -25,11 +25,15 @@ Owner said "go ahead" on 2026-11-06 and "complete it all" on 2026-11-07; applyin
 Mutation check: disabling the stale check, the search, or the call budget each fails its test. Migration
 `20261107000000_agent_turn_usage_and_stale` is **not on production**; the build's migration assertion blocks a deploy until it is.
 
-Not built in stage 1, and why: the old-beside-new diff on the confirmation card and `resolve_by_name` both need each command or entity
-to declare how to read its target (which table, which name column, which input field is which column), because a command's input
-does not map to a row generically. That is an optional `describeTarget` on `CommandDefinition` plus a per-entity name reader: a platform
-type change, **implementation decision required** before code. Until then the prompt's exact-match rule and grounding's ambiguity check
-stand in, and the card shows the input fields; writing `description` on the 318 of 384 commands and
+Built after the owner's "go ahead as you think is right" (2026-11-07), the design both items needed: an optional
+`CommandDefinition.currentState` (names a registered query and the fields the command sets, so the confirmation reads the record as
+the person may read it and shows `field: was → now`) and `registerNameResolver` (`agent-targets.ts`; a resolver is offered only when the
+person holds Read on its entity and the capability is ready). The `resolve_name` tool returns the one match, or the candidates when
+several; a single match is grounded and several are recorded as a multi-row result, so the model cannot write against one by choosing.
+First users: company and person (CRM), customer and supplier (trading), `update_company` shows was → now. Other commands and entities opt
+in the same way, one declaration each.
+
+Still not built: written `description` on the 318 commands and 239 queries without one; writing `description` on the 318 of 384 commands and
 239 of 259 queries that lack one (`plainDescription` covers the gap, so the search still matches key words).
 The per-tenant ceiling override (section 7.4) is not built; the deployment-wide setting is.
 

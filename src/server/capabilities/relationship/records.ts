@@ -327,6 +327,8 @@ export const updateCompany: CommandDefinition<{ id: string; version?: number; pa
   verb: "Edit",
   description: "Change a company's details.",
   input: z.object({ id: z.string().uuid(), version: z.number().int().optional(), patch: companyPatchSchema }),
+  // Task 132 A4: a confirmation shows each changed detail as was -> now.
+  currentState: { query: "verity.relationship.company_detail", input: (i) => ({ id: i.id }), changes: (i) => i.patch },
   handler: async (ctx, input) => {
     const saved = await applyCompanyPatch(ctx, input.id, input.version, input.patch, "verity.relationship.update_company");
     return { result: { id: saved.id, version: saved.version } };

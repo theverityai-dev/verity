@@ -468,7 +468,10 @@ describe("conformance: over-genericity (Phase G)", () => {
     // 59: agent-approval.ts (ADR-055) — the approval class of a command when the agent asks for it, pending actions and
     // agent-turn records. Platform because the agent channel is platform (ADR-017), the rule must be one rule for every
     // capability's commands, and the store is a tenant table with a platform retention schedule. It reads no capability's tables.
-    expect(platformModules.length).toBeLessThanOrEqual(59);
+    // 60: agent-targets.ts (Task 132) — name resolvers and "current state" readers the agent channel calls on the person's behalf.
+    // Platform because the agent channel is platform (ADR-017) and the rule (ask when several match, show was -> now) is one rule for
+    // every capability. It reads no capability's tables: capabilities register their own resolver and name a registered query.
+    expect(platformModules.length).toBeLessThanOrEqual(60);
   });
 });
 

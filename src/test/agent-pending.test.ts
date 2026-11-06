@@ -7,6 +7,7 @@ import { assertRlsEnforceable, withTenant } from "@/server/platform/tenancy";
 import { provisionIdentity } from "@/server/platform/identity";
 import { clearCommands, registerCommand, type ActorContext, type CommandDefinition } from "@/server/platform/command";
 import { clearQueries, registerQuery, type QueryDefinition } from "@/server/platform/query";
+import { clearNameResolvers, registerNameResolver } from "@/server/platform/agent-targets";
 import { activateCapability, invalidateCapabilityCache } from "@/server/platform/capability";
 import { decidePendingAction, runAgentTurn } from "@/server/platform/agent-chat";
 import {
@@ -50,6 +51,19 @@ const recordPayment: CommandDefinition<{ thingId: string; note: string }, { note
     return { result: { note: input.note } };
   },
 };
+/** Same shape, but it declares how to read what it changes, so the confirmation can show was -> now (Task 132 A4). */
+const settleThing: CommandDefinition<{ thingId: string; name: string; note: string }, { name: string }> = {
+  key: "verity.test.agent_settle_thing",
+  entity: ENTITY,
+  verb: "Edit",
+  description: "Settle the thing.",
+  input: z.object({ thingId: z.string().uuid(), name: z.string().min(1), note: z.string().min(1) }),
+  currentState: { query: "verity.test.agent_get_thing", input: (i) => ({ id: i.thingId }), changes: (i) => ({ name: i.name, note: i.note }) },
+  handler: async (_ctx, input) => {
+    ran.push("settle_thing");
+    return { result: { name: input.name } };
+  },
+};
 const renameThing: CommandDefinition<{ note: string }, { note: string }> = {
   key: "verity.test.agent_rename_thing",
   entity: ENTITY,
@@ -80,6 +94,17 @@ const listThings: QueryDefinition<Record<string, never>, Array<{ id: string; nam
   description: "List the things.",
   input: z.object({}),
   handler: async (ctx) => [{ id: ctx.actor.tenantId, name: "the thing" }],
+};
+
+const getThing: QueryDefinition<{ id: string }, { id: string; name: string; note: string | null }> = {
+  key: "verity.test.agent_get_thing",
+  entity: ENTITY,
+  description: "Read one thing.",
+  input: z.object({ id: z.string().uuid() }),
+  handler: async (ctx, input) => {
+    const t = await ctx.tx.tenant.findUnique({ where: { id: input.id } });
+    return { id: input.id, name: t?.name ?? "", note: null };
+  },
 };
 
 const toolName = (key: string) => key.replaceAll(".", "__");
@@ -127,6 +152,15 @@ describeDb("agent pending actions and turn records (ADR-055)", () => {
     registerCommand(renameThing);
     registerCommand(discardThing);
     registerQuery(listThings);
+    registerCommand(settleThing);
+    registerQuery(getThing);
+    // Candidates are looked up by text, so a test controls how many match.
+    const names = new Map<string, string[]>([["acme", ["Acme Traders"]], ["sharma", ["Sharma Steel", "Sharma Stores"]]]);
+    registerNameResolver({
+      noun: "thing",
+      entity: ENTITY,
+      find: async (_tx, text) => (names.get(text.toLowerCase()) ?? []).map((name, i) => ({ id: i === 0 ? tenantA : randomUUID(), name })),
+    });
     process.env.OPENAI_API_KEY = "test-key";
     process.env.OPENAI_BASE_URL = "http://model.invalid/v1";
     process.env.OPENAI_MODEL = "scripted-model";
@@ -172,6 +206,7 @@ describeDb("agent pending actions and turn records (ADR-055)", () => {
   afterAll(async () => {
     clearCommands();
     clearQueries();
+    clearNameResolvers();
     invalidateCapabilityCache();
     const admin = new PrismaClient({ datasourceUrl: process.env.DIRECT_URL });
     try {
@@ -412,9 +447,9 @@ describeDb("agent pending actions and turn records (ADR-055)", () => {
     ]);
     const result = await runAgentTurn(owner, [], "what things are there?");
     expect(result.reply).toBe("There is one thing.");
-    expect(bodies[0].tools!.map((t) => t.function.name)).toEqual(["find_tools"]);
+    expect(bodies[0].tools!.map((t) => t.function.name).sort()).toEqual(["find_tools", "resolve_name"]);
     const found = JSON.parse(bodies[1].messages.find((m) => m.role === "tool")!.content!).untrusted_data as Array<{ tool: string }>;
-    expect(found[0].tool).toBe(toolName(listThings.key));
+    expect(found.map((f) => f.tool)).toContain(toolName(listThings.key));
     expect(bodies[1].tools!.map((t) => t.function.name)).toContain(toolName(listThings.key));
     expect(result.toolCalls.map((c) => c.key)).toEqual(["find_tools", listThings.key]);
 
@@ -423,6 +458,50 @@ describeDb("agent pending actions and turn records (ADR-055)", () => {
     const { bodies: none } = scriptModel([{ calls: [{ name: "find_tools", args: { need: "list the things" } }] }, { content: "Nothing." }]);
     await runAgentTurn(roleless, [], "what things are there?");
     expect(none[0].tools).toBeUndefined();
+  });
+
+  it("shows what a record is now beside what the command would set it to (Task 132 A4)", async () => {
+    const tenantName = "Agent Works";
+    await withTenant(tenantA, (tx) => tx.tenant.update({ where: { id: tenantA }, data: { name: tenantName } }));
+    scriptModel([
+      { calls: [{ key: listThings.key, args: {} }] },
+      { calls: [{ key: settleThing.key, args: { thingId: tenantA, name: "Agent Works Ltd", note: "Settled in full" } }] },
+    ]);
+    const result = await runAgentTurn(owner, [], "settle it");
+    // Each changed field shows was -> now; a field the record holds empty reads "empty".
+    expect(result.preview!.details).toEqual(["name: Agent Works → Agent Works Ltd, note: empty → Settled in full"]);
+    expect(ran).toEqual([]);
+  });
+
+  it("looks a record up by name: one match is grounded, several are never chosen for the person (Task 132 A9)", async () => {
+    const { bodies } = scriptModel([
+      { calls: [{ name: "resolve_name", args: { kind: "thing", name: "Acme" } }] },
+      { calls: [{ key: recordPayment.key, args: { thingId: tenantA, note: "Paid 900" } }] },
+    ]);
+    const one = await runAgentTurn(owner, [], "pay Acme");
+    expect(bodies[0].tools!.map((t) => t.function.name)).toContain("resolve_name");
+    expect(one.preview).toMatchObject({ commandKey: recordPayment.key }); // the id was grounded by the lookup, no list query needed
+
+    scriptModel([
+      { calls: [{ name: "resolve_name", args: { kind: "thing", name: "Sharma" } }] },
+      { calls: [{ key: recordPayment.key, args: { thingId: tenantA, note: "Paid 900" } }] },
+      { content: "Which Sharma?" },
+    ]);
+    const before = (await pendingRows()).length;
+    const several = await runAgentTurn(owner, [], "pay Sharma");
+    expect(several.preview).toBeUndefined();
+    expect(await pendingRows()).toHaveLength(before);
+    expect(JSON.stringify(several.toolCalls.at(-1)!.output)).toContain("multi-record");
+
+    scriptModel([{ calls: [{ name: "resolve_name", args: { kind: "thing", name: "Nobody" } }] }, { content: "Not found." }]);
+    const none = await runAgentTurn(owner, [], "pay Nobody");
+    expect(none.toolCalls[0].output).toEqual({ status: "none", noun: "thing" });
+
+    // A person with no role holds no Read grant, so the lookup is not even offered.
+    const roleless: ActorContext = { ...colleague, roleId: null };
+    const { bodies: nb } = scriptModel([{ content: "Hello." }]);
+    await runAgentTurn(roleless, [], "hi");
+    expect(nb[0].tools).toBeUndefined();
   });
 
   it("purges turns after 90 days and decided actions after 30, and keeps what is newer", async () => {
