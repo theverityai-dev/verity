@@ -532,7 +532,9 @@ need the client's answers and are NOT authorised.
 - **Status:** PARTLY BUILT 2026-11-07, local only (A1, A3, A4 without the diff card, A9 in part, A10; see Task 132 Status).
   Left: (1) apply `20261107000000_agent_turn_usage_and_stale` to production with the owner's go-ahead, then push (the build's
   migration check blocks deploys until then); (2) old-beside-new diff on the confirmation card; (3) `resolve_by_name`;
-  (4) `description` on the 318 commands and 239 queries without one.
+  (4) `description` on the 318 commands and 239 queries without one. Items 2 and 3 need the `describeTarget` decision first (Task 132 Status).
+  Production migration status 2026-11-07: pending only this one (checked from a clean worktree of HEAD); the apply was blocked by the
+  permission gate, so it has not been run.
 
 ## P3: verification, coverage, housekeeping
 

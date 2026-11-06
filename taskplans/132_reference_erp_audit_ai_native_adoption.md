@@ -12,7 +12,7 @@ Task 131 (agent approvals, phases D to I), Task 90 (Attention), Task 88 (reconci
 
 ## Status: STAGE 1 PARTLY BUILT 2026-11-07 (local database only); stages 2 to 5 PROPOSED
 
-Owner said "go ahead" on 2026-11-06. Built in stage 1, proven on a migrated local database (`verity_t132`):
+Owner said "go ahead" on 2026-11-06 and "complete it all" on 2026-11-07; applying the migration to production was blocked by the tool permission gate and is waiting on an explicit allow. Built in stage 1, proven on a migrated local database (`verity_t132`):
 
 | Item | What was built | Proof |
 |---|---|---|
@@ -25,8 +25,11 @@ Owner said "go ahead" on 2026-11-06. Built in stage 1, proven on a migrated loca
 Mutation check: disabling the stale check, the search, or the call budget each fails its test. Migration
 `20261107000000_agent_turn_usage_and_stale` is **not on production**; the build's migration assertion blocks a deploy until it is.
 
-Not built in stage 1: the old-beside-new diff on the confirmation card (needs a per-entity read of the target row); `resolve_by_name`
-(the prompt's exact-match rule and grounding's ambiguity check stand in); writing `description` on the 318 of 384 commands and
+Not built in stage 1, and why: the old-beside-new diff on the confirmation card and `resolve_by_name` both need each command or entity
+to declare how to read its target (which table, which name column, which input field is which column), because a command's input
+does not map to a row generically. That is an optional `describeTarget` on `CommandDefinition` plus a per-entity name reader: a platform
+type change, **implementation decision required** before code. Until then the prompt's exact-match rule and grounding's ambiguity check
+stand in, and the card shows the input fields; writing `description` on the 318 of 384 commands and
 239 of 259 queries that lack one (`plainDescription` covers the gap, so the search still matches key words).
 The per-tenant ceiling override (section 7.4) is not built; the deployment-wide setting is.
 
