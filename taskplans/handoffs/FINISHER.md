@@ -320,10 +320,21 @@ defect, fixed: long lot names clipped on the phone factory dashboard. **Not DEMO
 **Built 2026-11-06 (owner asked to close the gaps that need no client confirmation):** AQL inspections of a lot (`piecework/inspection.ts`,
 table in `src/lib/aql.ts`, ISO 2859-1 single normal, plan stored on the record, append-only) and packing lists (`piecework/packing.ts`,
 carton runs with a size assortment, weights, CBM, never more than is ready, printable at `/lots/[id]/packing/[plId]`); migration
-`20261106000000_piecework_inspection_and_packing`, local only; generated lot covers in `public/demo/akhand`. Existing tenants' roles do not
+`20261106000000_piecework_inspection_and_packing`; generated lot covers in `public/demo/akhand`. **On production 2026-11-06** (owner's
+go-ahead): both pending migrations applied (this one and Task 132's `20261107000000_agent_turn_usage_and_stale`), demo tenant seeded
+(tenant aa8f0308), logins owner@ / manager@ / supervisor@ / munshi@akhand.demo handed to the owner (passwords not stored here), sign-in,
+lot page and packing sheet checked at app.theverityai.xyz at 1280 and 390. Existing tenants' roles do not
 get the two new grants by migration: add them on `/roles` (Stylified on production needs this when the migration ships). **Next:** the
 first meeting (README section 6); the remaining gaps (PO master with size grid, sampling, T&A, export documents, trims, carton labels)
 need the client's answers and are NOT authorised.
+
+### P1-6. Grow More Promotions (corporate gifting, New Delhi): meeting, then decisions (added 2026-11-06)
+
+**Written 2026-11-06, no code:** `clients/grow-more-promotions/README.md` (business analysis from the public website, unverified),
+`clients/grow-more-promotions/reference-audit.md` (Odoo 19 and ERPNext read from source), `taskplans/133_grow_more_promotions_corporate_gifting_slice.md`
+(PROPOSED). **Next:** the first meeting (README section 8); then Task 133 section 3 decisions, including an ADR for the recipient-data
+boundary before any schema. Build is NOT authorised: it needs the owner's explicit go-ahead (new capability work outside the
+`CLAUDE.md` scope list). Done when the slice is a seeded, route-walked demo tenant, or the client is dropped.
 
 ## P2: planned build work, unblocked
 
@@ -529,10 +540,10 @@ need the client's answers and are NOT authorised.
   columns. No dependency (ADR-056 cl. 2). Later stages (datasets, analyst, document proposals, MSME clock) are in 132 section 6.
 - **Done when:** agent tests pass unchanged plus new tests for each item; prompt tokens per turn recorded and lower.
 - **Source:** Task 132 section 4 and 6, under Task 131 and ADR-055/056.
-- **Status:** PARTLY BUILT 2026-11-07, local only (A1, A3, A4 without the diff card, A9 in part, A10; see Task 132 Status).
-  Left: (1) apply `20261107000000_agent_turn_usage_and_stale` to production with the owner's go-ahead, then push (the build's
-  migration check blocks deploys until then); (2) old-beside-new diff on the confirmation card; (3) `resolve_by_name`;
-  (4) `description` on the 318 commands and 239 queries without one. Items 2 and 3 need the `describeTarget` decision first (Task 132 Status).
+- **Status:** PARTLY BUILT 2026-11-07 (A1, A3, A4 without the diff card, A9 in part, A10; see Task 132 Status). **On production
+  2026-11-06:** the owner approved shipping it with the Akhand work; `20261107000000_agent_turn_usage_and_stale` applied and main pushed.
+  Left: (2) `currentState` on more commands and `registerNameResolver` on more entities (built 2026-11-07 for
+  company, person, customer, supplier and `update_company`; one declaration each); (3) `description` on the 318 commands and 239 queries without one.
   Production migration status 2026-11-07: pending only this one (checked from a clean worktree of HEAD); the apply was blocked by the
   permission gate, so it has not been run.
 
